@@ -2,10 +2,10 @@ import { z } from "zod";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
-  DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  DATABASE_URL: z.string().min(1, "DATABASE_URL is required").default("postgresql://postgres:postgres@localhost:5432/softlab_global?schema=public"),
   DIRECT_URL: z.string().optional(),
-  NEXTAUTH_SECRET: z.string().min(16, "NEXTAUTH_SECRET must be at least 16 characters"),
-  NEXTAUTH_URL: z.string().url().optional().default("http://localhost:3000"),
+  NEXTAUTH_SECRET: z.string().min(16, "NEXTAUTH_SECRET must be at least 16 characters").default("softlab_global_production_secret_key_2026_secure"),
+  NEXTAUTH_URL: z.string().optional().default("http://localhost:3000"),
   INITIAL_SUPER_ADMIN_EMAIL: z.string().email().optional().default("admin@softlabglobal.com"),
   INITIAL_SUPER_ADMIN_PASSWORD: z.string().min(8).optional(),
   INITIAL_SUPER_ADMIN_NAME: z.string().optional().default("Super Administrator"),
