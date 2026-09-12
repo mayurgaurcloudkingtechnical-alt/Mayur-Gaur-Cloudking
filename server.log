@@ -1,0 +1,14 @@
+==============================================================
+    SOFTLAB GLOBAL - Next.js Development Server (Port 3000)
+==============================================================
+
+
+> softlab-global@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.15
+  - Local:        http://localhost:3000
+  - Environments: .env
+
+ ✓ Starting...
+Press any key to continue . . . 

@@ -1,0 +1,152 @@
+import * as React from "react";
+import Link from "next/link";
+import { SITE_CONFIG } from "@/lib/constants/site";
+import { MapPin, Phone, Mail, Clock, ShieldCheck, ArrowUpRight } from "lucide-react";
+
+export function PublicFooter() {
+  const currentYear = new Date().getFullYear();
+
+  return (
+    <footer className="border-t border-slate-200 bg-white text-slate-700">
+      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
+          {/* Column 1: Brand & Identity */}
+          <div className="space-y-4">
+            <Link href="/" className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm">
+                SL
+              </div>
+              <div className="flex flex-col">
+                <span className="text-lg font-bold tracking-tight text-slate-900 leading-none">
+                  {SITE_CONFIG.name}
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-600 tracking-wider uppercase mt-0.5">
+                  IT Education & Research
+                </span>
+              </div>
+            </Link>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              {SITE_CONFIG.shortDescription}
+            </p>
+            <div className="flex items-center gap-2 pt-1 text-xs text-slate-600">
+              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+              <span>GSTIN: <span className="font-mono font-semibold text-slate-800">{SITE_CONFIG.gstin}</span></span>
+            </div>
+          </div>
+
+          {/* Column 2: Quick Links */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
+              Academic Navigation
+            </h3>
+            <ul className="space-y-2.5 text-xs">
+              {SITE_CONFIG.navLinks.map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-slate-600 hover:text-emerald-700 transition-colors flex items-center gap-1"
+                  >
+                    <span>{link.label}</span>
+                  </Link>
+                </li>
+              ))}
+              <li>
+                <Link
+                  href="/login"
+                  className="text-emerald-700 font-semibold hover:text-emerald-800 transition-colors flex items-center gap-1"
+                >
+                  <span>Student & Faculty Portal</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 3: Hours & Support */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
+              Counseling & Support
+            </h3>
+            <ul className="space-y-3 text-xs text-slate-600">
+              <li className="flex items-start gap-2.5">
+                <Clock className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-semibold text-slate-800">{SITE_CONFIG.businessHours.days}</p>
+                  <p className="text-slate-500">{SITE_CONFIG.businessHours.hours}</p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">{SITE_CONFIG.businessHours.sunday}</p>
+                </div>
+              </li>
+              <li className="pt-1">
+                <p className="text-slate-500 mb-1">General Inquiries:</p>
+                <a
+                  href={`mailto:${SITE_CONFIG.contact.email}`}
+                  className="font-medium text-slate-800 hover:text-emerald-700 underline underline-offset-2"
+                >
+                  {SITE_CONFIG.contact.email}
+                </a>
+              </li>
+              <li>
+                <p className="text-slate-500 mb-1">Admissions Desk:</p>
+                <a
+                  href={`mailto:${SITE_CONFIG.contact.admissionsEmail}`}
+                  className="font-medium text-slate-800 hover:text-emerald-700 underline underline-offset-2"
+                >
+                  {SITE_CONFIG.contact.admissionsEmail}
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          {/* Column 4: Campus Location & Direct Contact */}
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 mb-4">
+              Campus Address
+            </h3>
+            <div className="space-y-3 text-xs text-slate-600">
+              <div className="flex items-start gap-2.5">
+                <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                <address className="not-italic leading-relaxed">
+                  <p className="font-semibold text-slate-800">{SITE_CONFIG.address.line1}</p>
+                  <p>{SITE_CONFIG.address.line2}</p>
+                  <p>{SITE_CONFIG.address.city}, {SITE_CONFIG.address.state} — {SITE_CONFIG.address.pincode}</p>
+                </address>
+              </div>
+
+              <div className="flex items-center gap-2.5 pt-1">
+                <Phone className="h-4 w-4 text-emerald-600 shrink-0" />
+                <a
+                  href={`tel:${SITE_CONFIG.contact.phoneTel}`}
+                  className="font-bold text-slate-800 hover:text-emerald-700 transition-colors"
+                >
+                  {SITE_CONFIG.contact.phone}
+                </a>
+              </div>
+
+              <div className="pt-2">
+                <a
+                  href={SITE_CONFIG.address.googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 hover:text-emerald-800"
+                >
+                  <span>View on Google Maps</span>
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar: Copyright */}
+        <div className="mt-12 border-t border-slate-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+          <p>© {currentYear} {SITE_CONFIG.name}. All rights reserved.</p>
+          <div className="flex items-center gap-6">
+            <span>Enterprise IT Education Platform</span>
+            <span>•</span>
+            <span>Prayagraj, Uttar Pradesh</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+}
