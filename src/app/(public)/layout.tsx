@@ -6,6 +6,7 @@ import { SITE_CONFIG } from "@/lib/constants/site";
 
 import { TopAnnouncementBar } from "@/components/public/top-announcement-bar";
 import { FloatingWhatsApp } from "@/components/public/floating-whatsapp";
+import { CareerCounselingModal } from "@/components/public/career-counseling-modal";
 
 export default async function PublicLayout({
   children,
@@ -44,6 +45,7 @@ export default async function PublicLayout({
       <main className="flex-1">{children}</main>
       <PublicFooter />
       <FloatingWhatsApp />
+      <CareerCounselingModal />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { signIn } from "next-auth/react";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertBanner } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { Lock, GraduationCap, ArrowRight, KeyRound, Building2 } from "lucide-react";
+import { Lock, GraduationCap, ArrowRight, Building2 } from "lucide-react";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
 import Link from "next/link";
 
@@ -22,12 +22,6 @@ function StudentLoginForm() {
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
-
-  const fillCredentials = (val: string, pass: string) => {
-    setEnrollmentNo(val);
-    setPassword(pass);
-    setError(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,9 +48,8 @@ function StudentLoginForm() {
         return;
       }
 
-      // Successful student login - direct to student dashboard
-      router.push("/student/dashboard");
-      router.refresh();
+      // Successful student login - direct to student dashboard with hard navigation
+      window.location.href = "/student/dashboard";
     } catch (err) {
       setError("An unexpected authentication error occurred. Please try again.");
       setIsLoading(false);
@@ -85,32 +78,6 @@ function StudentLoginForm() {
             {error}
           </AlertBanner>
         )}
-
-        {/* 1-Click Student Fast Access */}
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-            <KeyRound className="h-3.5 w-3.5" />
-            <span>Instant Access for Enrolled Students:</span>
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => fillCredentials("SLG-2026-AIML-001", "Password@123")}
-              className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-2.5 py-2 font-bold text-white shadow-sm transition-all text-xs"
-            >
-              <GraduationCap className="w-3.5 h-3.5" />
-              <span>Srishti Sharma</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials("SLG-2026-0001", "Student@2026")}
-              className="flex items-center justify-center gap-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-2 font-semibold text-slate-200 border border-slate-700 transition-all text-xs"
-            >
-              <GraduationCap className="w-3.5 h-3.5 text-slate-400" />
-              <span>Sample Student</span>
-            </button>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           {/* Enrollment Number Input - Strictly type="text" so NO @ browser error! */}
@@ -214,6 +181,12 @@ export default function StudentLoginPage() {
         <React.Suspense fallback={<LoadingSpinner />}>
           <StudentLoginForm />
         </React.Suspense>
+
+        <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
+          Civil Lines Campus: Patrika Chauraha, 13/11/8G, Tashkent Marg, Prayagraj, UP
+          <br />
+          Student Desk Helpline: +91 9196596975 | Email: info@softlabglobal.com
+        </p>
       </div>
     </div>
   );

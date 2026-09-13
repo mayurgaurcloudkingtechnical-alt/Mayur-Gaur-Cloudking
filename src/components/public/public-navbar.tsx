@@ -6,7 +6,8 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { Menu, X, ArrowRight, UserCheck, GraduationCap, PhoneCall, Building2 } from "lucide-react";
+import { Menu, X, ArrowRight, UserCheck, GraduationCap, PhoneCall, Building2, Sparkles } from "lucide-react";
+import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
 
 interface PublicNavbarProps {
   userRole?: string | null;
@@ -63,6 +64,17 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
 
         {/* Portal Login / Dashboard CTA */}
         <div className="hidden md:flex items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => openCareerCounselingModal()}
+            size="sm"
+            variant="ghost"
+            className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 text-xs h-9 px-2.5 font-bold flex items-center gap-1.5 border border-emerald-200"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-emerald-600 animate-pulse" />
+            <span>Free Counseling</span>
+          </Button>
+
           {userRole ? (
             <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-xs h-9 px-3.5">
               <Link href={dashboardHref} className="flex items-center gap-1.5">
@@ -130,9 +142,20 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
           </nav>
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                openCareerCounselingModal();
+              }}
+              className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold py-2.5 px-4 rounded-xl text-xs shadow-sm"
+            >
+              <Sparkles className="h-4 w-4 text-emerald-200" />
+              <span>Book Free Career Counseling</span>
+            </button>
             <Link
               href={userRole ? dashboardHref : "/student-login"}
-              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-sm"
+              className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-sm"
             >
               <GraduationCap className="h-4 w-4 text-white" />
               <span>Student Portal Login</span>

@@ -17,10 +17,10 @@ export const SITE_CONFIG = {
       "https://maps.google.com/?q=Patrika+Chauraha+Tashkent+Marg+Civil+Lines+Prayagraj+Uttar+Pradesh+211001",
   },
   contact: {
-    phone: "+91 9194085890",
-    phoneTel: "+919194085890",
+    phone: "+91 9196596975",
+    phoneTel: "+919196596975",
     email: "info@softlabglobal.com",
-    admissionsEmail: "admissions@softlabglobal.com",
+    admissionsEmail: "info@softlabglobal.com",
   },
   gstin: "09AFYFS5388G1ZX",
   businessHours: {

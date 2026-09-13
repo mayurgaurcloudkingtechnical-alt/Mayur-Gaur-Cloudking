@@ -6,6 +6,7 @@ import { ContentStatus } from "@prisma/client";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { CourseCard } from "@/components/public/course-card";
 import { HeroLeadForm } from "@/components/public/hero-lead-form";
+import { AiMlShowcase } from "@/components/public/ai-ml-showcase";
 import { Button } from "@/components/ui/button";
 import {
   Code,
@@ -226,7 +227,12 @@ export default async function HomePage() {
       </section>
 
       {/* ==================================================================== */}
-      {/* 3. FEATURED PROGRAMS & BROCHURES SHOWCASE                           */}
+      {/* 3. AI & MACHINE LEARNING INNOVATION SHOWCASE                         */}
+      {/* ==================================================================== */}
+      <AiMlShowcase />
+
+      {/* ==================================================================== */}
+      {/* 4. FEATURED PROGRAMS & BROCHURES SHOWCASE                           */}
       {/* ==================================================================== */}
       <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

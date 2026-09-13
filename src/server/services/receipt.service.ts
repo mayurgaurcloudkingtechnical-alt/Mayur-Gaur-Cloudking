@@ -52,7 +52,7 @@ export class ReceiptService {
     address: "Civil Lines, Prayagraj, Uttar Pradesh - 211001, India",
     gstin: "09AFYFS5388G1ZX",
     email: "info@softlabglobal.com",
-    phone: "+91 9194085890",
+    phone: "+91 9196596975",
     website: "https://softlabglobal.com",
   };
 

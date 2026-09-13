@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertBanner } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ShieldCheck, Lock, Mail, Eye, EyeOff, KeyRound, GraduationCap, UserCheck, Briefcase } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Eye, EyeOff, GraduationCap } from "lucide-react";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
 import Link from "next/link";
 
@@ -18,19 +18,12 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
-  const [loginType, setLoginType] = React.useState<"student" | "staff">("student");
+  const [loginType, setLoginType] = React.useState<"student" | "staff">("staff");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
-
-  const fillCredentials = (identifierVal: string, userPass: string, type: "student" | "staff" = "student") => {
-    setLoginType(type);
-    setEmail(identifierVal);
-    setPassword(userPass);
-    setError(null);
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,15 +44,15 @@ function LoginForm() {
         } else if (res.error.includes("not active")) {
           setError("Your account is not active. Please contact institute administration.");
         } else {
-          setError("Invalid Enrollment Number / Email or password. Please verify your credentials.");
+          setError("Invalid credentials or password. Please verify your email / ID.");
         }
         setIsLoading(false);
         return;
       }
 
-      // Successful login - redirect to role dashboard if callbackUrl is generic
+      // Successful login - redirect to role dashboard
       if (callbackUrl && callbackUrl !== "/" && callbackUrl !== "/login") {
-        router.push(callbackUrl);
+        window.location.href = callbackUrl;
       } else {
         try {
           const sessionRes = await fetch("/api/auth/session");
@@ -67,19 +60,22 @@ function LoginForm() {
           const role = sessionData?.user?.roleCode;
 
           if (role === "STUDENT") {
-            router.push("/student/dashboard");
+            window.location.href = "/student/dashboard";
           } else if (role === "TRAINER") {
-            router.push("/trainer/dashboard");
+            window.location.href = "/trainer/dashboard";
           } else if (role === "COUNSELOR" || role === "TELECALLER") {
-            router.push("/counselor/dashboard");
+            window.location.href = "/counselor/dashboard";
+          } else if (role === "ACCOUNTANT") {
+            window.location.href = "/admin/finance";
+          } else if (role === "HR") {
+            window.location.href = "/admin/staff";
           } else {
-            router.push("/admin/dashboard");
+            window.location.href = "/admin/dashboard";
           }
         } catch {
-          router.push("/student/dashboard");
+          window.location.href = loginType === "student" ? "/student/dashboard" : "/admin/dashboard";
         }
       }
-      router.refresh();
     } catch (err) {
       setError("An unexpected authentication error occurred. Please try again.");
       setIsLoading(false);
@@ -92,10 +88,10 @@ function LoginForm() {
 
       <CardHeader className="space-y-1 text-center pb-3 pt-6">
         <CardTitle className="text-xl font-extrabold text-white">
-          Sign In to LMS Portal
+          Sign In to SoftLab Global
         </CardTitle>
         <CardDescription className="text-xs text-slate-400">
-          Students sign in with their unique Enrollment Number (Student ID)
+          Access institutional portal with your registered credentials
         </CardDescription>
 
         {/* Portal Role Tabs */}
@@ -135,48 +131,6 @@ function LoginForm() {
             </AlertBanner>
           </div>
         )}
-
-        {/* 1-Click Role Access Buttons */}
-        <div className="rounded-xl border border-slate-800 bg-slate-950/60 p-3 space-y-2">
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
-            <KeyRound className="h-3.5 w-3.5" />
-            <span>Instant Demo Access (Click to Fill):</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => fillCredentials("SLG-2026-AIML-001", "Password@123", "student")}
-              className="flex items-center justify-center gap-1 rounded-lg bg-emerald-950/60 px-2 py-2 font-semibold text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/80 transition-all text-[11px]"
-            >
-              <GraduationCap className="w-3 h-3 text-emerald-400" />
-              <span>Srishti (Enrollment No)</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials("SLG-2026-0001", "Student@2026", "student")}
-              className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-emerald-400 border border-slate-700 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all text-[11px]"
-            >
-              <GraduationCap className="w-3 h-3" />
-              <span>Sample Student</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials("trainer@softlabglobal.com", "Trainer@2026", "staff")}
-              className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-sky-400 border border-slate-700 hover:bg-sky-950/50 hover:border-sky-500 transition-all text-[11px]"
-            >
-              <UserCheck className="w-3 h-3" />
-              <span>Trainer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdmin@2026", "staff")}
-              className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-amber-400 border border-slate-700 hover:bg-amber-950/50 hover:border-amber-500 transition-all text-[11px]"
-            >
-              <Briefcase className="w-3 h-3" />
-              <span>Admin</span>
-            </button>
-          </div>
-        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div className="space-y-1.5">
@@ -296,7 +250,7 @@ export default function LoginPage() {
         <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
           Civil Lines Campus: Patrika Chauraha, 13/11/8G, Tashkent Marg, Prayagraj, UP
           <br />
-          Helpline: +91 9194085890 | GSTIN: 09AFYFS5388G1ZX
+          Helpline: +91 9196596975 | GSTIN: 09AFYFS5388G1ZX
         </p>
       </div>
     </div>
