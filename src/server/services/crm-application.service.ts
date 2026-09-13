@@ -2,7 +2,7 @@ import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
-import { ApplicationStage, LeadStatus, Prisma } from "@prisma/client";
+import { ApplicationStage, LeadStatus, LeadSource, Prisma } from "@prisma/client";
 import { CrmConversionService } from "./crm-conversion.service";
 import { normalizeEmail, normalizePhone } from "./crm-lead.service";
 
@@ -20,6 +20,23 @@ export interface CreateApplicationInput {
   state?: string;
   pincode?: string;
   highestQualification?: string;
+}
+
+export interface CreateDirectAdmissionInput {
+  courseId: string;
+  batchId?: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone: string;
+  dateOfBirth?: Date;
+  gender?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  highestQualification?: string;
+  leadId?: string;
+  source?: LeadSource;
 }
 
 export interface UpdateStageInput {
@@ -78,10 +95,22 @@ export class CrmApplicationService {
     }
 
     const hasReadAll = hasPermission(user.permissions, "leads:read_all");
-    if (!hasReadAll && lead.assignedToId !== user.id) {
+    const isAssigned =
+      lead.assignedToId === user.id ||
+      lead.assignedCounselorId === user.id ||
+      !lead.assignedToId;
+
+    if (!hasReadAll && !isAssigned) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "You can only create applications for leads assigned to you.",
+      });
+    }
+
+    if (!lead.assignedToId) {
+      await db.lead.update({
+        where: { id: lead.id },
+        data: { assignedToId: user.id, assignedCounselorId: user.id },
       });
     }
 
@@ -145,6 +174,69 @@ export class CrmApplicationService {
     });
 
     return application;
+  }
+
+  /**
+   * Directly creates an admission application, auto-linking or creating a lead if not provided.
+   */
+  static async createDirectAdmission(user: AuthenticatedUser, input: CreateDirectAdmissionInput) {
+    const canCreate = hasPermission(user.permissions, "admissions:create");
+    if (!canCreate) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to create admission applications.",
+      });
+    }
+
+    let leadId = input.leadId;
+    const cleanPhone = normalizePhone(input.applicantPhone);
+    const cleanEmail = normalizeEmail(input.applicantEmail);
+
+    if (!leadId) {
+      // Find or create lead
+      let lead = await db.lead.findFirst({
+        where: {
+          OR: [{ phone: cleanPhone }, { email: cleanEmail }],
+        },
+      });
+
+      if (!lead) {
+        lead = await db.lead.create({
+          data: {
+            fullName: input.applicantName.trim(),
+            email: cleanEmail,
+            phone: cleanPhone,
+            city: input.city?.trim() || null,
+            qualification: input.highestQualification?.trim() || null,
+            source: input.source || LeadSource.WALK_IN,
+            status: LeadStatus.INTERESTED,
+            qualityScore: "HOT",
+            interestedCourseId: input.courseId,
+            notes: "Direct admission application initiated from Admissions Desk.",
+            assignedToId: user.id,
+            assignedCounselorId: user.id,
+            createdById: user.id,
+          },
+        });
+      }
+      leadId = lead.id;
+    }
+
+    return this.createApplication(user, {
+      leadId,
+      courseId: input.courseId,
+      batchId: input.batchId,
+      applicantName: input.applicantName,
+      applicantEmail: cleanEmail,
+      applicantPhone: cleanPhone,
+      dateOfBirth: input.dateOfBirth,
+      gender: input.gender,
+      address: input.address,
+      city: input.city,
+      state: input.state,
+      pincode: input.pincode,
+      highestQualification: input.highestQualification,
+    });
   }
 
   /**

@@ -115,7 +115,9 @@ function LoginForm() {
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div className="space-y-1.5">
             <Label htmlFor="identifier" className="text-xs font-medium text-slate-300">
-              {loginType === "student" ? "Student Enrollment Number (ID)" : "Institutional Email Address"}
+              {loginType === "student"
+                ? "Enrollment Number, Email, or Mobile"
+                : "Institutional Email or Mobile Number"}
             </Label>
             <div className="relative">
               {loginType === "student" ? (
@@ -126,7 +128,11 @@ function LoginForm() {
               <Input
                 id="identifier"
                 type="text"
-                placeholder={loginType === "student" ? "e.g. SLG-2026-AIML-001" : "name@softlabglobal.com"}
+                placeholder={
+                  loginType === "student"
+                    ? "e.g. SLG-2026-0001, student@..., or 9876543210"
+                    : "counselor@softlabglobal.com or Mobile"
+                }
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -137,7 +143,7 @@ function LoginForm() {
             </div>
             {loginType === "student" && (
               <p className="text-[11px] text-slate-400">
-                Aapka Enrollment Number admission confirmation receipt me diya gaya hai (e.g. <span className="text-emerald-400 font-mono">SLG-2026-AIML-001</span>).
+                You can sign in with your Enrollment ID (e.g. <span className="text-emerald-400 font-mono">SLG-2026-0001</span>), registered email, or mobile.
               </p>
             )}
           </div>
@@ -185,6 +191,88 @@ function LoginForm() {
             )}
           </Button>
         </form>
+
+        {/* Quick Demo Test Credentials Bar */}
+        <div className="pt-2 border-t border-slate-800/80">
+          <p className="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
+            <span>Quick Fill Working Credentials:</span>
+            <span className="text-[10px] text-emerald-400">Click to load</span>
+          </p>
+          <div className="grid grid-cols-3 gap-1 text-[10px]">
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("staff");
+                setEmail("counselor@softlabglobal.com");
+                setPassword("CounselorSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Counselor
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("staff");
+                setEmail("telecaller@softlabglobal.com");
+                setPassword("TelecallerSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Telecaller
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("staff");
+                setEmail("admin@softlabglobal.com");
+                setPassword("SuperAdminSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("student");
+                setEmail("SLG-2026-0001");
+                setPassword("StudentSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Student ID
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("staff");
+                setEmail("trainer@softlabglobal.com");
+                setPassword("TrainerSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Trainer
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLoginType("staff");
+                setEmail("director@softlabglobal.com");
+                setPassword("DirectorSecure2026!");
+                setError(null);
+              }}
+              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
+            >
+              Director
+            </button>
+          </div>
+        </div>
       </CardContent>
 
       <CardFooter className="flex flex-col space-y-2 border-t border-slate-800 bg-slate-950/50 p-4 text-center text-xs text-slate-400">

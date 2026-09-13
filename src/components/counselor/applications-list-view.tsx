@@ -9,13 +9,15 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApplicationStage } from "@prisma/client";
-import { Search, FileText, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, FileText, ChevronLeft, ChevronRight, PlusCircle, GraduationCap } from "lucide-react";
+import { DirectAdmissionDialog } from "./direct-admission-dialog";
 
 interface ApplicationsListViewProps {
   basePath?: string;
 }
 
 export function ApplicationsListView({ basePath = "/counselor/admissions" }: ApplicationsListViewProps) {
+  const [admissionOpen, setAdmissionOpen] = useState(false);
   const [stage, setStage] = useState<ApplicationStage | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -48,6 +50,16 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                 className="pl-9 h-9 text-xs"
               />
             </div>
+
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => setAdmissionOpen(true)}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+            >
+              <PlusCircle className="h-4 w-4" />
+              <span>New Admission Application</span>
+            </Button>
           </div>
 
           {/* Stage Filters */}
@@ -203,6 +215,11 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
           )}
         </CardContent>
       </Card>
+
+      <DirectAdmissionDialog
+        open={admissionOpen}
+        onOpenChange={setAdmissionOpen}
+      />
     </div>
   );
 }

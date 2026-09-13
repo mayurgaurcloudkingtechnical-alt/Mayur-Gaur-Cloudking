@@ -25,6 +25,7 @@ import {
   FileText,
   Clock,
   CreditCard,
+  Share2,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 
@@ -71,6 +72,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
         return [
@@ -78,6 +80,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
+          { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
         return [

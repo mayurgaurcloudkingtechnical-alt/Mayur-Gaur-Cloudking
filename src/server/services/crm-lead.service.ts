@@ -18,6 +18,22 @@ export interface PublicEnquiryInput {
   honeypot?: string;
 }
 
+export interface CreateLeadManualInput {
+  fullName: string;
+  email?: string;
+  phone: string;
+  city?: string;
+  qualification?: string;
+  source?: LeadSource;
+  qualityScore?: string;
+  interestedCourseId?: string;
+  notes?: string;
+  assignedToId?: string;
+  assignedCounselorId?: string;
+  assignedTelecallerId?: string;
+  nextFollowUp?: Date | null;
+}
+
 export interface ListLeadsInput {
   status?: LeadStatus;
   search?: string;
@@ -133,9 +149,18 @@ export class CrmLeadService {
     const where: Prisma.LeadWhereInput = {};
 
     if (!hasReadAll) {
-      where.assignedToId = user.id;
+      where.OR = [
+        { assignedToId: user.id },
+        { assignedCounselorId: user.id },
+        { assignedTelecallerId: user.id },
+        { assignedToId: null },
+      ];
     } else if (input.assignedToId) {
-      where.assignedToId = input.assignedToId;
+      where.OR = [
+        { assignedToId: input.assignedToId },
+        { assignedCounselorId: input.assignedToId },
+        { assignedTelecallerId: input.assignedToId },
+      ];
     }
 
     if (input.status) {
@@ -383,5 +408,243 @@ export class CrmLeadService {
     });
 
     return updatedLead;
+  }
+
+  /**
+   * Manually creates a lead by Counselor, Telecaller, or Administrator.
+   */
+  static async createLead(user: AuthenticatedUser, input: CreateLeadManualInput) {
+    const canCreate = hasPermission(user.permissions, "leads:create");
+    if (!canCreate) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to create leads.",
+      });
+    }
+
+    const cleanPhone = normalizePhone(input.phone);
+    const cleanEmail = input.email && input.email.trim().length > 0
+      ? normalizeEmail(input.email)
+      : `${cleanPhone}@lead.softlabglobal.com`;
+
+    // Check duplicate
+    const existing = await db.lead.findFirst({
+      where: {
+        OR: [
+          { phone: cleanPhone },
+          ...(cleanEmail ? [{ email: cleanEmail }] : []),
+        ],
+      },
+    });
+
+    if (existing) {
+      const updatedNotes = input.notes
+        ? `${existing.notes || ""}\n[Manual Re-inquiry by ${user.firstName} ${user.lastName} on ${new Date().toISOString()}]: ${input.notes}`.trim()
+        : existing.notes;
+
+      const updated = await db.lead.update({
+        where: { id: existing.id },
+        data: {
+          notes: updatedNotes,
+          interestedCourseId: input.interestedCourseId || existing.interestedCourseId,
+          city: input.city || existing.city,
+          qualification: input.qualification || existing.qualification,
+          nextFollowUp: input.nextFollowUp || existing.nextFollowUp,
+        },
+        include: {
+          course: { select: { id: true, title: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true } },
+        },
+      });
+
+      await db.leadActivity.create({
+        data: {
+          leadId: existing.id,
+          userId: user.id,
+          activityType: "NOTE_ADDED",
+          disposition: "DUPLICATE_UPDATED",
+          notes: `Updated lead via manual entry by ${user.firstName} ${user.lastName}.`,
+        },
+      });
+
+      return { lead: updated, isNew: false };
+    }
+
+    const assignedToId = input.assignedToId || user.id;
+    const assignedCounselorId = input.assignedCounselorId || (user.roleCode === "COUNSELOR" ? user.id : null);
+    const assignedTelecallerId = input.assignedTelecallerId || (user.roleCode === "TELECALLER" ? user.id : null);
+
+    const lead = await db.lead.create({
+      data: {
+        fullName: input.fullName.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        city: input.city?.trim() || null,
+        qualification: input.qualification?.trim() || null,
+        source: input.source || LeadSource.WALK_IN,
+        status: LeadStatus.NEW,
+        qualityScore: input.qualityScore || "WARM",
+        interestedCourseId: input.interestedCourseId || null,
+        notes: input.notes?.trim() || null,
+        assignedToId,
+        assignedCounselorId,
+        assignedTelecallerId,
+        nextFollowUp: input.nextFollowUp || null,
+        createdById: user.id,
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: lead.id,
+        userId: user.id,
+        activityType: "MANUAL_CREATED",
+        disposition: "NEW_MANUAL_LEAD",
+        notes: `Lead manually entered by ${user.firstName} ${user.lastName} (${user.roleCode}). Source: ${lead.source}.`,
+      },
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "LEAD_MANUALLY_CREATED",
+      resourceType: "Lead",
+      resourceId: lead.id,
+      newData: { email: cleanEmail, phone: cleanPhone, source: lead.source },
+    });
+
+    return { lead, isNew: true };
+  }
+
+  /**
+   * Retrieves pipeline Kanban view of leads grouped by stage.
+   */
+  static async getPipelineOverview(user: AuthenticatedUser, courseId?: string) {
+    const hasReadAll = hasPermission(user.permissions, "leads:read_all");
+    const hasReadOwn = hasPermission(user.permissions, "leads:read_own");
+
+    if (!hasReadAll && !hasReadOwn) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view leads pipeline.",
+      });
+    }
+
+    const where: Prisma.LeadWhereInput = {};
+    if (!hasReadAll) {
+      where.OR = [
+        { assignedToId: user.id },
+        { assignedCounselorId: user.id },
+        { assignedTelecallerId: user.id },
+        { assignedToId: null },
+      ];
+    }
+
+    if (courseId) {
+      where.interestedCourseId = courseId;
+    }
+
+    const leads = await db.lead.findMany({
+      where,
+      orderBy: [{ nextFollowUp: "asc" }, { createdAt: "desc" }],
+      include: {
+        course: { select: { id: true, title: true, baseFee: true } },
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+        _count: { select: { followUps: true, applications: true } },
+      },
+    });
+
+    const pipelineStages: Record<LeadStatus, typeof leads> = {
+      [LeadStatus.NEW]: [],
+      [LeadStatus.CONTACTED]: [],
+      [LeadStatus.FOLLOW_UP]: [],
+      [LeadStatus.INTERESTED]: [],
+      [LeadStatus.DEMO]: [],
+      [LeadStatus.NEGOTIATION]: [],
+      [LeadStatus.ADMITTED]: [],
+      [LeadStatus.LOST]: [],
+    };
+
+    for (const lead of leads) {
+      if (pipelineStages[lead.status]) {
+        pipelineStages[lead.status].push(lead);
+      } else {
+        pipelineStages[LeadStatus.NEW].push(lead);
+      }
+    }
+
+    const counts: Record<LeadStatus, number> = {
+      [LeadStatus.NEW]: pipelineStages[LeadStatus.NEW].length,
+      [LeadStatus.CONTACTED]: pipelineStages[LeadStatus.CONTACTED].length,
+      [LeadStatus.FOLLOW_UP]: pipelineStages[LeadStatus.FOLLOW_UP].length,
+      [LeadStatus.INTERESTED]: pipelineStages[LeadStatus.INTERESTED].length,
+      [LeadStatus.DEMO]: pipelineStages[LeadStatus.DEMO].length,
+      [LeadStatus.NEGOTIATION]: pipelineStages[LeadStatus.NEGOTIATION].length,
+      [LeadStatus.ADMITTED]: pipelineStages[LeadStatus.ADMITTED].length,
+      [LeadStatus.LOST]: pipelineStages[LeadStatus.LOST].length,
+    };
+
+    return {
+      total: leads.length,
+      stages: pipelineStages,
+      counts,
+    };
+  }
+
+  /**
+   * One-click stage progression for Kanban cards.
+   */
+  static async updateLeadStage(user: AuthenticatedUser, leadId: string, newStatus: LeadStatus) {
+    const hasUpdate = hasPermission(user.permissions, "leads:update");
+    if (!hasUpdate) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to update leads.",
+      });
+    }
+
+    const lead = await db.lead.findUnique({
+      where: { id: leadId },
+    });
+
+    if (!lead) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Lead with ID '${leadId}' not found.`,
+      });
+    }
+
+    const updated = await db.lead.update({
+      where: { id: leadId },
+      data: { status: newStatus },
+      include: {
+        course: { select: { id: true, title: true } },
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId,
+        userId: user.id,
+        activityType: "STATUS_CHANGE",
+        disposition: newStatus,
+        notes: `Stage changed from ${lead.status} to ${newStatus} by ${user.firstName} ${user.lastName}.`,
+      },
+    });
+
+    await db.followUpHistory.create({
+      data: {
+        leadId,
+        type: FollowUpType.STATUS_CHANGE,
+        notes: `Pipeline stage updated to ${newStatus}`,
+        performedById: user.id,
+      },
+    });
+
+    return updated;
   }
 }

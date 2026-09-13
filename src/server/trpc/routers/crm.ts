@@ -1,8 +1,9 @@
 import { router, publicProcedure, requireRoleProcedure } from "../init";
 import { z } from "zod";
-import { UserRoleCode, LeadStatus, FollowUpType, ApplicationStage } from "@prisma/client";
+import { UserRoleCode, LeadStatus, LeadSource, FollowUpType, ApplicationStage } from "@prisma/client";
 import { CrmLeadService } from "@/server/services/crm-lead.service";
 import { CrmApplicationService } from "@/server/services/crm-application.service";
+import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 
@@ -264,5 +265,160 @@ export const crmRouter = router({
     .input(z.object({ applicationId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       return CrmApplicationService.convertApplicationToStudent(asAuthUser(ctx.user), input.applicationId);
+    }),
+
+  /**
+   * Manually creates a lead by Counselor, Telecaller, or Administrator.
+   */
+  createLead: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
+        email: z.string().email().optional().or(z.literal("")),
+        phone: z.string().min(10, "Mobile number must be at least 10 digits").max(15),
+        city: z.string().optional(),
+        qualification: z.string().optional(),
+        source: z.nativeEnum(LeadSource).optional(),
+        qualityScore: z.string().optional(),
+        interestedCourseId: z.string().optional(),
+        notes: z.string().optional(),
+        assignedToId: z.string().optional(),
+        assignedCounselorId: z.string().optional(),
+        assignedTelecallerId: z.string().optional(),
+        nextFollowUp: z.date().nullable().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmLeadService.createLead(asAuthUser(ctx.user), {
+        ...input,
+        email: input.email || undefined,
+      });
+    }),
+
+  /**
+   * Directly creates an admission application, auto-linking or creating a lead if not provided.
+   */
+  createDirectAdmission: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        courseId: z.string(),
+        batchId: z.string().optional(),
+        applicantName: z.string().min(2, "Applicant name required"),
+        applicantEmail: z.string().email("Valid email required"),
+        applicantPhone: z.string().min(10, "10-digit mobile required"),
+        dateOfBirth: z.date().optional(),
+        gender: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        pincode: z.string().optional(),
+        highestQualification: z.string().optional(),
+        leadId: z.string().optional(),
+        source: z.nativeEnum(LeadSource).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.createDirectAdmission(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Retrieves pipeline Kanban view of leads grouped by stage.
+   */
+  getPipelineOverview: requireRoleProcedure(crmRoles)
+    .input(z.object({ courseId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      return CrmLeadService.getPipelineOverview(asAuthUser(ctx.user), input?.courseId);
+    }),
+
+  /**
+   * One-click stage progression for Kanban cards.
+   */
+  updateLeadStage: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        stage: z.nativeEnum(LeadStatus),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmLeadService.updateLeadStage(asAuthUser(ctx.user), input.leadId, input.stage);
+    }),
+
+  /**
+   * Retrieves marketing integration status and recent ingested leads.
+   */
+  getMarketingIntegrationStatus: requireRoleProcedure(crmRoles).query(async () => {
+    const [totalLeads, channelStats, recentLeads] = await Promise.all([
+      db.lead.count(),
+      db.lead.groupBy({
+        by: ["source"],
+        _count: { id: true },
+      }),
+      db.lead.findMany({
+        take: 15,
+        orderBy: { createdAt: "desc" },
+        include: {
+          course: { select: { id: true, title: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true } },
+        },
+      }),
+    ]);
+
+    const channelCounts: Record<string, number> = {};
+    for (const item of channelStats) {
+      channelCounts[item.source] = item._count.id;
+    }
+
+    return {
+      totalLeads,
+      channelCounts,
+      recentLeads,
+      webhookUrls: {
+        justdial: "/api/webhooks/justdial",
+        meta: "/api/webhooks/meta",
+        googleAds: "/api/webhooks/google-ads",
+        whatsapp: "/api/webhooks/whatsapp",
+        universal: "/api/webhooks/leads",
+      },
+    };
+  }),
+
+  /**
+   * Test simulator to verify webhook ingestion directly from the UI.
+   */
+  testIngestLead: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        platform: z.enum(["JUSTDIAL", "META", "GOOGLE_ADS", "WHATSAPP", "UNIVERSAL"]),
+        fullName: z.string(),
+        phone: z.string(),
+        email: z.string().optional(),
+        city: z.string().optional(),
+        courseName: z.string().optional(),
+        campaignName: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const sourceMap: Record<string, LeadSource> = {
+        JUSTDIAL: LeadSource.JUSTDIAL,
+        META: LeadSource.META_ADS_FB,
+        GOOGLE_ADS: LeadSource.GOOGLE_ADS,
+        WHATSAPP: LeadSource.WHATSAPP,
+        UNIVERSAL: LeadSource.WEBSITE,
+      };
+
+      const source = sourceMap[input.platform] || LeadSource.WEBSITE;
+
+      return CrmIngestionService.ingestLead({
+        fullName: input.fullName,
+        phone: input.phone,
+        email: input.email,
+        city: input.city || "Prayagraj",
+        source,
+        interestedCourseName: input.courseName || "Full Stack Web Development",
+        campaignName: input.campaignName || `Test Campaign ${input.platform}`,
+        notes: input.notes || `Simulated live lead from ${input.platform} testing panel.`,
+      });
     }),
 });

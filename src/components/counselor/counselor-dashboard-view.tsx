@@ -6,8 +6,10 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle } from "lucide-react";
+import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle, PlusCircle, GraduationCap, Share2 } from "lucide-react";
 import { LeadStatus } from "@prisma/client";
+import { CreateLeadDialog } from "./create-lead-dialog";
+import { DirectAdmissionDialog } from "./direct-admission-dialog";
 
 interface CounselorDashboardViewProps {
   maxDiscount: number;
@@ -15,6 +17,9 @@ interface CounselorDashboardViewProps {
 }
 
 export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashboardViewProps) {
+  const [createLeadOpen, setCreateLeadOpen] = React.useState(false);
+  const [admissionOpen, setAdmissionOpen] = React.useState(false);
+
   const { data: stats, isLoading: isLoadingStats } = api.crm.getStats.useQuery();
   const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery({
     limit: 5,
@@ -25,6 +30,42 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
 
   return (
     <div className="space-y-6">
+      {/* Quick Action Toolbar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
+        <div>
+          <h3 className="text-sm font-bold text-slate-900">Counseling & Admissions Desk</h3>
+          <p className="text-xs text-slate-500">Quickly capture walk-ins, log leads, or initiate student enrollment.</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setCreateLeadOpen(true)}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+          >
+            <PlusCircle className="h-4 w-4" />
+            <span>Add Lead</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setAdmissionOpen(true)}
+            className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+          >
+            <GraduationCap className="h-4 w-4" />
+            <span>New Admission</span>
+          </Button>
+
+          <Button asChild size="sm" variant="outline" className="text-xs font-semibold flex items-center gap-1.5">
+            <Link href="/counselor/marketing">
+              <Share2 className="h-3.5 w-3.5 text-blue-600" />
+              <span>Ads & Webhooks</span>
+            </Link>
+          </Button>
+        </div>
+      </div>
+
       {/* Alert if follow-ups are due */}
       {dueCount > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">
@@ -192,6 +233,18 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
           )}
         </CardContent>
       </Card>
+
+      {/* Add Lead Modal */}
+      <CreateLeadDialog
+        open={createLeadOpen}
+        onOpenChange={setCreateLeadOpen}
+      />
+
+      {/* Direct Admission Modal */}
+      <DirectAdmissionDialog
+        open={admissionOpen}
+        onOpenChange={setAdmissionOpen}
+      />
     </div>
   );
 }
