@@ -18,14 +18,16 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/";
 
+  const [loginType, setLoginType] = React.useState<"student" | "staff">("student");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
 
-  const fillCredentials = (userEmail: string, userPass: string) => {
-    setEmail(userEmail);
+  const fillCredentials = (identifierVal: string, userPass: string, type: "student" | "staff" = "student") => {
+    setLoginType(type);
+    setEmail(identifierVal);
     setPassword(userPass);
     setError(null);
   };
@@ -37,7 +39,8 @@ function LoginForm() {
 
     try {
       const res = await signIn("credentials", {
-        email: email.trim().toLowerCase(),
+        identifier: email.trim(),
+        email: email.trim(),
         password,
         redirect: false,
       });
@@ -48,7 +51,7 @@ function LoginForm() {
         } else if (res.error.includes("not active")) {
           setError("Your account is not active. Please contact institute administration.");
         } else {
-          setError("Invalid email or password. Please verify your credentials.");
+          setError("Invalid Enrollment Number / Email or password. Please verify your credentials.");
         }
         setIsLoading(false);
         return;
@@ -87,13 +90,41 @@ function LoginForm() {
     <Card className="border-slate-800 bg-slate-900/90 backdrop-blur-xl shadow-2xl text-white rounded-2xl overflow-hidden">
       <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-400" />
 
-      <CardHeader className="space-y-1 text-center pb-4 pt-6">
+      <CardHeader className="space-y-1 text-center pb-3 pt-6">
         <CardTitle className="text-xl font-extrabold text-white">
           Sign In to LMS Portal
         </CardTitle>
         <CardDescription className="text-xs text-slate-400">
-          Enter your institutional credentials to access your courses & dashboard
+          Students sign in with their unique Enrollment Number (Student ID)
         </CardDescription>
+
+        {/* Portal Role Tabs */}
+        <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950/80 rounded-xl border border-slate-800 mt-3">
+          <button
+            type="button"
+            onClick={() => { setLoginType("student"); setError(null); }}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+              loginType === "student"
+                ? "bg-emerald-600 text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <GraduationCap className="h-3.5 w-3.5" />
+            <span>Student Portal</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => { setLoginType("staff"); setError(null); }}
+            className={`flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all ${
+              loginType === "staff"
+                ? "bg-slate-800 text-white shadow-sm border border-slate-700"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <ShieldCheck className="h-3.5 w-3.5" />
+            <span>Staff & Admin</span>
+          </button>
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -114,15 +145,15 @@ function LoginForm() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => fillCredentials("srishti.sharma@softlabglobal.com", "Password@123")}
+              onClick={() => fillCredentials("SLG-2026-AIML-001", "Password@123", "student")}
               className="flex items-center justify-center gap-1 rounded-lg bg-emerald-950/60 px-2 py-2 font-semibold text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/80 transition-all text-[11px]"
             >
               <GraduationCap className="w-3 h-3 text-emerald-400" />
-              <span>Srishti (Student)</span>
+              <span>Srishti (Enrollment No)</span>
             </button>
             <button
               type="button"
-              onClick={() => fillCredentials("student@softlabglobal.com", "Student@2026")}
+              onClick={() => fillCredentials("SLG-2026-0001", "Student@2026", "student")}
               className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-emerald-400 border border-slate-700 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all text-[11px]"
             >
               <GraduationCap className="w-3 h-3" />
@@ -130,7 +161,7 @@ function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={() => fillCredentials("trainer@softlabglobal.com", "Trainer@2026")}
+              onClick={() => fillCredentials("trainer@softlabglobal.com", "Trainer@2026", "staff")}
               className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-sky-400 border border-slate-700 hover:bg-sky-950/50 hover:border-sky-500 transition-all text-[11px]"
             >
               <UserCheck className="w-3 h-3" />
@@ -138,7 +169,7 @@ function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdmin@2026")}
+              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdmin@2026", "staff")}
               className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-amber-400 border border-slate-700 hover:bg-amber-950/50 hover:border-amber-500 transition-all text-[11px]"
             >
               <Briefcase className="w-3 h-3" />
@@ -149,21 +180,32 @@ function LoginForm() {
 
         <form onSubmit={handleSubmit} className="space-y-4 pt-1">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-medium text-slate-300">Email address</Label>
+            <Label htmlFor="identifier" className="text-xs font-medium text-slate-300">
+              {loginType === "student" ? "Student Enrollment Number (ID)" : "Institutional Email Address"}
+            </Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+              {loginType === "student" ? (
+                <GraduationCap className="absolute left-3 top-3 h-4 w-4 text-emerald-500" />
+              ) : (
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
+              )}
               <Input
-                id="email"
-                type="email"
-                placeholder="name@softlabglobal.com"
+                id="identifier"
+                type="text"
+                placeholder={loginType === "student" ? "e.g. SLG-2026-AIML-001" : "name@softlabglobal.com"}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                autoComplete="email"
+                autoComplete="username"
                 className="pl-9 bg-slate-950/60 border-slate-800 text-white placeholder:text-slate-500 text-xs h-10 focus-visible:ring-emerald-500"
                 disabled={isLoading}
               />
             </div>
+            {loginType === "student" && (
+              <p className="text-[11px] text-slate-400">
+                Aapka Enrollment Number admission confirmation receipt me diya gaya hai (e.g. <span className="text-emerald-400 font-mono">SLG-2026-AIML-001</span>).
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">

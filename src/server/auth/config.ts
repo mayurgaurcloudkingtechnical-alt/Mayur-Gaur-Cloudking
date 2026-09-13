@@ -8,7 +8,8 @@ import { RateLimiter } from "@/server/lib/rate-limiter";
 import { UserRoleCode } from "@prisma/client";
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().optional(),
+  email: z.string().optional(),
   password: z.string().min(1),
 });
 
@@ -27,7 +28,8 @@ export const authConfig: NextAuthConfig = {
     CredentialsProvider({
       name: "credentials",
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Enrollment Number or Email", type: "text" },
+        email: { label: "Email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials, req) {
@@ -36,39 +38,71 @@ export const authConfig: NextAuthConfig = {
           return null;
         }
 
-        const { email, password } = parsed.data;
-        const normalizedEmail = email.toLowerCase().trim();
+        const rawIdentifier = (parsed.data.identifier || parsed.data.email || "").trim();
+        const { password } = parsed.data;
 
-        // Rate limiting check: 5 attempts per 15 mins per email
-        const rateCheck = RateLimiter.check(`login:${normalizedEmail}`, 5, 15 * 60 * 1000);
+        if (!rawIdentifier) {
+          return null;
+        }
+
+        // Rate limiting check: 5 attempts per 15 mins per identifier
+        const rateCheck = RateLimiter.check(`login:${rawIdentifier.toLowerCase()}`, 5, 15 * 60 * 1000);
         if (!rateCheck.allowed) {
           await AuditService.log({
             action: "AUTH_LOGIN_LOCKED_OUT",
             resourceType: "User",
-            resourceId: normalizedEmail,
+            resourceId: rawIdentifier,
             newData: { reason: "Rate limit exceeded" },
           });
           throw new Error("Too many failed attempts. Please try again later.");
         }
 
-        const user = await db.user.findUnique({
-          where: { email: normalizedEmail },
+        let user = null;
+
+        // 1. Try finding by Student Enrollment Number (studentId)
+        const studentProfile = await db.studentProfile.findFirst({
+          where: {
+            studentId: { equals: rawIdentifier, mode: "insensitive" },
+          },
           include: {
-            role: {
-              select: {
-                permissions: true,
-                maxDiscountPercent: true,
+            user: {
+              include: {
+                role: {
+                  select: {
+                    permissions: true,
+                    maxDiscountPercent: true,
+                  },
+                },
               },
             },
           },
         });
 
+        if (studentProfile?.user) {
+          user = studentProfile.user;
+        } else {
+          // 2. Fallback: Search by email (for Staff, Trainers, Admins, or student email)
+          user = await db.user.findFirst({
+            where: {
+              email: { equals: rawIdentifier.toLowerCase(), mode: "insensitive" },
+            },
+            include: {
+              role: {
+                select: {
+                  permissions: true,
+                  maxDiscountPercent: true,
+                },
+              },
+            },
+          });
+        }
+
         if (!user || !user.passwordHash) {
           await AuditService.log({
             action: "AUTH_LOGIN_FAILED",
             resourceType: "User",
-            resourceId: normalizedEmail,
-            newData: { reason: "User not found" },
+            resourceId: rawIdentifier,
+            newData: { reason: "User or Enrollment Number not found" },
           });
           return null;
         }
@@ -96,7 +130,7 @@ export const authConfig: NextAuthConfig = {
         }
 
         // Login successful: reset rate limiter and update lastLoginAt
-        RateLimiter.reset(`login:${normalizedEmail}`);
+        RateLimiter.reset(`login:${rawIdentifier.toLowerCase()}`);
         await db.user.update({
           where: { id: user.id },
           data: { lastLoginAt: new Date() },
