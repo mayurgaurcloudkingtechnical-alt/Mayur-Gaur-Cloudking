@@ -4,6 +4,9 @@ import { PublicNavbar } from "@/components/public/public-navbar";
 import { PublicFooter } from "@/components/public/public-footer";
 import { SITE_CONFIG } from "@/lib/constants/site";
 
+import { TopAnnouncementBar } from "@/components/public/top-announcement-bar";
+import { FloatingWhatsApp } from "@/components/public/floating-whatsapp";
+
 export default async function PublicLayout({
   children,
 }: {
@@ -36,9 +39,11 @@ export default async function PublicLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
+      <TopAnnouncementBar />
       <PublicNavbar userRole={session?.user?.roleCode ?? null} />
       <main className="flex-1">{children}</main>
       <PublicFooter />
+      <FloatingWhatsApp />
     </div>
   );
 }

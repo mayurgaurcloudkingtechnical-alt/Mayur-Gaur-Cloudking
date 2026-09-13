@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: softlab_global_app
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://softlab:secure_password_2026@postgres:5432/softlab_db?schema=public
+      - DIRECT_URL=postgresql://softlab:secure_password_2026@postgres:5432/softlab_db?schema=public
+      - AUTH_SECRET=softlab_production_secret_key_32_characters_minimum_len_2026
+      - NEXTAUTH_URL=https://softlabglobal.com
+      - PORT=3000
+    depends_on:
+      - postgres
+    ports:
+      - "3000:3000"
+    networks:
+      - softlab_net
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: softlab_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: softlab
+      POSTGRES_PASSWORD: secure_password_2026
+      POSTGRES_DB: softlab_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - softlab_net
+
+networks:
+  softlab_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
