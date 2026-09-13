@@ -50,31 +50,11 @@ function LoginForm() {
         return;
       }
 
-      // Successful login - redirect to role dashboard
+      // Successful login - redirect to server-side dispatcher or callbackUrl
       if (callbackUrl && callbackUrl !== "/" && callbackUrl !== "/login") {
         window.location.href = callbackUrl;
       } else {
-        try {
-          const sessionRes = await fetch("/api/auth/session");
-          const sessionData = await sessionRes.json();
-          const role = sessionData?.user?.roleCode;
-
-          if (role === "STUDENT") {
-            window.location.href = "/student/dashboard";
-          } else if (role === "TRAINER") {
-            window.location.href = "/trainer/dashboard";
-          } else if (role === "COUNSELOR" || role === "TELECALLER") {
-            window.location.href = "/counselor/dashboard";
-          } else if (role === "ACCOUNTANT") {
-            window.location.href = "/admin/finance";
-          } else if (role === "HR") {
-            window.location.href = "/admin/staff";
-          } else {
-            window.location.href = "/admin/dashboard";
-          }
-        } catch {
-          window.location.href = loginType === "student" ? "/student/dashboard" : "/admin/dashboard";
-        }
+        window.location.href = "/dashboard";
       }
     } catch (err) {
       setError("An unexpected authentication error occurred. Please try again.");
