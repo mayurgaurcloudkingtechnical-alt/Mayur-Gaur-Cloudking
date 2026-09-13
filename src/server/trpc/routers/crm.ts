@@ -19,6 +19,7 @@ function asAuthUser(user: any): AuthenticatedUser {
 
 const crmRoles = [
   UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
   UserRoleCode.MANAGER,
   UserRoleCode.COUNSELOR,
@@ -27,6 +28,7 @@ const crmRoles = [
 
 const admissionRoles = [
   UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
   UserRoleCode.MANAGER,
   UserRoleCode.COUNSELOR,

@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
+import { AiMl3DVisual } from "@/components/public/ai-ml-3d-visual";
 import {
   Sparkles,
   Cpu,
@@ -11,22 +12,12 @@ import {
   Layers,
   ArrowRight,
   CheckCircle2,
-  Download,
-  ShieldCheck,
   Award,
   Zap,
   Bot,
-  Flame,
-  FileCode2,
-  Calendar,
-  MessageCircle,
 } from "lucide-react";
-import { SITE_CONFIG } from "@/lib/constants/site";
 
 export function AiMlShowcase() {
-  const whatsappUrl = `https://wa.me/919196596975?text=${encodeURIComponent(
-    "Hello SoftLab Global, I want to inquire about the AI & Machine Learning Master Course syllabus and ₹5,000 down payment admission."
-  )}`;
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white py-16 sm:py-24 border-y border-slate-800">
@@ -131,98 +122,9 @@ export function AiMlShowcase() {
             </div>
           </div>
 
-          {/* Right: Admission Card & Flexible Payment Model */}
-          <div className="lg:col-span-5">
-            <div className="rounded-3xl bg-slate-900/95 border-2 border-emerald-500/40 p-6 sm:p-8 shadow-2xl shadow-emerald-950/80 relative overflow-hidden backdrop-blur-xl">
-              {/* Highlight Ribbon */}
-              <div className="absolute top-0 right-0 bg-gradient-to-l from-emerald-600 to-teal-600 text-white text-[10px] font-extrabold uppercase tracking-widest px-4 py-1.5 rounded-bl-xl shadow">
-                Enrolling Now: Batch AIML-2026-B1
-              </div>
-
-              <div className="space-y-4 pt-2">
-                <div className="space-y-1">
-                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
-                    Cohort Details & Fee Plan
-                  </span>
-                  <h3 className="text-2xl font-black text-white">
-                    AI & ML Master Certification
-                  </h3>
-                  <p className="text-xs text-slate-400">
-                    Full-time & Weekend Batches • Lab & Live Online • 6 Months
-                  </p>
-                </div>
-
-                {/* Pricing Box */}
-                <div className="rounded-2xl bg-slate-950/90 border border-slate-800 p-4 space-y-3">
-                  <div className="flex items-baseline justify-between border-b border-slate-800 pb-2.5">
-                    <div>
-                      <p className="text-xs text-slate-400">Full Program Tuition</p>
-                      <p className="text-2xl font-black text-white">₹90,000</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-[11px] text-emerald-400 font-bold">Seat Booking Down Payment</p>
-                      <p className="text-xl font-extrabold text-emerald-400">₹5,000</p>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1.5 text-xs text-slate-300">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Balance in flexible monthly installments (₹42,500 x 2)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>Instant LMS Student Portal Credentials & Lab Access</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>1-on-1 Dedicated Faculty Mentorship</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Call to Actions */}
-                <div className="space-y-2.5 pt-2">
-                  <Button
-                    onClick={() => openCareerCounselingModal("AI & Machine Learning Complete Course")}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold h-11 text-xs shadow-lg shadow-emerald-900/40 rounded-xl"
-                  >
-                    <div className="flex items-center justify-center gap-2">
-                      <Calendar className="w-4 h-4" />
-                      <span>Book Free AI/ML Career Counseling</span>
-                    </div>
-                  </Button>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold h-10 rounded-xl"
-                    >
-                      <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-1.5 text-[#25D366]">
-                        <MessageCircle className="w-3.5 h-3.5" />
-                        <span>WhatsApp Desk</span>
-                      </a>
-                    </Button>
-
-                    <Button
-                      asChild
-                      variant="outline"
-                      className="border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold h-10 rounded-xl"
-                    >
-                      <Link href="/courses" className="flex items-center justify-center gap-1.5">
-                        <span>All Courses</span>
-                        <ArrowRight className="w-3.5 h-3.5" />
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-
-                <p className="text-[10px] text-center text-slate-500 pt-1">
-                  Inquiries helpline: <span className="text-slate-300 font-semibold">+91 9196596975</span> • Email: <span className="text-slate-300 font-semibold">info@softlabglobal.com</span>
-                </p>
-              </div>
-            </div>
+          {/* Right: Premium 3D AI/ML & Cloud Holographic Technology Visual */}
+          <div className="lg:col-span-5 flex items-center justify-center">
+            <AiMl3DVisual />
           </div>
         </div>
       </div>

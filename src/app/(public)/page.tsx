@@ -138,7 +138,7 @@ export default async function HomePage() {
                 Master industry-standard software engineering, AI/ML, Cloud DevOps, and Cyber Security with live production projects, direct architect reviews, and guaranteed placement drives.
               </p>
 
-              {/* Key Bullet Highlights (Similar to Cloudking Technical) */}
+              {/* Key Bullet Highlights */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 text-xs sm:text-sm">
                 {[
                   "100% Job Placement in Top Companies",

@@ -39,7 +39,7 @@ export class SystemHealthService {
     try {
       await db.$queryRaw`SELECT 1`;
       latencyMs = Math.round(performance.now() - start);
-      dbStatus = latencyMs < 200 ? "CONNECTED" : "DEGRADED";
+      dbStatus = latencyMs < 2500 ? "CONNECTED" : "DEGRADED";
       // 25 models exist across Days 1-14
       modelCount = 25;
     } catch (err) {
@@ -48,21 +48,26 @@ export class SystemHealthService {
       latencyMs = -1;
     }
 
-    const requiredEnvs = [
-      "DATABASE_URL",
-      "NEXTAUTH_SECRET",
-      "NEXTAUTH_URL",
-    ];
-
+    const hasAuthSecret = Boolean(process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET);
     const configuredEnvVars: string[] = [];
     const missingEnvVars: string[] = [];
 
-    for (const key of requiredEnvs) {
-      if (process.env[key]) {
-        configuredEnvVars.push(key);
-      } else {
-        missingEnvVars.push(key);
-      }
+    if (process.env.DATABASE_URL) {
+      configuredEnvVars.push("DATABASE_URL");
+    } else {
+      missingEnvVars.push("DATABASE_URL");
+    }
+
+    if (hasAuthSecret) {
+      configuredEnvVars.push(process.env.AUTH_SECRET ? "AUTH_SECRET" : "NEXTAUTH_SECRET");
+    } else {
+      missingEnvVars.push("AUTH_SECRET");
+    }
+
+    if (process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL) {
+      configuredEnvVars.push("NEXTAUTH_URL");
+    } else {
+      missingEnvVars.push("NEXTAUTH_URL");
     }
 
     const mem = process.memoryUsage();

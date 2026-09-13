@@ -48,6 +48,13 @@ export const analyticsRouter = router({
   }),
 
   /**
+   * Retrieves comprehensive marketing channels, campaign attribution, and conversion funnels
+   */
+  getMarketingAnalytics: requireRoleProcedure(executiveRoles).query(async () => {
+    return AnalyticsService.getMarketingAnalytics();
+  }),
+
+  /**
    * Generates sanitized CSV report payloads and logs audit export records
    */
   exportAuditReport: requireRoleProcedure(executiveRoles)

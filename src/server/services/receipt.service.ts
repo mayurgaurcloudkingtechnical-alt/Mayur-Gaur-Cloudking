@@ -48,11 +48,11 @@ export interface FormattedReceiptData {
 export class ReceiptService {
   static readonly COMPANY_INFO = {
     name: "SOFTLAB GLOBAL",
-    tagline: "Industrial Software & Technology Training Institute",
-    address: "Civil Lines, Prayagraj, Uttar Pradesh - 211001, India",
+    tagline: "Center for Excellence • Software Development, Cloud & AI",
+    address: "Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, UP – 211001",
     gstin: "09AFYFS5388G1ZX",
     email: "info@softlabglobal.com",
-    phone: "+91 9196596975",
+    phone: "+91 9194085890",
     website: "https://softlabglobal.com",
   };
 

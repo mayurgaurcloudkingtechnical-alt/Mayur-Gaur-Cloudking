@@ -10,7 +10,10 @@ export interface PublicEnquiryInput {
   email: string;
   phone: string;
   city?: string;
+  qualification?: string;
   interestedCourseId?: string;
+  source?: LeadSource;
+  campaignName?: string;
   notes?: string;
   honeypot?: string;
 }
@@ -68,16 +71,17 @@ export class CrmLeadService {
     }
 
     const rateKey = `crm:enquiry:${ipAddress}`;
-    const rateCheck = RateLimiter.check(rateKey, 5, 15 * 60 * 1000);
+    const rateCheck = RateLimiter.check(rateKey, 15, 15 * 60 * 1000);
     if (!rateCheck.allowed) {
       throw new TRPCError({
         code: "TOO_MANY_REQUESTS",
-        message: "Too many enquiry attempts. Please wait 15 minutes before submitting again.",
+        message: "Too many enquiry attempts. Please wait a few minutes before submitting again.",
       });
     }
 
     const cleanPhone = normalizePhone(input.phone);
     const cleanEmail = normalizeEmail(input.email);
+    const leadSource = input.source || LeadSource.WEBSITE;
 
     const lead = await db.lead.create({
       data: {
@@ -85,7 +89,9 @@ export class CrmLeadService {
         email: cleanEmail,
         phone: cleanPhone,
         city: input.city?.trim() || null,
-        source: LeadSource.WEBSITE,
+        qualification: input.qualification?.trim() || null,
+        source: leadSource,
+        campaignName: input.campaignName?.trim() || null,
         status: LeadStatus.NEW,
         interestedCourseId: input.interestedCourseId || null,
         notes: input.notes?.trim() || null,
@@ -99,7 +105,7 @@ export class CrmLeadService {
       newData: {
         email: cleanEmail,
         courseId: input.interestedCourseId,
-        source: LeadSource.WEBSITE,
+        source: leadSource,
       },
       ipAddress,
       userAgent,

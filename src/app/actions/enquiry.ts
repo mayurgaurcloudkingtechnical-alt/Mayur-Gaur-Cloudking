@@ -9,6 +9,8 @@ const enquirySchema = z.object({
   phone: z.string().min(10, "Please enter a valid 10-digit mobile number"),
   email: z.string().email("Please enter a valid email address"),
   city: z.string().optional(),
+  qualification: z.string().optional(),
+  source: z.string().optional(),
   interestedCourseId: z.string().optional(),
   trainingMode: z.string().optional(),
   notes: z.string().optional(),
@@ -31,9 +33,11 @@ export async function submitEnquiryAction(
     phone: formData.get("phone") as string,
     email: formData.get("email") as string,
     city: formData.get("city") as string,
+    qualification: formData.get("qualification") as string,
+    source: formData.get("source") as string,
     interestedCourseId: formData.get("interestedCourseId") as string,
     trainingMode: formData.get("trainingMode") as string,
-    notes: formData.get("notes") as string,
+    notes: (formData.get("notes") || formData.get("message")) as string,
     honeypot: formData.get("honeypot") as string,
   };
 
@@ -59,12 +63,16 @@ export async function submitEnquiryAction(
       .filter(Boolean)
       .join(" | ");
 
+    const leadSource = (validated.data.source as any) || undefined;
+
     const result = await CrmLeadService.submitPublicEnquiry(
       {
         fullName: validated.data.fullName,
         phone: validated.data.phone,
         email: validated.data.email,
         city: validated.data.city,
+        qualification: validated.data.qualification,
+        source: leadSource,
         interestedCourseId: validated.data.interestedCourseId || undefined,
         notes: combinedNotes || undefined,
         honeypot: validated.data.honeypot,

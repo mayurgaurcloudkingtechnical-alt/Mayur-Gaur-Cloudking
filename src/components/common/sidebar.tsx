@@ -66,18 +66,23 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Live Classes", href: "/trainer/classes", icon: <Calendar className="h-4 w-4" /> },
           { title: "Curriculum CMS", href: "/trainer/classes", icon: <FileEdit className="h-4 w-4" /> },
         ];
-      case "COUNSELOR":
       case "TELECALLER":
         return [
           { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
-          { title: "Admissions", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
-          { title: "Analytics", href: "/counselor/analytics", icon: <BarChart3 className="h-4 w-4" /> },
+        ];
+      case "COUNSELOR":
+        return [
+          { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
+          { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
         ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
           { title: "Admissions", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
           { title: "Batches & Schedules", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },

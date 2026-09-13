@@ -6,7 +6,7 @@ const COURSES = [
     slug: "ai-ml-complete-course-master-level",
     title: "AI & ML Complete Course (Master Level)",
     summary: "Master AI, Machine Learning, Deep Learning, Generative AI, MLOps, and real-world deployment.",
-    description: "This AI & ML Complete Course (Master Level) by SoftLab Global (CloudKing Technical, Prayagraj) covers Artificial Intelligence, Machine Learning, Deep Learning, Generative AI, MLOps, and real-world applications. Gain hands-on experience with industry-leading tools and build projects that solve real-world problems.",
+    description: "This AI & ML Complete Course (Master Level) by SoftLab Global (Civil Lines Campus, Prayagraj) covers Artificial Intelligence, Machine Learning, Deep Learning, Generative AI, MLOps, and real-world applications. Gain hands-on experience with industry-leading tools and build projects that solve real-world problems.",
     durationWeeks: 24,
     baseFee: 4500000, // ₹45,000 in integer Paise
     level: "Beginner to Advanced (Master Level)",

@@ -8,6 +8,9 @@ import {
   AttendanceStatus,
   CertificateStatus,
   LeadStatus,
+  LeadSource,
+  ApplicationStage,
+  UserRoleCode,
 } from "@prisma/client";
 
 export class AnalyticsService {
@@ -242,5 +245,284 @@ export class AnalyticsService {
     }
 
     return trend;
+  }
+
+  /**
+   * Computes comprehensive marketing channels, campaign attribution,
+   * full conversion funnels, counselor-wise velocity, and course revenue analytics.
+   */
+  static async getMarketingAnalytics() {
+    // 1. Fetch all leads with their applications, payments, course, and assignees
+    const [leads, allCourses, staffUsers] = await Promise.all([
+      db.lead.findMany({
+        include: {
+          applications: {
+            include: {
+              payments: {
+                where: { status: PaymentTransactionStatus.SUCCESS },
+                select: { amount: true },
+              },
+            },
+          },
+          course: { select: { id: true, title: true } },
+          assignedCounselor: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedTelecaller: { select: { id: true, firstName: true, lastName: true, email: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+          followUps: { select: { id: true, createdAt: true } },
+        },
+      }),
+      db.course.findMany({
+        where: { deletedAt: null },
+        select: { id: true, title: true },
+      }),
+      db.user.findMany({
+        where: {
+          roleCode: { in: [UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER, UserRoleCode.MANAGER, UserRoleCode.ADMIN] },
+          status: "ACTIVE",
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, roleCode: true },
+      }),
+    ]);
+
+    // Channel definitions
+    const channelDefinitions: Array<{ id: string; name: string; sources: LeadSource[] }> = [
+      { id: "meta", name: "Meta (Facebook & Instagram)", sources: [LeadSource.META, LeadSource.META_ADS_FB, LeadSource.META_ADS_IG] },
+      { id: "google", name: "Google Ads & Search", sources: [LeadSource.GOOGLE, LeadSource.GOOGLE_ADS, LeadSource.GOOGLE_SEARCH] },
+      { id: "justdial", name: "Justdial Local Search", sources: [LeadSource.JUSTDIAL] },
+      { id: "website", name: "Website Direct & Popups", sources: [LeadSource.WEBSITE, LeadSource.WEBSITE_CAREER_POPUP, LeadSource.CAREER_POPUP, LeadSource.COURSE_PAGE, LeadSource.CONTACT_FORM] },
+      { id: "whatsapp", name: "WhatsApp & Chatbot", sources: [LeadSource.WHATSAPP, LeadSource.CHATBOT] },
+      { id: "referral", name: "Student & Alumni Referrals", sources: [LeadSource.REFERRAL] },
+      { id: "walk_in", name: "Campus Walk-ins", sources: [LeadSource.WALK_IN] },
+      { id: "other", name: "Other Direct & Campus Drives", sources: [LeadSource.OTHER, LeadSource.SOCIAL_MEDIA, LeadSource.CAMPUS_DRIVE] },
+    ];
+
+    const getIntegrationStatus = (id: string) => {
+      switch (id) {
+        case "meta": {
+          const isConfigured = Boolean(process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN || process.env.META_PIXEL_ID);
+          return {
+            status: isConfigured ? ("CONNECTED" as const) : ("NOT_CONNECTED" as const),
+            message: isConfigured ? "Meta Graph API & Pixel Active" : "Integration not connected",
+          };
+        }
+        case "google": {
+          const isConfigured = Boolean(process.env.GOOGLE_ADS_DEVELOPER_TOKEN || process.env.GOOGLE_ADS_CLIENT_ID || process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID);
+          return {
+            status: isConfigured ? ("CONNECTED" as const) : ("NOT_CONNECTED" as const),
+            message: isConfigured ? "Google Ads & Analytics Connected" : "Integration not connected",
+          };
+        }
+        case "justdial": {
+          const isConfigured = Boolean(process.env.JUSTDIAL_API_KEY || process.env.JUSTDIAL_LEAD_WEBHOOK_SECRET);
+          return {
+            status: isConfigured ? ("CONNECTED" as const) : ("NOT_CONNECTED" as const),
+            message: isConfigured ? "Justdial Webhook Ingestion Live" : "Integration not connected",
+          };
+        }
+        case "whatsapp": {
+          const isConfigured = Boolean(process.env.WHATSAPP_API_TOKEN || process.env.WHATSAPP_PHONE_NUMBER_ID);
+          return {
+            status: isConfigured ? ("CONNECTED" as const) : ("NOT_CONNECTED" as const),
+            message: isConfigured ? "WhatsApp Cloud API Active" : "Web chat mode active (Cloud API not connected)",
+          };
+        }
+        case "website":
+          return { status: "NATIVE" as const, message: "Native in-app capture active" };
+        case "referral":
+        case "walk_in":
+        default:
+          return { status: "NATIVE" as const, message: "Direct institutional tracking" };
+      }
+    };
+
+    // Aggregate channel metrics
+    const channels = channelDefinitions.map((def) => {
+      const channelLeads = leads.filter((l) => def.sources.includes(l.source));
+      const leadsCount = channelLeads.length;
+      const contactedCount = channelLeads.filter((l) => l.status !== LeadStatus.NEW).length;
+      
+      let applicationsCount = 0;
+      let admissionsCount = 0;
+      let revenuePaise = 0;
+
+      for (const lead of channelLeads) {
+        applicationsCount += lead.applications.length;
+        const isAdmitted =
+          lead.status === LeadStatus.ADMITTED ||
+          lead.applications.some((a) => a.stage === ApplicationStage.APPROVED || a.stage === ApplicationStage.CONVERTED);
+        if (isAdmitted) {
+          admissionsCount++;
+        }
+        for (const app of lead.applications) {
+          for (const payment of app.payments) {
+            revenuePaise += payment.amount;
+          }
+        }
+      }
+
+      const conversionRate = leadsCount > 0 ? Number(((admissionsCount / leadsCount) * 100).toFixed(1)) : 0;
+      const integration = getIntegrationStatus(def.id);
+
+      return {
+        id: def.id,
+        name: def.name,
+        leadsCount,
+        contactedCount,
+        applicationsCount,
+        admissionsCount,
+        conversionRate,
+        revenuePaise,
+        integration,
+      };
+    });
+
+    // Compute Funnel Stages
+    const totalLeads = leads.length;
+    const contactedLeads = leads.filter((l) => l.status !== LeadStatus.NEW).length;
+    const followUpLeads = leads.filter(
+      (l) => l.followUps.length > 0 || ([LeadStatus.FOLLOW_UP, LeadStatus.INTERESTED, LeadStatus.DEMO, LeadStatus.NEGOTIATION, LeadStatus.ADMITTED] as LeadStatus[]).includes(l.status)
+    ).length;
+    const interestedLeads = leads.filter(
+      (l) => ([LeadStatus.INTERESTED, LeadStatus.DEMO, LeadStatus.NEGOTIATION, LeadStatus.ADMITTED] as LeadStatus[]).includes(l.status)
+    ).length;
+    const applicationLeads = leads.filter((l) => l.applications.length > 0).length;
+    const approvedLeads = leads.filter((l) =>
+      l.applications.some((a) => a.stage === ApplicationStage.APPROVED || a.stage === ApplicationStage.CONVERTED)
+    ).length;
+    const convertedLeads = leads.filter(
+      (l) => l.status === LeadStatus.ADMITTED || l.applications.some((a) => a.stage === ApplicationStage.CONVERTED)
+    ).length;
+    const lostLeads = leads.filter((l) => l.status === LeadStatus.LOST).length;
+
+    const calcPct = (count: number) => (totalLeads > 0 ? Number(((count / totalLeads) * 100).toFixed(1)) : 0);
+
+    const funnelStages = [
+      { stage: "Lead", count: totalLeads, percentage: 100 },
+      { stage: "Contacted", count: contactedLeads, percentage: calcPct(contactedLeads) },
+      { stage: "Follow-up", count: followUpLeads, percentage: calcPct(followUpLeads) },
+      { stage: "Interested", count: interestedLeads, percentage: calcPct(interestedLeads) },
+      { stage: "Application", count: applicationLeads, percentage: calcPct(applicationLeads) },
+      { stage: "Admission", count: approvedLeads, percentage: calcPct(approvedLeads) },
+      { stage: "Converted", count: convertedLeads, percentage: calcPct(convertedLeads) },
+      { stage: "Lost", count: lostLeads, percentage: calcPct(lostLeads) },
+    ];
+
+    // Counselor conversions
+    const counselorMap = new Map<string, {
+      id: string;
+      name: string;
+      email: string;
+      role: string;
+      assignedLeads: number;
+      admittedCount: number;
+      revenuePaise: number;
+      pendingFollowUps: number;
+    }>();
+
+    for (const staff of staffUsers) {
+      counselorMap.set(staff.id, {
+        id: staff.id,
+        name: `${staff.firstName} ${staff.lastName}`.trim(),
+        email: staff.email,
+        role: staff.roleCode,
+        assignedLeads: 0,
+        admittedCount: 0,
+        revenuePaise: 0,
+        pendingFollowUps: 0,
+      });
+    }
+
+    const now = new Date();
+    for (const lead of leads) {
+      const counselorId = lead.assignedCounselorId || lead.assignedToId || lead.assignedTelecallerId;
+      if (counselorId && counselorMap.has(counselorId)) {
+        const item = counselorMap.get(counselorId)!;
+        item.assignedLeads++;
+        const isAdmitted =
+          lead.status === LeadStatus.ADMITTED ||
+          lead.applications.some((a) => a.stage === ApplicationStage.APPROVED || a.stage === ApplicationStage.CONVERTED);
+        if (isAdmitted) {
+          item.admittedCount++;
+        }
+        for (const app of lead.applications) {
+          for (const payment of app.payments) {
+            item.revenuePaise += payment.amount;
+          }
+        }
+        if (lead.nextFollowUp && lead.nextFollowUp < now && lead.status !== LeadStatus.ADMITTED && lead.status !== LeadStatus.LOST) {
+          item.pendingFollowUps++;
+        }
+      }
+    }
+
+    const counselors = Array.from(counselorMap.values()).map((c) => ({
+      ...c,
+      conversionRate: c.assignedLeads > 0 ? Number(((c.admittedCount / c.assignedLeads) * 100).toFixed(1)) : 0,
+    })).sort((a, b) => b.assignedLeads - a.assignedLeads);
+
+    // Course performance
+    const courseMap = new Map<string, {
+      id: string;
+      title: string;
+      leadsCount: number;
+      applicationsCount: number;
+      admissionsCount: number;
+      revenuePaise: number;
+    }>();
+
+    for (const course of allCourses) {
+      courseMap.set(course.id, {
+        id: course.id,
+        title: course.title,
+        leadsCount: 0,
+        applicationsCount: 0,
+        admissionsCount: 0,
+        revenuePaise: 0,
+      });
+    }
+
+    for (const lead of leads) {
+      const courseId = lead.interestedCourseId;
+      if (courseId && courseMap.has(courseId)) {
+        const item = courseMap.get(courseId)!;
+        item.leadsCount++;
+        item.applicationsCount += lead.applications.length;
+        const isAdmitted =
+          lead.status === LeadStatus.ADMITTED ||
+          lead.applications.some((a) => a.stage === ApplicationStage.APPROVED || a.stage === ApplicationStage.CONVERTED);
+        if (isAdmitted) {
+          item.admissionsCount++;
+        }
+        for (const app of lead.applications) {
+          for (const payment of app.payments) {
+            item.revenuePaise += payment.amount;
+          }
+        }
+      }
+    }
+
+    const courses = Array.from(courseMap.values()).map((c) => ({
+      ...c,
+      conversionRate: c.leadsCount > 0 ? Number(((c.admissionsCount / c.leadsCount) * 100).toFixed(1)) : 0,
+    })).sort((a, b) => b.leadsCount - a.leadsCount);
+
+    // Aggregate summary
+    const totalMarketingRevenuePaise = channels.reduce((acc, ch) => acc + ch.revenuePaise, 0);
+    const overallConversionRate = totalLeads > 0 ? Number(((convertedLeads / totalLeads) * 100).toFixed(1)) : 0;
+
+    return {
+      channels,
+      funnelStages,
+      counselors,
+      courses,
+      summary: {
+        totalLeads,
+        totalContacted: contactedLeads,
+        totalApplications: applicationLeads,
+        totalAdmissions: convertedLeads,
+        overallConversionRate,
+        totalMarketingRevenuePaise,
+      },
+    };
   }
 }

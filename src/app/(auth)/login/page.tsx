@@ -205,7 +205,7 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center bg-slate-950 p-4 sm:p-6 lg:p-8 overflow-hidden">
-      {/* Tech Backdrop Glows (Inspired by lms.cloudkingtechnical.com) */}
+      {/* Tech Backdrop Glows */}
       <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:28px_28px] opacity-10 pointer-events-none" />
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-emerald-600/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-cyan-600/20 rounded-full blur-3xl pointer-events-none" />

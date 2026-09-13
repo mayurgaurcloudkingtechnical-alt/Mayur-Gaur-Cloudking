@@ -98,10 +98,10 @@ export function SoftlabLogo({
         {showTagline && (
           <div className="flex flex-col mt-0.5">
             <span className={`font-semibold tracking-wide uppercase ${dimension.sub} ${isDark ? "text-emerald-400" : "text-emerald-700"}`}>
-              CloudKing Technical, Prayagraj
+              Center for Excellence • Prayagraj
             </span>
             <span className={`text-[9px] tracking-tight ${isDark ? "text-slate-400" : "text-slate-500"} hidden sm:inline`}>
-              IT Training • Development • Designing • Digital
+              IT Training • Software Development • Cloud • AI
             </span>
           </div>
         )}
