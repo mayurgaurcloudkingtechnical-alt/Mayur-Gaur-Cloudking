@@ -6,8 +6,11 @@ cd /d "C:\Users\softl\OneDrive\Desktop\SOFTLAB-GLOBAL"
 echo ==============================================================
 echo     SOFTLAB GLOBAL - Next.js Server (http://127.0.0.1:3000)
 echo ==============================================================
+echo [1/2] Verifying and starting PostgreSQL 16 server...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\start-postgres.ps1"
 echo.
-echo Starting server... Open http://127.0.0.1:3000 in your browser!
+echo [2/2] Starting Next.js Web Portal... Open http://127.0.0.1:3000 in your browser!
 echo.
-call npx next dev -H 127.0.0.1 -p 3000
+call npm run dev
 pause
+

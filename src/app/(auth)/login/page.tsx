@@ -9,7 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertBanner } from "@/components/ui/toast";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
-import { ShieldCheck, Lock, Mail } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Eye, EyeOff, KeyRound } from "lucide-react";
+import { SoftlabLogo } from "@/components/common/softlab-logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -20,6 +21,14 @@ function LoginForm() {
   const [password, setPassword] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
+
+  const [showPassword, setShowPassword] = React.useState(false);
+
+  const fillCredentials = (userEmail: string, userPass: string) => {
+    setEmail(userEmail);
+    setPassword(userPass);
+    setError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,7 +65,7 @@ function LoginForm() {
 
   return (
     <Card className="border-slate-200/80 shadow-md">
-      <CardHeader className="space-y-1 text-center">
+      <CardHeader className="space-y-1 text-center pb-4">
         <CardTitle className="text-xl">Sign in to your portal</CardTitle>
         <CardDescription>
           Enter your institutional credentials to access your workspace
@@ -71,6 +80,37 @@ function LoginForm() {
             </AlertBanner>
           </div>
         )}
+
+        {/* Quick Demo Credential Autofill */}
+        <div className="mb-5 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-800 mb-2">
+            <KeyRound className="h-3.5 w-3.5 text-emerald-600" />
+            <span>Instant Demo Access (Click to Fill):</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 text-xs">
+            <button
+              type="button"
+              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdminSecure2026!")}
+              className="rounded bg-white px-2 py-1.5 font-medium text-emerald-700 shadow-sm border border-emerald-200 hover:bg-emerald-50 text-[11px]"
+            >
+              Super Admin
+            </button>
+            <button
+              type="button"
+              onClick={() => fillCredentials("trainer@softlabglobal.com", "TrainerSecure2026!")}
+              className="rounded bg-white px-2 py-1.5 font-medium text-sky-700 shadow-sm border border-sky-200 hover:bg-sky-50 text-[11px]"
+            >
+              Trainer
+            </button>
+            <button
+              type="button"
+              onClick={() => fillCredentials("student@softlabglobal.com", "StudentSecure2026!")}
+              className="rounded bg-white px-2 py-1.5 font-medium text-slate-700 shadow-sm border border-slate-200 hover:bg-slate-50 text-[11px]"
+            >
+              Student
+            </button>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -99,15 +139,23 @@ function LoginForm() {
               <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
               <Input
                 id="password"
-                type="password"
+                type={showPassword ? "text" : "password"}
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 autoComplete="current-password"
-                className="pl-9"
+                className="pl-9 pr-10"
                 disabled={isLoading}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 
@@ -128,7 +176,7 @@ function LoginForm() {
         </form>
       </CardContent>
 
-      <CardFooter className="flex flex-col space-y-3 border-t border-slate-100 bg-slate-50/50 p-4 text-center text-xs text-slate-500 rounded-b-xl">
+      <CardFooter className="flex flex-col space-y-2.5 border-t border-slate-100 bg-slate-50/50 p-4 text-center text-xs text-slate-500 rounded-b-xl">
         <div className="flex items-center justify-center gap-1 text-slate-600 font-medium">
           <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
           <span>Role-Based Access Control Protected</span>
@@ -153,14 +201,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-slate-50 via-slate-100/60 to-slate-200/50 p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-md">
         {/* Brand Header */}
-        <div className="mb-8 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white font-black text-2xl shadow-lg shadow-emerald-500/20">
-            SL
-          </div>
-          <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900">
-            SOFTLAB GLOBAL
-          </h1>
-          <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-emerald-600">
+        <div className="mb-6 flex flex-col items-center text-center">
+          <SoftlabLogo size="xl" showTagline={true} className="justify-center" />
+          <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 border border-emerald-200/60 px-3 py-1 rounded-full">
             Institutional Management System
           </p>
         </div>

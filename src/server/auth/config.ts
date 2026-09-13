@@ -13,6 +13,8 @@ const loginSchema = z.object({
 });
 
 export const authConfig: NextAuthConfig = {
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "change_me_to_a_cryptographically_secure_random_string_32_chars_min",
+  trustHost: true,
   session: {
     strategy: "jwt",
     maxAge: 28800, // 8 hours as specified in docs/SECURITY.md

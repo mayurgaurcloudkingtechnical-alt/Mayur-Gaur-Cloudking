@@ -33,6 +33,7 @@ const securityHeaders = [
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  cleanDistDir: false,
   eslint: {
     ignoreDuringBuilds: true,
   },

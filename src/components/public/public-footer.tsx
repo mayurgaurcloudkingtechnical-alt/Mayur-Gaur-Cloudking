@@ -1,6 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { SITE_CONFIG } from "@/lib/constants/site";
+import { SoftlabLogo } from "@/components/common/softlab-logo";
 import { MapPin, Phone, Mail, Clock, ShieldCheck, ArrowUpRight } from "lucide-react";
 
 export function PublicFooter() {
@@ -12,18 +13,8 @@ export function PublicFooter() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           {/* Column 1: Brand & Identity */}
           <div className="space-y-4">
-            <Link href="/" className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm">
-                SL
-              </div>
-              <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-                  {SITE_CONFIG.name}
-                </span>
-                <span className="text-[10px] font-semibold text-emerald-600 tracking-wider uppercase mt-0.5">
-                  IT Education & Research
-                </span>
-              </div>
+            <Link href="/" className="inline-block">
+              <SoftlabLogo size="md" />
             </Link>
             <p className="text-xs text-slate-600 leading-relaxed">
               {SITE_CONFIG.shortDescription}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { SoftlabLogo } from "@/components/common/softlab-logo";
 import { LogOut, User as UserIcon, Menu } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 
@@ -33,17 +34,7 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
           </button>
         )}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-600 text-white font-bold text-lg shadow-sm">
-            SL
-          </div>
-          <div className="flex flex-col">
-            <span className="text-base font-bold tracking-tight text-slate-900 leading-none">
-              SOFTLAB GLOBAL
-            </span>
-            <span className="text-[10px] uppercase font-semibold text-emerald-600 tracking-wider">
-              IT Education SaaS
-            </span>
-          </div>
+          <SoftlabLogo size="sm" showTagline={false} />
         </Link>
       </div>
 

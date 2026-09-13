@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SITE_CONFIG } from "@/lib/constants/site";
+import { SoftlabLogo } from "@/components/common/softlab-logo";
 import { Menu, X, ArrowRight, UserCheck } from "lucide-react";
 
 interface PublicNavbarProps {
@@ -32,18 +33,8 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
     <header className="sticky top-0 z-50 w-full border-b border-slate-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Wordmark */}
-        <Link href="/" className="flex items-center gap-3 group">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold text-lg shadow-sm transition-transform group-hover:scale-105">
-            SL
-          </div>
-          <div className="flex flex-col">
-            <span className="text-lg font-bold tracking-tight text-slate-900 leading-none">
-              {SITE_CONFIG.name}
-            </span>
-            <span className="text-[11px] font-semibold text-emerald-600 tracking-wider uppercase mt-0.5">
-              IT Education & Research
-            </span>
-          </div>
+        <Link href="/" className="group">
+          <SoftlabLogo size="md" />
         </Link>
 
         {/* Desktop Navigation Links */}

@@ -108,6 +108,11 @@ enum LeadSource {
   GOOGLE_SEARCH
   CAMPUS_DRIVE
   OTHER
+  JUSTDIAL
+  GOOGLE_ADS
+  META_ADS_FB
+  META_ADS_IG
+  CHATBOT
 }
 
 enum FollowUpType {
@@ -209,8 +214,18 @@ model User {
   // Attendance marking
   markedAttendance AttendanceRecord[] @relation("AttendanceMarker")
 
+  // Dedicated Business Communication & Marketing Routing
+  callingNumber         String?
+  whatsappNumber        String?
+  isLeadAccepting       Boolean                @default(true)
+  dailyLeadQuota        Int                    @default(50)
+  activeLeadsCount      Int                    @default(0)
+
   // CRM relations
   assignedLeads         Lead[]                 @relation("LeadAssignee")
+  assignedCounselorLeads Lead[]                @relation("LeadCounselorAssignee")
+  assignedTelecallerLeads Lead[]               @relation("LeadTelecallerAssignee")
+  performedLeadActivities LeadActivity[]
   createdLeads          Lead[]                 @relation("LeadCreator")
   performedFollowUps    FollowUpHistory[]      @relation("FollowUpPerformer")
   counseledApplications AdmissionApplication[] @relation("ApplicationCounselor")
@@ -606,37 +621,78 @@ model AttendanceEntry {
 // ==============================================================================
 
 model Lead {
-  id                 String       @id @default(cuid())
-  fullName           String
-  email              String
-  phone              String       // Normalized (e.g. 10 digits without +91)
-  city               String?
-  source             LeadSource   @default(WEBSITE)
-  status             LeadStatus   @default(NEW)
-  interestedCourseId String?
-  course             Course?      @relation(fields: [interestedCourseId], references: [id], onDelete: SetNull)
-  interestedBatchId  String?
-  batch              Batch?       @relation(fields: [interestedBatchId], references: [id], onDelete: SetNull)
-  notes              String?      @db.Text
-  nextFollowUp       DateTime?
-  assignedToId       String?
-  assignedTo         User?        @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
-  createdById        String?
-  createdBy          User?        @relation("LeadCreator", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt          DateTime     @default(now())
-  updatedAt          DateTime     @updatedAt
+  id                  String       @id @default(cuid())
+  fullName            String
+  email               String
+  phone               String       // Normalized (e.g. 10 digits without +91)
+  city                String?
+  qualification       String?
+  source              LeadSource   @default(WEBSITE)
+  status              LeadStatus   @default(NEW)
+  qualityScore        String       @default("WARM") // HOT, WARM, COLD, INVALID
+  interestedCourseId  String?
+  course              Course?      @relation(fields: [interestedCourseId], references: [id], onDelete: SetNull)
+  interestedBatchId   String?
+  batch               Batch?       @relation(fields: [interestedBatchId], references: [id], onDelete: SetNull)
+  notes               String?      @db.Text
+  nextFollowUp        DateTime?
+  
+  // Dynamic Role-Based Routing
+  assignedToId        String?
+  assignedTo          User?        @relation("LeadAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  assignedCounselorId String?
+  assignedCounselor   User?        @relation("LeadCounselorAssignee", fields: [assignedCounselorId], references: [id], onDelete: SetNull)
+  assignedTelecallerId String?
+  assignedTelecaller  User?        @relation("LeadTelecallerAssignee", fields: [assignedTelecallerId], references: [id], onDelete: SetNull)
 
-  followUps          FollowUpHistory[]
-  applications       AdmissionApplication[]
+  // Marketing Attribution & Campaign Tracking
+  campaignName        String?
+  adsetName           String?
+  adCreativeName      String?
+  keywordSearch       String?
+  landingPageUrl      String?
+
+  // AI Chatbot State
+  botQualified        Boolean      @default(false)
+  botSummary          String?      @db.Text
+  lastChatTranscript  String?      @db.Text
+
+  createdById         String?
+  createdBy           User?        @relation("LeadCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  followUps           FollowUpHistory[]
+  activities          LeadActivity[]
+  applications        AdmissionApplication[]
 
   @@index([email])
   @@index([phone])
   @@index([status])
   @@index([assignedToId])
+  @@index([assignedCounselorId])
+  @@index([assignedTelecallerId])
   @@index([source])
   @@index([nextFollowUp])
   @@index([interestedCourseId])
   @@map("leads")
+}
+
+model LeadActivity {
+  id             String       @id @default(cuid())
+  leadId         String
+  lead           Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  activityType   String       // "WEBHOOK_INGESTED", "AI_WHATSAPP_SENT", "CALL_CONNECTED", "STATUS_CHANGE", "NOTE_ADDED"
+  disposition    String?      // "CONNECTED", "CALLBACK", "BUSY", "INTERESTED", "DEMO_SCHEDULED", "NOT_INTERESTED"
+  notes          String?      @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([leadId])
+  @@index([userId])
+  @@index([createdAt])
+  @@map("lead_activities")
 }
 
 model FollowUpHistory {
