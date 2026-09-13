@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { Menu, X, ArrowRight, UserCheck, GraduationCap, PhoneCall } from "lucide-react";
+import { Menu, X, ArrowRight, UserCheck, GraduationCap, PhoneCall, Building2 } from "lucide-react";
 
 interface PublicNavbarProps {
   userRole?: string | null;
@@ -62,14 +62,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
         </nav>
 
         {/* Portal Login / Dashboard CTA */}
-        <div className="hidden md:flex items-center gap-2.5">
-          <Button asChild variant="outline" size="sm" className="border-emerald-200 text-emerald-800 hover:bg-emerald-50 text-xs h-9 px-3">
-            <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center gap-1.5">
-              <PhoneCall className="h-3.5 w-3.5 text-emerald-600" />
-              <span>Call Us</span>
-            </a>
-          </Button>
-
+        <div className="hidden md:flex items-center gap-2">
           {userRole ? (
             <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-xs h-9 px-3.5">
               <Link href={dashboardHref} className="flex items-center gap-1.5">
@@ -78,13 +71,23 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
               </Link>
             </Button>
           ) : (
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md text-xs h-9 px-4">
-              <Link href="/student/dashboard" className="flex items-center gap-1.5">
-                <GraduationCap className="h-4 w-4 text-emerald-200" />
-                <span>Student Portal</span>
-                <ArrowRight className="h-3 w-3 text-emerald-200" />
-              </Link>
-            </Button>
+            <>
+              {/* Student Portal Login Button */}
+              <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm text-xs h-9 px-3 font-bold">
+                <Link href="/student-login" className="flex items-center gap-1.5">
+                  <GraduationCap className="h-4 w-4 text-emerald-200" />
+                  <span>Student Portal</span>
+                </Link>
+              </Button>
+
+              {/* SoftLab Staff / Admin Login Button */}
+              <Button asChild variant="outline" size="sm" className="border-slate-300 hover:border-slate-400 text-slate-700 hover:bg-slate-50 text-xs h-9 px-3 font-semibold">
+                <Link href="/login" className="flex items-center gap-1.5">
+                  <Building2 className="h-3.5 w-3.5 text-slate-500" />
+                  <span>SoftLab Login</span>
+                </Link>
+              </Button>
+            </>
           )}
         </div>
 
@@ -128,15 +131,22 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
             <Link
-              href={userRole ? dashboardHref : "/student/dashboard"}
+              href={userRole ? dashboardHref : "/student-login"}
               className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-sm"
             >
               <GraduationCap className="h-4 w-4 text-white" />
-              <span>Student Portal & LMS Login</span>
+              <span>Student Portal Login</span>
+            </Link>
+            <Link
+              href="/login"
+              className="w-full flex items-center justify-center gap-2 border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold py-2.5 px-4 rounded-xl text-xs"
+            >
+              <Building2 className="h-4 w-4 text-slate-500" />
+              <span>SoftLab Staff / Admin Login</span>
             </Link>
             <a
               href={`tel:${SITE_CONFIG.contact.phoneTel}`}
-              className="w-full flex items-center justify-center gap-2 border border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold py-2.5 px-4 rounded-xl text-xs"
+              className="w-full flex items-center justify-center gap-2 border border-emerald-200 text-emerald-800 hover:bg-emerald-50 font-semibold py-2.5 px-4 rounded-xl text-xs"
             >
               <PhoneCall className="h-4 w-4 text-emerald-600" />
               <span>Call Admissions: {SITE_CONFIG.contact.phone}</span>

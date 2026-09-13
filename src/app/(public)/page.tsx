@@ -171,9 +171,9 @@ export default async function HomePage() {
                 </Button>
 
                 <Button asChild variant="ghost" size="lg" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 text-xs sm:text-sm h-11 px-4">
-                  <Link href="/login" className="flex items-center gap-1.5">
+                  <Link href="/student-login" className="flex items-center gap-1.5">
                     <GraduationCap className="h-4 w-4" />
-                    <span>LMS Student Portal</span>
+                    <span>Student Portal &rarr;</span>
                   </Link>
                 </Button>
               </div>

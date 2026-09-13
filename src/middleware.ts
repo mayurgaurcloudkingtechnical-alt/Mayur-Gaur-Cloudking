@@ -27,8 +27,8 @@ export async function middleware(req: NextRequest) {
     secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "change_me_to_a_cryptographically_secure_random_string_32_chars_min",
   });
 
-  const isAuthRoute = pathname.startsWith("/login");
-  const isStudentRoute = pathname.startsWith("/student");
+  const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/student-login");
+  const isStudentRoute = pathname.startsWith("/student") && !pathname.startsWith("/student-login");
   const isTrainerRoute = pathname.startsWith("/trainer");
   const isCounselorRoute = pathname.startsWith("/counselor");
   const isAdminRoute = pathname.startsWith("/admin");
@@ -143,6 +143,7 @@ export const config = {
   matcher: [
     "/",
     "/login",
+    "/student-login",
     "/student/:path*",
     "/trainer/:path*",
     "/counselor/:path*",
