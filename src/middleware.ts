@@ -22,10 +22,35 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "change_me_to_a_cryptographically_secure_random_string_32_chars_min",
-  });
+  const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "change_me_to_a_cryptographically_secure_random_string_32_chars_min";
+  const hasSecureCookie = req.cookies.has("__Secure-authjs.session-token") || req.cookies.has("__Secure-next-auth.session-token");
+  const isHttps = req.nextUrl.protocol === "https:" || req.headers.get("x-forwarded-proto") === "https" || process.env.NODE_ENV === "production";
+
+  let token = null;
+  if (hasSecureCookie || isHttps) {
+    token = await getToken({
+      req,
+      secret,
+      secureCookie: true,
+    });
+  }
+
+  if (!token) {
+    token = await getToken({
+      req,
+      secret,
+      secureCookie: false,
+    });
+  }
+
+  if (!token && (req.cookies.has("__Secure-next-auth.session-token") || req.cookies.has("next-auth.session-token"))) {
+    token = await getToken({
+      req,
+      secret,
+      cookieName: hasSecureCookie ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+      salt: hasSecureCookie ? "__Secure-next-auth.session-token" : "next-auth.session-token",
+    });
+  }
 
   const isAuthRoute = pathname.startsWith("/login") || pathname.startsWith("/student-login");
   const isStudentRoute = pathname.startsWith("/student") && !pathname.startsWith("/student-login");
