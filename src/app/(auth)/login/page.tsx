@@ -54,8 +54,28 @@ function LoginForm() {
         return;
       }
 
-      // Successful login
-      router.push(callbackUrl);
+      // Successful login - redirect to role dashboard if callbackUrl is generic
+      if (callbackUrl && callbackUrl !== "/" && callbackUrl !== "/login") {
+        router.push(callbackUrl);
+      } else {
+        try {
+          const sessionRes = await fetch("/api/auth/session");
+          const sessionData = await sessionRes.json();
+          const role = sessionData?.user?.roleCode;
+
+          if (role === "STUDENT") {
+            router.push("/student/dashboard");
+          } else if (role === "TRAINER") {
+            router.push("/trainer/dashboard");
+          } else if (role === "COUNSELOR" || role === "TELECALLER") {
+            router.push("/counselor/dashboard");
+          } else {
+            router.push("/admin/dashboard");
+          }
+        } catch {
+          router.push("/student/dashboard");
+        }
+      }
       router.refresh();
     } catch (err) {
       setError("An unexpected authentication error occurred. Please try again.");
@@ -91,18 +111,26 @@ function LoginForm() {
             <KeyRound className="h-3.5 w-3.5" />
             <span>Instant Demo Access (Click to Fill):</span>
           </div>
-          <div className="grid grid-cols-3 gap-2 text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <button
               type="button"
-              onClick={() => fillCredentials("student@softlabglobal.com", "StudentSecure2026!")}
-              className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-emerald-400 border border-slate-700 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all text-[11px]"
+              onClick={() => fillCredentials("srishti.sharma@softlabglobal.com", "Password@123")}
+              className="flex items-center justify-center gap-1 rounded-lg bg-emerald-950/60 px-2 py-2 font-semibold text-emerald-300 border border-emerald-500/50 hover:bg-emerald-900/80 transition-all text-[11px]"
             >
-              <GraduationCap className="w-3 h-3" />
-              <span>Student</span>
+              <GraduationCap className="w-3 h-3 text-emerald-400" />
+              <span>Srishti (Student)</span>
             </button>
             <button
               type="button"
-              onClick={() => fillCredentials("trainer@softlabglobal.com", "TrainerSecure2026!")}
+              onClick={() => fillCredentials("student@softlabglobal.com", "Student@2026")}
+              className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-emerald-400 border border-slate-700 hover:bg-emerald-950/50 hover:border-emerald-500 transition-all text-[11px]"
+            >
+              <GraduationCap className="w-3 h-3" />
+              <span>Sample Student</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => fillCredentials("trainer@softlabglobal.com", "Trainer@2026")}
               className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-sky-400 border border-slate-700 hover:bg-sky-950/50 hover:border-sky-500 transition-all text-[11px]"
             >
               <UserCheck className="w-3 h-3" />
@@ -110,7 +138,7 @@ function LoginForm() {
             </button>
             <button
               type="button"
-              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdminSecure2026!")}
+              onClick={() => fillCredentials("admin@softlabglobal.com", "SuperAdmin@2026")}
               className="flex items-center justify-center gap-1 rounded-lg bg-slate-800/80 px-2 py-2 font-semibold text-amber-400 border border-slate-700 hover:bg-amber-950/50 hover:border-amber-500 transition-all text-[11px]"
             >
               <Briefcase className="w-3 h-3" />

@@ -1,4 +1,4 @@
-﻿import { db } from "../src/server/db/client";
+import { db } from "../src/server/db/client";
 import * as bcrypt from "bcryptjs";
 import { UserRoleCode, BatchStatus, DeliveryMode, EnrollmentStatus, FeePaymentStatus, FeeStructureStatus, InstallmentStatus, PaymentMethod, PaymentTransactionStatus } from "@prisma/client";
 
@@ -40,7 +40,7 @@ async function main() {
         code: "AIML-2026-B1",
         name: "AI & ML Master Cohort 2026 (Prayagraj)",
         startDate: new Date("2026-09-15T10:00:00Z"),
-        status: BatchStatus.ACTIVE,
+        status: BatchStatus.ONGOING,
         maxCapacity: 25,
         deliveryMode: DeliveryMode.OFFLINE,
         location: "Lab 2, Tashkent Marg, Civil Lines, Prayagraj",

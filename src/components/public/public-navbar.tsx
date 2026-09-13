@@ -74,15 +74,15 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
             <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm text-xs h-9 px-3.5">
               <Link href={dashboardHref} className="flex items-center gap-1.5">
                 <UserCheck className="h-3.5 w-3.5" />
-                <span>Dashboard</span>
+                <span>My Dashboard</span>
               </Link>
             </Button>
           ) : (
-            <Button asChild size="sm" className="bg-slate-900 hover:bg-slate-800 text-white shadow-md text-xs h-9 px-4">
-              <Link href="/login" className="flex items-center gap-1.5">
-                <GraduationCap className="h-4 w-4 text-emerald-400" />
-                <span>LMS Login</span>
-                <ArrowRight className="h-3 w-3 text-slate-400" />
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md text-xs h-9 px-4">
+              <Link href="/student/dashboard" className="flex items-center gap-1.5">
+                <GraduationCap className="h-4 w-4 text-emerald-200" />
+                <span>Student Portal</span>
+                <ArrowRight className="h-3 w-3 text-emerald-200" />
               </Link>
             </Button>
           )}
@@ -128,11 +128,11 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
 
           <div className="pt-3 border-t border-slate-100 flex flex-col gap-2">
             <Link
-              href="/login"
-              className="w-full flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-4 rounded-xl text-xs"
+              href={userRole ? dashboardHref : "/student/dashboard"}
+              className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl text-xs shadow-sm"
             >
-              <GraduationCap className="h-4 w-4 text-emerald-400" />
-              <span>LMS Student & Staff Portal</span>
+              <GraduationCap className="h-4 w-4 text-white" />
+              <span>Student Portal & LMS Login</span>
             </Link>
             <a
               href={`tel:${SITE_CONFIG.contact.phoneTel}`}

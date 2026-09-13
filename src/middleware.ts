@@ -52,6 +52,20 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
+  // Direct root portal redirects
+  if (pathname === "/student") {
+    return NextResponse.redirect(new URL("/student/dashboard", req.url));
+  }
+  if (pathname === "/trainer") {
+    return NextResponse.redirect(new URL("/trainer/dashboard", req.url));
+  }
+  if (pathname === "/admin") {
+    return NextResponse.redirect(new URL("/admin/dashboard", req.url));
+  }
+  if (pathname === "/counselor") {
+    return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
+  }
+
   const isProtectedRoute =
     isStudentRoute || isTrainerRoute || isCounselorRoute || isAdminRoute;
 
