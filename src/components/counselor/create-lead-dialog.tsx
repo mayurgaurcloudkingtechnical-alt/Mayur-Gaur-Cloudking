@@ -41,7 +41,7 @@ export function CreateLeadDialog({ open, onOpenChange, onSuccess }: CreateLeadDi
   const { data: counselors = [] } = api.crm.listCounselors.useQuery();
 
   const createMutation = api.crm.createLead.useMutation({
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       setErrorMsg(null);
       utils.crm.listLeads.invalidate();
       utils.crm.getStats.invalidate();
@@ -54,7 +54,7 @@ export function CreateLeadDialog({ open, onOpenChange, onSuccess }: CreateLeadDi
       setNotes("");
       if (onSuccess) onSuccess(data.lead.id);
     },
-    onError: (err) => {
+    onError: (err: any) => {
       setErrorMsg(err.message || "Failed to create lead record.");
     },
   });

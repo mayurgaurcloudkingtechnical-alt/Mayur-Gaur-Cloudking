@@ -157,12 +157,68 @@ function getCourseMetadata(slug: string, title: string): CourseMetadata {
       gradient: "from-rose-950 via-slate-900 to-slate-950",
     };
   }
-  if (key.includes("linux") || key.includes("network")) {
+  if (key.includes("technical support")) {
     return {
-      technologies: ["RHEL / Ubuntu", "Bash", "Nginx", "Firewalls", "CCNA"],
-      careerOutcome: "Linux System Administrator",
+      technologies: ["Windows 11", "Hardware Diagnostics", "Active Directory", "Office 365", "ITIL"],
+      careerOutcome: "Technical Support Engineer",
       icon: Terminal,
-      gradient: "from-zinc-950 via-orange-950 to-slate-950",
+      gradient: "from-blue-950 via-slate-900 to-slate-950",
+    };
+  }
+  if (key.includes("mysql")) {
+    return {
+      technologies: ["MySQL 8.0", "Indexing & Optimization", "Stored Procedures", "Replication", "ACID Transactions"],
+      careerOutcome: "MySQL Database Administrator",
+      icon: Database,
+      gradient: "from-teal-950 via-cyan-950 to-slate-950",
+    };
+  }
+  if (key.includes("oracle")) {
+    return {
+      technologies: ["Oracle 19c/21c", "RMAN Recovery", "Data Guard", "OCI Cloud", "Performance Tuning"],
+      careerOutcome: "Oracle Certified DBA",
+      icon: Database,
+      gradient: "from-red-950 via-slate-900 to-slate-950",
+    };
+  }
+  if (key.includes("graphics")) {
+    return {
+      technologies: ["Adobe Photoshop", "Illustrator", "InDesign", "CorelDRAW", "Branding & Packaging"],
+      careerOutcome: "Creative Graphics & Brand Designer",
+      icon: Sparkles,
+      gradient: "from-fuchsia-950 via-rose-950 to-slate-950",
+    };
+  }
+  if (key.includes("mern")) {
+    return {
+      technologies: ["MongoDB", "Express.js", "React.js", "Node.js", "Next.js 14"],
+      careerOutcome: "MERN Full Stack Engineer",
+      icon: Layers,
+      gradient: "from-emerald-950 via-teal-950 to-slate-950",
+    };
+  }
+  if (key.includes("server")) {
+    return {
+      technologies: ["Windows Server 2022", "AD DS", "Group Policy", "DNS / DHCP", "Hyper-V"],
+      careerOutcome: "Windows Server Administrator",
+      icon: Terminal,
+      gradient: "from-indigo-950 via-slate-900 to-slate-950",
+    };
+  }
+  if (key.includes("office 365")) {
+    return {
+      technologies: ["M365 Admin", "Exchange Online", "SharePoint", "Teams Governance", "Entra ID"],
+      careerOutcome: "Microsoft 365 Administrator",
+      icon: Cloud,
+      gradient: "from-sky-950 via-indigo-950 to-slate-950",
+    };
+  }
+  if (key.includes("advance networking") || key.includes("networking")) {
+    return {
+      technologies: ["Cisco CCNA", "OSPF & BGP", "VLANs & Trunks", "Subnetting VLSM", "IPsec VPN"],
+      careerOutcome: "Network Infrastructure Engineer",
+      icon: Terminal,
+      gradient: "from-cyan-950 via-slate-900 to-slate-950",
     };
   }
 

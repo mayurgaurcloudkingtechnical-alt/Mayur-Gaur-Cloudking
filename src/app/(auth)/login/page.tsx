@@ -191,88 +191,6 @@ function LoginForm() {
             )}
           </Button>
         </form>
-
-        {/* Quick Demo Test Credentials Bar */}
-        <div className="pt-2 border-t border-slate-800/80">
-          <p className="text-[11px] font-semibold text-slate-400 mb-1.5 flex items-center justify-between">
-            <span>Quick Fill Working Credentials:</span>
-            <span className="text-[10px] text-emerald-400">Click to load</span>
-          </p>
-          <div className="grid grid-cols-3 gap-1 text-[10px]">
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("staff");
-                setEmail("counselor@softlabglobal.com");
-                setPassword("CounselorSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Counselor
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("staff");
-                setEmail("telecaller@softlabglobal.com");
-                setPassword("TelecallerSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Telecaller
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("staff");
-                setEmail("admin@softlabglobal.com");
-                setPassword("SuperAdminSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Admin
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("student");
-                setEmail("SLG-2026-0001");
-                setPassword("StudentSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Student ID
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("staff");
-                setEmail("trainer@softlabglobal.com");
-                setPassword("TrainerSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Trainer
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setLoginType("staff");
-                setEmail("director@softlabglobal.com");
-                setPassword("DirectorSecure2026!");
-                setError(null);
-              }}
-              className="px-2 py-1 bg-slate-800/80 hover:bg-emerald-950/80 hover:text-emerald-300 border border-slate-700/60 rounded text-slate-300 transition text-center truncate"
-            >
-              Director
-            </button>
-          </div>
-        </div>
       </CardContent>
 
       <CardFooter className="flex flex-col space-y-2 border-t border-slate-800 bg-slate-950/50 p-4 text-center text-xs text-slate-400">
@@ -318,7 +236,7 @@ export default function LoginPage() {
         <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
           Civil Lines Campus: Patrika Chauraha, 13/11/8G, Tashkent Marg, Prayagraj, UP
           <br />
-          Helpline: +91 9196596975 | GSTIN: 09AFYFS5388G1ZX
+          Helpline: +91 9194085890 | GSTIN: 09AFYFS5388G1ZX
         </p>
       </div>
     </div>

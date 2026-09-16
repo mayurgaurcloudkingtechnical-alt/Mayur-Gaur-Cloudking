@@ -1,14 +1,17 @@
 import { requireRole } from "@/server/auth/rbac";
-import { UserRoleCode } from "@prisma/client";
+import { UserRoleCode, LeadSource } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import Link from "next/link";
-import { Users, Shield, BookOpen, Activity, Calendar } from "lucide-react";
+import { Users, Shield, BookOpen, Activity, Calendar, Instagram, ExternalLink, ArrowRight, BarChart3, Sparkles } from "lucide-react";
 import { db } from "@/server/db/client";
 import { formatDate } from "@/lib/utils";
+import { INSTAGRAM_CONFIG, META_ADS_CONFIG } from "@/server/config/meta-ads.config";
+import { UnifiedLiveDashboard } from "@/components/admin/dashboard/unified-live-dashboard";
 
 export default async function AdminDashboardPage() {
   const user = await requireRole([
@@ -21,7 +24,7 @@ export default async function AdminDashboardPage() {
     UserRoleCode.PLACEMENT_OFFICER,
   ]);
 
-  const [userCount, roleCount, courseCount, batchCount, auditCount, recentLogs] = await Promise.all([
+  const [userCount, roleCount, courseCount, batchCount, auditCount, recentLogs, igLeadCount, fbLeadCount] = await Promise.all([
     db.user.count(),
     db.role.count(),
     db.course.count(),
@@ -39,80 +42,89 @@ export default async function AdminDashboardPage() {
         },
       },
     }),
+    db.lead.count({ where: { source: LeadSource.META_ADS_IG } }),
+    db.lead.count({ where: { source: LeadSource.META_ADS_FB } }),
   ]);
 
   return (
     <DashboardShell user={user}>
       <PageHeader
         title="Operations & Administration ERP"
-        description="Global institutional management, user directories, catalog, and security governance."
+        description="Global institutional mission control, multi-platform telemetry, and real-time live tracking."
         action={
-          <Badge variant="default" className="text-xs uppercase">
-            {user.roleCode.replace(/_/g, " ")} • System Authority
+          <Badge variant="default" className="text-xs uppercase bg-slate-900">
+            {user.roleCode.replace(/_/g, " ")} • Mission Control Authority
           </Badge>
         }
       />
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Registered Users</CardTitle>
+            <CardTitle className="text-xs font-semibold text-slate-600">Registered Users</CardTitle>
             <Users className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{userCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Across all 11 system roles</p>
+            <p className="text-xs text-slate-500 mt-0.5">Across all 11 system roles</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Documented Roles</CardTitle>
+            <CardTitle className="text-xs font-semibold text-slate-600">Documented Roles</CardTitle>
             <Shield className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{roleCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Enforced with server RBAC</p>
+            <p className="text-xs text-slate-500 mt-0.5">Enforced with server RBAC</p>
           </CardContent>
         </Card>
 
-        <Link href="/admin/courses" className="block transition-transform hover:scale-[1.02]">
+        <Link href="/admin/courses" className="block transition-transform hover:scale-[1.01]">
           <Card className="h-full border-emerald-100 hover:border-emerald-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-800">Academic Courses</CardTitle>
+              <CardTitle className="text-xs font-semibold text-emerald-800">Academic Courses</CardTitle>
               <BookOpen className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-emerald-700">{courseCount}</div>
-              <p className="text-xs text-slate-500 mt-1">Manage catalog →</p>
+              <p className="text-xs text-slate-500 mt-0.5">Manage catalog →</p>
             </CardContent>
           </Card>
         </Link>
 
-        <Link href="/admin/batches" className="block transition-transform hover:scale-[1.02]">
+        <Link href="/admin/batches" className="block transition-transform hover:scale-[1.01]">
           <Card className="h-full border-emerald-100 hover:border-emerald-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-800">Batches & Cohorts</CardTitle>
+              <CardTitle className="text-xs font-semibold text-emerald-800">Batches & Cohorts</CardTitle>
               <Calendar className="h-4 w-4 text-emerald-600" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-emerald-700">{batchCount}</div>
-              <p className="text-xs text-slate-500 mt-1">Manage cohorts →</p>
+              <p className="text-xs text-slate-500 mt-0.5">Manage cohorts →</p>
             </CardContent>
           </Card>
         </Link>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Audit Logs</CardTitle>
+            <CardTitle className="text-xs font-semibold text-slate-600">Audit Logs</CardTitle>
             <Activity className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-900">{auditCount}</div>
-            <p className="text-xs text-slate-500 mt-1">Immutable security logs</p>
+            <p className="text-xs text-slate-500 mt-0.5">Immutable security logs</p>
           </CardContent>
         </Card>
       </div>
+
+      {/* Unified Multi-Platform Mission Control with Real-Time Live Tracking */}
+      <div className="mb-8">
+        <UnifiedLiveDashboard />
+      </div>
+
+
 
       <div className="space-y-6">
         <Card>

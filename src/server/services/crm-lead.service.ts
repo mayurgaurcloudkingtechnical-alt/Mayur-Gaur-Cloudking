@@ -4,6 +4,7 @@ import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
 import { LeadSource, LeadStatus, FollowUpType, Prisma } from "@prisma/client";
+import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 
 export interface PublicEnquiryInput {
   fullName: string;
@@ -646,5 +647,146 @@ export class CrmLeadService {
     });
 
     return updated;
+  }
+
+  /**
+   * Logs a rapid calling disposition (CONNECTED, CALLBACK, BUSY, INTERESTED, NOT_INTERESTED).
+   * Creates a LeadActivity record and optionally updates status / follow-up date.
+   */
+  static async logDisposition(
+    user: AuthenticatedUser,
+    input: {
+      leadId: string;
+      disposition: string;
+      notes?: string;
+      newStatus?: LeadStatus;
+      nextFollowUpDate?: Date | null;
+    }
+  ) {
+    const lead = await db.lead.findUnique({
+      where: { id: input.leadId },
+    });
+
+    if (!lead) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Lead with ID '${input.leadId}' not found.`,
+      });
+    }
+
+    const activity = await db.leadActivity.create({
+      data: {
+        leadId: input.leadId,
+        userId: user.id,
+        activityType: "CALL_DISPOSITION",
+        disposition: input.disposition,
+        notes: input.notes || `Disposition logged: ${input.disposition}`,
+      },
+    });
+
+    if (input.newStatus || input.nextFollowUpDate !== undefined) {
+      await db.lead.update({
+        where: { id: input.leadId },
+        data: {
+          ...(input.newStatus ? { status: input.newStatus } : {}),
+          ...(input.nextFollowUpDate !== undefined ? { nextFollowUp: input.nextFollowUpDate } : {}),
+        },
+      });
+    }
+
+    return activity;
+  }
+
+  /**
+   * Retrieves high-level digital marketing attribution & conversion analytics.
+   */
+  static async getMarketingAnalytics() {
+    const [groupedStats, recentActivities, boostTotal, boostAdmitted] = await Promise.all([
+      db.lead.groupBy({
+        by: ["source", "status"],
+        _count: { id: true },
+      }),
+      db.leadActivity.findMany({
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          lead: { select: { id: true, fullName: true, phone: true, source: true } },
+          user: { select: { id: true, firstName: true, lastName: true, roleCode: true } },
+        },
+      }),
+      db.lead.count({
+        where: {
+          OR: [
+            { adCreativeName: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+            { campaignName: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+            { notes: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+          ],
+        },
+      }),
+      db.lead.count({
+        where: {
+          status: LeadStatus.ADMITTED,
+          OR: [
+            { adCreativeName: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+            { campaignName: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+            { notes: { contains: META_ADS_CONFIG.ACTIVE_BOOST.boostId } },
+          ],
+        },
+      }),
+    ]);
+
+    let totalJustDial = 0;
+    let admittedJustDial = 0;
+    let totalGoogle = 0;
+    let admittedGoogle = 0;
+    let totalMetaFb = 0;
+    let admittedMetaFb = 0;
+    let totalInstagram = 0;
+    let admittedInstagram = 0;
+    let totalWebsite = 0;
+    let admittedWebsite = 0;
+
+    for (const stat of groupedStats) {
+      const count = stat._count.id;
+      const isAdmitted = stat.status === LeadStatus.ADMITTED;
+
+      if (stat.source === LeadSource.JUSTDIAL) {
+        totalJustDial += count;
+        if (isAdmitted) admittedJustDial += count;
+      } else if (stat.source === LeadSource.GOOGLE_ADS) {
+        totalGoogle += count;
+        if (isAdmitted) admittedGoogle += count;
+      } else if (stat.source === LeadSource.META_ADS_FB) {
+        totalMetaFb += count;
+        if (isAdmitted) admittedMetaFb += count;
+      } else if (stat.source === LeadSource.META_ADS_IG) {
+        totalInstagram += count;
+        if (isAdmitted) admittedInstagram += count;
+      } else if (stat.source === LeadSource.WEBSITE) {
+        totalWebsite += count;
+        if (isAdmitted) admittedWebsite += count;
+      }
+    }
+
+    const totalMetaCombined = totalMetaFb + totalInstagram;
+    const admittedMetaCombined = admittedMetaFb + admittedInstagram;
+
+    return {
+      platforms: {
+        justdial: { total: totalJustDial, admitted: admittedJustDial, conversionRate: totalJustDial > 0 ? ((admittedJustDial / totalJustDial) * 100).toFixed(1) : "0.0" },
+        googleAds: { total: totalGoogle, admitted: admittedGoogle, conversionRate: totalGoogle > 0 ? ((admittedGoogle / totalGoogle) * 100).toFixed(1) : "0.0" },
+        metaAds: { total: totalMetaCombined, admitted: admittedMetaCombined, conversionRate: totalMetaCombined > 0 ? ((admittedMetaCombined / totalMetaCombined) * 100).toFixed(1) : "0.0" },
+        facebookAds: { total: totalMetaFb, admitted: admittedMetaFb, conversionRate: totalMetaFb > 0 ? ((admittedMetaFb / totalMetaFb) * 100).toFixed(1) : "0.0" },
+        instagram: { total: totalInstagram, admitted: admittedInstagram, conversionRate: totalInstagram > 0 ? ((admittedInstagram / totalInstagram) * 100).toFixed(1) : "0.0" },
+        website: { total: totalWebsite, admitted: admittedWebsite, conversionRate: totalWebsite > 0 ? ((admittedWebsite / totalWebsite) * 100).toFixed(1) : "0.0" },
+      },
+      activeBoostCampaign: {
+        ...META_ADS_CONFIG.ACTIVE_BOOST,
+        totalLeads: boostTotal,
+        admittedLeads: boostAdmitted,
+        conversionRate: boostTotal > 0 ? ((boostAdmitted / boostTotal) * 100).toFixed(1) : "0.0",
+      },
+      recentActivities,
+    };
   }
 }

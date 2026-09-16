@@ -1,0 +1,170 @@
+[
+  {
+    "title": "Technical Support Engineer",
+    "slug": "technical-support-engineer",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Intermediate",
+    "summary": "Master enterprise IT support, Windows/Linux desktop administration, hardware diagnostics, networking, Microsoft 365, and ITIL ticketing workflows."
+  },
+  {
+    "title": "C++ Programming Complete Course (Basic To Advanced)",
+    "slug": "cpp-programming-complete-course",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Advanced",
+    "summary": "Comprehensive C++ programming covering core syntax, memory management, pointers, Object-Oriented Programming (OOP), Templates, STL, and Modern C++20."
+  },
+  {
+    "title": "MySQL Advanced Course (Beginner To Expert)",
+    "slug": "mysql-advanced-course",
+    "durationWeeks": 24,
+    "baseFee": 6500000,
+    "level": "Beginner to Expert",
+    "summary": "Master enterprise relational database design, complex SQL queries, indexing strategies, transactions (ACID), stored procedures, triggers, replication, and performance tuning."
+  },
+  {
+    "title": "Digital Marketing Master Class",
+    "slug": "digital-marketing-master-class",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Advanced",
+    "summary": "Master SEO, Google Search & Display Ads, Meta (Facebook & Instagram) Marketing, Content Strategy, Email Automation, and Google Analytics 4 (GA4)."
+  },
+  {
+    "title": "Java Full Stack Developer",
+    "slug": "java-full-stack-developer",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Enterprise Advanced",
+    "summary": "Complete enterprise Java stack: Core Java, OOP, Collections, Spring Boot 3, Hibernate/JPA, RESTful APIs, Microservices, React.js frontend, Docker, and MySQL/PostgreSQL."
+  },
+  {
+    "title": "Python Full Stack Developer",
+    "slug": "python-full-stack-developer",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Enterprise Advanced",
+    "summary": "Full-stack development using Python 3.12, Django 5, FastAPI, PostgreSQL, HTML5/CSS3/JavaScript, React.js frontend, Docker, and REST APIs."
+  },
+  {
+    "title": "Full Web Development",
+    "slug": "full-web-development",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Intermediate",
+    "summary": "Hands-on full web development program covering HTML5, CSS3, Tailwind CSS, JavaScript ES6+, Node.js, Express, MongoDB, Git, and website deployment."
+  },
+  {
+    "title": "Graphics Designing Master Level",
+    "slug": "graphics-designing-master-level",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Professional",
+    "summary": "Master visual communication, Adobe Photoshop, Adobe Illustrator, InDesign, CorelDRAW, typography, branding identity, packaging design, and portfolio creation."
+  },
+  {
+    "title": "Cyber Security Complete Course",
+    "slug": "cyber-security-complete-course",
+    "durationWeeks": 24,
+    "baseFee": 11500000,
+    "level": "Beginner to Advanced Specialist",
+    "summary": "Comprehensive ethical hacking, network penetration testing, web application security (OWASP Top 10), cryptography, digital forensics, and SOC operations."
+  },
+  {
+    "title": "Oracle Database Administration (DBA) with Oracle Cloud Integration",
+    "slug": "oracle-database-administration-dba",
+    "durationWeeks": 24,
+    "baseFee": 7500000,
+    "level": "Intermediate to Expert",
+    "summary": "Enterprise Oracle 19c/21c architecture, multitenant CDB/PDB, backup & recovery with RMAN, Data Guard disaster recovery, performance tuning, and Oracle Cloud Infrastructure (OCI)."
+  },
+  {
+    "title": "Data Science Master Level",
+    "slug": "data-science-master-level",
+    "durationWeeks": 24,
+    "baseFee": 7500000,
+    "level": "Beginner to Master Specialist",
+    "summary": "Complete Data Science pipeline: Python, NumPy, Pandas, Exploratory Data Analysis, Statistics, Scikit-Learn Machine Learning, Feature Engineering, Power BI, and Big Data (PySpark)."
+  },
+  {
+    "title": "MERN Full Stack Developer",
+    "slug": "mern-full-stack-developer",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Advanced Engineer",
+    "summary": "Master modern full-stack web applications with MongoDB, Express.js, React.js (with Next.js), and Node.js. Includes Redux Toolkit, Tailwind CSS, TypeScript, and cloud deployment."
+  },
+  {
+    "title": "Master in Artificial Intelligence and Machine Learning",
+    "slug": "master-in-artificial-intelligence-and-machine-learning",
+    "durationWeeks": 52,
+    "baseFee": 12500000,
+    "level": "Advanced Master Level",
+    "summary": "Comprehensive 1-year master program: Deep Learning, Neural Networks, PyTorch, Computer Vision (CNNs), Natural Language Processing (Transformers), Large Language Models (LLMs), Generative AI, and MLOps."
+  },
+  {
+    "title": "Certificate in Cloud Computing and Cyber Security With AI",
+    "slug": "certificate-in-cloud-computing-and-cyber-security-with-ai",
+    "durationWeeks": 52,
+    "baseFee": 9000000,
+    "level": "Comprehensive Advanced",
+    "summary": "1-year integrated professional program combining AWS & Azure Cloud Engineering, Enterprise Cyber Defense, DevSecOps pipelines, and AI-driven Threat Intelligence."
+  },
+  {
+    "title": "Certificate in Cloud Computing With DevOps",
+    "slug": "certificate-in-cloud-computing-with-devops",
+    "durationWeeks": 24,
+    "baseFee": 7000000,
+    "level": "Intermediate to Advanced",
+    "summary": "Master cloud engineering on AWS, Linux automation, Git, Docker, Kubernetes, Terraform (IaC), Jenkins, GitHub Actions CI/CD pipelines, and Prometheus/Grafana monitoring."
+  },
+  {
+    "title": "Certificate in Advance Networking",
+    "slug": "certificate-in-advance-networking",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Advanced",
+    "summary": "In-depth enterprise routing, switching, VLANs, OSPF, BGP, IPv4/IPv6 subnetting, ACLs, NAT, VPN tunnels, and Cisco Packet Tracer / GNS3 network design."
+  },
+  {
+    "title": "Master in Cloud Administration",
+    "slug": "master-in-cloud-administration",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Professional",
+    "summary": "Comprehensive cloud administrator training on AWS and Azure: IAM security, virtual private networks, auto-scaling, cloud storage lifecycle, and disaster recovery."
+  },
+  {
+    "title": "Master in Linux Administration",
+    "slug": "master-in-linux-administration",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Advanced SysAdmin",
+    "summary": "Enterprise Linux training on Red Hat Enterprise Linux (RHEL) and Ubuntu Server: CLI mastery, storage management (LVM), systemd services, SELinux, and Bash scripting."
+  },
+  {
+    "title": "Master in Server Administration",
+    "slug": "master-in-server-administration",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Enterprise Admin",
+    "summary": "Windows Server 2022 administration: Active Directory Domain Services (AD DS), Group Policy Objects (GPO), DNS, DHCP, Hyper-V, and disaster recovery."
+  },
+  {
+    "title": "Certificate in Office 365 Admin",
+    "slug": "certificate-in-office-365-admin",
+    "durationWeeks": 4,
+    "baseFee": 2500000,
+    "level": "Beginner to Intermediate",
+    "summary": "Focused Microsoft 365 administration: Tenant setup, Exchange Online mailboxes, SharePoint permissions, Teams governance, and Entra ID (Azure AD) security."
+  },
+  {
+    "title": "Certificate in C Language",
+    "slug": "certificate-in-c-language",
+    "durationWeeks": 12,
+    "baseFee": 2500000,
+    "level": "Beginner to Intermediate",
+    "summary": "Foundational programming in C: Syntax, loops, functions, arrays, strings, pointers, memory allocation, structures, unions, and file input/output operations."
+  }
+]
