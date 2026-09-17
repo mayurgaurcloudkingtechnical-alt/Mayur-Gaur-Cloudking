@@ -776,13 +776,25 @@ export const adminRouter = router({
         let user = await tx.user.findUnique({ where: { email: cleanEmail } });
 
         if (!user) {
+          const cleanPhone = input.phone.trim();
+          const existingPhoneUser = await tx.user.findFirst({
+            where: { phone: cleanPhone },
+          });
+
+          if (existingPhoneUser) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `A user with phone number '${cleanPhone}' is already registered (${existingPhoneUser.email}). Please use a unique mobile number.`,
+            });
+          }
+
           const defaultPasswordHash = await bcrypt.hash("StudentSecure2026!", 10);
           user = await tx.user.create({
             data: {
               firstName: input.firstName.trim(),
               lastName: input.lastName.trim(),
               email: cleanEmail,
-              phone: input.phone.trim(),
+              phone: cleanPhone,
               roleCode: UserRoleCode.STUDENT,
               passwordHash: defaultPasswordHash,
               status: UserStatus.ACTIVE,
@@ -790,25 +802,45 @@ export const adminRouter = router({
           });
         }
 
-        const count = await tx.studentProfile.count();
-        const year = new Date().getFullYear();
-        const studentId = `SG-${year}-${(count + 1).toString().padStart(5, "0")}`;
+        let studentProfile = await tx.studentProfile.findUnique({
+          where: { userId: user.id },
+        });
 
-        const studentProfile = await tx.studentProfile.create({
-          data: {
-            userId: user.id,
-            studentId,
-            dateOfBirth: input.dateOfBirth,
-            gender: input.gender,
-            address: input.address,
-            city: input.city,
-            state: input.state,
-            pincode: input.pincode,
-            highestDegree: input.highestDegree,
-            guardianName: input.guardianName,
-            guardianPhone: input.guardianPhone,
+        if (!studentProfile) {
+          const count = await tx.studentProfile.count();
+          const year = new Date().getFullYear();
+          const studentId = `SG-${year}-${(count + 1).toString().padStart(5, "0")}`;
+
+          studentProfile = await tx.studentProfile.create({
+            data: {
+              userId: user.id,
+              studentId,
+              dateOfBirth: input.dateOfBirth,
+              gender: input.gender,
+              address: input.address,
+              city: input.city,
+              state: input.state,
+              pincode: input.pincode,
+              highestDegree: input.highestDegree,
+              guardianName: input.guardianName,
+              guardianPhone: input.guardianPhone,
+            },
+          });
+        }
+
+        const existingEnrollment = await tx.enrollment.findFirst({
+          where: {
+            studentId: studentProfile.id,
+            courseId: input.courseId,
           },
         });
+
+        if (existingEnrollment) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `This student is already enrolled in ${course.title}.`,
+          });
+        }
 
         const enrollment = await tx.enrollment.create({
           data: {
