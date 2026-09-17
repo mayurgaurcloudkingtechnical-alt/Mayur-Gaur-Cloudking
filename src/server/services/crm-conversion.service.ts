@@ -81,8 +81,8 @@ export class CrmConversionService {
 
       if (!studentProfile) {
         const year = new Date().getFullYear();
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const studentCode = `SLG-${year}-${rand}`;
+        const count = await tx.studentProfile.count();
+        const studentCode = `SG-${year}-${(count + 1).toString().padStart(5, "0")}`;
 
         studentProfile = await tx.studentProfile.create({
           data: {
@@ -115,6 +115,31 @@ export class CrmConversionService {
             courseId: app.courseId,
             batchId: app.batchId || null,
             status: EnrollmentStatus.ACTIVE,
+          },
+        });
+      }
+
+      // Auto-create active FeeStructure (Fee Ledger) for the enrolled student
+      let feeStructure = await tx.feeStructure.findUnique({
+        where: { enrollmentId: enrollment.id },
+      });
+
+      if (!feeStructure) {
+        const course = await tx.course.findUnique({ where: { id: app.courseId } });
+        const totalCourseFee = course?.baseFee || 3500000;
+        feeStructure = await tx.feeStructure.create({
+          data: {
+            studentId: studentProfile.id,
+            enrollmentId: enrollment.id,
+            courseId: app.courseId,
+            batchId: app.batchId || null,
+            totalCourseFee,
+            netPayableAmount: totalCourseFee,
+            pendingAmount: totalCourseFee,
+            paidAmount: 0,
+            paymentStatus: "PENDING",
+            status: "ACTIVE",
+            createdById: user.id,
           },
         });
       }

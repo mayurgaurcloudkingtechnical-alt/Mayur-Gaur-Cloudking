@@ -58,14 +58,14 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Certificates", href: "/student/certificates", icon: <Award className="h-4 w-4" /> },
           { title: "Fees & Breakdown", href: "/student/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "Payment History", href: "/student/payments", icon: <CreditCard className="h-4 w-4" /> },
-          { title: "Career & Placement", href: "/student/placement", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Career & Placement", href: "/student/placements", icon: <Briefcase className="h-4 w-4" /> },
         ];
       case "TRAINER":
         return [
           { title: "Dashboard", href: "/trainer/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Assigned Batches", href: "/trainer/batches", icon: <Users className="h-4 w-4" /> },
           { title: "Live Classes", href: "/trainer/classes", icon: <Calendar className="h-4 w-4" /> },
-          { title: "Curriculum CMS", href: "/trainer/classes", icon: <FileEdit className="h-4 w-4" /> },
+          { title: "Curriculum CMS", href: "/trainer/courses", icon: <FileEdit className="h-4 w-4" /> },
         ];
       case "TELECALLER":
         return [
@@ -86,14 +86,17 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
-          { title: "Admissions", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
+          { title: "Admissions Desk", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
+          { title: "Student Management", href: "/admin/students", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
-          { title: "Batches & Schedules", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
+          { title: "Batches & Cohorts", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
+          { title: "Attendance Oversight", href: "/admin/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },
           { title: "Finance & Accounts", href: "/admin/finance", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "Exams & Results", href: "/admin/exams", icon: <FileCheck2 className="h-4 w-4" /> },
           { title: "Certificates", href: "/admin/certificates", icon: <Award className="h-4 w-4" /> },
-          { title: "Placements", href: "/admin/placement", icon: <Briefcase className="h-4 w-4" /> },
-          { title: "Staff & HR", href: "/admin/hr", icon: <Users className="h-4 w-4" /> },
+          { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
+          { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },
           { title: "Settings & RBAC", href: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
         ];
     }

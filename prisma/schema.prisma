@@ -1410,5 +1410,23 @@ model Notification {
   @@map("notifications")
 }
 
+// ==============================================================================
+// 15. SYSTEM SETTINGS, CONFIGURATION & INTEGRATIONS REGISTRY
+// ==============================================================================
+
+model SystemSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  category  String   @default("GENERAL") // GENERAL, BRANDING, RAZORPAY, EMAIL, WHATSAPP, INTEGRATIONS, SECURITY
+  isSecret  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+
+  @@index([category])
+  @@map("system_settings")
+}
+
+
 
 

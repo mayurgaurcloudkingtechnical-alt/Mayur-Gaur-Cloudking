@@ -21,6 +21,10 @@ import {
   Trash2,
   Edit2,
   ExternalLink,
+  GraduationCap,
+  UserPlus,
+  UserMinus,
+  Eye,
 } from "lucide-react";
 
 interface BatchDetailViewProps {
@@ -30,12 +34,38 @@ interface BatchDetailViewProps {
 export function BatchDetailView({ batchId }: BatchDetailViewProps) {
   const [scheduleModalOpen, setScheduleModalOpen] = React.useState(false);
   const [editBatchOpen, setEditBatchOpen] = React.useState(false);
+  const [addStudentOpen, setAddStudentOpen] = React.useState(false);
+  const [selectedStudentProfileId, setSelectedStudentProfileId] = React.useState("");
 
   const { data: batch, isLoading, error } = api.batch.getById.useQuery({
     id: batchId,
   });
 
+  const { data: batchStudents, isLoading: studentsLoading } = api.batch.getBatchStudents.useQuery({
+    batchId,
+  });
+
+  const { data: availableStudents } = api.admin.listStudents.useQuery({
+    pageSize: 100,
+  });
+
   const utils = api.useUtils();
+
+  const addStudentMutation = api.batch.addStudentToBatch.useMutation({
+    onSuccess: () => {
+      utils.batch.getBatchStudents.invalidate({ batchId });
+      utils.batch.getById.invalidate({ id: batchId });
+      setAddStudentOpen(false);
+      setSelectedStudentProfileId("");
+    },
+  });
+
+  const removeStudentMutation = api.batch.removeStudentFromBatch.useMutation({
+    onSuccess: () => {
+      utils.batch.getBatchStudents.invalidate({ batchId });
+      utils.batch.getById.invalidate({ id: batchId });
+    },
+  });
 
   const updateStatusMutation = api.batch.updateStatus.useMutation({
     onSuccess: () => {
@@ -388,6 +418,188 @@ export function BatchDetailView({ batchId }: BatchDetailViewProps) {
         </CardContent>
       </Card>
 
+      {/* Enrolled Students Roster */}
+      <Card>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <GraduationCap className="h-5 w-5 text-emerald-600" />
+              Enrolled Cohort Roster ({batchStudents?.length || 0} / {batch.maxCapacity})
+            </CardTitle>
+            <CardDescription>
+              Active learners enrolled and receiving live class notifications in this batch
+            </CardDescription>
+          </div>
+          <Button
+            size="sm"
+            onClick={() => setAddStudentOpen(true)}
+            className="gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white self-start sm:self-auto"
+          >
+            <UserPlus className="h-4 w-4" /> Add Student to Cohort
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {studentsLoading ? (
+            <div className="py-8 text-center text-xs text-slate-500">Loading cohort student roster...</div>
+          ) : !batchStudents || batchStudents.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
+              <GraduationCap className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+              <p className="font-semibold text-slate-700">No students allocated to this batch yet</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Click &quot;Add Student to Cohort&quot; to assign enrolled learners to this batch.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-lg border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-slate-50 text-xs">
+                    <TableHead>Student ID</TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Fee Status</TableHead>
+                    <TableHead>Enrolled At</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {batchStudents.map((enr) => (
+                    <TableRow key={enr.enrollmentId} className="text-xs">
+                      <TableCell className="font-mono font-bold text-emerald-700">
+                        {enr.studentId}
+                      </TableCell>
+                      <TableCell className="font-semibold text-slate-900">
+                        {enr.name}
+                      </TableCell>
+                      <TableCell className="text-slate-600">
+                        <div>{enr.email}</div>
+                        <div className="text-[11px] text-slate-400">{enr.phone}</div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          className={`text-[10px] font-semibold ${
+                            enr.feeStatus === "PAID"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : enr.feeStatus === "PARTIAL"
+                              ? "bg-amber-100 text-amber-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {enr.feeStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-slate-500">
+                        {new Date(enr.enrolledAt).toLocaleDateString("en-IN")}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link href={`/admin/students/${enr.studentProfileId}`}>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-7 px-2 text-slate-600 hover:text-slate-900 gap-1"
+                              title="View Student Dossier"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                          </Link>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-red-500 hover:text-red-700 hover:bg-red-50"
+                            disabled={removeStudentMutation.isPending}
+                            onClick={() =>
+                              removeStudentMutation.mutate({
+                                batchId: batch.id,
+                                enrollmentId: enr.enrollmentId,
+                              })
+                            }
+                            title="Remove from this cohort"
+                          >
+                            <UserMinus className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add Student Dialog */}
+      {addStudentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-150">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                <UserPlus className="h-4 w-4 text-emerald-600" />
+                Add Student to Cohort
+              </h3>
+              <button
+                onClick={() => setAddStudentOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!selectedStudentProfileId) return;
+                addStudentMutation.mutate({
+                  batchId: batch.id,
+                  studentProfileId: selectedStudentProfileId,
+                });
+              }}
+              className="p-6 space-y-4 text-sm"
+            >
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1">
+                  Select Registered Student
+                </label>
+                <select
+                  required
+                  value={selectedStudentProfileId}
+                  onChange={(e) => setSelectedStudentProfileId(e.target.value)}
+                  className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-sm"
+                >
+                  <option value="">-- Choose Student --</option>
+                  {availableStudents?.students?.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.studentId}) - {s.email}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Assigns the student to this batch and synchronizes attendance and class notifications.
+                </p>
+              </div>
+
+              <div className="pt-4 flex justify-end gap-3 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setAddStudentOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={addStudentMutation.isPending || !selectedStudentProfileId}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                >
+                  {addStudentMutation.isPending ? "Assigning..." : "Assign to Batch"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       <CreateClassDialog
         batchId={batch.id}
         batchStartDate={batch.startDate}
@@ -404,3 +616,4 @@ export function BatchDetailView({ batchId }: BatchDetailViewProps) {
     </div>
   );
 }
+

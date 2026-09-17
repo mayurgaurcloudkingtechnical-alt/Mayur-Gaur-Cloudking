@@ -456,4 +456,184 @@ export const batchRouter = router({
 
       return updated;
     }),
+
+  /**
+   * Retrieves student roster enrolled in this batch.
+   */
+  getBatchStudents: protectedProcedure
+    .input(z.object({ batchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const enrollments = await ctx.db.enrollment.findMany({
+        where: { batchId: input.batchId },
+        include: {
+          student: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phone: true,
+                  status: true,
+                },
+              },
+            },
+          },
+          feeStructure: {
+            select: {
+              paymentStatus: true,
+              totalCourseFee: true,
+              paidAmount: true,
+              pendingAmount: true,
+            },
+          },
+        },
+        orderBy: { enrolledAt: "desc" },
+      });
+
+      return enrollments.map((enr) => ({
+        enrollmentId: enr.id,
+        studentProfileId: enr.student.id,
+        studentId: enr.student.studentId,
+        name: `${enr.student.user.firstName} ${enr.student.user.lastName}`,
+        email: enr.student.user.email,
+        phone: enr.student.user.phone,
+        status: enr.status,
+        enrolledAt: enr.enrolledAt,
+        feeStatus: enr.feeStructure?.paymentStatus || "PENDING",
+        paidAmount: enr.feeStructure?.paidAmount || 0,
+        pendingAmount: enr.feeStructure?.pendingAmount || 0,
+      }));
+    }),
+
+  /**
+   * Assigns a student to a batch.
+   */
+  addStudentToBatch: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+  ])
+    .input(
+      z.object({
+        batchId: z.string(),
+        studentProfileId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const batch = await ctx.db.batch.findUnique({
+        where: { id: input.batchId },
+      });
+
+      if (!batch) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Batch not found." });
+      }
+
+      // Find or create enrollment for this course
+      let enrollment = await ctx.db.enrollment.findUnique({
+        where: {
+          studentId_courseId: {
+            studentId: input.studentProfileId,
+            courseId: batch.courseId,
+          },
+        },
+      });
+
+      if (enrollment) {
+        enrollment = await ctx.db.enrollment.update({
+          where: { id: enrollment.id },
+          data: { batchId: batch.id },
+        });
+      } else {
+        enrollment = await ctx.db.enrollment.create({
+          data: {
+            studentId: input.studentProfileId,
+            courseId: batch.courseId,
+            batchId: batch.id,
+            status: "ACTIVE",
+          },
+        });
+      }
+
+      // Also update fee structure if present
+      await ctx.db.feeStructure.updateMany({
+        where: { enrollmentId: enrollment.id },
+        data: { batchId: batch.id },
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "BATCH_STUDENT_ASSIGNED",
+        resourceType: "Batch",
+        resourceId: batch.id,
+        newData: { studentProfileId: input.studentProfileId, enrollmentId: enrollment.id },
+      });
+
+      return { success: true, enrollmentId: enrollment.id };
+    }),
+
+  /**
+   * Removes a student from a batch (unlinks batch, preserves course enrollment).
+   */
+  removeStudentFromBatch: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+  ])
+    .input(
+      z.object({
+        batchId: z.string(),
+        enrollmentId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const updated = await ctx.db.enrollment.update({
+        where: { id: input.enrollmentId },
+        data: { batchId: null },
+      });
+
+      await ctx.db.feeStructure.updateMany({
+        where: { enrollmentId: input.enrollmentId },
+        data: { batchId: null },
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "BATCH_STUDENT_REMOVED",
+        resourceType: "Batch",
+        resourceId: input.batchId,
+        newData: { enrollmentId: input.enrollmentId },
+      });
+
+      return { success: true };
+    }),
+
+  /**
+   * Retrieves high-level metrics for batch dashboard.
+   */
+  getBatchMetrics: protectedProcedure
+    .input(z.object({ batchId: z.string() }))
+    .query(async ({ ctx, input }) => {
+      const [totalStudents, activeStudents, classesCount, completedClasses] =
+        await Promise.all([
+          ctx.db.enrollment.count({ where: { batchId: input.batchId } }),
+          ctx.db.enrollment.count({
+            where: { batchId: input.batchId, status: "ACTIVE" },
+          }),
+          ctx.db.scheduledClass.count({ where: { batchId: input.batchId } }),
+          ctx.db.scheduledClass.count({
+            where: { batchId: input.batchId, status: "COMPLETED" },
+          }),
+        ]);
+
+      return {
+        totalStudents,
+        activeStudents,
+        totalClasses: classesCount,
+        completedClasses,
+        syllabusCompletionRate: classesCount > 0 ? Math.round((completedClasses / classesCount) * 100) : 0,
+      };
+    }),
 });
+

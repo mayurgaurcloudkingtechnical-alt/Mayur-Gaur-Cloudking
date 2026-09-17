@@ -58,4 +58,25 @@ export const attendanceRouter = router({
     .query(async ({ ctx, input }) => {
       return AttendanceService.getBatchAttendanceStats(ctx, input.batchId);
     }),
+
+  /**
+   * Institutional attendance oversight across all cohorts.
+   */
+  getInstitutionalAttendance: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+  ])
+    .input(
+      z
+        .object({
+          batchId: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return AttendanceService.getInstitutionalAttendance(ctx, input);
+    }),
 });
+

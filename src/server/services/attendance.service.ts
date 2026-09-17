@@ -300,4 +300,108 @@ export class AttendanceService {
       })),
     };
   }
+
+  /**
+   * Institutional attendance oversight across all batches and sessions for Admin / Director.
+   */
+  static async getInstitutionalAttendance(ctx: any, filter?: { batchId?: string }) {
+    const where: any = {};
+    if (filter?.batchId) {
+      where.batchId = filter.batchId;
+    }
+
+    const [records, batches] = await Promise.all([
+      ctx.db.attendanceRecord.findMany({
+        where,
+        orderBy: { date: "desc" },
+        take: 50,
+        include: {
+          batch: {
+            select: { id: true, name: true, code: true },
+          },
+          session: {
+            select: { id: true, title: true, scheduledAt: true },
+          },
+          markedBy: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          entries: {
+            select: { id: true, status: true },
+          },
+        },
+      }),
+      ctx.db.batch.findMany({
+        where: { deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          code: true,
+          course: { select: { title: true } },
+          _count: {
+            select: {
+              enrollments: { where: { status: EnrollmentStatus.ACTIVE } },
+              attendanceRecords: true,
+            },
+          },
+        },
+        take: 30,
+      }),
+    ]);
+
+    let totalEntries = 0;
+    let totalPresent = 0;
+    let totalAbsent = 0;
+    let totalLate = 0;
+
+    const formattedRecords = records.map((r: any) => {
+      const present = r.entries.filter((e: any) => e.status === AttendanceStatus.PRESENT).length;
+      const absent = r.entries.filter((e: any) => e.status === AttendanceStatus.ABSENT).length;
+      const late = r.entries.filter((e: any) => e.status === AttendanceStatus.LATE).length;
+      const total = r.entries.length;
+
+      totalEntries += total;
+      totalPresent += present;
+      totalAbsent += absent;
+      totalLate += late;
+
+      return {
+        id: r.id,
+        date: r.date,
+        batchName: r.batch.name,
+        batchCode: r.batch.code,
+        sessionTitle: r.session?.title ?? "Regular Session",
+        markedByName: r.markedBy ? `${r.markedBy.firstName} ${r.markedBy.lastName}` : "System",
+        topicCovered: r.topicCovered || "Standard Module Curriculum",
+        totalMarked: total,
+        present,
+        absent,
+        late,
+        rate: total > 0 ? Math.round(((present + late) / total) * 100) : 100,
+      };
+    });
+
+    const overallPercentage =
+      totalEntries > 0 ? Math.round(((totalPresent + totalLate) / totalEntries) * 100) : 100;
+
+    return {
+      metrics: {
+        totalRecords: records.length,
+        totalEntries,
+        totalPresent,
+        totalAbsent,
+        totalLate,
+        overallPercentage,
+      },
+      records: formattedRecords,
+      batches: batches.map((b: any) => ({
+        id: b.id,
+        name: b.name,
+        code: b.code,
+        courseTitle: b.course.title,
+        activeStudents: b._count.enrollments,
+        totalSessions: b._count.attendanceRecords,
+      })),
+    };
+  }
 }
+

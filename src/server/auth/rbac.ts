@@ -21,11 +21,82 @@ export function hasRole(role: UserRoleCode, allowedRoles: UserRoleCode[]): boole
   return allowedRoles.includes(role);
 }
 
+const LEGACY_MAP: Record<string, string[]> = {
+  "students.view": ["students:read", "leads:read_all", "admissions:read"],
+  "students.create": ["students:create", "admissions:create"],
+  "students.edit": ["students:update", "admissions:create"],
+  "students.delete": ["students:delete"],
+  "courses.view": ["courses:read"],
+  "courses.create": ["courses:create"],
+  "courses.edit": ["courses:update"],
+  "courses.delete": ["courses:delete"],
+  "courses.publish": ["courses:publish"],
+  "batches.view": ["batches:read", "courses:read"],
+  "batches.create": ["batches:create"],
+  "batches.edit": ["batches:update"],
+  "admissions.view": ["admissions:read", "leads:read_all", "leads:read_own"],
+  "admissions.create": ["admissions:create", "leads:create"],
+  "admissions.edit": ["admissions:update", "leads:update"],
+  "admissions.approve": ["admissions:approve_discount", "admissions:create"],
+  "fees.view": ["payments:view_ledger", "finance:read"],
+  "fees.recordPayment": ["payments:record_offline", "finance:record"],
+  "attendance.view": ["attendance:read", "attendance:mark"],
+  "attendance.create": ["attendance:mark"],
+  "lms.view": ["content:read", "courses:read"],
+  "lms.create": ["content:manage"],
+  "lms.edit": ["content:manage"],
+  "staff.view": ["hr:employees:manage", "staff:read"],
+  "staff.create": ["hr:employees:manage", "staff:create"],
+  "settings.view": ["system:read"],
+  "settings.edit": ["system:manage"],
+};
+
 /**
  * Checks whether a user's permissions array contains the requested permission.
  */
 export function hasPermission(permissions: string[], permission: string): boolean {
-  return permissions.includes(permission) || permissions.includes("*");
+  if (!permissions || !Array.isArray(permissions)) return false;
+  if (permissions.includes("*")) return true;
+  if (permissions.includes(permission)) return true;
+
+  // Domain wildcard support: e.g. "students.*" matches "students.create"
+  for (const perm of permissions) {
+    if (perm.endsWith(".*")) {
+      const prefix = perm.slice(0, -2);
+      if (permission.startsWith(prefix + ".")) {
+        return true;
+      }
+    }
+  }
+
+  // Normalize legacy format: e.g. "STUDENT_CREATE" -> "students:create"
+  const normalizedUserPerms = permissions.map((p) => p.toLowerCase().replace(/_/g, ":"));
+  const normalizedTarget = permission.toLowerCase().replace(/_/g, ":");
+
+  const legacyAliases = LEGACY_MAP[permission];
+  if (
+    legacyAliases &&
+    legacyAliases.some(
+      (alias) =>
+        permissions.includes(alias) ||
+        normalizedUserPerms.includes(alias) ||
+        normalizedUserPerms.includes(alias.replace(":", "_"))
+    )
+  ) {
+    return true;
+  }
+
+  // Reverse check: if permission checked is a legacy string and user has the modern one
+  for (const [modern, aliases] of Object.entries(LEGACY_MAP)) {
+    if (
+      (aliases.includes(permission) || aliases.includes(normalizedTarget)) &&
+      permissions.includes(modern)
+    ) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /**
