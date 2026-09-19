@@ -714,29 +714,35 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                 </CardHeader>
 
                 <CardContent className="p-5 space-y-5">
-                  {/* Ledger totals */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-100">
+                  {/* Mandatory Ledger totals: Course Fee | Discount | Final Fee | Paid | Pending */}
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-100">
                     <div>
-                      <span className="text-xs font-semibold text-slate-500">Agreed Course Fee</span>
-                      <p className="text-lg font-bold text-slate-900">
+                      <span className="text-xs font-semibold text-slate-500">Course Fee</span>
+                      <p className="text-base font-bold text-slate-900">
                         ₹{(fs.totalCourseFee / 100).toLocaleString("en-IN")}
                       </p>
                     </div>
                     <div>
-                      <span className="text-xs font-semibold text-slate-500">Net Payable Amount</span>
-                      <p className="text-lg font-bold text-slate-900">
+                      <span className="text-xs font-semibold text-amber-600">Discount</span>
+                      <p className="text-base font-bold text-amber-700">
+                        {fs.discountAmount > 0 ? `-₹${(fs.discountAmount / 100).toLocaleString("en-IN")}` : "₹0"}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-semibold text-slate-700">Final Fee</span>
+                      <p className="text-base font-bold text-slate-900">
                         ₹{(fs.netPayableAmount / 100).toLocaleString("en-IN")}
                       </p>
                     </div>
                     <div>
-                      <span className="text-xs font-semibold text-emerald-600">Total Collected</span>
-                      <p className="text-lg font-bold text-emerald-700">
+                      <span className="text-xs font-semibold text-emerald-600">Paid</span>
+                      <p className="text-base font-bold text-emerald-700">
                         ₹{(fs.paidAmount / 100).toLocaleString("en-IN")}
                       </p>
                     </div>
                     <div>
-                      <span className="text-xs font-semibold text-red-600">Outstanding Balance</span>
-                      <p className="text-lg font-bold text-red-700">
+                      <span className="text-xs font-semibold text-rose-600">Pending</span>
+                      <p className="text-base font-bold text-rose-700">
                         ₹{(fs.pendingAmount / 100).toLocaleString("en-IN")}
                       </p>
                     </div>

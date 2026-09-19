@@ -27,6 +27,7 @@ enum UserRoleCode {
   ACCOUNTANT
   PLACEMENT_OFFICER
   STUDENT
+  MARKETING
 }
 
 enum UserStatus {
@@ -119,6 +120,8 @@ enum LeadSource {
   JUSTDIAL
   CAMPUS_DRIVE
   CHATBOT
+  LINKEDIN
+  LINKEDIN_ADS
   OTHER
 }
 
@@ -169,6 +172,7 @@ enum PaymentMethod {
   CHEQUE
   OTHER
   RAZORPAY
+  STRIPE
 }
 
 enum PaymentTransactionStatus {
@@ -248,11 +252,18 @@ model User {
 
   // Placement relations
   createdJobDrives      JobDrive[]             @relation("JobDriveCreator")
+  assignedRecruiters    RecruiterContact[]     @relation("RecruiterAssignee")
+  recruiterFollowUps    RecruiterFollowUp[]
 
   // Staff ERP & HR relations
-  staffProfile          StaffProfile?
-  reviewedLeaveRequests LeaveRequest[]         @relation("LeaveReviewer")
-  processedPayrolls     PayrollRecord[]        @relation("PayrollProcessor")
+  staffProfile           StaffProfile?
+  reviewedLeaveRequests  LeaveRequest[]          @relation("LeaveReviewer")
+  processedPayrolls      PayrollRecord[]         @relation("PayrollProcessor")
+  verifiedAttendances    StaffAttendance[]       @relation("AttendanceVerifier")
+  createdStaffTasks      StaffTask[]             @relation("TaskCreator")
+  conductedStaffReviews  StaffPerformanceReview[] @relation("PerformanceReviewer")
+  verifiedStaffDocuments StaffDocument[]         @relation("DocumentVerifier")
+  createdStaffJobOpenings StaffJobOpening[]      @relation("JobOpeningCreator")
 
   // Audit & BI relations
   generatedAuditReports AuditReportExport[]    @relation("AuditReportGenerator")
@@ -406,6 +417,7 @@ model Batch {
   leads        Lead[]
   applications AdmissionApplication[]
   feeStructures FeeStructure[]
+  jobDrives    JobDrive[]
 
   @@index([courseId])
   @@index([status])
@@ -637,6 +649,7 @@ model Lead {
   source              LeadSource   @default(WEBSITE)
   status              LeadStatus   @default(NEW)
   qualityScore        String       @default("WARM") // HOT, WARM, COLD, INVALID
+  score               Int?
   interestedCourseId  String?
   course              Course?      @relation(fields: [interestedCourseId], references: [id], onDelete: SetNull)
   interestedBatchId   String?
@@ -1092,9 +1105,16 @@ enum JobType {
 
 enum PlacementApplicationStatus {
   APPLIED
+  UNDER_REVIEW
   SHORTLISTED
   INTERVIEW_SCHEDULED
+  INTERVIEWED
+  SELECTED
   OFFERED
+  OFFER_ACCEPTED
+  OFFER_REJECTED
+  JOINED
+  DID_NOT_JOIN
   PLACED
   REJECTED
   WITHDRAWN
@@ -1106,80 +1126,174 @@ enum InterviewRoundType {
   CODING
   HR
   GROUP_DISCUSSION
+  MANAGERIAL
+  FINAL
   OTHER
 }
 
 model CorporatePartner {
-  id            String     @id @default(cuid())
-  name          String
-  industry      String?
-  website       String?
-  contactPerson String?
-  contactEmail  String?
-  contactPhone  String?
-  location      String?
-  isActive      Boolean    @default(true)
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  id               String              @id @default(cuid())
+  name             String
+  industry         String?
+  website          String?
+  companySize      String?
+  address          String?
+  city             String?
+  state            String?
+  country          String?             @default("India")
+  gstNumber        String?
+  contactPerson    String?
+  contactEmail     String?
+  contactPhone     String?
+  location         String?
+  notes            String?             @db.Text
+  lastContactDate  DateTime?
+  nextFollowUpDate DateTime?
+  isActive         Boolean             @default(true)
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 
-  jobDrives     JobDrive[]
+  jobDrives        JobDrive[]
+  recruiters       RecruiterContact[]
+  followUps        RecruiterFollowUp[]
 
   @@index([isActive])
   @@map("corporate_partners")
 }
 
-model JobDrive {
-  id                   String                 @id @default(cuid())
-  companyId            String
-  company              CorporatePartner       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  title                String
-  slug                 String                 @unique
-  jobType              JobType                @default(FULL_TIME)
-  description          String                 @db.Text
-  eligibilityCriteria  String?                @db.Text
-  minPassingPercentage Float?
-  requireCertification Boolean                @default(false)
-  targetCourseId       String?
-  targetCourse         Course?                @relation(fields: [targetCourseId], references: [id], onDelete: SetNull)
-  salaryPackage        String?                // e.g. "₹4.5 - 6.5 LPA" or "₹25,000/month"
-  location             String?
-  openingsCount        Int                    @default(1)
-  deadline             DateTime?
-  driveDate            DateTime?
-  status               JobDriveStatus         @default(DRAFT)
-  createdById          String
-  createdBy            User                   @relation("JobDriveCreator", fields: [createdById], references: [id])
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
+model RecruiterContact {
+  id                     String             @id @default(cuid())
+  companyId              String
+  company                CorporatePartner   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                   String
+  designation            String?
+  email                  String
+  phone                  String
+  altPhone               String?
+  linkedinUrl            String?
+  location               String?
+  preferredCommunication String?            // CALL, EMAIL, WHATSAPP, LINKEDIN
+  assignedStaffId        String?
+  assignedStaff          User?              @relation("RecruiterAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  notes                  String?            @db.Text
+  nextFollowUpDate       DateTime?
+  status                 String             @default("ACTIVE") // ACTIVE, INACTIVE
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
 
-  applications         PlacementApplication[]
+  followUps              RecruiterFollowUp[]
+  jobDrives              JobDrive[]
 
   @@index([companyId])
+  @@index([email])
+  @@map("recruiter_contacts")
+}
+
+model RecruiterFollowUp {
+  id               String            @id @default(cuid())
+  companyId        String
+  company          CorporatePartner  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recruiterId      String?
+  recruiter        RecruiterContact? @relation(fields: [recruiterId], references: [id], onDelete: SetNull)
+  staffId          String
+  staff            User              @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  type             String            // CALL, EMAIL, MEETING, WHATSAPP, NOTE
+  notes            String            @db.Text
+  nextFollowUpDate DateTime?
+  status           String            @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([companyId])
+  @@index([recruiterId])
+  @@index([staffId])
+  @@map("recruiter_follow_ups")
+}
+
+model JobDrive {
+  id                      String                 @id @default(cuid())
+  companyId               String
+  company                 CorporatePartner       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  recruiterId             String?
+  recruiter               RecruiterContact?      @relation(fields: [recruiterId], references: [id], onDelete: SetNull)
+  title                   String
+  slug                    String                 @unique
+  department              String?
+  jobType                 JobType                @default(FULL_TIME)
+  workMode                String?                @default("ON_SITE") // ON_SITE, HYBRID, REMOTE
+  description             String                 @db.Text
+  responsibilities        String?                @db.Text
+  requirements            String?                @db.Text
+  benefits                String?                @db.Text
+  eligibilityCriteria     String?                @db.Text
+  minPassingPercentage    Float?
+  minAttendancePercentage Float?                 @default(75.0)
+  requireCertification    Boolean                @default(false)
+  targetCourseId          String?
+  targetCourse            Course?                @relation(fields: [targetCourseId], references: [id], onDelete: SetNull)
+  eligibleBatchId         String?
+  eligibleBatch           Batch?                 @relation(fields: [eligibleBatchId], references: [id], onDelete: SetNull)
+  salaryPackage           String?                // e.g. "₹4.5 - 6.5 LPA" or "₹25,000/month"
+  minSalary               Int?                   // in integer Paise
+  maxSalary               Int?                   // in integer Paise
+  salaryType              String?                @default("ANNUAL_CTC")
+  experienceRequired      String?
+  qualification           String?
+  location                String?
+  openingsCount           Int                    @default(1)
+  requiredSkills          String[]               @default([])
+  preferredSkills         String[]               @default([])
+  deadline                DateTime?
+  driveDate               DateTime?
+  interviewDate           DateTime?
+  joiningDate             DateTime?
+  venue                   String?
+  meetingLink             String?
+  driveType               String?                @default("CAMPUS_DRIVE")
+  status                  JobDriveStatus         @default(DRAFT)
+  createdById             String
+  createdBy               User                   @relation("JobDriveCreator", fields: [createdById], references: [id])
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  applications            PlacementApplication[]
+
+  @@index([companyId])
+  @@index([recruiterId])
   @@index([targetCourseId])
+  @@index([eligibleBatchId])
   @@index([status])
   @@index([deadline])
   @@map("job_drives")
 }
 
 model StudentPlacementProfile {
-  id            String         @id @default(cuid())
-  studentId     String         @unique
-  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  headline      String?
-  bio           String?        @db.Text
-  resumeUrl     String?
-  portfolioUrl  String?
-  githubUrl     String?
-  linkedinUrl   String?
-  skills        String[]       @default([])
-  isPlaced      Boolean        @default(false)
-  placedCompany String?
-  placedPackage String?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  studentId         String         @unique
+  student           StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  headline          String?
+  bio               String?        @db.Text
+  resumeUrl         String?
+  portfolioUrl      String?
+  githubUrl         String?
+  linkedinUrl       String?
+  skills            String[]       @default([])
+  preferredLocation String?
+  preferredRole     String?
+  expectedSalary    String?
+  experienceMonths  Int?           @default(0)
+  placementStatus   String         @default("REGISTERED") // ELIGIBLE, REGISTERED, APPLIED, SHORTLISTED, INTERVIEWING, SELECTED, OFFERED, JOINED, PLACED, OPTED_OUT
+  resumeFileName    String?
+  resumeUpdatedAt   DateTime?
+  isPlaced          Boolean        @default(false)
+  placedCompany     String?
+  placedPackage     String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   @@index([studentId])
   @@index([isPlaced])
+  @@index([placementStatus])
   @@map("student_placement_profiles")
 }
 
@@ -1197,6 +1311,8 @@ model PlacementApplication {
   updatedAt       DateTime                   @updatedAt
 
   rounds          InterviewRound[]
+  offer           PlacementOffer?
+  joiningRecord   PlacementJoiningRecord?
 
   @@unique([jobDriveId, studentId])
   @@index([jobDriveId])
@@ -1220,6 +1336,46 @@ model InterviewRound {
 
   @@index([applicationId])
   @@map("interview_rounds")
+}
+
+model PlacementOffer {
+  id               String               @id @default(cuid())
+  applicationId    String               @unique
+  application      PlacementApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  companyName      String
+  position         String
+  ctc              Int                  // in integer Paise
+  fixedSalary      Int?
+  variableSalary   Int?
+  joiningBonus     Int?
+  workLocation     String?
+  offerDate        DateTime             @default(now())
+  joiningDate      DateTime?
+  offerDocumentUrl String?
+  status           String               @default("PENDING") // PENDING, ACCEPTED, REJECTED, EXPIRED
+  notes            String?              @db.Text
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@map("placement_offers")
+}
+
+model PlacementJoiningRecord {
+  id                  String               @id @default(cuid())
+  applicationId       String               @unique
+  application         PlacementApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  companyName         String
+  position            String
+  joinedDate          DateTime             @default(now())
+  employeeId          String?
+  joiningProofUrl     String?
+  status              String               @default("JOINED") // JOINED, PROBATION, CONFIRMED, RESIGNED, TERMINATED, DID_NOT_JOIN
+  followUpDate        DateTime?
+  notes               String?              @db.Text
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  @@map("placement_joining_records")
 }
 
 // ==============================================================================
@@ -1254,32 +1410,179 @@ enum StaffDepartment {
   MARKETING
   OPERATIONS
   MANAGEMENT
+  HR
+  PLACEMENT
+  SALES
+  COUNSELING
+  TELECALLING
+  TRAINING
+  IT
+  OTHER
+}
+
+model StaffDepartmentEntity {
+  id          String             @id @default(cuid())
+  code        String             @unique
+  name        String
+  description String?
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  designations StaffDesignation[]
+
+  @@map("staff_departments")
+}
+
+model StaffDesignation {
+  id           String                 @id @default(cuid())
+  departmentId String?
+  department   StaffDepartmentEntity? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  title        String
+  code         String                 @unique
+  level        Int                    @default(1)
+  description  String?
+  isActive     Boolean                @default(true)
+  createdAt    DateTime               @default(now())
+  updatedAt    DateTime               @updatedAt
+
+  @@map("staff_designations")
 }
 
 model StaffProfile {
-  id                String          @id @default(cuid())
-  userId            String          @unique
-  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  employeeId        String          @unique
-  department        StaffDepartment
-  designation       String
-  joiningDate       DateTime        @default(now())
-  baseSalary        Int             // Base monthly salary in integer Paise
-  bankAccountNumber String?
-  bankIfsc          String?
-  panNumber         String?
-  isActive          Boolean         @default(true)
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  id                    String          @id @default(cuid())
+  userId                String          @unique
+  user                  User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  employeeId            String          @unique
+  department            StaffDepartment
+  designation           String
+  joiningDate           DateTime        @default(now())
+  baseSalary            Int             // Base monthly salary in integer Paise
+  profilePhoto          String?
+  gender                String?
+  dateOfBirth           DateTime?
+  personalPhone         String?
+  personalEmail         String?
+  residentialAddress    String?
+  employmentType        String          @default("FULL_TIME") // FULL_TIME, PART_TIME, CONTRACT, INTERN
+  workLocation          String          @default("PRAYAGRAJ_CAMPUS")
+  reportingManagerId    String?
+  reportingManager      StaffProfile?   @relation("StaffReporting", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  subordinates          StaffProfile[]  @relation("StaffReporting")
+  employmentStatus      String          @default("ACTIVE") // ACTIVE, PROBATION, ON_LEAVE, SUSPENDED, RESIGNED, TERMINATED, INACTIVE
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  skills                String[]        @default([])
+  bankAccountNumber     String?
+  bankIfsc              String?
+  panNumber             String?
+  shiftId               String?
+  shift                 StaffShift?             @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  isActive              Boolean         @default(true)
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
 
-  leaveRequests     LeaveRequest[]
-  payrollRecords    PayrollRecord[]
+  leaveRequests         LeaveRequest[]
+  payrollRecords        PayrollRecord[]
+  attendances           StaffAttendance[]
+  tasks                 StaffTask[]     @relation("AssignedTasks")
+  performanceReviews    StaffPerformanceReview[]
+  documents             StaffDocument[]
+  assets                StaffAsset[]
+  onboardingChecklist   StaffOnboardingChecklist?
+  offboardingRecord     StaffOffboardingRecord?
 
   @@index([userId])
   @@index([employeeId])
   @@index([department])
+  @@index([shiftId])
   @@index([isActive])
   @@map("staff_profiles")
+}
+
+model StaffAttendance {
+  id           String        @id @default(cuid())
+  staffId      String
+  staff        StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  date         DateTime      @db.Date
+  status       String        @default("PRESENT") // PRESENT, ABSENT, HALF_DAY, LATE, WORK_FROM_HOME, ON_DUTY, LEAVE
+  checkInTime  DateTime?
+  checkOutTime DateTime?
+  workingHours Float?
+  remarks      String?
+  verifiedById String?
+  verifiedBy   User?         @relation("AttendanceVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([staffId, date])
+  @@index([staffId])
+  @@index([date])
+  @@index([status])
+  @@map("staff_attendances")
+}
+
+model StaffTask {
+  id                   String        @id @default(cuid())
+  title                String
+  description          String?       @db.Text
+  assignedStaffId      String
+  assignedStaff        StaffProfile  @relation("AssignedTasks", fields: [assignedStaffId], references: [id], onDelete: Cascade)
+  department           String?
+  priority             String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status               String        @default("PENDING") // PENDING, IN_PROGRESS, COMPLETED, OVERDUE, CANCELLED
+  dueDate              DateTime?
+  completionPercentage Int           @default(0)
+  createdById          String
+  createdBy            User          @relation("TaskCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  @@index([assignedStaffId])
+  @@index([status])
+  @@index([priority])
+  @@map("staff_tasks")
+}
+
+model StaffPerformanceReview {
+  id               String        @id @default(cuid())
+  staffId          String
+  staff            StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  reviewPeriod     String        // e.g. "Q1 2026", "Annual 2025-26"
+  reviewerId       String
+  reviewer         User          @relation("PerformanceReviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  kpis             Json?
+  goals            Json?
+  selfAssessment   String?       @db.Text
+  managerFeedback  String?       @db.Text
+  rating           Float         @default(3.0) // 1.0 to 5.0
+  status           String        @default("DRAFT") // DRAFT, SUBMITTED, REVIEWED, COMPLETED
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([staffId])
+  @@index([reviewerId])
+  @@map("staff_performance_reviews")
+}
+
+model StaffDocument {
+  id           String        @id @default(cuid())
+  staffId      String
+  staff        StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  documentType String        // AADHAAR, PAN, OFFER_LETTER, APPOINTMENT_LETTER, EXPERIENCE_LETTER, PAYSLIP, OTHER
+  title        String
+  documentUrl  String
+  fileName     String?
+  fileSize     Int?
+  isVerified   Boolean       @default(false)
+  uploadedAt   DateTime      @default(now())
+  verifiedAt   DateTime?
+  verifiedById String?
+  verifiedBy   User?         @relation("DocumentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+
+  @@index([staffId])
+  @@index([documentType])
+  @@map("staff_documents")
 }
 
 model LeaveRequest {
@@ -1336,6 +1639,167 @@ model PayrollRecord {
   @@index([year])
   @@index([status])
   @@map("payroll_records")
+}
+
+model StaffShift {
+  id           String         @id @default(cuid())
+  name         String
+  code         String         @unique
+  startTime    String
+  endTime      String
+  breakMinutes Int            @default(60)
+  weeklyOff    String         @default("SUNDAY")
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  staff        StaffProfile[]
+
+  @@map("staff_shifts")
+}
+
+model StaffAsset {
+  id              String        @id @default(cuid())
+  assetTag        String        @unique
+  name            String
+  category        String
+  serialNumber    String?
+  brand           String?
+  model           String?
+  purchaseDate    DateTime?
+  warrantyExpiry  DateTime?
+  condition       String        @default("GOOD")
+  status          String        @default("AVAILABLE")
+  assignedStaffId String?
+  assignedStaff   StaffProfile? @relation(fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  assignedDate    DateTime?
+  returnDate      DateTime?
+  notes           String?       @db.Text
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([category])
+  @@index([status])
+  @@index([assignedStaffId])
+  @@map("staff_assets")
+}
+
+model StaffJobOpening {
+  id             String           @id @default(cuid())
+  title          String
+  department     String
+  employmentType String           @default("FULL_TIME")
+  experienceMin  Int              @default(0)
+  experienceMax  Int?
+  minSalary      Int?
+  maxSalary      Int?
+  openPositions  Int              @default(1)
+  location       String           @default("PRAYAGRAJ_CAMPUS")
+  description    String           @db.Text
+  requirements   String?          @db.Text
+  status         String           @default("ACTIVE")
+  closingDate    DateTime?
+  createdById    String
+  createdBy      User             @relation("JobOpeningCreator", fields: [createdById], references: [id], onDelete: Cascade)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  applicants     StaffApplicant[]
+
+  @@index([department])
+  @@index([status])
+  @@index([createdById])
+  @@map("staff_job_openings")
+}
+
+model StaffApplicant {
+  id               String          @id @default(cuid())
+  openingId        String
+  opening          StaffJobOpening @relation(fields: [openingId], references: [id], onDelete: Cascade)
+  fullName         String
+  email            String
+  phone            String
+  currentRole      String?
+  currentCompany   String?
+  experienceYears  Float           @default(0)
+  expectedCtc      Int?
+  noticePeriodDays Int?            @default(30)
+  resumeUrl        String?
+  portfolioUrl     String?
+  linkedinUrl      String?
+  status           String          @default("APPLIED")
+  rating           Int?            @default(0)
+  notes            String?         @db.Text
+  interviewDate    DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([openingId])
+  @@index([status])
+  @@index([email])
+  @@map("staff_applicants")
+}
+
+model StaffOnboardingChecklist {
+  id                  String        @id @default(cuid())
+  staffId             String        @unique
+  staff               StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  personalDetailsDone Boolean       @default(false)
+  documentsUploaded   Boolean       @default(false)
+  bankDetailsVerified Boolean       @default(false)
+  workstationAssigned Boolean       @default(false)
+  idCardIssued        Boolean       @default(false)
+  emailAccountCreated Boolean       @default(false)
+  slackOrPortalInvited Boolean      @default(false)
+  orientationCompleted Boolean      @default(false)
+  completionPercent   Int           @default(0)
+  status              String        @default("IN_PROGRESS")
+  completedAt         DateTime?
+  notes               String?       @db.Text
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  @@map("staff_onboarding_checklists")
+}
+
+model StaffOffboardingRecord {
+  id                    String        @id @default(cuid())
+  staffId               String        @unique
+  staff                 StaffProfile  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  resignationDate       DateTime?
+  lastWorkingDay        DateTime?
+  reasonForLeaving      String?       @db.Text
+  assetsReturned        Boolean       @default(false)
+  emailDeactivated      Boolean       @default(false)
+  idCardReturned        Boolean       @default(false)
+  accountsDuesCleared   Boolean       @default(false)
+  relievingLetterIssued Boolean       @default(false)
+  experienceLetterIssued Boolean      @default(false)
+  exitInterviewNotes    String?       @db.Text
+  status                String        @default("INITIATED")
+  clearedAt             DateTime?
+  clearedById           String?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@map("staff_offboarding_records")
+}
+
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  templateKey String   @unique
+  name        String
+  category    String   @default("HR")
+  subject     String?
+  bodyContent String   @db.Text
+  variables   String[] @default([])
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@index([templateKey])
+  @@map("document_templates")
 }
 
 // ==============================================================================

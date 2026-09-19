@@ -26,7 +26,7 @@ export class RazorpayProvider implements PaymentGateway {
   /**
    * Helper to verify if live API calls can be made
    */
-  private isLiveConfigured(): boolean {
+  isConfigured(): boolean {
     const keyId = this.getKeyId();
     const keySecret = this.getKeySecret();
     return (
@@ -35,6 +35,17 @@ export class RazorpayProvider implements PaymentGateway {
       !keySecret.includes("YourRazorpay") &&
       process.env.NODE_ENV !== "test"
     );
+  }
+
+  isLiveConfigured(): boolean {
+    return this.isConfigured();
+  }
+
+  getPublicConfig() {
+    return {
+      keyId: this.getKeyId(),
+      isConfigured: this.isConfigured(),
+    };
   }
 
   /**

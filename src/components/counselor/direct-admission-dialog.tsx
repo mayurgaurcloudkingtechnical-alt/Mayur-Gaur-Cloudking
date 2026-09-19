@@ -28,6 +28,7 @@ export function DirectAdmissionDialog({
   onSuccess,
 }: DirectAdmissionDialogProps) {
   const [courseId, setCourseId] = useState("");
+  const [batchId, setBatchId] = useState("");
   const [applicantName, setApplicantName] = useState("");
   const [applicantEmail, setApplicantEmail] = useState("");
   const [applicantPhone, setApplicantPhone] = useState("");
@@ -36,12 +37,31 @@ export function DirectAdmissionDialog({
   const [state, setState] = useState("Uttar Pradesh");
   const [source, setSource] = useState<LeadSource>(LeadSource.WALK_IN);
   const [selectedLeadId, setSelectedLeadId] = useState<string>("");
+  const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FIXED">("PERCENTAGE");
+  const [discountValue, setDiscountValue] = useState<number>(0);
+  const [paidAmount, setPaidAmount] = useState<number>(0);
+  const [remarks, setRemarks] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const utils = api.useUtils();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
+  const { data: batchesData } = api.batch.list.useQuery(
+    { courseId: courseId || undefined, pageSize: 50 },
+    { enabled: !!courseId }
+  );
+  const batches = batchesData?.batches || [];
+
   const { data: leadsData } = api.crm.listLeads.useQuery({ limit: 50 });
   const leads = leadsData?.leads || [];
+
+  const selectedCourse = courses.find((c: any) => c.id === courseId);
+  const courseFeeInr = selectedCourse?.baseFee ? selectedCourse.baseFee / 100 : 0;
+  const discountAmountInr =
+    discountType === "PERCENTAGE"
+      ? Math.round((courseFeeInr * (discountValue || 0)) / 100)
+      : Math.min(courseFeeInr, discountValue || 0);
+  const finalFeeInr = Math.max(0, courseFeeInr - discountAmountInr);
+  const pendingAmountInr = Math.max(0, finalFeeInr - (paidAmount || 0));
 
   const createMutation = api.crm.createDirectAdmission.useMutation({
     onSuccess: (app) => {
@@ -55,6 +75,10 @@ export function DirectAdmissionDialog({
       setApplicantEmail("");
       setApplicantPhone("");
       setSelectedLeadId("");
+      setBatchId("");
+      setDiscountValue(0);
+      setPaidAmount(0);
+      setRemarks("");
       if (onSuccess) onSuccess(app.id);
     },
     onError: (err) => {
@@ -91,6 +115,7 @@ export function DirectAdmissionDialog({
 
     createMutation.mutate({
       courseId,
+      batchId: batchId || undefined,
       applicantName: applicantName.trim(),
       applicantEmail: applicantEmail.trim(),
       applicantPhone: cleanPhone,
@@ -99,6 +124,12 @@ export function DirectAdmissionDialog({
       highestQualification: highestQualification.trim() || undefined,
       leadId: selectedLeadId || undefined,
       source,
+      discountType: discountValue > 0 ? discountType : undefined,
+      discountValue: discountValue > 0 ? discountValue : undefined,
+      discountAmount: discountAmountInr > 0 ? discountAmountInr * 100 : undefined,
+      finalFee: finalFeeInr * 100,
+      paidAmount: paidAmount > 0 ? paidAmount * 100 : undefined,
+      remarks: remarks.trim() || undefined,
     });
   };
 
@@ -152,19 +183,44 @@ export function DirectAdmissionDialog({
               </Label>
               <select
                 value={courseId}
-                onChange={(e) => setCourseId(e.target.value)}
+                onChange={(e) => {
+                  setCourseId(e.target.value);
+                  setBatchId("");
+                }}
                 required
                 className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900"
               >
                 <option value="">-- Choose Program --</option>
-                {courses.map((c: { id: string; title: string }) => (
+                {courses.map((c: { id: string; title: string; baseFee?: number }) => (
                   <option key={c.id} value={c.id}>
-                    {c.title}
+                    {c.title} {c.baseFee ? `(₹${(c.baseFee / 100).toLocaleString("en-IN")})` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                <GraduationCap className="h-3 w-3 text-slate-400" />
+                <span>Assigned Cohort / Batch (Optional)</span>
+              </Label>
+              <select
+                value={batchId}
+                onChange={(e) => setBatchId(e.target.value)}
+                disabled={!courseId}
+                className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900 disabled:bg-slate-100 disabled:text-slate-400"
+              >
+                <option value="">-- Unassigned / To Be Allocated --</option>
+                {batches.map((b: any) => (
+                  <option key={b.id} value={b.id}>
+                    {b.code} ({b.name}) - {b.deliveryMode}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                 <User className="h-3 w-3 text-slate-400" />
@@ -179,9 +235,7 @@ export function DirectAdmissionDialog({
                 className="h-8 text-xs"
               />
             </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                 <Mail className="h-3 w-3 text-slate-400" />
@@ -197,7 +251,9 @@ export function DirectAdmissionDialog({
                 className="h-8 text-xs"
               />
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
                 <Phone className="h-3 w-3 text-slate-400" />
@@ -210,18 +266,6 @@ export function DirectAdmissionDialog({
                 value={applicantPhone}
                 onChange={(e) => setApplicantPhone(e.target.value)}
                 required
-                className="h-8 text-xs"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">Qualification</Label>
-              <Input
-                placeholder="e.g. B.Tech CS, BCA"
-                value={highestQualification}
-                onChange={(e) => setHighestQualification(e.target.value)}
                 className="h-8 text-xs"
               />
             </div>
@@ -255,6 +299,98 @@ export function DirectAdmissionDialog({
               </select>
             </div>
           </div>
+
+          {/* Institutional Fee & Discount Calculator */}
+          {courseId && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/40 p-3.5 space-y-3">
+              <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Institutional Fee & Concession Structure
+                </span>
+                <span className="text-xs font-semibold text-emerald-800">
+                  Standard Fee: ₹{courseFeeInr.toLocaleString("en-IN")}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-700">Discount Type</Label>
+                  <select
+                    value={discountType}
+                    onChange={(e) => setDiscountType(e.target.value as "PERCENTAGE" | "FIXED")}
+                    className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                  >
+                    <option value="PERCENTAGE">Percentage (%)</option>
+                    <option value="FIXED">Flat Amount (₹)</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-700">
+                    Discount Value {discountType === "PERCENTAGE" ? "(%)" : "(₹)"}
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={discountType === "PERCENTAGE" ? 100 : courseFeeInr}
+                    value={discountValue || ""}
+                    onChange={(e) => setDiscountValue(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-semibold text-slate-700">Initial Paid Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={finalFeeInr}
+                    value={paidAmount || ""}
+                    onChange={(e) => setPaidAmount(Number(e.target.value) || 0)}
+                    placeholder="0"
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[11px] font-semibold text-slate-700">
+                  Discount Approval Authority / Reason Note
+                </Label>
+                <Input
+                  placeholder="e.g. Director approved 10% merit scholarship / Early bird walk-in"
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  className="h-8 text-xs bg-white"
+                />
+              </div>
+
+              {/* Mandatory Fee Ledger Preview */}
+              <div className="grid grid-cols-5 gap-2 rounded-lg bg-white p-2.5 border border-emerald-200/80 text-center">
+                <div>
+                  <div className="text-[10px] text-slate-500 font-medium">Course Fee</div>
+                  <div className="text-xs font-bold text-slate-800">₹{courseFeeInr.toLocaleString("en-IN")}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 font-medium">Discount</div>
+                  <div className="text-xs font-bold text-amber-600">-₹{discountAmountInr.toLocaleString("en-IN")}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 font-medium">Final Fee</div>
+                  <div className="text-xs font-bold text-emerald-700">₹{finalFeeInr.toLocaleString("en-IN")}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 font-medium">Paid</div>
+                  <div className="text-xs font-bold text-blue-700">₹{paidAmount.toLocaleString("en-IN")}</div>
+                </div>
+                <div>
+                  <div className="text-[10px] text-slate-500 font-medium">Pending</div>
+                  <div className="text-xs font-bold text-rose-600">₹{pendingAmountInr.toLocaleString("en-IN")}</div>
+                </div>
+              </div>
+            </div>
+          )}
 
           <DialogFooter className="pt-3">
             <Button

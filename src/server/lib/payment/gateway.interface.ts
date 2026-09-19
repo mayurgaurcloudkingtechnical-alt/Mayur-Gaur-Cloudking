@@ -9,6 +9,12 @@ export interface CreateOrderParams {
   currency?: string; // Default: "INR"
   receipt: string; // Unique order reference
   notes?: Record<string, string>;
+  customerEmail?: string;
+  customerName?: string;
+  customerPhone?: string;
+  successUrl?: string;
+  cancelUrl?: string;
+  description?: string;
 }
 
 export interface GatewayOrderResult {
@@ -17,6 +23,8 @@ export interface GatewayOrderResult {
   currency: string;
   receipt: string;
   provider: string;
+  checkoutUrl?: string;
+  clientSecret?: string;
 }
 
 export interface VerifyPaymentParams {
@@ -32,6 +40,7 @@ export interface VerifyWebhookParams {
 
 export interface PaymentGateway {
   readonly providerName: string;
+  isConfigured(): boolean;
   createOrder(params: CreateOrderParams): Promise<GatewayOrderResult>;
   verifyPaymentSignature(params: VerifyPaymentParams): boolean;
   verifyWebhookSignature(params: VerifyWebhookParams): boolean;

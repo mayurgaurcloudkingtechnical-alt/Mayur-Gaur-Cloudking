@@ -127,6 +127,18 @@ export class CrmConversionService {
       if (!feeStructure) {
         const course = await tx.course.findUnique({ where: { id: app.courseId } });
         const totalCourseFee = course?.baseFee || 3500000;
+        let discountPaise = 0;
+        if (app.decisionReason) {
+          try {
+            const parsed = JSON.parse(app.decisionReason);
+            if (typeof parsed.discountAmount === "number") {
+              discountPaise = parsed.discountAmount;
+            }
+          } catch (e) {
+            // Not JSON formatted decision reason, ignore
+          }
+        }
+        const netPayable = Math.max(0, totalCourseFee - discountPaise);
         feeStructure = await tx.feeStructure.create({
           data: {
             studentId: studentProfile.id,
@@ -134,12 +146,14 @@ export class CrmConversionService {
             courseId: app.courseId,
             batchId: app.batchId || null,
             totalCourseFee,
-            netPayableAmount: totalCourseFee,
-            pendingAmount: totalCourseFee,
+            discountAmount: discountPaise,
+            netPayableAmount: netPayable,
+            pendingAmount: netPayable,
             paidAmount: 0,
-            paymentStatus: "PENDING",
+            paymentStatus: netPayable === 0 ? "PAID" : "PENDING",
             status: "ACTIVE",
             createdById: user.id,
+            remarks: app.decisionReason,
           },
         });
       }

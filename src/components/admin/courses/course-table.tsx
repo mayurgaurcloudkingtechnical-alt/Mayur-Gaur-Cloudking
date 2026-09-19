@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ContentStatus } from "@prisma/client";
 import { api } from "@/lib/trpc/react";
-import { ExternalLink, Edit2, Eye, Archive, CheckCircle, Clock } from "lucide-react";
+import { ExternalLink, Edit2, Eye, Archive, CheckCircle, Clock, RotateCcw, Trash2 } from "lucide-react";
 import { EditCourseDialog } from "./edit-course-dialog";
 
 interface CourseItem {
@@ -49,6 +49,15 @@ export function CourseTable({ courses, isLoading }: CourseTableProps) {
   const setStatusMutation = api.course.setStatus.useMutation({
     onSuccess: () => {
       utils.course.list.invalidate();
+    },
+  });
+
+  const deleteMutation = api.course.delete.useMutation({
+    onSuccess: () => {
+      utils.course.list.invalidate();
+    },
+    onError: (err) => {
+      alert(err.message);
     },
   });
 
@@ -176,6 +185,24 @@ export function CourseTable({ courses, isLoading }: CourseTableProps) {
                         </Button>
                       )}
 
+                      {c.status === "ARCHIVED" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-emerald-600 hover:text-emerald-700"
+                          disabled={setStatusMutation.isPending}
+                          onClick={() =>
+                            setStatusMutation.mutate({
+                              id: c.id,
+                              status: ContentStatus.DRAFT,
+                            })
+                          }
+                          title="Restore Course to Draft"
+                        >
+                          <RotateCcw className="h-3.5 w-3.5 mr-1" /> Restore
+                        </Button>
+                      )}
+
                       {c.status !== "ARCHIVED" && (
                         <Button
                           variant="ghost"
@@ -188,8 +215,26 @@ export function CourseTable({ courses, isLoading }: CourseTableProps) {
                               status: ContentStatus.ARCHIVED,
                             })
                           }
+                          title="Archive Course"
                         >
                           <Archive className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+
+                      {c._count.batches === 0 && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-400 hover:text-red-700"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => {
+                            if (confirm(`Permanently delete course "${c.title}"? This cannot be undone.`)) {
+                              deleteMutation.mutate({ id: c.id });
+                            }
+                          }}
+                          title="Delete Empty Course"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       )}
                     </div>

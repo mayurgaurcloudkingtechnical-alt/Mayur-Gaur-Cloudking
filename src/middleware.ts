@@ -56,6 +56,7 @@ export async function middleware(req: NextRequest) {
   const isStudentRoute = pathname.startsWith("/student") && !pathname.startsWith("/student-login");
   const isTrainerRoute = pathname.startsWith("/trainer");
   const isCounselorRoute = pathname.startsWith("/counselor");
+  const isTelecallerRoute = pathname.startsWith("/telecaller");
   const isAdminRoute = pathname.startsWith("/admin");
 
   // Handle LMS Subdomain Landing Routing
@@ -68,7 +69,10 @@ export async function middleware(req: NextRequest) {
       if (role === "TRAINER") {
         return NextResponse.redirect(new URL("/trainer/dashboard", req.url));
       }
-      if (role === "COUNSELOR" || role === "TELECALLER") {
+      if (role === "TELECALLER") {
+        return NextResponse.redirect(new URL("/telecaller/dashboard", req.url));
+      }
+      if (role === "COUNSELOR") {
         return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
       }
       return NextResponse.redirect(new URL("/admin/dashboard", req.url));
@@ -90,9 +94,12 @@ export async function middleware(req: NextRequest) {
   if (pathname === "/counselor") {
     return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
   }
+  if (pathname === "/telecaller") {
+    return NextResponse.redirect(new URL("/telecaller/dashboard", req.url));
+  }
 
   const isProtectedRoute =
-    isStudentRoute || isTrainerRoute || isCounselorRoute || isAdminRoute;
+    isStudentRoute || isTrainerRoute || isCounselorRoute || isTelecallerRoute || isAdminRoute;
 
   // 1. If accessing login route while already authenticated, redirect to role home
   if (isAuthRoute && token) {
@@ -103,7 +110,10 @@ export async function middleware(req: NextRequest) {
     if (role === "TRAINER") {
       return NextResponse.redirect(new URL("/trainer/dashboard", req.url));
     }
-    if (role === "COUNSELOR" || role === "TELECALLER") {
+    if (role === "TELECALLER") {
+      return NextResponse.redirect(new URL("/telecaller/dashboard", req.url));
+    }
+    if (role === "COUNSELOR") {
       return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
     }
     return NextResponse.redirect(new URL("/admin/dashboard", req.url));
@@ -134,6 +144,19 @@ export async function middleware(req: NextRequest) {
     if (
       isCounselorRoute &&
       !["COUNSELOR", "TELECALLER", "MANAGER", "SUPER_ADMIN"].includes(role)
+    ) {
+      return NextResponse.redirect(new URL("/login?error=Unauthorized", req.url));
+    }
+
+    // Telecallers are strictly limited to lead qualification: block access to formal admissions desk
+    if (role === "TELECALLER" && pathname.startsWith("/counselor/admissions")) {
+      return NextResponse.redirect(new URL("/telecaller/dashboard", req.url));
+    }
+
+    // Telecaller route boundary
+    if (
+      isTelecallerRoute &&
+      !["TELECALLER", "COUNSELOR", "MANAGER", "ADMIN", "DIRECTOR", "SUPER_ADMIN"].includes(role)
     ) {
       return NextResponse.redirect(new URL("/login?error=Unauthorized", req.url));
     }
@@ -171,6 +194,7 @@ export const config = {
     "/student-login",
     "/student/:path*",
     "/trainer/:path*",
+    "/telecaller/:path*",
     "/counselor/:path*",
     "/admin/:path*",
     "/api/:path*",

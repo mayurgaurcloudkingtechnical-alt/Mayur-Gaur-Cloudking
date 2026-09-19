@@ -124,4 +124,76 @@ export const paymentRouter = router({
 
       return data;
     }),
+
+  /**
+   * Enrolled student procedure to initiate payment for tuition fee / installment.
+   */
+  createFeePaymentOrder: protectedProcedure
+    .input(
+      z.object({
+        feeStructureId: z.string().min(1),
+        installmentId: z.string().optional(),
+        amountPaise: z.number().int().positive().optional(),
+        provider: z.enum(["STRIPE", "RAZORPAY", "AUTO"]).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      let studentProfileId = "";
+
+      if (ctx.user.roleCode === "STUDENT") {
+        const profile = await db.studentProfile.findUnique({
+          where: { userId: ctx.user.id },
+        });
+        if (!profile) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Student profile not found.",
+          });
+        }
+        studentProfileId = profile.id;
+      } else {
+        // Staff/Admin initiating payment on behalf of student
+        const fee = await db.feeStructure.findUnique({
+          where: { id: input.feeStructureId },
+        });
+        if (!fee) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Fee structure not found.",
+          });
+        }
+        studentProfileId = fee.studentId;
+      }
+
+      return OnlinePaymentService.createInstallmentOrder({
+        studentProfileId,
+        feeStructureId: input.feeStructureId,
+        installmentId: input.installmentId,
+        amountPaise: input.amountPaise,
+        provider: input.provider,
+      });
+    }),
+
+  /**
+   * Cryptographically verifies fee payment completion and settles balances.
+   */
+  verifyFeePayment: protectedProcedure
+    .input(
+      z.object({
+        gatewayOrderId: z.string().min(1),
+        gatewayPaymentId: z.string().min(1),
+        gatewaySignature: z.string().min(1),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return OnlinePaymentService.verifyAndProcessFeePayment(input);
+    }),
+
+  /**
+   * Returns active connection status of Stripe, Razorpay, and environment settings.
+   */
+  getGatewayStatus: publicProcedure.query(() => {
+    return OnlinePaymentService.getGatewayStatus();
+  }),
 });
+

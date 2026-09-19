@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { useState } from "react";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { RecordPaymentDialog } from "./record-payment-dialog";
-import { IndianRupee, Search, CreditCard } from "lucide-react";
+import { IndianRupee, Search, CreditCard, Download } from "lucide-react";
 
 export function FeeStructuresTable() {
   const [search, setSearch] = useState("");
@@ -40,6 +40,45 @@ export function FeeStructuresTable() {
       default:
         return <Badge className="bg-slate-100 text-slate-700 text-[11px] font-bold">PENDING</Badge>;
     }
+  };
+
+  const exportFeesCSV = () => {
+    if (!data?.items || data.items.length === 0) {
+      alert("No fee structures to export.");
+      return;
+    }
+    const headers = [
+      "Student Name",
+      "Student ID",
+      "Email",
+      "Course",
+      "Base Fee (INR)",
+      "Discount (INR)",
+      "Payable Fee (INR)",
+      "Paid Amount (INR)",
+      "Pending Balance (INR)",
+      "Payment Status",
+    ];
+    const rows = data.items.map((item: any) => [
+      `"${item.student.user.firstName} ${item.student.user.lastName}"`,
+      `"${item.student.studentId || ""}"`,
+      `"${item.student.user.email}"`,
+      `"${item.course.title}"`,
+      (item.totalCourseFee / 100).toFixed(2),
+      (item.discountAmount / 100).toFixed(2),
+      (item.netPayableAmount / 100).toFixed(2),
+      (item.paidAmount / 100).toFixed(2),
+      (item.pendingAmount / 100).toFixed(2),
+      `"${item.paymentStatus}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `SoftLab_Fee_Structures_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
@@ -88,6 +127,17 @@ export function FeeStructuresTable() {
           >
             Paid
           </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={exportFeesCSV}
+            className="text-xs h-8 border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+            title="Export fee structures CSV"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-500" />
+            <span>Export CSV</span>
+          </Button>
         </div>
       </div>
 
@@ -97,9 +147,11 @@ export function FeeStructuresTable() {
             <TableRow>
               <TableHead className="text-xs font-semibold text-slate-700">Student</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Course & Cohort</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-700">Total Net</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Course Fee</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Discount</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Final Fee</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Paid</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-700">Outstanding</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Pending</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700 text-right">Actions</TableHead>
             </TableRow>
@@ -107,13 +159,13 @@ export function FeeStructuresTable() {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
                   Loading financial records...
                 </TableCell>
               </TableRow>
             ) : !data || data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
                   No fee records found matching criteria.
                 </TableCell>
               </TableRow>
@@ -132,13 +184,19 @@ export function FeeStructuresTable() {
                     <p className="font-medium text-slate-800 line-clamp-1">{fee.course.title}</p>
                     <p className="text-[11px] text-slate-400">{fee.batch?.code || "Unassigned Cohort"}</p>
                   </TableCell>
-                  <TableCell className="font-semibold text-slate-900">
+                  <TableCell className="font-medium text-slate-700">
+                    {formatPaiseToRupees(fee.totalCourseFee)}
+                  </TableCell>
+                  <TableCell className="font-medium text-amber-600">
+                    {fee.discountAmount > 0 ? `-${formatPaiseToRupees(fee.discountAmount)}` : "₹0"}
+                  </TableCell>
+                  <TableCell className="font-bold text-slate-900">
                     {formatPaiseToRupees(fee.netPayableAmount)}
                   </TableCell>
-                  <TableCell className="text-emerald-700 font-medium">
+                  <TableCell className="text-emerald-700 font-semibold">
                     {formatPaiseToRupees(fee.paidAmount)}
                   </TableCell>
-                  <TableCell className="font-semibold text-amber-800">
+                  <TableCell className="font-bold text-rose-600">
                     {formatPaiseToRupees(fee.pendingAmount)}
                   </TableCell>
                   <TableCell>{getStatusBadge(fee.paymentStatus)}</TableCell>

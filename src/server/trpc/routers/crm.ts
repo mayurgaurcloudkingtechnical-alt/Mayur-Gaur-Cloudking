@@ -65,7 +65,7 @@ export const crmRouter = router({
   listPublicCourses: publicProcedure.query(async () => {
     return db.course.findMany({
       where: { status: "PUBLISHED", deletedAt: null },
-      select: { id: true, title: true, slug: true },
+      select: { id: true, title: true, slug: true, baseFee: true },
       orderBy: { title: "asc" },
     });
   }),
@@ -446,6 +446,90 @@ export const crmRouter = router({
     }),
 
   /**
+   * Updates an admission application's personal or academic details.
+   */
+  updateApplication: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        applicantName: z.string().min(2).optional(),
+        applicantEmail: z.string().email().optional(),
+        applicantPhone: z.string().min(10).optional(),
+        courseId: z.string().optional(),
+        batchId: z.string().nullable().optional(),
+        counselorId: z.string().nullable().optional(),
+        stage: z.nativeEnum(ApplicationStage).optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        pincode: z.string().optional(),
+        highestQualification: z.string().optional(),
+        address: z.string().optional(),
+        decisionReason: z.string().optional(),
+        discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
+        discountValue: z.number().min(0).optional(),
+        discountAmount: z.number().min(0).optional(),
+        finalFee: z.number().min(0).optional(),
+        paidAmount: z.number().min(0).optional(),
+        remarks: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.updateApplication(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Safely archives an admission application.
+   */
+  archiveApplication: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        reason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.archiveApplication(asAuthUser(ctx.user), input.applicationId, input.reason);
+    }),
+
+  /**
+   * Restores an archived admission application.
+   */
+  restoreApplication: requireRoleProcedure(admissionRoles)
+    .input(z.object({ applicationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.restoreApplication(asAuthUser(ctx.user), input.applicationId);
+    }),
+
+  /**
+   * Permanently deletes an unconverted admission application.
+   */
+  deleteApplication: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+  ])
+    .input(z.object({ applicationId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.deleteApplication(asAuthUser(ctx.user), input.applicationId);
+    }),
+
+  /**
+   * Exports admission applications to CSV format.
+   */
+  exportApplications: requireRoleProcedure(admissionRoles)
+    .input(
+      z
+        .object({
+          stage: z.nativeEnum(ApplicationStage).optional(),
+          courseId: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return CrmApplicationService.exportApplications(asAuthUser(ctx.user), input);
+    }),
+
+  /**
    * Fetches live Instagram profile analytics for @softlabglobal9.
    * Uses Instagram Graph API when INSTAGRAM_ACCESS_TOKEN and INSTAGRAM_BUSINESS_ACCOUNT_ID
    * are configured in .env, otherwise returns structured setup-pending state with setup guide.
@@ -635,6 +719,12 @@ export const crmRouter = router({
         highestQualification: z.string().optional(),
         leadId: z.string().optional(),
         source: z.nativeEnum(LeadSource).optional(),
+        discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
+        discountValue: z.number().min(0).optional(),
+        discountAmount: z.number().min(0).optional(),
+        finalFee: z.number().min(0).optional(),
+        paidAmount: z.number().min(0).optional(),
+        remarks: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

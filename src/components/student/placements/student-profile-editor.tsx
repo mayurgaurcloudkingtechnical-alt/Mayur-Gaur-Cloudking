@@ -19,6 +19,9 @@ export function StudentProfileEditor({ profile, onProfileUpdated }: Props) {
     githubUrl: profile?.githubUrl || "",
     linkedinUrl: profile?.linkedinUrl || "",
     skills: profile?.skills?.join(", ") || "",
+    preferredLocation: profile?.preferredLocation || "",
+    preferredRole: profile?.preferredRole || "",
+    expectedSalary: profile?.expectedSalary || "",
   });
 
   const updateMutation = api.placement.updateMyPlacementProfile.useMutation({
@@ -38,6 +41,9 @@ export function StudentProfileEditor({ profile, onProfileUpdated }: Props) {
         portfolioUrl: form.portfolioUrl.trim() || undefined,
         githubUrl: form.githubUrl.trim() || undefined,
         linkedinUrl: form.linkedinUrl.trim() || undefined,
+        preferredLocation: form.preferredLocation.trim() || undefined,
+        preferredRole: form.preferredRole.trim() || undefined,
+        expectedSalary: form.expectedSalary.trim() || undefined,
         skills: form.skills ? form.skills.split(",").map((s: string) => s.trim()).filter(Boolean) : [],
       });
 
@@ -61,6 +67,9 @@ export function StudentProfileEditor({ profile, onProfileUpdated }: Props) {
               githubUrl: profile?.githubUrl || "",
               linkedinUrl: profile?.linkedinUrl || "",
               skills: profile?.skills?.join(", ") || "",
+              preferredLocation: profile?.preferredLocation || "",
+              preferredRole: profile?.preferredRole || "",
+              expectedSalary: profile?.expectedSalary || "",
             });
           }}
           className="text-xs font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1"

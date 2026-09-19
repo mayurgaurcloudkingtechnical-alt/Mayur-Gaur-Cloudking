@@ -1,16 +1,39 @@
-﻿"use client";
+"use client";
 
 import * as React from "react";
 import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { formatPaiseToRupees, formatDate } from "@/lib/utils";
-import { IndianRupee, Clock, CheckCircle2, AlertCircle, FileText, Calendar } from "lucide-react";
+import { IndianRupee, Clock, CheckCircle2, AlertCircle, FileText, Calendar, CreditCard } from "lucide-react";
 import { FeePaymentStatus, InstallmentStatus } from "@prisma/client";
+import { UniversalPaymentDialog } from "@/components/payment/universal-payment-dialog";
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableRow,
+  TableHead,
+  TableCell,
+} from "@/components/ui/table";
 
 export function StudentFeesView() {
+  const utils = api.useUtils();
   const { data, isLoading, error } = api.finance.getMyFeeOverview.useQuery();
+  const [checkoutDialog, setCheckoutDialog] = React.useState<{
+    open: boolean;
+    feeStructureId: string;
+    installmentId?: string;
+    installmentNumber?: number;
+    courseTitle: string;
+    amountPaise: number;
+  }>({
+    open: false,
+    feeStructureId: "",
+    courseTitle: "",
+    amountPaise: 0,
+  });
 
   if (isLoading) {
     return (
@@ -68,7 +91,26 @@ export function StudentFeesView() {
                     <strong>{data.studentId}</strong>
                   </CardDescription>
                 </div>
-                <div>{getStatusBadge(fee.paymentStatus)}</div>
+                <div className="flex items-center gap-2">
+                  <div>{getStatusBadge(fee.paymentStatus)}</div>
+                  {fee.pendingAmount > 0 && (
+                    <Button
+                      size="sm"
+                      className="h-8 px-3 text-xs bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 shadow-sm"
+                      onClick={() =>
+                        setCheckoutDialog({
+                          open: true,
+                          feeStructureId: fee.id,
+                          courseTitle: fee.course.title,
+                          amountPaise: fee.pendingAmount,
+                        })
+                      }
+                    >
+                      <CreditCard className="h-3.5 w-3.5" />
+                      <span>Pay Due ({formatPaiseToRupees(fee.pendingAmount)})</span>
+                    </Button>
+                  )}
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-4 space-y-6">
@@ -135,6 +177,7 @@ export function StudentFeesView() {
                           <TableHead className="text-[11px] font-semibold text-slate-700">Installment Amount</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Paid Amount</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Status</TableHead>
+                          <TableHead className="text-[11px] font-semibold text-slate-700 text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -165,6 +208,28 @@ export function StudentFeesView() {
                                   ? "OVERDUE"
                                   : inst.status}
                               </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {inst.status !== InstallmentStatus.PAID ? (
+                                <Button
+                                  size="sm"
+                                  className="h-6 px-2.5 text-[10px] bg-indigo-600 hover:bg-indigo-700 text-white font-medium"
+                                  onClick={() =>
+                                    setCheckoutDialog({
+                                      open: true,
+                                      feeStructureId: fee.id,
+                                      installmentId: inst.id,
+                                      installmentNumber: inst.installmentNumber,
+                                      courseTitle: fee.course.title,
+                                      amountPaise: inst.amount - inst.paidAmount,
+                                    })
+                                  }
+                                >
+                                  Pay Now
+                                </Button>
+                              ) : (
+                                <span className="text-[10px] text-emerald-600 font-semibold">Settled</span>
+                              )}
                             </TableCell>
                           </TableRow>
                         ))}
@@ -225,6 +290,20 @@ export function StudentFeesView() {
           </Card>
         </div>
       ))}
+
+      {/* Universal Payment Dialog */}
+      <UniversalPaymentDialog
+        open={checkoutDialog.open}
+        onOpenChange={(open) => setCheckoutDialog((prev) => ({ ...prev, open }))}
+        feeStructureId={checkoutDialog.feeStructureId}
+        installmentId={checkoutDialog.installmentId}
+        installmentNumber={checkoutDialog.installmentNumber}
+        courseTitle={checkoutDialog.courseTitle}
+        amountPaise={checkoutDialog.amountPaise}
+        onSuccess={() => {
+          utils.finance.getMyFeeOverview.invalidate();
+        }}
+      />
     </div>
   );
 }

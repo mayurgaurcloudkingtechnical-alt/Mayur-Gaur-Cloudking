@@ -6,19 +6,38 @@ import { JobDriveStatus, JobType, UserRoleCode } from "@prisma/client";
 
 export interface CreateJobDriveInput {
   companyId: string;
+  recruiterId?: string;
   title: string;
   slug?: string;
+  department?: string;
   jobType?: JobType;
+  workMode?: string;
   description: string;
+  responsibilities?: string;
+  requirements?: string;
+  benefits?: string;
+  eligibleBatchId?: string;
   eligibilityCriteria?: string;
   minPassingPercentage?: number;
+  minAttendancePercentage?: number;
   requireCertification?: boolean;
   targetCourseId?: string;
   salaryPackage?: string;
+  minSalary?: number;
+  maxSalary?: number;
+  salaryType?: string;
   location?: string;
+  experience?: string;
+  qualification?: string;
+  skills?: string[];
   openingsCount?: number;
   deadline?: Date;
   driveDate?: Date;
+  interviewDate?: Date;
+  joiningDate?: Date;
+  venue?: string;
+  meetingLink?: string;
+  driveType?: string;
   status?: JobDriveStatus;
 }
 
@@ -31,7 +50,9 @@ export interface StudentEligibilityResult {
   reasons: string[];
   courseEnrolled: boolean;
   assessmentPassed: boolean;
+  attendanceQualified: boolean;
   bestScorePercentage: number | null;
+  attendancePercentage: number | null;
   certificateVerified: boolean;
 }
 
@@ -83,25 +104,46 @@ export class JobDriveService {
     const drive = await db.jobDrive.create({
       data: {
         companyId: input.companyId,
+        recruiterId: input.recruiterId,
         title: input.title.trim(),
         slug,
+        department: input.department?.trim(),
         jobType: input.jobType || JobType.FULL_TIME,
+        workMode: input.workMode?.trim() || "On-site",
         description: input.description,
+        responsibilities: input.responsibilities?.trim(),
+        requirements: input.requirements?.trim(),
+        benefits: input.benefits?.trim(),
+        eligibleBatchId: input.eligibleBatchId,
         eligibilityCriteria: input.eligibilityCriteria?.trim(),
         minPassingPercentage: input.minPassingPercentage,
+        minAttendancePercentage: input.minAttendancePercentage,
         requireCertification: input.requireCertification ?? false,
         targetCourseId: input.targetCourseId,
         salaryPackage: input.salaryPackage?.trim(),
+        minSalary: input.minSalary,
+        maxSalary: input.maxSalary,
+        salaryType: input.salaryType?.trim() || "LPA",
         location: input.location?.trim(),
+        experienceRequired: input.experience?.trim(),
+        qualification: input.qualification?.trim(),
+        requiredSkills: input.skills ?? [],
         openingsCount: input.openingsCount ?? 1,
         deadline: input.deadline,
         driveDate: input.driveDate,
+        interviewDate: input.interviewDate,
+        joiningDate: input.joiningDate,
+        venue: input.venue?.trim(),
+        meetingLink: input.meetingLink?.trim(),
+        driveType: input.driveType || "ON_CAMPUS",
         status: input.status || JobDriveStatus.DRAFT,
         createdById: user.id,
       },
       include: {
         company: true,
+        recruiter: true,
         targetCourse: true,
+        eligibleBatch: true,
       },
     });
 
@@ -128,23 +170,44 @@ export class JobDriveService {
       where: { id: input.id },
       data: {
         ...(input.companyId !== undefined ? { companyId: input.companyId } : {}),
+        ...(input.recruiterId !== undefined ? { recruiterId: input.recruiterId } : {}),
         ...(input.title !== undefined ? { title: input.title.trim() } : {}),
+        ...(input.department !== undefined ? { department: input.department?.trim() } : {}),
         ...(input.jobType !== undefined ? { jobType: input.jobType } : {}),
+        ...(input.workMode !== undefined ? { workMode: input.workMode?.trim() } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.responsibilities !== undefined ? { responsibilities: input.responsibilities?.trim() } : {}),
+        ...(input.requirements !== undefined ? { requirements: input.requirements?.trim() } : {}),
+        ...(input.benefits !== undefined ? { benefits: input.benefits?.trim() } : {}),
+        ...(input.eligibleBatchId !== undefined ? { eligibleBatchId: input.eligibleBatchId } : {}),
         ...(input.eligibilityCriteria !== undefined ? { eligibilityCriteria: input.eligibilityCriteria?.trim() } : {}),
         ...(input.minPassingPercentage !== undefined ? { minPassingPercentage: input.minPassingPercentage } : {}),
+        ...(input.minAttendancePercentage !== undefined ? { minAttendancePercentage: input.minAttendancePercentage } : {}),
         ...(input.requireCertification !== undefined ? { requireCertification: input.requireCertification } : {}),
         ...(input.targetCourseId !== undefined ? { targetCourseId: input.targetCourseId } : {}),
         ...(input.salaryPackage !== undefined ? { salaryPackage: input.salaryPackage?.trim() } : {}),
+        ...(input.minSalary !== undefined ? { minSalary: input.minSalary } : {}),
+        ...(input.maxSalary !== undefined ? { maxSalary: input.maxSalary } : {}),
+        ...(input.salaryType !== undefined ? { salaryType: input.salaryType?.trim() } : {}),
         ...(input.location !== undefined ? { location: input.location?.trim() } : {}),
+        ...(input.experience !== undefined ? { experienceRequired: input.experience?.trim() } : {}),
+        ...(input.qualification !== undefined ? { qualification: input.qualification?.trim() } : {}),
+        ...(input.skills !== undefined ? { requiredSkills: input.skills } : {}),
         ...(input.openingsCount !== undefined ? { openingsCount: input.openingsCount } : {}),
         ...(input.deadline !== undefined ? { deadline: input.deadline } : {}),
         ...(input.driveDate !== undefined ? { driveDate: input.driveDate } : {}),
+        ...(input.interviewDate !== undefined ? { interviewDate: input.interviewDate } : {}),
+        ...(input.joiningDate !== undefined ? { joiningDate: input.joiningDate } : {}),
+        ...(input.venue !== undefined ? { venue: input.venue?.trim() } : {}),
+        ...(input.meetingLink !== undefined ? { meetingLink: input.meetingLink?.trim() } : {}),
+        ...(input.driveType !== undefined ? { driveType: input.driveType } : {}),
         ...(input.status !== undefined ? { status: input.status } : {}),
       },
       include: {
         company: true,
+        recruiter: true,
         targetCourse: true,
+        eligibleBatch: true,
       },
     });
 
@@ -260,14 +323,51 @@ export class JobDriveService {
       }
     }
 
-    const isEligible = courseEnrolled && assessmentPassed && certificateVerified;
+    if (drive.eligibleBatchId) {
+      const enrolledInBatch = await db.enrollment.findFirst({
+        where: {
+          studentId: studentProfileId,
+          batchId: drive.eligibleBatchId,
+        },
+      });
+      if (!enrolledInBatch) {
+        reasons.push("This opening is restricted to a specific batch.");
+      }
+    }
+
+    let attendanceQualified = true;
+    let attendancePercentage: number | null = null;
+
+    if (drive.minAttendancePercentage && drive.minAttendancePercentage > 0) {
+      const attendanceEntries = await db.attendanceEntry.findMany({
+        where: { studentId: studentProfileId },
+        select: { status: true },
+      });
+
+      if (attendanceEntries.length > 0) {
+        const presentCount = attendanceEntries.filter((a) => a.status === "PRESENT").length;
+        attendancePercentage = Number(((presentCount / attendanceEntries.length) * 100).toFixed(1));
+
+        if (attendancePercentage < drive.minAttendancePercentage) {
+          attendanceQualified = false;
+          reasons.push(
+            `Minimum attendance of ${drive.minAttendancePercentage}% required. Your current attendance is ${attendancePercentage}%.`
+          );
+        }
+      }
+    }
+
+    const isEligible =
+      courseEnrolled && assessmentPassed && certificateVerified && attendanceQualified && reasons.length === 0;
 
     return {
       isEligible,
       reasons,
       courseEnrolled,
       assessmentPassed,
+      attendanceQualified,
       bestScorePercentage,
+      attendancePercentage,
       certificateVerified,
     };
   }

@@ -69,10 +69,10 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
         ];
       case "TELECALLER":
         return [
-          { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-          { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
+          { title: "Telecalling Desk", href: "/telecaller/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
-          { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
+          { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
         return [
@@ -95,6 +95,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Exams & Results", href: "/admin/exams", icon: <FileCheck2 className="h-4 w-4" /> },
           { title: "Certificates", href: "/admin/certificates", icon: <Award className="h-4 w-4" /> },
           { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
           { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },
           { title: "Settings & RBAC", href: "/admin/settings", icon: <Settings className="h-4 w-4" /> },

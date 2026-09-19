@@ -1,4 +1,4 @@
-﻿import { db } from "@/server/db/client";
+import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
@@ -210,6 +210,8 @@ export class FeeStructureService {
       hasPermission(user.permissions, "payments:view_ledger") ||
       hasPermission(user.permissions, "admissions:read") ||
       user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
       user.roleCode === "ACCOUNTANT";
 
     if (!canView) {
@@ -273,7 +275,7 @@ export class FeeStructureService {
 
     const now = new Date();
 
-    const [aggregates, overdueInstallments, partialCount, recentPayments] = await Promise.all([
+    const [aggregates, overdueInstallments, partialCount, recentPayments, pendingStudents] = await Promise.all([
       db.feeStructure.aggregate({
         where: { status: FeeStructureStatus.ACTIVE },
         _sum: {
@@ -294,11 +296,21 @@ export class FeeStructureService {
         where: { paymentStatus: FeePaymentStatus.PARTIAL, status: FeeStructureStatus.ACTIVE },
       }),
       db.paymentTransaction.findMany({
-        take: 5,
+        take: 6,
         orderBy: { paymentDate: "desc" },
         include: {
-          student: { include: { user: { select: { firstName: true, lastName: true } } } },
+          student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
           feeStructure: { include: { course: { select: { title: true } } } },
+        },
+      }),
+      db.feeStructure.findMany({
+        where: { pendingAmount: { gt: 0 }, status: FeeStructureStatus.ACTIVE },
+        take: 6,
+        orderBy: { pendingAmount: "desc" },
+        include: {
+          student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+          course: { select: { title: true } },
+          batch: { select: { name: true, code: true } },
         },
       }),
     ]);
@@ -312,14 +324,18 @@ export class FeeStructureService {
       return acc + (remaining > 0 ? remaining : 0);
     }, 0);
 
+    const collectionRate = totalReceivable > 0 ? Math.round((totalCollected / totalReceivable) * 100) : 100;
+
     return {
       totalReceivable,
       totalCollected,
       totalOutstanding,
       overdueAmount,
+      collectionRate,
       totalEnrolledFees: aggregates._count.id,
       partialCount,
       recentPayments,
+      pendingStudents,
     };
   }
 }

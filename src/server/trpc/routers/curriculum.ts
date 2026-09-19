@@ -477,4 +477,53 @@ export const curriculumRouter = router({
 
       return { success: true };
     }),
+
+  restoreModule: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.module.findUnique({ where: { id: input.id } });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Module not found." });
+
+      await verifyCourseAccess(ctx, existing.courseId);
+
+      const restored = await ctx.db.module.update({
+        where: { id: input.id },
+        data: { status: ContentStatus.DRAFT, deletedAt: null },
+      });
+
+      await AuditService.log({
+        actorId: ctx.session.user.id,
+        action: "CURRICULUM_MODULE_RESTORE",
+        resourceType: "Module",
+        resourceId: restored.id,
+      });
+
+      return { success: true };
+    }),
+
+  restoreLesson: protectedProcedure
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await ctx.db.lesson.findUnique({
+        where: { id: input.id },
+        include: { module: true },
+      });
+      if (!existing) throw new TRPCError({ code: "NOT_FOUND", message: "Lesson not found." });
+
+      await verifyCourseAccess(ctx, existing.module.courseId);
+
+      const restored = await ctx.db.lesson.update({
+        where: { id: input.id },
+        data: { status: ContentStatus.DRAFT, deletedAt: null },
+      });
+
+      await AuditService.log({
+        actorId: ctx.session.user.id,
+        action: "CURRICULUM_LESSON_RESTORE",
+        resourceType: "Lesson",
+        resourceId: restored.id,
+      });
+
+      return { success: true };
+    }),
 });

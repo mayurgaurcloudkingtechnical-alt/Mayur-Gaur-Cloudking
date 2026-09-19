@@ -28,6 +28,7 @@ export function IntegrationsHubView() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const { data: settingsData } = api.admin.getSystemSettings.useQuery();
+  const gatewayStatus = api.payment.getGatewayStatus.useQuery();
   const razorpayConfig = settingsData?.razorpay;
 
   const copyToClipboard = (text: string, key: string) => {
@@ -38,12 +39,24 @@ export function IntegrationsHubView() {
 
   const integrations = [
     {
+      id: "stripe",
+      name: "Stripe Payment Gateway",
+      category: "Payment Processing",
+      description: "Global credit/debit card processing with verified webhooks and automated receipt settlement.",
+      icon: <CreditCard className="h-6 w-6 text-indigo-600" />,
+      status: gatewayStatus.data?.stripe.configured ? "CONFIGURED" : "CONFIG_PENDING",
+      meta: gatewayStatus.data?.stripe.configured ? "Stripe Live Connected" : "Publishable & Secret Keys required",
+      webhookUrl: "https://www.softlabglobal.com/api/webhooks/stripe",
+      actionHref: "/admin/settings",
+      actionText: "Configure Stripe",
+    },
+    {
       id: "razorpay",
       name: "Razorpay Payment Gateway",
       category: "Payment Processing",
       description: "Production payment processing for online student course enrollments and installments.",
       icon: <CreditCard className="h-6 w-6 text-emerald-600" />,
-      status: razorpayConfig?.keyId ? "CONFIGURED" : "CONFIG_PENDING",
+      status: razorpayConfig?.keyId || gatewayStatus.data?.razorpay.configured ? "CONFIGURED" : "CONFIG_PENDING",
       meta: razorpayConfig?.keyId ? `Key ID: ${razorpayConfig.keyId.slice(0, 14)}...` : "Keys not set",
       actionHref: "/admin/settings",
       actionText: "Configure Credentials",

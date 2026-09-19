@@ -20,6 +20,7 @@ export interface CreateApplicationInput {
   state?: string;
   pincode?: string;
   highestQualification?: string;
+  decisionReason?: string;
 }
 
 export interface CreateDirectAdmissionInput {
@@ -37,6 +38,35 @@ export interface CreateDirectAdmissionInput {
   highestQualification?: string;
   leadId?: string;
   source?: LeadSource;
+  discountType?: "PERCENTAGE" | "FIXED";
+  discountValue?: number;
+  discountAmount?: number;
+  finalFee?: number;
+  paidAmount?: number;
+  remarks?: string;
+}
+
+export interface UpdateApplicationInput {
+  applicationId: string;
+  applicantName?: string;
+  applicantEmail?: string;
+  applicantPhone?: string;
+  courseId?: string;
+  batchId?: string | null;
+  counselorId?: string | null;
+  stage?: ApplicationStage;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  highestQualification?: string;
+  address?: string;
+  decisionReason?: string;
+  discountType?: "PERCENTAGE" | "FIXED";
+  discountValue?: number;
+  discountAmount?: number;
+  finalFee?: number;
+  paidAmount?: number;
+  remarks?: string;
 }
 
 export interface UpdateStageInput {
@@ -147,6 +177,7 @@ export class CrmApplicationService {
         state: input.state?.trim() || null,
         pincode: input.pincode?.trim() || null,
         highestQualification: input.highestQualification?.trim() || null,
+        decisionReason: input.decisionReason?.trim() || null,
       },
       include: {
         course: { select: { id: true, title: true } },
@@ -222,6 +253,18 @@ export class CrmApplicationService {
       leadId = lead.id;
     }
 
+    let decisionReason: string | undefined = undefined;
+    if (input.discountAmount || input.discountType || input.remarks || input.finalFee) {
+      decisionReason = JSON.stringify({
+        discountType: input.discountType || "FIXED",
+        discountValue: input.discountValue || 0,
+        discountAmount: input.discountAmount || 0,
+        finalFee: input.finalFee,
+        paidAmount: input.paidAmount || 0,
+        remarks: input.remarks || "",
+      });
+    }
+
     return this.createApplication(user, {
       leadId,
       courseId: input.courseId,
@@ -236,6 +279,7 @@ export class CrmApplicationService {
       state: input.state,
       pincode: input.pincode,
       highestQualification: input.highestQualification,
+      decisionReason,
     });
   }
 
@@ -417,5 +461,279 @@ export class CrmApplicationService {
    */
   static async convertApplicationToStudent(user: AuthenticatedUser, applicationId: string) {
     return CrmConversionService.convertApplicationToStudent(user, applicationId);
+  }
+
+  /**
+   * Updates application details including applicant contact, target course, cohort, and discount terms.
+   */
+  static async updateApplication(user: AuthenticatedUser, input: UpdateApplicationInput) {
+    const canManage =
+      hasPermission(user.permissions, "admissions:create") ||
+      hasPermission(user.permissions, "admissions:approve_discount") ||
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN";
+
+    if (!canManage) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack authority to edit admission applications.",
+      });
+    }
+
+    const app = await db.admissionApplication.findUnique({
+      where: { id: input.applicationId },
+    });
+
+    if (!app) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Application with ID '${input.applicationId}' not found.`,
+      });
+    }
+
+    let decisionReason = input.decisionReason;
+    if (input.discountAmount !== undefined || input.discountType !== undefined || input.remarks !== undefined || input.finalFee !== undefined) {
+      let existingMetadata: any = {};
+      if (app.decisionReason) {
+        try {
+          existingMetadata = JSON.parse(app.decisionReason);
+        } catch (e) {
+          existingMetadata = { notes: app.decisionReason };
+        }
+      }
+      decisionReason = JSON.stringify({
+        ...existingMetadata,
+        ...(input.discountType ? { discountType: input.discountType } : {}),
+        ...(input.discountValue !== undefined ? { discountValue: input.discountValue } : {}),
+        ...(input.discountAmount !== undefined ? { discountAmount: input.discountAmount } : {}),
+        ...(input.finalFee !== undefined ? { finalFee: input.finalFee } : {}),
+        ...(input.paidAmount !== undefined ? { paidAmount: input.paidAmount } : {}),
+        ...(input.remarks !== undefined ? { remarks: input.remarks } : {}),
+      });
+    }
+
+    const updated = await db.admissionApplication.update({
+      where: { id: input.applicationId },
+      data: {
+        ...(input.applicantName ? { applicantName: input.applicantName.trim() } : {}),
+        ...(input.applicantEmail ? { applicantEmail: normalizeEmail(input.applicantEmail) } : {}),
+        ...(input.applicantPhone ? { applicantPhone: normalizePhone(input.applicantPhone) } : {}),
+        ...(input.courseId ? { courseId: input.courseId } : {}),
+        ...(input.batchId !== undefined ? { batchId: input.batchId } : {}),
+        ...(input.counselorId !== undefined ? { counselorId: input.counselorId } : {}),
+        ...(input.stage ? { stage: input.stage } : {}),
+        ...(input.city !== undefined ? { city: input.city?.trim() || null } : {}),
+        ...(input.state !== undefined ? { state: input.state?.trim() || null } : {}),
+        ...(input.pincode !== undefined ? { pincode: input.pincode?.trim() || null } : {}),
+        ...(input.highestQualification !== undefined ? { highestQualification: input.highestQualification?.trim() || null } : {}),
+        ...(input.address !== undefined ? { address: input.address?.trim() || null } : {}),
+        ...(decisionReason !== undefined ? { decisionReason } : {}),
+      },
+      include: {
+        course: { select: { id: true, title: true } },
+        batch: { select: { id: true, name: true, code: true } },
+      },
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "ADMISSION_APPLICATION_UPDATED",
+      resourceType: "AdmissionApplication",
+      resourceId: app.id,
+      newData: {
+        applicantName: updated.applicantName,
+        courseId: updated.courseId,
+        stage: updated.stage,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Safely archives an admission application without deleting historical CRM links.
+   */
+  static async archiveApplication(user: AuthenticatedUser, applicationId: string, reason?: string) {
+    const canArchive =
+      hasPermission(user.permissions, "admissions:create") ||
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN";
+
+    if (!canArchive) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "You lack permission to archive applications." });
+    }
+
+    const app = await db.admissionApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
+
+    const updated = await db.admissionApplication.update({
+      where: { id: applicationId },
+      data: {
+        stage: ApplicationStage.REJECTED,
+        decisionReason: reason || "Archived by institutional administration.",
+        reviewerId: user.id,
+      },
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "ADMISSION_APPLICATION_ARCHIVED",
+      resourceType: "AdmissionApplication",
+      resourceId: app.id,
+      newData: { stage: ApplicationStage.REJECTED, reason },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Restores an archived admission application back to Under Review.
+   */
+  static async restoreApplication(user: AuthenticatedUser, applicationId: string) {
+    const canRestore =
+      hasPermission(user.permissions, "admissions:create") ||
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN";
+
+    if (!canRestore) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "You lack permission to restore applications." });
+    }
+
+    const app = await db.admissionApplication.findUnique({ where: { id: applicationId } });
+    if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
+
+    const updated = await db.admissionApplication.update({
+      where: { id: applicationId },
+      data: {
+        stage: ApplicationStage.UNDER_REVIEW,
+        decisionReason: "Restored from archive to Under Review.",
+        reviewerId: user.id,
+      },
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "ADMISSION_APPLICATION_RESTORED",
+      resourceType: "AdmissionApplication",
+      resourceId: app.id,
+      newData: { stage: ApplicationStage.UNDER_REVIEW },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Permanently deletes an unconverted, unbilled application with safety checks.
+   */
+  static async deleteApplication(user: AuthenticatedUser, applicationId: string) {
+    const isRootAdmin =
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN";
+
+    if (!isRootAdmin) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only administrators can delete applications." });
+    }
+
+    const app = await db.admissionApplication.findUnique({
+      where: { id: applicationId },
+      include: { payments: true },
+    });
+
+    if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
+
+    if (app.convertedStudentProfileId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot delete an application that has already been converted to an enrolled student. Archive it instead.",
+      });
+    }
+
+    if (app.payments && app.payments.length > 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot delete an application with recorded payment transactions. Archive it instead to maintain financial audit trails.",
+      });
+    }
+
+    await db.admissionApplication.delete({ where: { id: applicationId } });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "ADMISSION_APPLICATION_DELETED",
+      resourceType: "AdmissionApplication",
+      resourceId: app.id,
+      previousData: { applicationNumber: app.applicationNumber, applicantName: app.applicantName },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Exports admission applications to CSV format.
+   */
+  static async exportApplications(user: AuthenticatedUser, input?: { stage?: ApplicationStage; courseId?: string }) {
+    const canExport =
+      hasPermission(user.permissions, "admissions:read") ||
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "COUNSELOR";
+
+    if (!canExport) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "You lack permission to export admission records." });
+    }
+
+    const where: Prisma.AdmissionApplicationWhereInput = {};
+    if (input?.stage) where.stage = input.stage;
+    if (input?.courseId) where.courseId = input.courseId;
+
+    const items = await db.admissionApplication.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        course: { select: { title: true, baseFee: true } },
+        batch: { select: { name: true, code: true } },
+        counselor: { select: { firstName: true, lastName: true, email: true } },
+      },
+    });
+
+    const headers = [
+      "Application Number",
+      "Applicant Name",
+      "Applicant Email",
+      "Applicant Phone",
+      "City",
+      "Course",
+      "Cohort",
+      "Stage",
+      "Counselor",
+      "Base Fee (INR)",
+      "Applied Date",
+    ];
+
+    const rows = items.map((app) => [
+      app.applicationNumber,
+      `"${app.applicantName.replace(/"/g, '""')}"`,
+      app.applicantEmail,
+      app.applicantPhone,
+      app.city || "N/A",
+      `"${app.course.title.replace(/"/g, '""')}"`,
+      app.batch ? app.batch.code : "Unassigned",
+      app.stage,
+      app.counselor ? `${app.counselor.firstName} ${app.counselor.lastName}` : "Direct",
+      (app.course.baseFee / 100).toString(),
+      new Date(app.createdAt).toISOString().split("T")[0],
+    ]);
+
+    const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    return {
+      fileName: `SoftLab-Admissions-Export-${new Date().toISOString().split("T")[0]}.csv`,
+      csvContent,
+      count: items.length,
+    };
   }
 }

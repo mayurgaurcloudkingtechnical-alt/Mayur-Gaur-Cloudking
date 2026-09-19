@@ -47,6 +47,11 @@ const LEGACY_MAP: Record<string, string[]> = {
   "lms.edit": ["content:manage"],
   "staff.view": ["hr:employees:manage", "staff:read"],
   "staff.create": ["hr:employees:manage", "staff:create"],
+  "staff.manage": ["hr:employees:manage", "staff:manage", "staff.edit"],
+  "hrms.view": ["hrms:read", "attendance:read", "leaves:read", "payroll:read", "staff:read"],
+  "hrms.manage": ["hrms:manage", "attendance:mark", "leaves:manage", "payroll:manage"],
+  "placements.view": ["placements:read", "placement:read", "jobs:read", "drives:read"],
+  "placements.manage": ["placements:manage", "placement:manage", "jobs:manage", "drives:manage"],
   "settings.view": ["system:read"],
   "settings.edit": ["system:manage"],
 };

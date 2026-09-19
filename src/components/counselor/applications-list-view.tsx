@@ -9,8 +9,21 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApplicationStage } from "@prisma/client";
-import { Search, FileText, ChevronLeft, ChevronRight, PlusCircle, GraduationCap } from "lucide-react";
+import {
+  Search,
+  FileText,
+  ChevronLeft,
+  ChevronRight,
+  PlusCircle,
+  Download,
+  Edit,
+  Archive,
+  RotateCcw,
+  Trash2,
+  Loader2,
+} from "lucide-react";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
+import { EditApplicationDialog } from "./edit-application-dialog";
 
 interface ApplicationsListViewProps {
   basePath?: string;
@@ -18,9 +31,13 @@ interface ApplicationsListViewProps {
 
 export function ApplicationsListView({ basePath = "/counselor/admissions" }: ApplicationsListViewProps) {
   const [admissionOpen, setAdmissionOpen] = useState(false);
+  const [editingApp, setEditingApp] = useState<any | null>(null);
   const [stage, setStage] = useState<ApplicationStage | "ALL">("ALL");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const utils = api.useUtils();
 
   const { data, isLoading, error } = api.crm.listApplications.useQuery({
     stage: stage === "ALL" ? undefined : stage,
@@ -31,6 +48,50 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
 
   const applications = data?.applications || [];
   const pagination = data?.pagination;
+
+  const archiveMutation = api.crm.archiveApplication.useMutation({
+    onSuccess: () => {
+      utils.crm.listApplications.invalidate();
+    },
+    onError: (err) => alert(err.message),
+  });
+
+  const restoreMutation = api.crm.restoreApplication.useMutation({
+    onSuccess: () => {
+      utils.crm.listApplications.invalidate();
+    },
+    onError: (err) => alert(err.message),
+  });
+
+  const deleteMutation = api.crm.deleteApplication.useMutation({
+    onSuccess: () => {
+      utils.crm.listApplications.invalidate();
+    },
+    onError: (err) => alert(err.message),
+  });
+
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const res = await utils.crm.exportApplications.fetch({
+        stage: stage === "ALL" ? undefined : stage,
+      });
+      if (res && res.csvContent) {
+        const blob = new Blob([res.csvContent], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", res.fileName || "admissions-export.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } catch (err: any) {
+      alert("Failed to export: " + (err.message || "Unknown error"));
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -51,15 +112,29 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
               />
             </div>
 
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => setAdmissionOpen(true)}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-            >
-              <PlusCircle className="h-4 w-4" />
-              <span>New Admission Application</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={isExporting}
+                onClick={handleExportCsv}
+                className="border-slate-300 text-slate-700 text-xs font-semibold flex items-center gap-1.5 h-8"
+              >
+                {isExporting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+                <span>Export CSV</span>
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setAdmissionOpen(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs h-8"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>New Admission Application</span>
+              </Button>
+            </div>
           </div>
 
           {/* Stage Filters */}
@@ -175,9 +250,76 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                         })}
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">
-                          <Link href={`${basePath}/${app.id}`}>Review</Link>
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-slate-300">
+                            <Link href={`${basePath}/${app.id}`}>Review</Link>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setEditingApp(app)}
+                            className="h-7 w-7 p-0 text-slate-600 hover:text-slate-900"
+                            title="Edit Application"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                          </Button>
+                          {app.stage === ApplicationStage.REJECTED ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (confirm(`Restore application ${app.applicationNumber} back to Under Review?`)) {
+                                  restoreMutation.mutate({ applicationId: app.id });
+                                }
+                              }}
+                              disabled={restoreMutation.isPending}
+                              className="h-7 w-7 p-0 text-emerald-600 hover:text-emerald-800"
+                              title="Restore Application"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : app.stage !== ApplicationStage.CONVERTED ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                const reason = prompt("Enter reason for archiving application:");
+                                if (reason !== null) {
+                                  archiveMutation.mutate({ applicationId: app.id, reason });
+                                }
+                              }}
+                              disabled={archiveMutation.isPending}
+                              className="h-7 w-7 p-0 text-amber-600 hover:text-amber-800"
+                              title="Archive Application"
+                            >
+                              <Archive className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : null}
+                          {app.stage !== ApplicationStage.CONVERTED && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                if (
+                                  confirm(
+                                    `Permanently delete unconverted application ${app.applicationNumber}? This cannot be undone.`
+                                  )
+                                ) {
+                                  deleteMutation.mutate({ applicationId: app.id });
+                                }
+                              }}
+                              disabled={deleteMutation.isPending}
+                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                              title="Delete Application"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -219,6 +361,12 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
       <DirectAdmissionDialog
         open={admissionOpen}
         onOpenChange={setAdmissionOpen}
+      />
+
+      <EditApplicationDialog
+        open={!!editingApp}
+        onOpenChange={(open) => !open && setEditingApp(null)}
+        application={editingApp}
       />
     </div>
   );

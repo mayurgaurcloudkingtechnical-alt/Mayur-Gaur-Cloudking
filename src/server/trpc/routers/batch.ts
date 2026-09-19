@@ -9,6 +9,9 @@ export const batchRouter = router({
     .input(
       z.object({
         courseId: z.string().optional(),
+        facultyId: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
         status: z.nativeEnum(BatchStatus).optional(),
         deliveryMode: z.nativeEnum(DeliveryMode).optional(),
         search: z.string().optional(),
@@ -17,7 +20,7 @@ export const batchRouter = router({
       })
     )
     .query(async ({ ctx, input }) => {
-      const { courseId, status, deliveryMode, search, page, pageSize } = input;
+      const { courseId, facultyId, startDate, endDate, status, deliveryMode, search, page, pageSize } = input;
       const skip = (page - 1) * pageSize;
 
       // Scoping: Trainers only see batches they are assigned to
@@ -39,6 +42,9 @@ export const batchRouter = router({
       const where: Prisma.BatchWhereInput = {
         ...trainerFilter,
         ...(courseId ? { courseId } : {}),
+        ...(facultyId ? { trainers: { some: { trainerId: facultyId } } } : {}),
+        ...(startDate ? { startDate: { gte: new Date(startDate) } } : {}),
+        ...(endDate ? { endDate: { lte: new Date(endDate) } } : {}),
         ...(status ? { status } : {}),
         ...(deliveryMode ? { deliveryMode } : {}),
         ...(search
@@ -85,7 +91,7 @@ export const batchRouter = router({
               },
             },
             _count: {
-              select: { classes: true },
+              select: { classes: true, enrollments: true },
             },
           },
         }),

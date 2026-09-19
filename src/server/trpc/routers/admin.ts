@@ -41,6 +41,133 @@ export const adminRouter = router({
     };
   }),
 
+  globalSearch: protectedProcedure
+    .input(z.object({ query: z.string().min(1).max(100) }))
+    .query(async ({ ctx, input }) => {
+      const q = input.query.trim();
+      if (!q) return { students: [], staff: [], leads: [], courses: [], drives: [], batches: [] };
+
+      const [students, staff, leads, courses, drives, batches] = await Promise.all([
+        ctx.db.studentProfile.findMany({
+          where: {
+            OR: [
+              { studentId: { contains: q, mode: "insensitive" } },
+              { user: { firstName: { contains: q, mode: "insensitive" } } },
+              { user: { lastName: { contains: q, mode: "insensitive" } } },
+              { user: { email: { contains: q, mode: "insensitive" } } },
+            ],
+          },
+          take: 5,
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
+        }),
+        ctx.db.staffProfile.findMany({
+          where: {
+            OR: [
+              { employeeId: { contains: q, mode: "insensitive" } },
+              { designation: { contains: q, mode: "insensitive" } },
+              { user: { firstName: { contains: q, mode: "insensitive" } } },
+              { user: { lastName: { contains: q, mode: "insensitive" } } },
+              { user: { email: { contains: q, mode: "insensitive" } } },
+            ],
+          },
+          take: 5,
+          include: {
+            user: { select: { firstName: true, lastName: true, email: true } },
+          },
+        }),
+        ctx.db.lead.findMany({
+          where: {
+            OR: [
+              { fullName: { contains: q, mode: "insensitive" } },
+              { email: { contains: q, mode: "insensitive" } },
+              { phone: { contains: q, mode: "insensitive" } },
+            ],
+          },
+          take: 5,
+          select: { id: true, fullName: true, email: true, phone: true, status: true },
+        }),
+        ctx.db.course.findMany({
+          where: {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { slug: { contains: q, mode: "insensitive" } },
+            ],
+          },
+          take: 5,
+          select: { id: true, title: true, status: true, slug: true },
+        }),
+        ctx.db.jobDrive.findMany({
+          where: {
+            OR: [
+              { title: { contains: q, mode: "insensitive" } },
+              { company: { name: { contains: q, mode: "insensitive" } } },
+            ],
+          },
+          take: 5,
+          include: {
+            company: { select: { name: true } },
+          },
+        }),
+        ctx.db.batch.findMany({
+          where: {
+            OR: [
+              { name: { contains: q, mode: "insensitive" } },
+              { code: { contains: q, mode: "insensitive" } },
+            ],
+          },
+          take: 5,
+          select: { id: true, name: true, code: true, status: true },
+        }),
+      ]);
+
+      return {
+        students: students.map((s: any) => ({
+          id: s.id,
+          title: `${s.user.firstName} ${s.user.lastName}`,
+          subtitle: `ID: ${s.studentId} • ${s.user.email}`,
+          url: `/admin/students?search=${encodeURIComponent(s.studentId)}`,
+          type: "Student",
+        })),
+        staff: staff.map((st: any) => ({
+          id: st.id,
+          title: `${st.user.firstName} ${st.user.lastName}`,
+          subtitle: `${st.employeeId} • ${st.designation} (${st.department})`,
+          url: `/admin/staff?search=${encodeURIComponent(st.employeeId)}`,
+          type: "Staff",
+        })),
+        leads: leads.map((l: any) => ({
+          id: l.id,
+          title: l.fullName,
+          subtitle: `${l.phone} • ${l.status}`,
+          url: `/admin/leads?search=${encodeURIComponent(l.fullName)}`,
+          type: "Lead",
+        })),
+        courses: courses.map((c: any) => ({
+          id: c.id,
+          title: c.title,
+          subtitle: `${c.slug} • ${c.status}`,
+          url: `/admin/courses`,
+          type: "Course",
+        })),
+        drives: drives.map((d: any) => ({
+          id: d.id,
+          title: d.title,
+          subtitle: `${d.company?.name || "Company"} • ${d.status}`,
+          url: `/admin/placements`,
+          type: "Job Drive",
+        })),
+        batches: batches.map((b: any) => ({
+          id: b.id,
+          title: b.name,
+          subtitle: `Code: ${b.code} • ${b.status}`,
+          url: `/admin/batches`,
+          type: "Batch",
+        })),
+      };
+    }),
+
   getRecentAuditLogs: requireRoleProcedure([
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
@@ -646,6 +773,7 @@ export const adminRouter = router({
           status: s.user.status,
           city: s.city,
           highestDegree: s.highestDegree,
+          guardianName: s.guardianName,
           enrollmentsCount: s.enrollments.length,
           activeCourses: s.enrollments.map((e) => e.course.title),
           activeBatches: s.enrollments.map((e) => e.batch?.name).filter(Boolean),

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
 import { LogOut, User as UserIcon, Menu } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
+import { GlobalSearchDialog } from "@/components/common/global-search-dialog";
 
 interface NavbarProps {
   user: {
@@ -36,6 +37,10 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
         <Link href="/" className="flex items-center gap-2">
           <SoftlabLogo size="sm" showTagline={false} />
         </Link>
+      </div>
+
+      <div className="flex items-center mx-2 sm:mx-4">
+        <GlobalSearchDialog />
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">

@@ -19,16 +19,17 @@ export const courseRouter = router({
       z.object({
         search: z.string().optional(),
         status: z.nativeEnum(ContentStatus).optional(),
+        archivedOnly: z.boolean().optional(),
         page: z.number().int().min(1).default(1),
         pageSize: z.number().int().min(1).max(50).default(10),
       })
     )
     .query(async ({ ctx, input }) => {
-      const { search, status, page, pageSize } = input;
+      const { search, status, archivedOnly, page, pageSize } = input;
       const skip = (page - 1) * pageSize;
 
       const where: Prisma.CourseWhereInput = {
-        deletedAt: null,
+        deletedAt: archivedOnly ? { not: null } : null,
         ...(status ? { status } : {}),
         ...(search
           ? {
@@ -400,5 +401,38 @@ export const courseRouter = router({
       });
 
       return { success: true };
+    }),
+
+  restore: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+  ])
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const course = await ctx.db.course.findUnique({
+        where: { id: input.id },
+      });
+
+      if (!course) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Course not found",
+        });
+      }
+
+      const restored = await ctx.db.course.update({
+        where: { id: input.id },
+        data: { deletedAt: null },
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "COURSE_RESTORE",
+        resourceType: "Course",
+        resourceId: restored.id,
+      });
+
+      return restored;
     }),
 });

@@ -22,6 +22,7 @@ import {
   Calendar,
   Layers,
 } from "lucide-react";
+import { PublicEnquiryForm } from "@/components/public/public-enquiry-form";
 
 interface CourseDetailPageProps {
   params: {
@@ -284,6 +285,8 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
             {/* Right Col: Admissions & Learning Support */}
             <div className="space-y-6">
+              <PublicEnquiryForm preselectedCourseId={course.id} preselectedCourseSlug={course.slug} />
+
               <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
                 <h3 className="text-base font-bold text-slate-900">What You Receive</h3>
                 <ul className="space-y-3 text-xs text-slate-600">

@@ -1,9 +1,9 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -16,177 +16,355 @@ import {
   ArrowUpRight,
   Receipt,
   FileCheck2,
+  Calendar,
+  CreditCard,
+  Plus,
+  Users,
+  ChevronRight,
 } from "lucide-react";
 import { FeeStructuresTable } from "./fee-structures-table";
+import { RecordPaymentDialog } from "./record-payment-dialog";
 
 export function FinanceOverviewView() {
-  const { data: metrics, isLoading } = api.finance.getOverviewMetrics.useQuery();
+  const [academicYear, setAcademicYear] = useState("2025-26");
+  const [selectedFeeStructure, setSelectedFeeStructure] = useState<{
+    id: string;
+    studentName: string;
+    pendingAmount: number;
+  } | null>(null);
+
+  const { data: metrics, isLoading, refetch } = api.finance.getOverviewMetrics.useQuery();
+
+  const totalReceivable = metrics?.totalReceivable || 0;
+  const totalCollected = metrics?.totalCollected || 0;
+  const totalOutstanding = metrics?.totalOutstanding || 0;
+  const overdueAmount = metrics?.overdueAmount || 0;
+  const collectionRate = metrics?.collectionRate ?? (totalReceivable > 0 ? Math.round((totalCollected / totalReceivable) * 100) : 100);
+
+  const recentPayments = metrics?.recentPayments || [];
+  const pendingStudents = (metrics as any)?.pendingStudents || [];
 
   return (
     <div className="space-y-6">
-      {/* Metrics Row */}
+      {/* Top Header & Academic Year Filter matching Image 8 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded border border-slate-200 shadow-sm">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Fees Dashboard</h1>
+          <p className="text-xs text-slate-500">Real-time tuition billing, collections telemetry, and outstanding dues tracking</p>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-slate-400" />
+            <span className="text-xs font-semibold text-slate-600">Academic Year:</span>
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="h-8 rounded border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-[#0088cc]"
+            >
+              <option value="2025-26">2025 - 2026 (Current)</option>
+              <option value="2024-25">2024 - 2025</option>
+              <option value="2023-24">2023 - 2024</option>
+            </select>
+          </div>
+
+          <a
+            href="#fee-ledger"
+            className="inline-flex items-center gap-1.5 bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-xs px-4 py-2 rounded shadow-sm uppercase tracking-wide transition-colors"
+          >
+            <Plus className="w-3.5 h-3.5" /> RECORD PAYMENT
+          </a>
+        </div>
+      </div>
+
+      {/* 4 KPI Cards matching EdumonX Image 8 */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-slate-200 bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase text-slate-500">Total Receivable</CardTitle>
-            <TrendingUp className="h-4 w-4 text-slate-400" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">
-              {isLoading ? "..." : formatPaiseToRupees(metrics?.totalReceivable || 0)}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">
-              Across {metrics?.totalEnrolledFees || 0} enrolled fee structures
-            </p>
-          </CardContent>
-        </Card>
+        {/* Card 1: Fees Collected */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Collected</span>
+            <span className="p-2 rounded bg-emerald-50 text-emerald-600">
+              <IndianRupee className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-700">
+            {isLoading ? "..." : formatPaiseToRupees(totalCollected)}
+          </div>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
+            <TrendingUp className="h-3.5 w-3.5" />
+            <span>+14.2% from prior period</span>
+          </div>
+        </div>
 
-        <Card className="border-slate-200 bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase text-emerald-700">Total Collected</CardTitle>
-            <IndianRupee className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-emerald-700">
-              {isLoading ? "..." : formatPaiseToRupees(metrics?.totalCollected || 0)}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">Realized revenue in bank & cash</p>
-          </CardContent>
-        </Card>
+        {/* Card 2: Fees Pending */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Pending</span>
+            <span className="p-2 rounded bg-amber-50 text-amber-600">
+              <Clock className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-amber-700">
+            {isLoading ? "..." : formatPaiseToRupees(totalOutstanding)}
+          </div>
+          <p className="mt-2 text-xs text-slate-500">
+            {metrics?.partialCount || 0} active installment plans
+          </p>
+        </div>
 
-        <Card className="border-slate-200 bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase text-amber-700">Outstanding Dues</CardTitle>
-            <Clock className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-700">
-              {isLoading ? "..." : formatPaiseToRupees(metrics?.totalOutstanding || 0)}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">{metrics?.partialCount || 0} partial payment plans</p>
-          </CardContent>
-        </Card>
+        {/* Card 3: Overdue Fees */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Overdue Fees</span>
+            <span className="p-2 rounded bg-rose-50 text-rose-600">
+              <AlertCircle className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-rose-700">
+            {isLoading ? "..." : formatPaiseToRupees(overdueAmount)}
+          </div>
+          <p className="mt-2 text-xs text-rose-600 font-medium">
+            Requires follow-up attention
+          </p>
+        </div>
 
-        <Card className="border-slate-200 bg-white">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-semibold uppercase text-red-700">Overdue Installments</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-700">
-              {isLoading ? "..." : formatPaiseToRupees(metrics?.overdueAmount || 0)}
-            </div>
-            <p className="text-[11px] text-slate-500 mt-1">Past scheduled payment milestone</p>
-          </CardContent>
-        </Card>
+        {/* Card 4: Collection Rate */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection Rate</span>
+            <span className="p-2 rounded bg-blue-50 text-blue-600">
+              <TrendingUp className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-slate-900">
+            {isLoading ? "..." : `${collectionRate}%`}
+          </div>
+          <div className="mt-2 w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-[#0088cc] h-2 rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, Math.max(0, collectionRate))}%` }}
+            />
+          </div>
+        </div>
       </div>
 
-      {/* Recent Transactions & Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-slate-200 bg-white">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-sm font-bold text-slate-900">Recent Payment Transactions</CardTitle>
-              <p className="text-xs text-slate-500">Live feed of verified fee receipts</p>
-            </div>
-            <Button asChild size="sm" variant="ghost" className="h-7 text-xs text-emerald-700">
-              <Link href="/admin/finance/payments" className="flex items-center gap-1">
-                <span>View All Payments</span>
-                <ArrowUpRight className="h-3 w-3" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader className="bg-slate-50">
-                <TableRow>
-                  <TableHead className="text-xs font-semibold text-slate-700">Reference</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-700">Student</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-700">Method</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-700">Amount</TableHead>
-                  <TableHead className="text-xs font-semibold text-slate-700">Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-6 text-center text-xs text-slate-400">
-                      Loading recent transactions...
-                    </TableCell>
-                  </TableRow>
-                ) : !metrics?.recentPayments || metrics.recentPayments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-6 text-center text-xs text-slate-400">
-                      No payment transactions recorded yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  metrics.recentPayments.map((p) => (
-                    <TableRow key={p.id} className="text-xs hover:bg-slate-50/50">
-                      <TableCell className="font-mono font-semibold text-slate-900">
-                        {p.transactionReference}
-                      </TableCell>
-                      <TableCell>
-                        {p.student?.user ? `${p.student.user.firstName} ${p.student.user.lastName}` : "Admitted Student"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-[10px] uppercase font-semibold">
-                          {p.paymentMethod}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-bold text-emerald-700">
-                        {formatPaiseToRupees(p.amount)}
-                      </TableCell>
-                      <TableCell className="text-slate-500">
-                        {formatDate(p.paymentDate)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+      {/* 3-Panel Split Layout matching EdumonX Image 8 */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* Panel 1: Paid vs Pending Breakdown Chart / Progress */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b pb-3">
+            <h3 className="text-sm font-bold text-slate-900">Paid vs Pending Fees</h3>
+            <span className="text-xs text-slate-400 font-mono font-semibold">{academicYear}</span>
+          </div>
 
-        {/* Quick Operations Guide */}
-        <Card className="border-slate-200 bg-white">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-bold text-slate-900">Finance Operations</CardTitle>
-            <p className="text-xs text-slate-500">Institutional policies & rules</p>
-          </CardHeader>
-          <CardContent className="space-y-3 text-xs text-slate-600">
-            <div className="rounded-md bg-slate-50 p-3 border border-slate-100 space-y-1">
-              <p className="font-bold text-slate-800">Deterministic Integer Paise</p>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                All amounts are saved and verified in integer Paise (₹1 = 100 Paise) to guarantee precision without floating-point drift.
-              </p>
+          <div className="space-y-4 pt-1">
+            {/* Visual Distribution Bar */}
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-xs text-slate-600">
+                <span className="font-semibold text-emerald-700">Collected ({totalReceivable > 0 ? Math.round((totalCollected / totalReceivable) * 100) : 0}%)</span>
+                <span className="font-semibold text-amber-700">Pending ({totalReceivable > 0 ? Math.round((totalOutstanding / totalReceivable) * 100) : 0}%)</span>
+              </div>
+              <div className="h-4 w-full bg-slate-100 rounded flex overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full transition-all"
+                  style={{ width: `${totalReceivable > 0 ? (totalCollected / totalReceivable) * 100 : 50}%` }}
+                  title="Collected"
+                />
+                <div
+                  className="bg-amber-500 h-full transition-all"
+                  style={{ width: `${totalReceivable > 0 ? (totalOutstanding / totalReceivable) * 100 : 50}%` }}
+                  title="Pending"
+                />
+              </div>
             </div>
 
-            <div className="rounded-md bg-slate-50 p-3 border border-slate-100 space-y-1">
-              <p className="font-bold text-slate-800">Non-Negative Payable Rule</p>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Discounts and scholarships are bounded server-side and can never exceed the gross tuition and registration fee.
-              </p>
+            {/* Breakdown Legend Cards */}
+            <div className="space-y-2.5 pt-2">
+              <div className="flex items-center justify-between p-2.5 rounded bg-emerald-50/60 border border-emerald-100 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                  <span className="font-semibold text-slate-700">Collected Revenue</span>
+                </div>
+                <span className="font-bold text-emerald-800">{formatPaiseToRupees(totalCollected)}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded bg-amber-50/60 border border-amber-100 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <span className="font-semibold text-slate-700">Pending Balances</span>
+                </div>
+                <span className="font-bold text-amber-800">{formatPaiseToRupees(totalOutstanding)}</span>
+              </div>
+
+              <div className="flex items-center justify-between p-2.5 rounded bg-rose-50/60 border border-rose-100 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                  <span className="font-semibold text-slate-700">Overdue Installments</span>
+                </div>
+                <span className="font-bold text-rose-800">{formatPaiseToRupees(overdueAmount)}</span>
+              </div>
             </div>
 
-            <div className="rounded-md bg-slate-50 p-3 border border-slate-100 space-y-1">
-              <p className="font-bold text-slate-800">Strict Overpayment Prevention</p>
-              <p className="text-[11px] text-slate-600 leading-relaxed">
-                Offline payments exceeding the current outstanding pending balance are blocked at the transactional boundary.
-              </p>
+            <div className="pt-2 border-t text-[11px] text-slate-500">
+              Total Receivable Committed: <span className="font-bold text-slate-800">{formatPaiseToRupees(totalReceivable)}</span>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
+
+        {/* Panel 2: Recent Payments with Avatars & Amounts */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <h3 className="text-sm font-bold text-slate-900">Recent Payments</h3>
+            <Link
+              href="/admin/finance/payments"
+              className="text-xs font-semibold text-[#0088cc] hover:underline flex items-center gap-1"
+            >
+              View All <ArrowUpRight className="h-3 w-3" />
+            </Link>
+          </div>
+
+          <div className="divide-y divide-slate-100 space-y-1">
+            {recentPayments.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No recent payment transactions found.
+              </div>
+            ) : (
+              recentPayments.map((p) => {
+                const studentName = p.student?.user
+                  ? `${p.student.user.firstName} ${p.student.user.lastName}`
+                  : "Enrolled Student";
+                const initials = studentName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                return (
+                  <div key={p.id} className="pt-2 pb-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-emerald-100 text-emerald-800 font-bold flex items-center justify-center text-[11px] shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900 line-clamp-1">{studentName}</p>
+                        <div className="flex items-center gap-1 text-[11px] text-slate-400">
+                          <span className="font-mono">{formatDate(p.paymentDate)}</span>
+                          <span>•</span>
+                          <span className="font-semibold uppercase text-slate-600">{p.paymentMethod}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-bold text-emerald-700 block">
+                        +{formatPaiseToRupees(p.amount)}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">{p.transactionReference.slice(0, 10)}</span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* Panel 3: Pending Fees by Student */}
+        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm space-y-3">
+          <div className="flex items-center justify-between border-b pb-3">
+            <h3 className="text-sm font-bold text-slate-900">Pending Fees by Student</h3>
+            <span className="text-xs text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+              {pendingStudents.length} Pending
+            </span>
+          </div>
+
+          <div className="divide-y divide-slate-100 space-y-1">
+            {pendingStudents.length === 0 ? (
+              <div className="py-8 text-center text-xs text-slate-400">
+                No outstanding pending dues found across cohorts.
+              </div>
+            ) : (
+              pendingStudents.map((fs: any) => {
+                const sName = fs.student?.user
+                  ? `${fs.student.user.firstName} ${fs.student.user.lastName}`
+                  : "Candidate";
+                const initials = sName
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                return (
+                  <div key={fs.id} className="pt-2 pb-2 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-800 font-bold flex items-center justify-center text-[11px] shrink-0">
+                        {initials}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900 line-clamp-1">{sName}</p>
+                        <p className="text-[11px] text-slate-400 line-clamp-1">
+                          {fs.course?.title || "IT Program"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-right">
+                        <span className="font-bold text-amber-700 block">
+                          {formatPaiseToRupees(fs.pendingAmount)}
+                        </span>
+                        <span className="text-[10px] uppercase font-semibold text-slate-400">
+                          {fs.paymentStatus}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sName = fs.student?.user ? `${fs.student.user.firstName} ${fs.student.user.lastName}` : "Candidate";
+                          setSelectedFeeStructure({
+                            id: fs.id,
+                            studentName: sName,
+                            pendingAmount: fs.pendingAmount,
+                          });
+                        }}
+                        className="px-2 py-1 bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-[10px] rounded uppercase tracking-wider transition-colors shadow-sm"
+                        title="Collect Fee Payment"
+                      >
+                        Collect
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
       </div>
 
-      {/* Fee Structures Ledger Section */}
-      <div className="space-y-3 pt-4">
+      {/* Comprehensive Fee Structures Ledger Section */}
+      <div id="fee-ledger" className="space-y-3 pt-2">
         <div>
           <h3 className="text-base font-bold text-slate-900">Active Student Fee Structures</h3>
-          <p className="text-xs text-slate-500">Manage enrollment fee structures, installments, and collections</p>
+          <p className="text-xs text-slate-500">Manage enrollment fee structures, installments, and offline collections</p>
         </div>
         <FeeStructuresTable />
       </div>
+
+      {/* Record Payment Dialog */}
+      {selectedFeeStructure && (
+        <RecordPaymentDialog
+          open={Boolean(selectedFeeStructure)}
+          onOpenChange={(open) => {
+            if (!open) setSelectedFeeStructure(null);
+          }}
+          feeStructureId={selectedFeeStructure.id}
+          studentName={selectedFeeStructure.studentName}
+          pendingAmountPaise={selectedFeeStructure.pendingAmount}
+          onSuccess={() => {
+            refetch();
+            setSelectedFeeStructure(null);
+          }}
+        />
+      )}
     </div>
   );
 }
