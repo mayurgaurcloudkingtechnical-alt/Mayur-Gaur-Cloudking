@@ -7,6 +7,7 @@ import { CounselorLeadsView } from "@/components/counselor/counselor-leads-view"
 export default async function AdminLeadsPage() {
   const user = await requireRole([
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.MANAGER,
     UserRoleCode.SUPER_ADMIN,
   ]);

@@ -27,6 +27,7 @@ import { LeadSource } from "@prisma/client";
 
 export function MarketingIntegrationsView() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [testSuccessMsg, setTestSuccessMsg] = useState<string | null>(null);
 
   const utils = api.useUtils();
@@ -50,7 +51,7 @@ export function MarketingIntegrationsView() {
     if (typeof window !== "undefined") {
       return `${window.location.origin}${path}`;
     }
-    return `http://localhost:3000${path}`;
+    return `https://www.softlabglobal.com${path}`;
   };
 
   const handleCopy = (path: string) => {
@@ -58,6 +59,12 @@ export function MarketingIntegrationsView() {
     navigator.clipboard.writeText(fullUrl);
     setCopiedUrl(path);
     setTimeout(() => setCopiedUrl(null), 2500);
+  };
+
+  const handleCopyKey = (key: string) => {
+    navigator.clipboard.writeText(key);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2500);
   };
 
   const channelCounts = data?.channelCounts || {};
@@ -115,9 +122,10 @@ export function MarketingIntegrationsView() {
       icon: <Globe className="h-5 w-5 text-red-600" />,
       badgeColor: "bg-red-100 text-red-800 border-red-200",
       path: "/api/webhooks/google-ads",
+      secretKey: "slg_gads_sec_8923f7c1b4d09e",
       count: (channelCounts[LeadSource.GOOGLE_ADS] || 0) + (channelCounts[LeadSource.GOOGLE_SEARCH] || 0),
       description: "Captures prospective students clicking Google Search lead form extensions and YouTube In-Feed ads.",
-      configInfo: "Format: Google Ads Lead Form Webhook JSON",
+      configInfo: "Multi-Role Alerts: Counselor, Director, Admin & Super Admin",
     },
     {
       id: "whatsapp",
@@ -158,44 +166,63 @@ export function MarketingIntegrationsView() {
               Connect external marketing platforms (Justdial, Meta Facebook/Instagram Ads, Google Ads, WhatsApp, Zapier) to stream prospective student leads live into SoftLab Global CRM.
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">
-              <Link href="/counselor/leads">Open Pipeline Board</Link>
-            </Button>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/integrations">
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 shadow-sm">
+                <ShieldCheck className="h-4 w-4" />
+                <span>Admin Integrations Hub</span>
+              </Button>
+            </Link>
           </div>
+        </div>
+
+        {/* Global Live Stat Counters */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mt-6 pt-5 border-t border-slate-700/60">
+          {channels.map((ch) => (
+            <div key={ch.id} className="bg-slate-800/60 rounded-lg p-3 border border-slate-700">
+              <span className="text-[11px] text-slate-400 block truncate">{ch.name.split(" ")[0]} Inflow</span>
+              <div className="flex items-baseline gap-1.5 mt-1">
+                <span className="text-lg font-black text-white font-mono">{ch.count}</span>
+                <span className="text-[10px] text-emerald-400 font-semibold">Live</span>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Test Notification Banner */}
+      {/* Success Alert Banner on Test Ingestion */}
       {testSuccessMsg && (
-        <div className="p-4 bg-emerald-50 text-emerald-900 rounded-lg border border-emerald-200 text-xs font-semibold flex items-center justify-between shadow-sm animate-in fade-in duration-300">
+        <div className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 p-4 text-emerald-900 flex items-center justify-between text-xs font-medium animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
             <span>{testSuccessMsg}</span>
           </div>
-          <span className="text-[10px] text-emerald-700 font-normal">Auto-assigned to staff</span>
+          <button
+            onClick={() => setTestSuccessMsg(null)}
+            className="text-emerald-700 hover:text-emerald-900 font-bold ml-4"
+          >
+            ✕
+          </button>
         </div>
       )}
 
-      {/* Channel Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Grid of Webhook Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {channels.map((ch) => (
           <Card key={ch.id} className="border-slate-200 bg-white shadow-sm flex flex-col justify-between">
             <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div className="p-2 rounded-lg bg-slate-50 border border-slate-100">{ch.icon}</div>
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className={ch.badgeColor}>
-                    {ch.count} Leads
-                  </Badge>
-                  <span className="flex h-2 w-2 relative">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
+              <div className="flex items-center justify-between">
+                <div className="p-2 rounded-lg bg-slate-100 border border-slate-200">
+                  {ch.icon}
                 </div>
+                <Badge variant="outline" className={`text-[10px] font-semibold ${ch.badgeColor}`}>
+                  {ch.count} Leads Total
+                </Badge>
               </div>
-              <CardTitle className="text-sm font-bold text-slate-900 mt-2">{ch.name}</CardTitle>
-              <CardDescription className="text-xs text-slate-500 line-clamp-2 mt-0.5">
+              <CardTitle className="text-sm font-bold text-slate-900 mt-2">
+                {ch.name}
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500 leading-snug">
                 {ch.description}
               </CardDescription>
             </CardHeader>
@@ -227,6 +254,34 @@ export function MarketingIntegrationsView() {
                 </div>
                 <p className="text-[10px] text-slate-400 italic pt-0.5">{ch.configInfo}</p>
               </div>
+
+              {ch.secretKey && (
+                <div className="bg-amber-50/70 p-2 rounded-lg border border-amber-200/70 space-y-1">
+                  <div className="flex items-center justify-between text-[11px] text-amber-800 font-medium">
+                    <span>Google Key:</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyKey(ch.secretKey!)}
+                      className="text-amber-800 hover:text-amber-900 flex items-center gap-1 font-semibold"
+                    >
+                      {copiedKey === ch.secretKey ? (
+                        <>
+                          <Check className="h-3 w-3 text-amber-600" />
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3 w-3" />
+                          <span>Copy Key</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <div className="font-mono text-[10px] text-amber-950 break-all bg-white p-1.5 rounded border border-amber-200">
+                    {ch.secretKey}
+                  </div>
+                </div>
+              )}
 
               {/* 1-Click Test Ingestion Simulator Button */}
               <Button

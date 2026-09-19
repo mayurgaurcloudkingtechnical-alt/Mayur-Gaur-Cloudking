@@ -9,6 +9,7 @@ import { SoftlabLogo } from "@/components/common/softlab-logo";
 import { LogOut, User as UserIcon, Menu } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { GlobalSearchDialog } from "@/components/common/global-search-dialog";
+import { NotificationBell } from "@/components/common/notification-bell";
 
 interface NavbarProps {
   user: {
@@ -44,6 +45,8 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-3 sm:gap-4">
+        <NotificationBell />
+
         <Badge variant="default" className="hidden sm:inline-flex uppercase font-mono text-[11px]">
           {user.roleCode.replace(/_/g, " ")}
         </Badge>

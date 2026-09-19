@@ -23,7 +23,7 @@ export interface IngestLeadPayload {
 export class CrmIngestionService {
   /**
    * Intelligently routes and ingests incoming leads from all channels:
-   * Justdial, Meta Ads, Google Ads, WhatsApp, Website, and Webhooks.
+   * Google Ads, Meta Ads, Justdial, WhatsApp, Website, and Webhooks.
    */
   static async ingestLead(payload: IngestLeadPayload) {
     const cleanPhone = normalizePhone(payload.phone);
@@ -143,26 +143,23 @@ export class CrmIngestionService {
         },
       });
 
-      // Notify the assignee
-      const notifyUserId = existingLead.assignedToId || primaryAssignedId;
-      if (notifyUserId) {
-        await db.notification.create({
-          data: {
-            userId: notifyUserId,
-            title: `Existing Lead Re-engaged via ${payload.source}`,
-            message: `${fullName} (${cleanPhone}) sent a new inquiry from ${payload.source}.`,
-            type: NotificationType.ADMISSION,
-            priority: NotificationPriority.HIGH,
-            link: `/counselor/leads/${existingLead.id}`,
-          },
-        });
-      }
+      // Broadcast real-time alerts to Counselor, Director, Admin, and Super Admin
+      await this.broadcastLeadNotification({
+        leadId: existingLead.id,
+        fullName,
+        phone: cleanPhone,
+        courseName: payload.interestedCourseName,
+        city,
+        source: payload.source,
+        isNew: false,
+        assignedUserId: existingLead.assignedToId || primaryAssignedId,
+      });
 
       return {
         isNew: false,
         leadId: existingLead.id,
         lead: updated,
-        assignedToId: notifyUserId,
+        assignedToId: existingLead.assignedToId || primaryAssignedId,
       };
     }
 
@@ -200,19 +197,17 @@ export class CrmIngestionService {
       },
     });
 
-    // Send in-app notification to the assigned staff member
-    if (primaryAssignedId) {
-      await db.notification.create({
-        data: {
-          userId: primaryAssignedId,
-          title: `New ${payload.source} Lead: ${fullName}`,
-          message: `Phone: ${cleanPhone} | Course: ${payload.interestedCourseName || "General"}. Immediate follow-up required.`,
-          type: NotificationType.ADMISSION,
-          priority: NotificationPriority.URGENT,
-          link: `/counselor/leads/${newLead.id}`,
-        },
-      });
-    }
+    // Broadcast real-time alerts to Counselor, Director, Admin, and Super Admin
+    await this.broadcastLeadNotification({
+      leadId: newLead.id,
+      fullName,
+      phone: cleanPhone,
+      courseName: payload.interestedCourseName,
+      city,
+      source: payload.source,
+      isNew: true,
+      assignedUserId: primaryAssignedId,
+    });
 
     return {
       isNew: true,
@@ -220,5 +215,83 @@ export class CrmIngestionService {
       lead: newLead,
       assignedToId: primaryAssignedId,
     };
+  }
+
+  /**
+   * Broadcasts lead alerts to Counselor, Director, Admin, and Super Admin
+   * guaranteeing that no lead is overlooked.
+   */
+  private static async broadcastLeadNotification(params: {
+    leadId: string;
+    fullName: string;
+    phone: string;
+    courseName?: string;
+    city?: string | null;
+    source: LeadSource;
+    isNew: boolean;
+    assignedUserId?: string | null;
+  }) {
+    try {
+      // Find all active users with roles: SUPER_ADMIN, DIRECTOR, ADMIN, COUNSELOR
+      const activeStakeholders = await db.user.findMany({
+        where: {
+          status: "ACTIVE",
+          OR: [
+            {
+              roleCode: {
+                in: [
+                  UserRoleCode.SUPER_ADMIN,
+                  UserRoleCode.DIRECTOR,
+                  UserRoleCode.ADMIN,
+                  UserRoleCode.COUNSELOR,
+                ],
+              },
+            },
+            ...(params.assignedUserId ? [{ id: params.assignedUserId }] : []),
+          ],
+        },
+        select: { id: true, roleCode: true },
+      });
+
+      if (!activeStakeholders.length) return;
+
+      const sourceLabel =
+        params.source === LeadSource.GOOGLE_ADS
+          ? "Google Ads"
+          : params.source.replace(/_/g, " ");
+
+      const title = params.isNew
+        ? `🔥 [${sourceLabel}] New Lead: ${params.fullName}`
+        : `🔄 [${sourceLabel}] Lead Re-Engaged: ${params.fullName}`;
+
+      const courseText = params.courseName ? ` | Course: ${params.courseName}` : "";
+      const cityText = params.city ? ` | City: ${params.city}` : "";
+      const message = `${params.fullName} (${params.phone})${courseText}${cityText}. Immediate follow-up required!`;
+
+      // Deduplicate recipient IDs
+      const uniqueUserMap = new Map<string, UserRoleCode>();
+      for (const u of activeStakeholders) {
+        uniqueUserMap.set(u.id, u.roleCode);
+      }
+
+      const notifications = Array.from(uniqueUserMap.entries()).map(([userId, roleCode]) => {
+        const isStaff =
+          roleCode === UserRoleCode.COUNSELOR || roleCode === UserRoleCode.TELECALLER;
+        return {
+          userId,
+          title,
+          message,
+          type: NotificationType.ADMISSION,
+          priority: params.isNew ? NotificationPriority.URGENT : NotificationPriority.HIGH,
+          link: isStaff ? `/counselor/leads/${params.leadId}` : `/admin/leads`,
+        };
+      });
+
+      await db.notification.createMany({
+        data: notifications,
+      });
+    } catch (err) {
+      console.error("[CrmIngestionService] Failed to broadcast lead notifications:", err);
+    }
   }
 }

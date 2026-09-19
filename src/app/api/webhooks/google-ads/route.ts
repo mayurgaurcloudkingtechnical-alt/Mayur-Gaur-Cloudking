@@ -4,66 +4,109 @@ import { LeadSource } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_WEBHOOK_KEY = "slg_gads_sec_8923f7c1b4d09e";
+
 /**
  * Google Ads Lead Form Webhook
- * Handles lead submission from Google Search Ads & YouTube Lead Extensions
+ * Handles lead submissions and verification pings from Google Search Ads & YouTube Lead Form extensions.
  */
 export async function GET() {
   return NextResponse.json({
     status: "active",
     platform: "Google Ads Lead Form Extensions",
-    message: "SoftLab Global Google Ads webhook active",
+    webhookUrl: "https://www.softlabglobal.com/api/webhooks/google-ads",
+    configuredKey: Boolean(process.env.GOOGLE_ADS_WEBHOOK_KEY || DEFAULT_WEBHOOK_KEY),
+    rolesNotified: ["COUNSELOR", "DIRECTOR", "ADMIN", "SUPER_ADMIN"],
+    message: "SoftLab Global Google Ads webhook active and listening for live leads.",
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const expectedKey = process.env.GOOGLE_ADS_WEBHOOK_KEY || DEFAULT_WEBHOOK_KEY;
 
-    // Verify Google Key if configured in environment
-    const configuredKey = process.env.GOOGLE_ADS_WEBHOOK_KEY;
-    if (configuredKey && body.google_key && body.google_key !== configuredKey) {
-      return NextResponse.json({ status: "unauthorized", message: "Invalid Google Key" }, { status: 401 });
+    // Check key from body.google_key, query params, or headers
+    const providedKey =
+      body.google_key ||
+      req.nextUrl.searchParams.get("key") ||
+      req.nextUrl.searchParams.get("google_key") ||
+      req.headers.get("x-google-key") ||
+      req.headers.get("authorization")?.replace(/Bearer\s+/i, "");
+
+    if (providedKey !== expectedKey) {
+      console.warn(`[GoogleAdsWebhook] Unauthorized attempt with key: ${providedKey ? `${providedKey.slice(0, 4)}***` : "NONE"}`);
+      return NextResponse.json(
+        {
+          status: "unauthorized",
+          message: "Invalid or missing Google Key. Configure the matching key in Google Ads Lead Form webhook options.",
+        },
+        { status: 401 }
+      );
     }
 
+    const isTest = Boolean(body.is_test || body.lead_id === "test");
+
     let fullName = body.fullName || body.name || "";
+    let firstName = "";
+    let lastName = "";
     let phone = body.phone || body.mobile || "";
     let email = body.email || "";
     let city = body.city || "";
     let courseName = body.course || body.courseName || "";
 
-    // Parse Google's user_column_data format if present
+    // Parse Google's user_column_data format
     if (Array.isArray(body.user_column_data)) {
       for (const col of body.user_column_data) {
         const colId = (col.column_id || "").toUpperCase();
-        const val = col.string_value || "";
-        if (colId === "FULL_NAME" || colId === "FIRST_NAME") fullName = val;
-        if (colId === "PHONE_NUMBER") phone = val;
-        if (colId === "EMAIL") email = val;
-        if (colId === "CITY") city = val;
-        if (colId === "COURSE" || colId === "INTEREST") courseName = val;
+        const val = (col.string_value || "").trim();
+
+        if (colId === "FULL_NAME") fullName = val;
+        else if (colId === "FIRST_NAME") firstName = val;
+        else if (colId === "LAST_NAME") lastName = val;
+        else if (colId === "PHONE_NUMBER" || colId.includes("PHONE") || colId.includes("MOBILE")) phone = val;
+        else if (colId === "EMAIL" || colId.includes("EMAIL")) email = val;
+        else if (colId === "CITY" || colId === "POSTAL_CODE" || colId === "REGION") {
+          if (!city) city = val;
+        } else if (colId === "COURSE" || colId === "INTEREST" || colId.includes("COURSE") || colId.includes("PROGRAM")) {
+          if (!courseName) courseName = val;
+        }
       }
     }
 
-    if (!phone || phone.replace(/\D/g, "").length < 10) {
+    if (!fullName && (firstName || lastName)) {
+      fullName = `${firstName} ${lastName}`.trim();
+    }
+
+    // If Google Ads is sending a test lead ("Send test data" button in Google Ads UI)
+    if (isTest) {
+      if (!fullName) fullName = "Google Ads Test Prospect";
+      if (!phone || phone.replace(/\D/g, "").length < 7) phone = "+919999999999";
+      if (!email) email = "test.lead@softlabglobal.com";
+      if (!courseName) courseName = "Cloud Computing & Cyber Security with AI";
+      if (!city) city = "Prayagraj";
+    }
+
+    const cleanDigits = phone.replace(/\D/g, "");
+    if (!isTest && (!phone || cleanDigits.length < 10)) {
       return NextResponse.json(
-        { status: "error", message: "No valid phone number in Google Ads payload" },
+        { status: "error", message: "No valid 10-digit phone number in Google Ads payload" },
         { status: 400 }
       );
     }
 
-    const campaignId = body.campaign_id ? `Campaign ID: ${body.campaign_id}` : "Google Search Ads";
+    const campaignId = body.campaign_id ? `Campaign ID: ${body.campaign_id}` : "Google Ads Search Campaign";
 
     const result = await CrmIngestionService.ingestLead({
       fullName: fullName || "Google Ads Prospect",
       phone,
-      email,
+      email: email || undefined,
       city: city || "Prayagraj",
       source: LeadSource.GOOGLE_ADS,
       interestedCourseName: courseName,
       campaignName: campaignId,
       adsetName: body.form_id ? `Form ID: ${body.form_id}` : undefined,
-      notes: `Ingested from Google Ads Lead Form. Lead ID: ${body.lead_id || "N/A"}`,
+      notes: `Ingested from Google Ads Lead Form. Lead ID: ${body.lead_id || "N/A"}. Form ID: ${body.form_id || "N/A"}. GCLID: ${body.gcl_id || "N/A"}${isTest ? " [VERIFIED TEST LEAD]" : ""}`,
       rawPayload: body,
     });
 
@@ -72,6 +115,10 @@ export async function POST(req: NextRequest) {
       code: 200,
       leadId: result.leadId,
       isNew: result.isNew,
+      isTest,
+      message: isTest
+        ? "Google Ads test lead verified successfully."
+        : "Lead ingested and broadcast to LMS CRM dashboards successfully.",
     });
   } catch (error: any) {
     console.error("[GoogleAdsWebhook Error]:", error);

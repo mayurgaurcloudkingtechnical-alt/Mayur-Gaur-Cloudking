@@ -3,7 +3,7 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
-import { LeadSource, LeadStatus, FollowUpType, Prisma } from "@prisma/client";
+import { LeadSource, LeadStatus, FollowUpType, Prisma, UserRoleCode } from "@prisma/client";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 
 export interface PublicEnquiryInput {
@@ -73,6 +73,25 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export function canReadAllLeads(user: AuthenticatedUser): boolean {
+  return (
+    user.roleCode === UserRoleCode.SUPER_ADMIN ||
+    user.roleCode === UserRoleCode.DIRECTOR ||
+    user.roleCode === UserRoleCode.ADMIN ||
+    user.roleCode === UserRoleCode.MANAGER ||
+    hasPermission(user.permissions, "leads:read_all")
+  );
+}
+
+export function canReadOwnLeads(user: AuthenticatedUser): boolean {
+  return (
+    canReadAllLeads(user) ||
+    user.roleCode === UserRoleCode.COUNSELOR ||
+    user.roleCode === UserRoleCode.TELECALLER ||
+    hasPermission(user.permissions, "leads:read_own")
+  );
+}
+
 export class CrmLeadService {
   /**
    * Captures public website enquiries with rate limiting, honeypot spam protection,
@@ -137,8 +156,8 @@ export class CrmLeadService {
    * Admins and Managers can see all leads and filter by counselor.
    */
   static async listLeads(user: AuthenticatedUser, input: ListLeadsInput) {
-    const hasReadAll = hasPermission(user.permissions, "leads:read_all");
-    const hasReadOwn = hasPermission(user.permissions, "leads:read_own");
+    const hasReadAll = canReadAllLeads(user);
+    const hasReadOwn = canReadOwnLeads(user);
 
     if (!hasReadAll && !hasReadOwn) {
       throw new TRPCError({
@@ -226,8 +245,8 @@ export class CrmLeadService {
    * Checks for potential duplicates sharing normalized phone or email.
    */
   static async getLeadDetails(user: AuthenticatedUser, leadId: string) {
-    const hasReadAll = hasPermission(user.permissions, "leads:read_all");
-    const hasReadOwn = hasPermission(user.permissions, "leads:read_own");
+    const hasReadAll = canReadAllLeads(user);
+    const hasReadOwn = canReadOwnLeads(user);
 
     if (!hasReadAll && !hasReadOwn) {
       throw new TRPCError({
@@ -267,7 +286,14 @@ export class CrmLeadService {
       });
     }
 
-    if (!hasReadAll && lead.assignedToId !== user.id) {
+    const canAccessLead =
+      hasReadAll ||
+      lead.assignedToId === user.id ||
+      lead.assignedCounselorId === user.id ||
+      lead.assignedTelecallerId === user.id ||
+      lead.assignedToId === null;
+
+    if (!canAccessLead) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "You are not assigned to this lead.",
@@ -320,8 +346,15 @@ export class CrmLeadService {
       });
     }
 
-    const hasReadAll = hasPermission(user.permissions, "leads:read_all");
-    if (!hasReadAll && lead.assignedToId !== user.id) {
+    const hasReadAll = canReadAllLeads(user);
+    const canUpdateLead =
+      hasReadAll ||
+      lead.assignedToId === user.id ||
+      lead.assignedCounselorId === user.id ||
+      lead.assignedTelecallerId === user.id ||
+      lead.assignedToId === null;
+
+    if (!canUpdateLead) {
       throw new TRPCError({
         code: "FORBIDDEN",
         message: "You can only update leads assigned to you.",
@@ -524,8 +557,8 @@ export class CrmLeadService {
    * Retrieves pipeline Kanban view of leads grouped by stage.
    */
   static async getPipelineOverview(user: AuthenticatedUser, courseId?: string) {
-    const hasReadAll = hasPermission(user.permissions, "leads:read_all");
-    const hasReadOwn = hasPermission(user.permissions, "leads:read_own");
+    const hasReadAll = canReadAllLeads(user);
+    const hasReadOwn = canReadOwnLeads(user);
 
     if (!hasReadAll && !hasReadOwn) {
       throw new TRPCError({
