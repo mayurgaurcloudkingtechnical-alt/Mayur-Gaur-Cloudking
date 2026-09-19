@@ -255,10 +255,16 @@ export class CrmIngestionService {
 
       if (!activeStakeholders.length) return;
 
-      const sourceLabel =
-        params.source === LeadSource.GOOGLE_ADS
-          ? "Google Ads"
-          : params.source.replace(/_/g, " ");
+      let sourceLabel = params.source.replace(/_/g, " ");
+      if (params.source === LeadSource.GOOGLE_ADS) {
+        sourceLabel = "Google Ads";
+      } else if (params.source === LeadSource.META_ADS_FB) {
+        sourceLabel = "Meta Facebook Ads";
+      } else if (params.source === LeadSource.META_ADS_IG) {
+        sourceLabel = "Instagram Ads";
+      } else if (params.source === LeadSource.META) {
+        sourceLabel = "Meta Lead Ads";
+      }
 
       const title = params.isNew
         ? `🔥 [${sourceLabel}] New Lead: ${params.fullName}`

@@ -111,9 +111,10 @@ export function MarketingIntegrationsView() {
       icon: <Share2 className="h-5 w-5 text-blue-600" />,
       badgeColor: "bg-blue-100 text-blue-800 border-blue-200",
       path: "/api/webhooks/meta",
+      secretKey: "softlab_meta_leadgen_2026",
       count: (channelCounts[LeadSource.META_ADS_FB] || 0) + (channelCounts[LeadSource.META_ADS_IG] || 0) + (channelCounts[LeadSource.META] || 0),
       description: "Instant ingestion of candidate form submissions from Facebook Newsfeed & Instagram Story Sponsored Ads.",
-      configInfo: "Verify Token: softlab_meta_leadgen_2026",
+      configInfo: "Verify Token: softlab_meta_leadgen_2026 • Multi-Role Alerts Active",
     },
     {
       id: "google_ads",
@@ -258,7 +259,7 @@ export function MarketingIntegrationsView() {
               {ch.secretKey && (
                 <div className="bg-amber-50/70 p-2 rounded-lg border border-amber-200/70 space-y-1">
                   <div className="flex items-center justify-between text-[11px] text-amber-800 font-medium">
-                    <span>Google Key:</span>
+                    <span>{ch.platform === "META" ? "Verify Token:" : "Secret Key:"}</span>
                     <button
                       type="button"
                       onClick={() => handleCopyKey(ch.secretKey!)}

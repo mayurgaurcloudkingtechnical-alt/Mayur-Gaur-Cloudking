@@ -4,10 +4,12 @@ import { LeadSource } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
+const DEFAULT_VERIFY_TOKEN = "softlab_meta_leadgen_2026";
+
 /**
  * Meta (Facebook & Instagram Lead Ads) Webhook
  * GET: Webhook verification challenge from Meta Graph API
- * POST: Incoming lead event
+ * POST: Incoming lead events from Meta Business Suite, Lead Ads Testing Tool, and CRM connectors
  */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -18,115 +20,220 @@ export async function GET(req: NextRequest) {
   const expectedToken =
     process.env.META_WEBHOOK_VERIFY_TOKEN ||
     process.env.META_VERIFY_TOKEN ||
-    "softlab_meta_leadgen_2026";
+    DEFAULT_VERIFY_TOKEN;
 
-  if (mode === "subscribe" && token === expectedToken) {
-    return new Response(challenge || "", { status: 200 });
+  // Meta Graph Webhook Verification Handshake
+  if (mode === "subscribe") {
+    if (token === expectedToken) {
+      console.log("[MetaWebhook] Successfully verified Meta webhook subscription handshake.");
+      return new Response(challenge || "", {
+        status: 200,
+        headers: { "Content-Type": "text/plain" },
+      });
+    } else {
+      console.warn(`[MetaWebhook] Verification failed. Token mismatch: received "${token}", expected "${expectedToken}"`);
+      return new Response("Forbidden: Invalid verify token", { status: 403 });
+    }
   }
 
-  // Fallback health check
+  // Health check & credentials overview
   return NextResponse.json({
     status: "active",
-    platform: "Meta (Facebook & Instagram Lead Ads)",
-    message: "SoftLab Global Meta Webhook active",
+    platform: "Meta Business Leads (Facebook & Instagram Lead Gen)",
+    webhookUrl: "https://www.softlabglobal.com/api/webhooks/meta",
+    verifyToken: expectedToken,
+    configuredToken: true,
+    rolesNotified: ["COUNSELOR", "DIRECTOR", "ADMIN", "SUPER_ADMIN"],
+    leadSources: ["META_ADS_FB", "META_ADS_IG", "META"],
+    message: "SoftLab Global Meta Lead Ads webhook active and listening for live leads.",
   });
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
 
-    // Check if standard Meta webhook structure
+    // Optional token validation if provided in query or header
+    const token =
+      req.nextUrl.searchParams.get("token") ||
+      req.nextUrl.searchParams.get("verify_token") ||
+      req.headers.get("x-meta-token") ||
+      body.verify_token;
+
+    const expectedToken =
+      process.env.META_WEBHOOK_VERIFY_TOKEN ||
+      process.env.META_VERIFY_TOKEN ||
+      DEFAULT_VERIFY_TOKEN;
+
+    if (token && token !== expectedToken) {
+      return NextResponse.json({ status: "unauthorized", message: "Invalid verify token" }, { status: 401 });
+    }
+
+    // --------------------------------------------------------------------------
+    // CASE A: Official Meta Graph Webhook Structure ({ object: "page", entry: [...] })
+    // --------------------------------------------------------------------------
     if (body.object === "page" && Array.isArray(body.entry)) {
+      const results = [];
+
       for (const entry of body.entry) {
-        if (Array.isArray(entry.changes)) {
-          for (const change of entry.changes) {
-            if (change.field === "leadgen") {
-              const val = change.value || {};
-              const leadgenId = val.leadgen_id;
-              const formId = val.form_id;
-              const adId = val.ad_id;
+        if (!Array.isArray(entry.changes)) continue;
 
-              // If lead details are attached directly (test tools or simulated payload)
-              let fullName = val.full_name || val.name || "";
-              let phone = val.phone_number || val.phone || "";
-              let email = val.email || "";
-              let courseName = val.course || val.interested_course || "";
-              const campaignName = val.campaign_name || "Meta Facebook/Instagram Lead Ad";
+        for (const change of entry.changes) {
+          if (change.field !== "leadgen") continue;
 
-              // If Meta Graph API token is set and contact details are not in payload, fetch from Graph API
-              const metaToken = process.env.META_ACCESS_TOKEN || process.env.FACEBOOK_ACCESS_TOKEN;
-              if (leadgenId && (!phone || !fullName) && metaToken) {
-                try {
-                  const graphRes = await fetch(
-                    `https://graph.facebook.com/v19.0/${leadgenId}?access_token=${metaToken}`
-                  );
-                  if (graphRes.ok) {
-                    const graphData = await graphRes.json();
-                    if (Array.isArray(graphData.field_data)) {
-                      for (const field of graphData.field_data) {
-                        const fName = field.name?.toLowerCase() || "";
-                        const fVal = field.values?.[0] || "";
-                        if (fName.includes("name")) fullName = fVal;
-                        if (fName.includes("phone") || fName.includes("mobile")) phone = fVal;
-                        if (fName.includes("email")) email = fVal;
-                        if (fName.includes("course") || fName.includes("program")) courseName = fVal;
-                      }
-                    }
-                  }
-                } catch (fetchErr) {
-                  console.error("[MetaWebhook GraphAPI Fetch Error]:", fetchErr);
-                }
-              }
+          const val = change.value || {};
+          const leadgenId = val.leadgen_id ? String(val.leadgen_id) : "";
+          const formId = val.form_id ? String(val.form_id) : "";
+          const adId = val.ad_id ? String(val.ad_id) : "";
+          const isTest = Boolean(
+            val.is_test ||
+            leadgenId === "444444444444444" ||
+            leadgenId.startsWith("test") ||
+            body.is_test
+          );
 
-              if (phone) {
-                await CrmIngestionService.ingestLead({
-                  fullName: fullName || "Meta Lead Ad Prospect",
-                  phone,
-                  email,
-                  source: LeadSource.META_ADS_FB,
-                  interestedCourseName: courseName,
-                  campaignName,
-                  adsetName: val.adset_name || `Form ID: ${formId}`,
-                  adCreativeName: val.ad_name || `Ad ID: ${adId}`,
-                  notes: `Ingested from Meta Leadgen (Lead ID: ${leadgenId}). Form: ${formId}.`,
-                  rawPayload: val,
-                });
-              }
+          let fullName = val.full_name || val.name || "";
+          let phone = val.phone_number || val.phone || val.mobile || "";
+          let email = val.email || "";
+          let city = val.city || "";
+          let courseName = val.course || val.interested_course || "";
+          const campaignName = val.campaign_name || "Meta Facebook/Instagram Lead Ad";
+
+          // Parse field_data array if attached directly (some bridge tools and simulators)
+          if (Array.isArray(val.field_data)) {
+            for (const field of val.field_data) {
+              const fName = (field.name || "").toLowerCase();
+              const fVal = (field.values?.[0] || "").trim();
+              if (fName.includes("name") || fName === "full_name") fullName = fVal;
+              if (fName.includes("phone") || fName.includes("mobile")) phone = fVal;
+              if (fName.includes("email")) email = fVal;
+              if (fName.includes("city") || fName.includes("location")) city = fVal;
+              if (fName.includes("course") || fName.includes("program") || fName.includes("interest")) courseName = fVal;
             }
           }
+
+          // If phone is missing and leadgenId exists, attempt Meta Graph API lookup
+          const metaToken =
+            process.env.META_ACCESS_TOKEN ||
+            process.env.FACEBOOK_ACCESS_TOKEN ||
+            process.env.INSTAGRAM_ACCESS_TOKEN;
+
+          if (leadgenId && (!phone || !fullName) && metaToken && !isTest) {
+            try {
+              const graphRes = await fetch(
+                `https://graph.facebook.com/v20.0/${leadgenId}?access_token=${metaToken}`
+              );
+              if (graphRes.ok) {
+                const graphData = await graphRes.json();
+                if (Array.isArray(graphData.field_data)) {
+                  for (const field of graphData.field_data) {
+                    const fName = (field.name || "").toLowerCase();
+                    const fVal = (field.values?.[0] || "").trim();
+                    if (fName.includes("name") || fName === "full_name") fullName = fVal;
+                    if (fName.includes("phone") || fName.includes("mobile")) phone = fVal;
+                    if (fName.includes("email")) email = fVal;
+                    if (fName.includes("city") || fName.includes("location")) city = fVal;
+                    if (fName.includes("course") || fName.includes("program") || fName.includes("interest")) courseName = fVal;
+                  }
+                }
+              }
+            } catch (fetchErr) {
+              console.error("[MetaWebhook GraphAPI Fetch Error]:", fetchErr);
+            }
+          }
+
+          // Test lead fallback (e.g. from Meta Lead Ads Testing Tool)
+          if (isTest) {
+            if (!fullName) fullName = "Meta Lead Ads Test Prospect";
+            if (!phone) phone = "+919999999999";
+            if (!email) email = "test.meta@softlabglobal.com";
+            if (!courseName) courseName = "Cloud Computing & Cyber Security with AI";
+            if (!city) city = "Prayagraj";
+          }
+
+          // Fallback if leadgen received without phone (e.g. pending access token setup)
+          if (!phone) {
+            fullName = fullName || `Meta Lead #${leadgenId ? leadgenId.slice(-6) : "Prospect"}`;
+            phone = "+910000000000";
+          }
+
+          const result = await CrmIngestionService.ingestLead({
+            fullName: fullName || "Meta Lead Ad Prospect",
+            phone,
+            email: email || undefined,
+            city: city || "Prayagraj",
+            source: LeadSource.META_ADS_FB,
+            interestedCourseName: courseName,
+            campaignName,
+            adsetName: val.adset_name || (formId ? `Form ID: ${formId}` : undefined),
+            adCreativeName: val.ad_name || (adId ? `Ad ID: ${adId}` : undefined),
+            notes: `Captured from Meta Leadgen Webhook. Lead ID: ${leadgenId || "N/A"}. Form ID: ${formId || "N/A"}.${isTest ? " [VERIFIED TEST LEAD]" : ""}`,
+            rawPayload: val,
+          });
+
+          results.push({ leadId: result.leadId, isNew: result.isNew, isTest });
         }
       }
 
-      return NextResponse.json({ status: "success", received: true });
+      return NextResponse.json({
+        status: "success",
+        code: 200,
+        received: true,
+        leadsProcessed: results.length,
+        results,
+        message: "Meta lead events processed and broadcast to dashboards successfully.",
+      });
     }
 
-    // Direct Lead Payload (e.g. from Zapier, Make, or custom Meta Lead Ads exporter)
-    const fullName = body.fullName || body.name || body.full_name || "Meta Lead Ad Prospect";
-    const phone = body.phone || body.phone_number || body.mobile || "";
+    // --------------------------------------------------------------------------
+    // CASE B: Direct Lead Payload (Zapier, Make, Pabbly, Custom Webhooks, Testing)
+    // --------------------------------------------------------------------------
+    const isTest = Boolean(body.is_test || body.lead_id === "test");
 
-    if (!phone || phone.replace(/\D/g, "").length < 10) {
-      return NextResponse.json({ status: "ignored", message: "No valid phone number in Meta payload" }, { status: 200 });
+    let fullName =
+      body.fullName ||
+      body.name ||
+      body.full_name ||
+      (body.firstName && body.lastName ? `${body.firstName} ${body.lastName}` : "") ||
+      "";
+
+    let phone = body.phone || body.phone_number || body.mobile || body.contact || "";
+    let email = body.email || body.email_address || "";
+    let city = body.city || "Prayagraj";
+    let courseName = body.courseName || body.course || body.interestedCourseName || body.interested_course || "";
+    const campaignName = body.campaignName || body.campaign_name || "Meta Ads Boost Campaign";
+
+    if (isTest) {
+      if (!fullName) fullName = "Meta Lead Ads Test Prospect";
+      if (!phone) phone = "+919999999999";
+      if (!email) email = "test.meta@softlabglobal.com";
+      if (!courseName) courseName = "Full Stack Web Development & Cloud DevOps";
     }
 
-    const email = body.email || "";
-    const courseName = body.courseName || body.course || body.interested_course || "";
-    const campaignName = body.campaignName || body.campaign_name || "Meta Ads Campaign";
-    const platform = (body.platform || body.source || "").toLowerCase().includes("ig")
+    const cleanDigits = phone.replace(/\D/g, "");
+    if (!isTest && (!phone || cleanDigits.length < 10)) {
+      return NextResponse.json(
+        { status: "error", message: "No valid phone number in Meta payload" },
+        { status: 400 }
+      );
+    }
+
+    const platformRaw = (body.platform || body.source || "").toLowerCase();
+    const source = platformRaw.includes("ig") || platformRaw.includes("instagram")
       ? LeadSource.META_ADS_IG
       : LeadSource.META_ADS_FB;
 
     const result = await CrmIngestionService.ingestLead({
-      fullName,
+      fullName: fullName || "Meta Lead Ad Prospect",
       phone,
-      email,
-      city: body.city || "Prayagraj",
-      source: platform,
+      email: email || undefined,
+      city: city || "Prayagraj",
+      source,
       interestedCourseName: courseName,
       campaignName,
-      adsetName: body.adsetName || body.adset_name,
-      adCreativeName: body.adCreativeName || body.ad_name,
-      notes: body.notes || `Meta Lead captured from ${platform}`,
+      adsetName: body.adsetName || body.adset_name || (body.form_id ? `Form ID: ${body.form_id}` : undefined),
+      adCreativeName: body.adCreativeName || body.ad_name || (body.ad_id ? `Ad ID: ${body.ad_id}` : undefined),
+      notes: body.notes || `Meta Lead captured from ${source}.${isTest ? " [VERIFIED TEST LEAD]" : ""}`,
       rawPayload: body,
     });
 
@@ -135,6 +242,11 @@ export async function POST(req: NextRequest) {
       code: 200,
       leadId: result.leadId,
       isNew: result.isNew,
+      isTest,
+      platform: source,
+      message: isTest
+        ? "Meta test lead verified successfully."
+        : "Meta lead ingested and broadcast to LMS CRM dashboards successfully.",
     });
   } catch (error: any) {
     console.error("[MetaWebhook Error]:", error);

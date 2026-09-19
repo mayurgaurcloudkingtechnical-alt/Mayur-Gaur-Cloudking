@@ -41,6 +41,9 @@ export function IntegrationsHubView() {
   const GOOGLE_ADS_WEBHOOK_URL = "https://www.softlabglobal.com/api/webhooks/google-ads";
   const GOOGLE_ADS_WEBHOOK_KEY = "slg_gads_sec_8923f7c1b4d09e";
 
+  const META_ADS_WEBHOOK_URL = "https://www.softlabglobal.com/api/webhooks/meta";
+  const META_ADS_VERIFY_TOKEN = "softlab_meta_leadgen_2026";
+
   const integrations = [
     {
       id: "google-ads",
@@ -56,13 +59,15 @@ export function IntegrationsHubView() {
     },
     {
       id: "meta-leads",
-      name: "Meta / Facebook Ads Leads Webhook",
+      name: "Meta Lead Ads (Facebook & Instagram)",
       category: "Marketing & CRM",
-      description: "Real-time ingestion of prospective learner leads from Facebook and Instagram lead gen forms.",
+      description: "Real-time automated ingestion of prospective learner leads from Facebook and Instagram Lead Ads and Boost Campaigns. Multi-role alerts broadcast to Counselor, Director, Admin & Super Admin.",
       icon: <Share2 className="h-6 w-6 text-sky-600" />,
       status: "ACTIVE",
-      meta: "Webhook Endpoint: /api/webhooks/meta-leads",
-      webhookUrl: "https://www.softlabglobal.com/api/webhooks/meta-leads",
+      meta: "Auto-Broadcast: Counselor, Director, Admin, Super Admin",
+      webhookUrl: META_ADS_WEBHOOK_URL,
+      webhookKey: META_ADS_VERIFY_TOKEN,
+      guideText: "In Meta for Developers / Business Suite → Webhooks → Select 'Page' → Subscribe to 'leadgen' → Enter Callback URL & Verify Token",
     },
     {
       id: "stripe",
@@ -143,50 +148,99 @@ export function IntegrationsHubView() {
         </Link>
       </div>
 
-      {/* Google Ads Lead Ingestion Quick Setup Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-xl p-5 text-white shadow-md">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+      {/* Dual Lead Ads Webhook Credentials Banner */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Google Ads Webhook Banner */}
+        <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 border border-indigo-800/40 rounded-xl p-5 text-white shadow-md flex flex-col justify-between space-y-4">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-xs font-semibold border border-rose-500/30">
               <Globe className="h-3.5 w-3.5" />
-              <span>Google Ads Lead Form Integration Live</span>
+              <span>Google Ads Lead Ingestion Live</span>
             </div>
-            <h4 className="text-base font-bold text-white">Direct Webhook Connection for Google Search & YouTube Ads</h4>
-            <p className="text-xs text-slate-300 max-w-2xl">
-              Paste this Webhook URL and Key into your Google Ads Lead Form extension delivery options. All captured leads are instantly delivered and broadcast to Counselor, Director, Admin, and Super Admin dashboards.
+            <h4 className="text-sm font-bold text-white">Google Search & YouTube Lead Forms</h4>
+            <p className="text-xs text-slate-300">
+              Enter these credentials under Google Ads Lead Form extension delivery options.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center gap-2">
-              <div className="text-left">
+          <div className="space-y-2">
+            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between gap-2">
+              <div className="text-left overflow-hidden">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Webhook URL</span>
-                <span className="text-xs font-mono text-emerald-300 select-all">{GOOGLE_ADS_WEBHOOK_URL}</span>
+                <span className="text-xs font-mono text-emerald-300 truncate block select-all">{GOOGLE_ADS_WEBHOOK_URL}</span>
               </div>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => copyToClipboard(GOOGLE_ADS_WEBHOOK_URL, "banner-url")}
-                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600"
+                onClick={() => copyToClipboard(GOOGLE_ADS_WEBHOOK_URL, "gads-banner-url")}
+                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600 flex-shrink-0"
               >
                 <Copy className="h-3 w-3" />
-                {copiedKey === "banner-url" ? "Copied!" : "Copy URL"}
+                {copiedKey === "gads-banner-url" ? "Copied!" : "Copy"}
               </Button>
             </div>
 
-            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center gap-2">
-              <div className="text-left">
+            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between gap-2">
+              <div className="text-left overflow-hidden">
                 <span className="text-[10px] text-slate-400 uppercase font-semibold block">Google Key</span>
-                <span className="text-xs font-mono text-amber-300 select-all">{GOOGLE_ADS_WEBHOOK_KEY}</span>
+                <span className="text-xs font-mono text-amber-300 truncate block select-all">{GOOGLE_ADS_WEBHOOK_KEY}</span>
               </div>
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => copyToClipboard(GOOGLE_ADS_WEBHOOK_KEY, "banner-key")}
-                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600"
+                onClick={() => copyToClipboard(GOOGLE_ADS_WEBHOOK_KEY, "gads-banner-key")}
+                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600 flex-shrink-0"
               >
                 <Copy className="h-3 w-3" />
-                {copiedKey === "banner-key" ? "Copied!" : "Copy Key"}
+                {copiedKey === "gads-banner-key" ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Meta Business Lead Ads Webhook Banner */}
+        <div className="bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 border border-sky-800/40 rounded-xl p-5 text-white shadow-md flex flex-col justify-between space-y-4">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-xs font-semibold border border-sky-500/30">
+              <Share2 className="h-3.5 w-3.5" />
+              <span>Meta Lead Ads Live (FB & Instagram)</span>
+            </div>
+            <h4 className="text-sm font-bold text-white">Facebook & Instagram Lead Generation</h4>
+            <p className="text-xs text-slate-300">
+              Enter these credentials in Meta for Developers or Meta Business Suite Webhooks.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between gap-2">
+              <div className="text-left overflow-hidden">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Callback URL</span>
+                <span className="text-xs font-mono text-cyan-300 truncate block select-all">{META_ADS_WEBHOOK_URL}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyToClipboard(META_ADS_WEBHOOK_URL, "meta-banner-url")}
+                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600 flex-shrink-0"
+              >
+                <Copy className="h-3 w-3" />
+                {copiedKey === "meta-banner-url" ? "Copied!" : "Copy"}
+              </Button>
+            </div>
+
+            <div className="bg-black/40 border border-slate-700/60 rounded-lg p-2.5 flex items-center justify-between gap-2">
+              <div className="text-left overflow-hidden">
+                <span className="text-[10px] text-slate-400 uppercase font-semibold block">Verify Token</span>
+                <span className="text-xs font-mono text-emerald-300 truncate block select-all">{META_ADS_VERIFY_TOKEN}</span>
+              </div>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => copyToClipboard(META_ADS_VERIFY_TOKEN, "meta-banner-token")}
+                className="h-7 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 gap-1 border border-slate-600 flex-shrink-0"
+              >
+                <Copy className="h-3 w-3" />
+                {copiedKey === "meta-banner-token" ? "Copied!" : "Copy"}
               </Button>
             </div>
           </div>
@@ -243,7 +297,9 @@ export function IntegrationsHubView() {
 
                 {item.webhookKey && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] text-slate-400">Webhook Key:</span>
+                    <span className="text-[11px] text-slate-400">
+                      {item.id === "meta-leads" ? "Verify Token:" : "Secret Key:"}
+                    </span>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -251,7 +307,7 @@ export function IntegrationsHubView() {
                       className="h-7 text-xs text-slate-600 gap-1 font-mono text-amber-700"
                     >
                       <Copy className="h-3 w-3" />
-                      {copiedKey === `${item.id}-key` ? "Copied!" : "Copy Key"}
+                      {copiedKey === `${item.id}-key` ? "Copied!" : "Copy"}
                     </Button>
                   </div>
                 )}
