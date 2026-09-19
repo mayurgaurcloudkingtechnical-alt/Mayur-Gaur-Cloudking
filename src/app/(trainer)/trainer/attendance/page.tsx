@@ -3,7 +3,7 @@ import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { TrainerAttendanceView } from "@/components/trainer/trainer-attendance-view";
 
-export default async function TrainerClassesPage() {
+export default async function TrainerAttendancePage() {
   const user = await requireRole([
     UserRoleCode.TRAINER,
     UserRoleCode.SUPER_ADMIN,

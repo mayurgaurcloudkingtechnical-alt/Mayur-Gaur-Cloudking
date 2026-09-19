@@ -62,10 +62,11 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
         ];
       case "TRAINER":
         return [
-          { title: "Dashboard", href: "/trainer/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
-          { title: "Assigned Batches", href: "/trainer/batches", icon: <Users className="h-4 w-4" /> },
-          { title: "Live Classes", href: "/trainer/classes", icon: <Calendar className="h-4 w-4" /> },
-          { title: "Curriculum CMS", href: "/trainer/courses", icon: <FileEdit className="h-4 w-4" /> },
+          { title: "Performance Dashboard", href: "/trainer/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Batches List", href: "/trainer/batches", icon: <Users className="h-4 w-4" /> },
+          { title: "Attendance & Register", href: "/trainer/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },
+          { title: "Course Topics & CMS", href: "/trainer/courses", icon: <BookOpen className="h-4 w-4" /> },
+          { title: "Live Classes Schedule", href: "/trainer/classes", icon: <Calendar className="h-4 w-4" /> },
         ];
       case "TELECALLER":
         return [
