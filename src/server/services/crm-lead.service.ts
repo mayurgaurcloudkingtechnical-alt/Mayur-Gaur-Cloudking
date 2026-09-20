@@ -37,6 +37,7 @@ export interface CreateLeadManualInput {
 
 export interface ListLeadsInput {
   status?: LeadStatus;
+  source?: LeadSource | string;
   search?: string;
   courseId?: string;
   assignedToId?: string;
@@ -166,52 +167,82 @@ export class CrmLeadService {
       });
     }
 
-    const where: Prisma.LeadWhereInput = {};
+    const andConditions: Prisma.LeadWhereInput[] = [];
 
     if (!hasReadAll) {
-      where.OR = [
-        { assignedToId: user.id },
-        { assignedCounselorId: user.id },
-        { assignedTelecallerId: user.id },
-        { assignedToId: null },
-      ];
+      andConditions.push({
+        OR: [
+          { assignedToId: user.id },
+          { assignedCounselorId: user.id },
+          { assignedTelecallerId: user.id },
+          { assignedToId: null },
+        ],
+      });
     } else if (input.assignedToId) {
-      where.OR = [
-        { assignedToId: input.assignedToId },
-        { assignedCounselorId: input.assignedToId },
-        { assignedTelecallerId: input.assignedToId },
-      ];
+      andConditions.push({
+        OR: [
+          { assignedToId: input.assignedToId },
+          { assignedCounselorId: input.assignedToId },
+          { assignedTelecallerId: input.assignedToId },
+        ],
+      });
     }
 
     if (input.status) {
-      where.status = input.status;
+      andConditions.push({ status: input.status });
+    }
+
+    if (input.source) {
+      if (input.source === "GOOGLE_ALL" || input.source === "GOOGLE_ADS") {
+        andConditions.push({
+          source: { in: [LeadSource.GOOGLE_ADS, LeadSource.GOOGLE, LeadSource.GOOGLE_SEARCH] },
+        });
+      } else if (input.source === "META_ALL" || input.source === "META_ADS") {
+        andConditions.push({
+          source: { in: [LeadSource.META_ADS_FB, LeadSource.META_ADS_IG, LeadSource.META] },
+        });
+      } else if (input.source in LeadSource) {
+        andConditions.push({ source: input.source as LeadSource });
+      }
     }
 
     if (input.courseId) {
-      where.interestedCourseId = input.courseId;
+      andConditions.push({ interestedCourseId: input.courseId });
     }
 
     if (input.search && input.search.trim().length > 0) {
       const q = input.search.trim();
-      where.OR = [
-        { fullName: { contains: q, mode: "insensitive" } },
-        { email: { contains: q, mode: "insensitive" } },
-        { phone: { contains: q } },
-      ];
+      andConditions.push({
+        OR: [
+          { fullName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q } },
+          { campaignName: { contains: q, mode: "insensitive" } },
+          { notes: { contains: q, mode: "insensitive" } },
+        ],
+      });
     }
 
     if (input.dueToday) {
       const endOfToday = new Date();
       endOfToday.setHours(23, 59, 59, 999);
-      where.nextFollowUp = {
-        not: null,
-        lte: endOfToday,
-      };
+      andConditions.push({
+        nextFollowUp: {
+          not: null,
+          lte: endOfToday,
+        },
+      });
     }
+
+    const where: Prisma.LeadWhereInput = andConditions.length > 0 ? { AND: andConditions } : {};
 
     const page = Math.max(1, input.page || 1);
     const limit = Math.min(50, Math.max(1, input.limit || 20));
     const skip = (page - 1) * limit;
+
+    const orderBy: Prisma.LeadOrderByWithRelationInput[] = input.dueToday
+      ? [{ nextFollowUp: "asc" }, { createdAt: "desc" }]
+      : [{ createdAt: "desc" }];
 
     const [total, leads] = await Promise.all([
       db.lead.count({ where }),
@@ -219,7 +250,7 @@ export class CrmLeadService {
         where,
         skip,
         take: limit,
-        orderBy: [{ nextFollowUp: "asc" }, { createdAt: "desc" }],
+        orderBy,
         include: {
           course: { select: { id: true, title: true, slug: true } },
           batch: { select: { id: true, name: true, code: true } },
@@ -786,16 +817,29 @@ export class CrmLeadService {
       if (stat.source === LeadSource.JUSTDIAL) {
         totalJustDial += count;
         if (isAdmitted) admittedJustDial += count;
-      } else if (stat.source === LeadSource.GOOGLE_ADS) {
+      } else if (
+        stat.source === LeadSource.GOOGLE_ADS ||
+        stat.source === LeadSource.GOOGLE ||
+        stat.source === LeadSource.GOOGLE_SEARCH
+      ) {
         totalGoogle += count;
         if (isAdmitted) admittedGoogle += count;
-      } else if (stat.source === LeadSource.META_ADS_FB) {
+      } else if (
+        stat.source === LeadSource.META_ADS_FB ||
+        stat.source === LeadSource.META
+      ) {
         totalMetaFb += count;
         if (isAdmitted) admittedMetaFb += count;
       } else if (stat.source === LeadSource.META_ADS_IG) {
         totalInstagram += count;
         if (isAdmitted) admittedInstagram += count;
-      } else if (stat.source === LeadSource.WEBSITE) {
+      } else if (
+        stat.source === LeadSource.WEBSITE ||
+        stat.source === LeadSource.WEBSITE_CAREER_POPUP ||
+        stat.source === LeadSource.CAREER_POPUP ||
+        stat.source === LeadSource.CONTACT_FORM ||
+        stat.source === LeadSource.COURSE_PAGE
+      ) {
         totalWebsite += count;
         if (isAdmitted) admittedWebsite += count;
       }

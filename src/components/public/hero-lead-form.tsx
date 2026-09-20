@@ -12,6 +12,30 @@ interface HeroLeadFormProps {
 export function HeroLeadForm({ courses }: HeroLeadFormProps) {
   const [state, setState] = React.useState<EnquiryState>({ success: false });
   const [isPending, setIsPending] = React.useState(false);
+  const [source, setSource] = React.useState("WEBSITE");
+  const [campaignName, setCampaignName] = React.useState("");
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const gclid = params.get("gclid");
+      const utmSource = (params.get("utm_source") || "").toLowerCase();
+      const utmCampaign = params.get("utm_campaign") || "";
+
+      if (gclid || utmSource.includes("google")) {
+        setSource("GOOGLE_ADS");
+        setCampaignName(utmCampaign ? `Google Ads: ${utmCampaign}` : "Google Ads Search Campaign");
+      } else if (
+        params.get("fbclid") ||
+        utmSource.includes("facebook") ||
+        utmSource.includes("meta") ||
+        utmSource.includes("instagram")
+      ) {
+        setSource(utmSource.includes("instagram") ? "META_ADS_IG" : "META_ADS_FB");
+        setCampaignName(utmCampaign ? `Meta Boost: ${utmCampaign}` : "Meta Sponsored Ad");
+      }
+    }
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -83,6 +107,8 @@ export function HeroLeadForm({ courses }: HeroLeadFormProps) {
       <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
         {/* Honeypot for spam bot prevention */}
         <input type="text" name="honeypot" className="hidden" tabIndex={-1} autoComplete="off" />
+        <input type="hidden" name="source" value={source} />
+        <input type="hidden" name="campaignName" value={campaignName} />
 
         {/* Full Name */}
         <div>

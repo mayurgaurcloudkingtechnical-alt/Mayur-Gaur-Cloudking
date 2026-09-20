@@ -31,6 +31,8 @@ export function PublicEnquiryForm({
   const [phone, setPhone] = useState("");
   const [city, setCity] = useState("");
   const [courseId, setCourseId] = useState(preselectedCourseId || "");
+  const [source, setSource] = useState<any>("WEBSITE");
+  const [campaignName, setCampaignName] = useState("");
   const [notes, setNotes] = useState("");
   const [honeypot, setHoneypot] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -38,6 +40,28 @@ export function PublicEnquiryForm({
 
   const { data: rawCourses, isLoading: isLoadingCourses } = api.crm.listPublicCourses.useQuery();
   const courses = React.useMemo(() => (rawCourses || []) as PublicCourseItem[], [rawCourses]);
+
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const gclid = params.get("gclid");
+      const utmSource = (params.get("utm_source") || "").toLowerCase();
+      const utmCampaign = params.get("utm_campaign") || "";
+
+      if (gclid || utmSource.includes("google")) {
+        setSource("GOOGLE_ADS");
+        setCampaignName(utmCampaign ? `Google Ads: ${utmCampaign}` : "Google Ads Search Campaign");
+      } else if (
+        params.get("fbclid") ||
+        utmSource.includes("facebook") ||
+        utmSource.includes("meta") ||
+        utmSource.includes("instagram")
+      ) {
+        setSource(utmSource.includes("instagram") ? "META_ADS_IG" : "META_ADS_FB");
+        setCampaignName(utmCampaign ? `Meta Boost: ${utmCampaign}` : "Meta Sponsored Ad");
+      }
+    }
+  }, []);
 
   // If preselectedCourseSlug is provided and courses are loaded, match by slug
   React.useEffect(() => {
@@ -79,6 +103,8 @@ export function PublicEnquiryForm({
       email: email.trim(),
       phone: phone.trim(),
       city: city.trim() || undefined,
+      source: source || undefined,
+      campaignName: campaignName || undefined,
       interestedCourseId: courseId || undefined,
       notes: notes.trim() || undefined,
       honeypot: honeypot.trim() || undefined,

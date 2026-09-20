@@ -21,10 +21,16 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
   const [admissionOpen, setAdmissionOpen] = React.useState(false);
 
   const { data: stats, isLoading: isLoadingStats } = api.crm.getStats.useQuery();
-  const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery({
-    limit: 5,
-    page: 1,
-  });
+  const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery(
+    {
+      limit: 6,
+      page: 1,
+    },
+    {
+      refetchInterval: 10000,
+      refetchOnWindowFocus: true,
+    }
+  );
 
   const dueCount = stats?.dueToday ?? 0;
 
@@ -166,6 +172,7 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
                 <thead>
                   <tr className="border-b border-slate-100 text-slate-500">
                     <th className="pb-2 font-semibold">Prospect</th>
+                    <th className="pb-2 font-semibold">Channel</th>
                     <th className="pb-2 font-semibold">Phone / City</th>
                     <th className="pb-2 font-semibold">Interested Course</th>
                     <th className="pb-2 font-semibold">Status</th>
@@ -178,7 +185,24 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
                     <tr key={lead.id} className="hover:bg-slate-50/50">
                       <td className="py-2.5">
                         <div className="font-semibold text-slate-900">{lead.fullName}</div>
-                        <div className="text-slate-400 text-[11px]">{lead.email}</div>
+                        <div className="text-slate-400 text-[11px] truncate max-w-[140px]">{lead.email}</div>
+                      </td>
+                      <td className="py-2.5">
+                        {lead.source === "GOOGLE_ADS" || lead.source === "GOOGLE" ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-[#0088cc] border border-blue-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#0088cc] animate-pulse"></span>
+                            Google Ads
+                          </span>
+                        ) : lead.source === "META_ADS_FB" || lead.source === "META_ADS_IG" || lead.source === "META" ? (
+                          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+                            Meta Ads
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                            {lead.source}
+                          </span>
+                        )}
                       </td>
                       <td className="py-2.5 text-slate-600">
                         <div>{lead.phone}</div>

@@ -46,6 +46,8 @@ export const crmRouter = router({
         email: z.string().email("Please provide a valid email address"),
         phone: z.string().min(10, "Phone must be at least 10 digits").max(15),
         city: z.string().max(50).optional(),
+        source: z.nativeEnum(LeadSource).optional(),
+        campaignName: z.string().max(150).optional(),
         interestedCourseId: z.string().optional(),
         notes: z.string().max(1000).optional(),
         honeypot: z.string().optional(),
@@ -112,7 +114,7 @@ export const crmRouter = router({
     .input(
       z.object({
         status: z.nativeEnum(LeadStatus).optional(),
-        source: z.nativeEnum(LeadSource).optional(),
+        source: z.string().optional(),
         search: z.string().optional(),
         courseId: z.string().optional(),
         assignedToId: z.string().optional(),
