@@ -99,6 +99,14 @@ enum LeadStatus {
   NEGOTIATION
   ADMITTED
   LOST
+  DISCUSSION
+  LOCATION_EVALUATION
+  PROPOSAL_SENT
+  APPROVED
+  AGREEMENT
+  SETUP
+  LAUNCHED
+  ON_HOLD
 }
 
 enum LeadSource {
@@ -122,6 +130,8 @@ enum LeadSource {
   CHATBOT
   LINKEDIN
   LINKEDIN_ADS
+  FRANCHISE
+  FRANCHISE_WEBSITE
   OTHER
 }
 
@@ -677,6 +687,16 @@ model Lead {
   botSummary          String?      @db.Text
   lastChatTranscript  String?      @db.Text
 
+  // Franchise Opportunity Ingestion & Metadata
+  franchiseState              String?
+  franchisePreferredLocation  String?
+  franchiseProfile            String?      // Entrepreneur, Institute Owner, IT Professional, Investor, etc.
+  franchiseInvestmentCapacity String?      // "Under ₹10 Lakh", "₹10L - ₹15L", etc.
+  franchiseExistingInstitute  Boolean?     @default(false)
+  franchiseExperience         String?
+  franchiseLaunchTimeline     String?
+  franchiseRequirements       String?      @db.Text
+
   createdById         String?
   createdBy           User?        @relation("LeadCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt           DateTime     @default(now())
@@ -695,6 +715,7 @@ model Lead {
   @@index([source])
   @@index([nextFollowUp])
   @@index([interestedCourseId])
+  @@index([franchiseState])
   @@map("leads")
 }
 

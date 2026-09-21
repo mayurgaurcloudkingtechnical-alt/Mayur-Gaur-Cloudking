@@ -3,8 +3,39 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
-import { LeadSource, LeadStatus, FollowUpType, Prisma, UserRoleCode } from "@prisma/client";
+import { LeadSource, LeadStatus, FollowUpType, Prisma, UserRoleCode, NotificationType, NotificationPriority } from "@prisma/client";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
+
+export interface FranchiseEnquiryInput {
+  fullName: string;
+  email: string;
+  phone: string;
+  city: string;
+  state: string;
+  preferredLocation?: string;
+  applicantProfile: string;
+  investmentCapacity: string;
+  existingInstitute?: boolean;
+  experience?: string;
+  launchTimeline?: string;
+  requirements?: string;
+  notes?: string;
+  campaignName?: string;
+  adsetName?: string;
+  adCreativeName?: string;
+  keywordSearch?: string;
+  landingPageUrl?: string;
+  honeypot?: string;
+}
+
+export interface ListFranchiseLeadsInput {
+  status?: LeadStatus;
+  state?: string;
+  search?: string;
+  investmentCapacity?: string;
+  page?: number;
+  limit?: number;
+}
 
 export interface PublicEnquiryInput {
   fullName: string;
@@ -103,6 +134,16 @@ export function canReadOwnLeads(user: AuthenticatedUser): boolean {
     user.roleCode === UserRoleCode.COUNSELOR ||
     user.roleCode === UserRoleCode.TELECALLER ||
     hasPermission(user.permissions, "leads:read_own")
+  );
+}
+
+export function canManageFranchise(user: AuthenticatedUser): boolean {
+  return (
+    user.roleCode === UserRoleCode.SUPER_ADMIN ||
+    user.roleCode === UserRoleCode.DIRECTOR ||
+    user.roleCode === UserRoleCode.ADMIN ||
+    user.roleCode === UserRoleCode.MANAGER ||
+    hasPermission(user.permissions, "franchise:manage")
   );
 }
 
@@ -659,6 +700,14 @@ export class CrmLeadService {
       [LeadStatus.NEGOTIATION]: [],
       [LeadStatus.ADMITTED]: [],
       [LeadStatus.LOST]: [],
+      [LeadStatus.DISCUSSION]: [],
+      [LeadStatus.LOCATION_EVALUATION]: [],
+      [LeadStatus.PROPOSAL_SENT]: [],
+      [LeadStatus.APPROVED]: [],
+      [LeadStatus.AGREEMENT]: [],
+      [LeadStatus.SETUP]: [],
+      [LeadStatus.LAUNCHED]: [],
+      [LeadStatus.ON_HOLD]: [],
     };
 
     for (const lead of leads) {
@@ -678,6 +727,14 @@ export class CrmLeadService {
       [LeadStatus.NEGOTIATION]: pipelineStages[LeadStatus.NEGOTIATION].length,
       [LeadStatus.ADMITTED]: pipelineStages[LeadStatus.ADMITTED].length,
       [LeadStatus.LOST]: pipelineStages[LeadStatus.LOST].length,
+      [LeadStatus.DISCUSSION]: pipelineStages[LeadStatus.DISCUSSION].length,
+      [LeadStatus.LOCATION_EVALUATION]: pipelineStages[LeadStatus.LOCATION_EVALUATION].length,
+      [LeadStatus.PROPOSAL_SENT]: pipelineStages[LeadStatus.PROPOSAL_SENT].length,
+      [LeadStatus.APPROVED]: pipelineStages[LeadStatus.APPROVED].length,
+      [LeadStatus.AGREEMENT]: pipelineStages[LeadStatus.AGREEMENT].length,
+      [LeadStatus.SETUP]: pipelineStages[LeadStatus.SETUP].length,
+      [LeadStatus.LAUNCHED]: pipelineStages[LeadStatus.LAUNCHED].length,
+      [LeadStatus.ON_HOLD]: pipelineStages[LeadStatus.ON_HOLD].length,
     };
 
     return {
@@ -893,5 +950,592 @@ export class CrmLeadService {
       },
       recentActivities,
     };
+  }
+
+  /**
+   * Captures public franchise enquiries with honeypot spam protection,
+   * rate limiting, phone/email normalization, deduplication, audit logging,
+   * and stakeholder notification.
+   */
+  static async submitFranchiseEnquiry(
+    input: FranchiseEnquiryInput,
+    ipAddress = "127.0.0.1",
+    userAgent = "unknown"
+  ) {
+    if (input.honeypot && input.honeypot.trim().length > 0) {
+      return {
+        success: true,
+        isNew: false,
+        leadId: "spam-filtered",
+        referenceNumber: "SLG-FRN-2026-SPAM",
+        message: "Your application has been received.",
+      };
+    }
+
+    const rateKey = `crm:franchise:${ipAddress}`;
+    const rateCheck = RateLimiter.check(rateKey, 10, 15 * 60 * 1000);
+    if (!rateCheck.allowed) {
+      throw new TRPCError({
+        code: "TOO_MANY_REQUESTS",
+        message: "Too many franchise enquiry attempts. Please wait a few minutes before submitting again.",
+      });
+    }
+
+    const cleanPhone = normalizePhone(input.phone);
+    const cleanEmail = normalizeEmail(input.email);
+
+    // Deduplication check: check if a lead with this phone or email already exists
+    const existingLead = await db.lead.findFirst({
+      where: {
+        OR: [
+          { phone: cleanPhone },
+          { email: cleanEmail },
+        ],
+      },
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        phone: true,
+        notes: true,
+        status: true,
+        assignedToId: true,
+      },
+    });
+
+    if (existingLead) {
+      const appendNote = `\n[${new Date().toISOString()}] Franchise Opportunity Re-Enquiry:
+Profile: ${input.applicantProfile} | Budget: ${input.investmentCapacity} | State: ${input.state} | City: ${input.city} | Timeline: ${input.launchTimeline || "N/A"}
+${input.notes ? `User Note: ${input.notes}` : ""}`;
+
+      const updatedLead = await db.lead.update({
+        where: { id: existingLead.id },
+        data: {
+          franchiseState: input.state,
+          franchisePreferredLocation: input.preferredLocation?.trim() || input.city.trim(),
+          franchiseProfile: input.applicantProfile,
+          franchiseInvestmentCapacity: input.investmentCapacity,
+          franchiseExistingInstitute: input.existingInstitute ?? false,
+          franchiseExperience: input.experience || null,
+          franchiseLaunchTimeline: input.launchTimeline || null,
+          franchiseRequirements: input.requirements || null,
+          notes: existingLead.notes ? `${existingLead.notes}${appendNote}` : appendNote.trim(),
+        },
+      });
+
+      await db.leadActivity.create({
+        data: {
+          leadId: existingLead.id,
+          activityType: "FRANCHISE_ENQUIRY_RECEIVED",
+          disposition: "RE_ENGAGED",
+          notes: `Re-engaged franchise application from /franchise. State: ${input.state}, City: ${input.city}, Profile: ${input.applicantProfile}, Investment: ${input.investmentCapacity}.`,
+        },
+      });
+
+      try {
+        const admins = await db.user.findMany({
+          where: {
+            status: "ACTIVE",
+            roleCode: { in: [UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN] },
+          },
+          select: { id: true },
+        });
+
+        if (admins.length > 0) {
+          await db.notification.createMany({
+            data: admins.map((admin) => ({
+              userId: admin.id,
+              title: `🏛️ [Franchise] Application Re-engaged: ${input.fullName}`,
+              message: `${input.fullName} (${cleanPhone}) has re-submitted a franchise inquiry for ${input.city}, ${input.state} (Budget: ${input.investmentCapacity}).`,
+              type: NotificationType.ADMISSION,
+              priority: NotificationPriority.HIGH,
+              link: `/admin/franchise`,
+            })),
+          });
+        }
+      } catch (err) {
+        console.error("Failed to notify admins of franchise re-engagement:", err);
+      }
+
+      const refNo = `SLG-FRN-2026-${existingLead.id.slice(-4).toUpperCase()}`;
+      return {
+        success: true,
+        isNew: false,
+        leadId: existingLead.id,
+        referenceNumber: refNo,
+        message: "Thank you for re-connecting! Your franchise application has been refreshed.",
+      };
+    }
+
+    // Auto-assign to an active Super Admin or Director
+    const assignedAdmin = await db.user.findFirst({
+      where: {
+        status: "ACTIVE",
+        roleCode: { in: [UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN] },
+      },
+      select: { id: true },
+      orderBy: { updatedAt: "asc" },
+    });
+
+    const newLead = await db.lead.create({
+      data: {
+        fullName: input.fullName.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        city: input.city.trim(),
+        source: LeadSource.FRANCHISE_WEBSITE,
+        status: LeadStatus.NEW,
+        qualityScore: "HOT",
+        franchiseState: input.state,
+        franchisePreferredLocation: input.preferredLocation?.trim() || input.city.trim(),
+        franchiseProfile: input.applicantProfile,
+        franchiseInvestmentCapacity: input.investmentCapacity,
+        franchiseExistingInstitute: input.existingInstitute ?? false,
+        franchiseExperience: input.experience || null,
+        franchiseLaunchTimeline: input.launchTimeline || null,
+        franchiseRequirements: input.requirements || null,
+        notes: `Franchise Opportunity Application.
+Profile: ${input.applicantProfile} | Budget: ${input.investmentCapacity} | Timeline: ${input.launchTimeline || "N/A"}
+${input.notes ? `Note: ${input.notes}` : ""}`.trim(),
+        campaignName: input.campaignName || null,
+        adsetName: input.adsetName || null,
+        adCreativeName: input.adCreativeName || null,
+        keywordSearch: input.keywordSearch || null,
+        landingPageUrl: input.landingPageUrl || "/franchise",
+        assignedToId: assignedAdmin?.id || null,
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: newLead.id,
+        activityType: "FRANCHISE_ENQUIRY_RECEIVED",
+        disposition: "NEW_ENQUIRY",
+        notes: `New franchise opportunity application from /franchise. Profile: ${input.applicantProfile}, Investment: ${input.investmentCapacity}, Location: ${input.city}, ${input.state}.`,
+      },
+    });
+
+    await AuditService.log({
+      action: "FRANCHISE_ENQUIRY_RECEIVED",
+      resourceType: "Lead",
+      resourceId: newLead.id,
+      newData: {
+        fullName: newLead.fullName,
+        email: cleanEmail,
+        phone: cleanPhone,
+        city: newLead.city,
+        state: input.state,
+        investment: input.investmentCapacity,
+      },
+      ipAddress,
+      userAgent,
+    });
+
+    try {
+      const admins = await db.user.findMany({
+        where: {
+          status: "ACTIVE",
+          roleCode: { in: [UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN] },
+        },
+        select: { id: true },
+      });
+
+      if (admins.length > 0) {
+        await db.notification.createMany({
+          data: admins.map((admin) => ({
+            userId: admin.id,
+            title: `🏛️ [Franchise] New Enquiry: ${newLead.fullName}`,
+            message: `New Franchise application from ${newLead.fullName} (${cleanPhone}) for ${input.city}, ${input.state} (Budget: ${input.investmentCapacity}).`,
+            type: NotificationType.ADMISSION,
+            priority: NotificationPriority.URGENT,
+            link: `/admin/franchise`,
+          })),
+        });
+      }
+    } catch (err) {
+      console.error("Failed to notify admins of new franchise lead:", err);
+    }
+
+    const refNo = `SLG-FRN-2026-${newLead.id.slice(-4).toUpperCase()}`;
+    return {
+      success: true,
+      isNew: true,
+      leadId: newLead.id,
+      referenceNumber: refNo,
+      message: "Thank you for your interest! Your franchise application has been submitted successfully.",
+    };
+  }
+
+  /**
+   * Lists franchise leads with filtering, pagination, and relation includes.
+   */
+  static async listFranchiseLeads(user: AuthenticatedUser, input: ListFranchiseLeadsInput) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view franchise applications.",
+      });
+    }
+
+    const page = Math.max(1, input.page || 1);
+    const limit = Math.min(100, Math.max(1, input.limit || 25));
+    const skip = (page - 1) * limit;
+
+    const andConditions: Prisma.LeadWhereInput[] = [
+      {
+        OR: [
+          { source: { in: [LeadSource.FRANCHISE, LeadSource.FRANCHISE_WEBSITE] } },
+          { franchiseState: { not: null } },
+        ],
+      },
+    ];
+
+    if (input.status) {
+      andConditions.push({ status: input.status });
+    }
+
+    if (input.state && input.state !== "ALL") {
+      andConditions.push({
+        franchiseState: { equals: input.state, mode: "insensitive" },
+      });
+    }
+
+    if (input.investmentCapacity && input.investmentCapacity !== "ALL") {
+      andConditions.push({
+        franchiseInvestmentCapacity: { equals: input.investmentCapacity },
+      });
+    }
+
+    if (input.search && input.search.trim().length > 0) {
+      const q = input.search.trim();
+      andConditions.push({
+        OR: [
+          { fullName: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q } },
+          { city: { contains: q, mode: "insensitive" } },
+          { franchiseState: { contains: q, mode: "insensitive" } },
+          { franchisePreferredLocation: { contains: q, mode: "insensitive" } },
+          { notes: { contains: q, mode: "insensitive" } },
+        ],
+      });
+    }
+
+    const where: Prisma.LeadWhereInput = { AND: andConditions };
+
+    const [total, leads] = await Promise.all([
+      db.lead.count({ where }),
+      db.lead.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          assignedTo: {
+            select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+          },
+          followUps: {
+            orderBy: { createdAt: "desc" },
+            take: 3,
+            include: {
+              performedBy: { select: { firstName: true, lastName: true } },
+            },
+          },
+          activities: {
+            orderBy: { createdAt: "desc" },
+            take: 3,
+          },
+          _count: {
+            select: {
+              followUps: true,
+              activities: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      leads,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Pipeline and distribution metrics for franchise applications.
+   */
+  static async getFranchiseStats(user: AuthenticatedUser) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view franchise statistics.",
+      });
+    }
+
+    const franchiseWhere: Prisma.LeadWhereInput = {
+      OR: [
+        { source: { in: [LeadSource.FRANCHISE, LeadSource.FRANCHISE_WEBSITE] } },
+        { franchiseState: { not: null } },
+      ],
+    };
+
+    const [total, statusGroups, leadsData, recentActivities] = await Promise.all([
+      db.lead.count({ where: franchiseWhere }),
+      db.lead.groupBy({
+        by: ["status"],
+        where: franchiseWhere,
+        _count: { id: true },
+      }),
+      db.lead.findMany({
+        where: franchiseWhere,
+        select: {
+          franchiseState: true,
+          franchiseProfile: true,
+          franchiseInvestmentCapacity: true,
+          city: true,
+        },
+      }),
+      db.leadActivity.findMany({
+        where: {
+          lead: franchiseWhere,
+        },
+        take: 10,
+        orderBy: { createdAt: "desc" },
+        include: {
+          lead: {
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              city: true,
+              franchiseState: true,
+              status: true,
+            },
+          },
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              roleCode: true,
+            },
+          },
+        },
+      }),
+    ]);
+
+    const pipelineCounts: Record<string, number> = {
+      NEW: 0,
+      CONTACTED: 0,
+      DISCUSSION: 0,
+      LOCATION_EVALUATION: 0,
+      PROPOSAL_SENT: 0,
+      APPROVED: 0,
+      AGREEMENT: 0,
+      SETUP: 0,
+      LAUNCHED: 0,
+      ON_HOLD: 0,
+      LOST: 0,
+    };
+
+    for (const group of statusGroups) {
+      pipelineCounts[group.status] = (pipelineCounts[group.status] || 0) + group._count.id;
+    }
+
+    const stateCounts: Record<string, number> = {};
+    const profileCounts: Record<string, number> = {};
+    const investmentCounts: Record<string, number> = {};
+
+    for (const lead of leadsData) {
+      if (lead.franchiseState) {
+        stateCounts[lead.franchiseState] = (stateCounts[lead.franchiseState] || 0) + 1;
+      }
+      if (lead.franchiseProfile) {
+        profileCounts[lead.franchiseProfile] = (profileCounts[lead.franchiseProfile] || 0) + 1;
+      }
+      if (lead.franchiseInvestmentCapacity) {
+        investmentCounts[lead.franchiseInvestmentCapacity] =
+          (investmentCounts[lead.franchiseInvestmentCapacity] || 0) + 1;
+      }
+    }
+
+    return {
+      total,
+      pipeline: pipelineCounts,
+      stateBreakdown: Object.entries(stateCounts)
+        .map(([state, count]) => ({ state, count }))
+        .sort((a, b) => b.count - a.count),
+      profileBreakdown: Object.entries(profileCounts)
+        .map(([profile, count]) => ({ profile, count }))
+        .sort((a, b) => b.count - a.count),
+      investmentBreakdown: Object.entries(investmentCounts)
+        .map(([capacity, count]) => ({ capacity, count }))
+        .sort((a, b) => b.count - a.count),
+      recentActivities,
+    };
+  }
+
+  /**
+   * Updates pipeline status of a franchise lead.
+   */
+  static async updateFranchiseLeadStatus(
+    user: AuthenticatedUser,
+    input: { leadId: string; status: LeadStatus; notes?: string }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to update franchise status.",
+      });
+    }
+
+    const existing = await db.lead.findUnique({
+      where: { id: input.leadId },
+      select: { id: true, status: true, fullName: true, notes: true },
+    });
+
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Franchise lead not found." });
+    }
+
+    const updated = await db.lead.update({
+      where: { id: input.leadId },
+      data: {
+        status: input.status,
+        notes: input.notes
+          ? `${existing.notes || ""}\n[Status updated to ${input.status} by ${user.firstName}]: ${input.notes}`.trim()
+          : undefined,
+      },
+    });
+
+    const userExists = user.id ? await db.user.findUnique({ where: { id: user.id }, select: { id: true } }) : null;
+    const actorId = userExists ? user.id : null;
+
+    await db.leadActivity.create({
+      data: {
+        leadId: input.leadId,
+        userId: actorId,
+        activityType: "STATUS_CHANGE",
+        disposition: input.status,
+        notes: `Status changed from ${existing.status} to ${input.status}. ${input.notes || ""}`.trim(),
+      },
+    });
+
+    await AuditService.log({
+      action: "LEAD_STATUS_UPDATE",
+      resourceType: "Lead",
+      resourceId: input.leadId,
+      actorId,
+      previousData: { status: existing.status },
+      newData: { status: input.status, notes: input.notes },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Logs a follow-up for a franchise lead.
+   */
+  static async addFranchiseFollowUp(
+    user: AuthenticatedUser,
+    input: {
+      leadId: string;
+      type: FollowUpType;
+      notes: string;
+      nextFollowUpDate?: Date | null;
+      newStatus?: LeadStatus;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to log follow-up.",
+      });
+    }
+
+    const userExists = user.id ? await db.user.findUnique({ where: { id: user.id }, select: { id: true } }) : null;
+    if (!userExists) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "User account not found for logging follow-up.",
+      });
+    }
+
+    const followUp = await db.followUpHistory.create({
+      data: {
+        leadId: input.leadId,
+        performedById: user.id,
+        type: input.type,
+        notes: input.notes,
+        nextFollowUpDate: input.nextFollowUpDate || null,
+      },
+    });
+
+    const updateData: Prisma.LeadUpdateInput = {
+      nextFollowUp: input.nextFollowUpDate || undefined,
+    };
+
+    if (input.newStatus) {
+      updateData.status = input.newStatus;
+    }
+
+    await db.lead.update({
+      where: { id: input.leadId },
+      data: updateData,
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: input.leadId,
+        userId: user.id,
+        activityType: "FOLLOW_UP_LOGGED",
+        disposition: input.type,
+        notes: `Follow-up logged (${input.type}): ${input.notes}`,
+      },
+    });
+
+    return followUp;
+  }
+
+  /**
+   * Assigns a franchise lead to a staff member.
+   */
+  static async assignFranchiseLead(
+    user: AuthenticatedUser,
+    input: { leadId: string; assignedToId: string | null }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to assign franchise leads.",
+      });
+    }
+
+    const userExists = user.id ? await db.user.findUnique({ where: { id: user.id }, select: { id: true } }) : null;
+    const actorId = userExists ? user.id : null;
+
+    const updated = await db.lead.update({
+      where: { id: input.leadId },
+      data: { assignedToId: input.assignedToId },
+      include: {
+        assignedTo: { select: { id: true, firstName: true, lastName: true } },
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: input.leadId,
+        userId: actorId,
+        activityType: "ASSIGNED",
+        notes: input.assignedToId
+          ? `Franchise lead assigned to ${updated.assignedTo?.firstName || "Staff"}`
+          : "Franchise lead unassigned",
+      },
+    });
+
+    return updated;
   }
 }

@@ -2,7 +2,7 @@ import * as React from "react";
 import Link from "next/link";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { MapPin, Phone, Mail, Clock, ShieldCheck, ArrowUpRight } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, ShieldCheck, ArrowUpRight, Building2 } from "lucide-react";
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();
@@ -41,6 +41,15 @@ export function PublicFooter() {
                   </Link>
                 </li>
               ))}
+              <li>
+                <Link
+                  href="/franchise"
+                  className="text-emerald-700 font-semibold hover:text-emerald-800 transition-colors flex items-center gap-1"
+                >
+                  <Building2 className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Franchise Opportunity</span>
+                </Link>
+              </li>
               <li>
                 <Link
                   href="/login"

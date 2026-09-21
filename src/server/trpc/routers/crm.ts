@@ -21,14 +21,23 @@ function asAuthUser(user: any): AuthenticatedUser {
 
 const crmRoles = [
   UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
   UserRoleCode.MANAGER,
   UserRoleCode.COUNSELOR,
   UserRoleCode.TELECALLER,
 ];
 
+const franchiseRoles = [
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+];
+
 const admissionRoles = [
   UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
   UserRoleCode.MANAGER,
   UserRoleCode.COUNSELOR,
@@ -59,6 +68,42 @@ export const crmRouter = router({
       const userAgent = ctx.headers ? ctx.headers.get("user-agent") || "unknown" : "unknown";
 
       return CrmLeadService.submitPublicEnquiry(input, ipAddress, userAgent);
+    }),
+
+  /**
+   * Public franchise enquiry submission with rate limiting, spam honeypot,
+   * deduplication, audit trail, and instant notifications.
+   */
+  submitFranchiseEnquiry: publicProcedure
+    .input(
+      z.object({
+        fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
+        email: z.string().email("Please provide a valid email address"),
+        phone: z.string().min(10, "Phone must be at least 10 digits").max(15),
+        city: z.string().min(2, "City is required").max(100),
+        state: z.string().min(2, "State is required").max(100),
+        preferredLocation: z.string().max(150).optional(),
+        applicantProfile: z.string().min(2, "Please select your profile"),
+        investmentCapacity: z.string().min(2, "Please select your investment capacity"),
+        existingInstitute: z.boolean().optional(),
+        experience: z.string().max(500).optional(),
+        launchTimeline: z.string().max(100).optional(),
+        requirements: z.string().max(1000).optional(),
+        notes: z.string().max(1000).optional(),
+        campaignName: z.string().max(150).optional(),
+        adsetName: z.string().max(150).optional(),
+        adCreativeName: z.string().max(150).optional(),
+        keywordSearch: z.string().max(150).optional(),
+        landingPageUrl: z.string().max(300).optional(),
+        honeypot: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const forwardedFor = ctx.headers ? ctx.headers.get("x-forwarded-for") : null;
+      const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
+      const userAgent = ctx.headers ? ctx.headers.get("user-agent") || "unknown" : "unknown";
+
+      return CrmLeadService.submitFranchiseEnquiry(input, ipAddress, userAgent);
     }),
 
   /**
@@ -855,5 +900,76 @@ export const crmRouter = router({
         campaignName: input.campaignName || `Test Campaign ${input.platform}`,
         notes: input.notes || `Simulated live lead from ${input.platform} testing panel.`,
       });
+    }),
+
+  /**
+   * Lists franchise leads with filtering, pagination, and relation includes.
+   */
+  listFranchiseLeads: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        status: z.nativeEnum(LeadStatus).optional(),
+        state: z.string().optional(),
+        investmentCapacity: z.string().optional(),
+        search: z.string().optional(),
+        page: z.number().int().positive().optional().default(1),
+        limit: z.number().int().positive().max(100).optional().default(25),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return CrmLeadService.listFranchiseLeads(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Aggregates franchise pipeline statistics and geographic distribution.
+   */
+  getFranchiseStats: requireRoleProcedure(franchiseRoles).query(async ({ ctx }) => {
+    return CrmLeadService.getFranchiseStats(asAuthUser(ctx.user));
+  }),
+
+  /**
+   * Updates pipeline stage of a franchise opportunity lead.
+   */
+  updateFranchiseStatus: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        status: z.nativeEnum(LeadStatus),
+        notes: z.string().max(1000).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.updateFranchiseLeadStatus(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Logs a follow-up and optional status update for a franchise lead.
+   */
+  addFranchiseFollowUp: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        type: z.nativeEnum(FollowUpType).default(FollowUpType.CALL),
+        notes: z.string().min(2, "Notes are required").max(2000),
+        nextFollowUpDate: z.date().optional().nullable(),
+        newStatus: z.nativeEnum(LeadStatus).optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.addFranchiseFollowUp(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Assigns a franchise lead to a designated manager or counselor.
+   */
+  assignFranchiseLead: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        assignedToId: z.string().nullable(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.assignFranchiseLead(asAuthUser(ctx.user), input);
     }),
 });

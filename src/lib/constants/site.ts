@@ -34,6 +34,7 @@ export const SITE_CONFIG = {
     { label: "About Us", href: "/about" },
     { label: "Career Support", href: "/career" },
     { label: "Faculty", href: "/trainers" },
+    { label: "Franchise", href: "/franchise" },
     { label: "Contact", href: "/contact" },
   ],
   trustPillars: [

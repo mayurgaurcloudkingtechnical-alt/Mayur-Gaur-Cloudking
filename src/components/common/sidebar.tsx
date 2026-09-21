@@ -26,6 +26,7 @@ import {
   Clock,
   CreditCard,
   Share2,
+  Building2,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 
@@ -87,6 +88,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "CRM Inbound Leads", href: "/admin/leads", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Franchise Management", href: "/admin/franchise", icon: <Building2 className="h-4 w-4" /> },
           { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
           { title: "Student Management", href: "/admin/students", icon: <UserPlus className="h-4 w-4" /> },
