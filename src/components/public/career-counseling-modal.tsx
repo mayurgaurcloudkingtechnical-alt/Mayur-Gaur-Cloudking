@@ -87,26 +87,8 @@ export function CareerCounselingModal({
     setTimeout(() => setState({ success: false }), 400);
   };
 
-  // Automatic first meaningful visit trigger
-  React.useEffect(() => {
-    if (controlledOpen !== undefined) return;
-
-    try {
-      const dismissedUntil = localStorage.getItem(STORAGE_KEY);
-      if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
-        return; // Still in cooldown period
-      }
-    } catch {
-      // Storage unavailable, proceed with fallback
-    }
-
-    // Auto-open after 4.5 seconds on the page
-    const timer = setTimeout(() => {
-      setInternalOpen(true);
-    }, 4500);
-
-    return () => clearTimeout(timer);
-  }, [controlledOpen]);
+  // Note: Modal never opens automatically on page load per user design.
+  // It only opens when the visitor explicitly clicks a counseling CTA.
 
   // Listen for global window trigger events
   React.useEffect(() => {

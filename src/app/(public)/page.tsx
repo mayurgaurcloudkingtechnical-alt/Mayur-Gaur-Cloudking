@@ -6,7 +6,7 @@ import { ContentStatus } from "@prisma/client";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { CourseCard } from "@/components/public/course-card";
 import { HeroLeadForm } from "@/components/public/hero-lead-form";
-import { HeroTechShowcase } from "@/components/public/hero-tech-showcase";
+import { Hero3DTechVisual } from "@/components/public/hero-3d-tech-visual";
 import { TalkToCounselorButton } from "@/components/public/talk-to-counselor-button";
 import { AiMlShowcase } from "@/components/public/ai-ml-showcase";
 import { Button } from "@/components/ui/button";
@@ -189,9 +189,9 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Animated AI/ML & Cyber Security Interactive Tech Showcase */}
-            <div className="lg:col-span-5">
-              <HeroTechShowcase />
+            {/* Right Column: Premium 3D WebGL AI & Cyber Security Interactive Visualization */}
+            <div className="lg:col-span-5 w-full">
+              <Hero3DTechVisual />
             </div>
           </div>
         </div>
