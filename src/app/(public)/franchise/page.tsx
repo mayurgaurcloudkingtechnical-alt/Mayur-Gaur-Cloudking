@@ -6,6 +6,7 @@ import { SITE_CONFIG } from "@/lib/constants/site";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { FranchiseEnquiryForm } from "@/components/public/franchise-enquiry-form";
+import { FranchiseSupportFramework } from "@/components/public/franchise-support-framework";
 import {
   Building2,
   CheckCircle2,
@@ -302,100 +303,23 @@ export default async function FranchisePage() {
       </section>
 
       {/* 3. 6 MONTHS COMPLETE SUPPORT FRAMEWORK */}
-      <section id="support-framework" className="py-16 md:py-20 bg-white border-b border-slate-200">
+      <section id="support-framework" className="py-16 md:py-24 bg-gradient-to-b from-white via-slate-50/50 to-white border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-3xl mx-auto mb-14">
+          <div className="text-center max-w-3xl mx-auto mb-12">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              Comprehensive Enablement
+              Comprehensive Enablement • 180 Days Turnkey Backing
             </span>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
-              6 Months Complete Operational Support
+              6 Months Complete Operational Support Framework
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
               We stand side-by-side with every franchise partner through the critical first 180 days. From initial lab
-              blueprints to filling your first cohort and delivering final graduation ceremonies.
+              blueprints and trainer onboarding to filling your cohorts and delivering job-ready graduates.
+              Click any pillar below to inspect confidential deliverables, SOP blueprints, and SLAs.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[
-              {
-                icon: Laptop,
-                title: "1. Lab Architecture & Workstation Blueprint",
-                desc: "Turnkey hardware specifications, lab networking topologies, power-backup planning, and classroom ergonomics tailored for code development.",
-              },
-              {
-                icon: BookOpen,
-                title: "2. 21+ Production-Grade Curricula",
-                desc: "Complete syllabi, step-by-step lab exercises, student handbooks, and GitHub repository boilerplates for modern full stack and cloud stacks.",
-              },
-              {
-                icon: Layers,
-                title: "3. Enterprise LMS Deployment",
-                desc: "Full institutional LMS access for batch scheduling, digital assignments, topic progress tracking, and attendance register automation.",
-              },
-              {
-                icon: Users,
-                title: "4. CRM & Lead Pipeline Integration",
-                desc: "Connect your local inquiries directly into the central CRM with automated round-robin routing to telecallers, counselors, and directors.",
-              },
-              {
-                icon: GraduationCap,
-                title: "5. Trainer Recruitment & Master Onboarding",
-                desc: "Interview frameworks to hire qualified local instructors, complemented by intensive onboarding from Mr. Mayur Gaur (11+ years of leadership & entrepreneurship) and core faculty.",
-              },
-              {
-                icon: TrendingUp,
-                title: "6. Digital Marketing & Local Geo-Launch",
-                desc: "High-converting ad templates, local Google Business optimization, social media banners, and flyer collateral for student inquiries.",
-              },
-              {
-                icon: Headphones,
-                title: "7. Admissions Counseling SOPs",
-                desc: "Proven telephone scripts, program comparison matrices, walk-in presentation guides, and fee installment structuring strategies.",
-              },
-              {
-                icon: Award,
-                title: "8. Examination & Dual Certification Engine",
-                desc: "Automated exam portals, verified marksheets, and official SOFTLAB GLOBAL digital certificate issuance with QR-code verification.",
-              },
-              {
-                icon: FileCheck,
-                title: "9. Capstone Project Ecosystem",
-                desc: "Real-world portfolio projects simulating live client briefs (e-commerce, SaaS, microservices, cloud deployments) for every student.",
-              },
-              {
-                icon: Briefcase,
-                title: "10. Placement Preparation Desk",
-                desc: "Resume templates, mock technical interview checklists, soft-skills rubrics, and campus recruitment drive coordination.",
-              },
-              {
-                icon: ShieldCheck,
-                title: "11. Quality Audits & Academic Reviews",
-                desc: "Monthly classroom observation, batch completion tracking, student satisfaction surveys, and syllabus adherence reviews.",
-              },
-              {
-                icon: Calendar,
-                title: "12. Dedicated Account Director",
-                desc: "Direct access to a senior corporate franchise manager with bi-weekly progress calls to optimize enrollment and resolve blockers.",
-              },
-            ].map((pillar, idx) => (
-              <div
-                key={idx}
-                className="rounded-2xl border border-slate-200 bg-slate-50/50 p-6 hover:bg-emerald-50/20 hover:border-emerald-300 transition-all group"
-              >
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-emerald-700 shadow-sm group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                    <pillar.icon className="h-5 w-5" />
-                  </div>
-                  <span className="text-xs font-bold text-slate-900 group-hover:text-emerald-900">
-                    {pillar.title}
-                  </span>
-                </div>
-                <p className="text-xs text-slate-600 leading-relaxed">{pillar.desc}</p>
-              </div>
-            ))}
-          </div>
+          <FranchiseSupportFramework />
         </div>
       </section>
 
