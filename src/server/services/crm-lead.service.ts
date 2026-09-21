@@ -74,12 +74,25 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+export const META_SOURCES: LeadSource[] = [
+  LeadSource.META,
+  LeadSource.META_ADS_FB,
+  LeadSource.META_ADS_IG,
+  LeadSource.SOCIAL_MEDIA,
+];
+
+export function isMetaLeadSource(source?: LeadSource | string | null): boolean {
+  if (!source) return false;
+  return META_SOURCES.includes(source as LeadSource);
+}
+
 export function canReadAllLeads(user: AuthenticatedUser): boolean {
   return (
     user.roleCode === UserRoleCode.SUPER_ADMIN ||
     user.roleCode === UserRoleCode.DIRECTOR ||
     user.roleCode === UserRoleCode.ADMIN ||
     user.roleCode === UserRoleCode.MANAGER ||
+    user.roleCode === UserRoleCode.COUNSELOR ||
     hasPermission(user.permissions, "leads:read_all")
   );
 }
@@ -169,7 +182,18 @@ export class CrmLeadService {
 
     const andConditions: Prisma.LeadWhereInput[] = [];
 
-    if (!hasReadAll) {
+    if (user.roleCode === UserRoleCode.TELECALLER) {
+      // Telecallers have full visibility over all Meta leads (FB, IG, etc.), plus assigned or unassigned leads
+      andConditions.push({
+        OR: [
+          { source: { in: META_SOURCES } },
+          { assignedToId: user.id },
+          { assignedCounselorId: user.id },
+          { assignedTelecallerId: user.id },
+          { assignedToId: null },
+        ],
+      });
+    } else if (!hasReadAll) {
       andConditions.push({
         OR: [
           { assignedToId: user.id },
@@ -319,6 +343,8 @@ export class CrmLeadService {
 
     const canAccessLead =
       hasReadAll ||
+      user.roleCode === UserRoleCode.COUNSELOR ||
+      (user.roleCode === UserRoleCode.TELECALLER && isMetaLeadSource(lead.source)) ||
       lead.assignedToId === user.id ||
       lead.assignedCounselorId === user.id ||
       lead.assignedTelecallerId === user.id ||
@@ -380,6 +406,8 @@ export class CrmLeadService {
     const hasReadAll = canReadAllLeads(user);
     const canUpdateLead =
       hasReadAll ||
+      user.roleCode === UserRoleCode.COUNSELOR ||
+      (user.roleCode === UserRoleCode.TELECALLER && isMetaLeadSource(lead.source)) ||
       lead.assignedToId === user.id ||
       lead.assignedCounselorId === user.id ||
       lead.assignedTelecallerId === user.id ||
@@ -388,7 +416,7 @@ export class CrmLeadService {
     if (!canUpdateLead) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You can only update leads assigned to you.",
+        message: "You can only update leads assigned to you or within your authorized channel pool.",
       });
     }
 

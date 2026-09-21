@@ -2,7 +2,7 @@ import { router, publicProcedure, requireRoleProcedure } from "../init";
 import { z } from "zod";
 import { UserRoleCode, LeadStatus, LeadSource, FollowUpType, ApplicationStage } from "@prisma/client";
 import { META_ADS_CONFIG, INSTAGRAM_CONFIG } from "@/server/config/meta-ads.config";
-import { CrmLeadService } from "@/server/services/crm-lead.service";
+import { CrmLeadService, canReadAllLeads, META_SOURCES } from "@/server/services/crm-lead.service";
 import { CrmApplicationService } from "@/server/services/crm-application.service";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { db } from "@/server/db/client";
@@ -76,8 +76,31 @@ export const crmRouter = router({
    * Pipeline dashboard metrics and follow-up counter.
    */
   getStats: requireRoleProcedure(crmRoles).query(async ({ ctx }) => {
-    const hasReadAll = hasPermission(ctx.user.permissions, "leads:read_all");
-    const whereLead = hasReadAll ? {} : { assignedToId: ctx.user.id };
+    const authUser = asAuthUser(ctx.user);
+    const hasReadAll = canReadAllLeads(authUser);
+
+    let whereLead: any = {};
+    if (hasReadAll) {
+      whereLead = {};
+    } else if (authUser.roleCode === UserRoleCode.TELECALLER) {
+      whereLead = {
+        OR: [
+          { source: { in: META_SOURCES } },
+          { assignedToId: ctx.user.id },
+          { assignedCounselorId: ctx.user.id },
+          { assignedTelecallerId: ctx.user.id },
+          { assignedToId: null },
+        ],
+      };
+    } else {
+      whereLead = {
+        OR: [
+          { assignedToId: ctx.user.id },
+          { assignedCounselorId: ctx.user.id },
+          { assignedToId: null },
+        ],
+      };
+    }
 
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);

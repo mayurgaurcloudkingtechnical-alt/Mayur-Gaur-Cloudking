@@ -161,6 +161,32 @@ export default function AboutPage() {
         </div>
       </section>
 
+      {/* Faculty & Mentors Callout */}
+      <section className="py-14 bg-gradient-to-r from-slate-900 to-slate-950 text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                Academic Leadership
+              </span>
+              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+                Mentorship by Practicing Software Engineers
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+                Meet our full-time technical faculty, certified cloud instructors, and admissions counselors who guide every student from first line of code to corporate placement.
+              </p>
+            </div>
+
+            <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0 h-11 px-6 rounded-xl shadow-lg shadow-emerald-950">
+              <Link href="/trainers" className="flex items-center gap-2">
+                <span>Meet Our Faculty & Staff</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Campus Location Card */}
       <section className="py-16 bg-slate-50/60">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

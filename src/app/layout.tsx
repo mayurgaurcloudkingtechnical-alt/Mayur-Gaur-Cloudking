@@ -5,6 +5,11 @@ import { TRPCReactProvider } from "@/lib/trpc/react";
 export const metadata: Metadata = {
   title: "SOFTLAB GLOBAL — IT Education Management Platform",
   description: "Enterprise IT education management, student LMS, faculty portal, admissions CRM, and verification engine.",
+  icons: {
+    icon: "/images/softlab-logo.png",
+    shortcut: "/images/softlab-logo.png",
+    apple: "/images/softlab-logo.png",
+  },
 };
 
 export default function RootLayout({

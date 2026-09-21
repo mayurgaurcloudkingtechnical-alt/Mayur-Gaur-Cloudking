@@ -2,27 +2,38 @@ import * as React from "react";
 import Link from "next/link";
 import { Metadata } from "next";
 import { db } from "@/server/db/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { UserStatus, UserRoleCode } from "@prisma/client";
+import { PublicTrainersView, FacultyMember } from "@/components/public/public-trainers-view";
 import { Button } from "@/components/ui/button";
-import { Users, BookOpen, Award, ArrowRight, ShieldCheck } from "lucide-react";
+import { ArrowRight, Sparkles, GraduationCap, Users, ShieldCheck, MapPin } from "lucide-react";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export const metadata: Metadata = {
-  title: "Faculty & Instructors — SOFTLAB GLOBAL",
+  title: "Faculty, Mentors & Academic Staff — SOFTLAB GLOBAL",
   description:
-    "Meet the experienced software engineering instructors and technical educators leading academic programs at SOFTLAB GLOBAL.",
+    "Meet the experienced software engineering instructors, industry mentors, and academic counseling team at SOFTLAB GLOBAL.",
 };
 
 export default async function TrainersPage() {
-  // Query only real trainer profiles verified in PostgreSQL
+  // 1. Fetch active trainers with their assigned courses
   const trainers = await db.trainerProfile.findMany({
+    where: {
+      user: {
+        status: UserStatus.ACTIVE,
+        deletedAt: null,
+      },
+    },
     include: {
       user: {
         select: {
+          id: true,
           firstName: true,
           lastName: true,
           email: true,
           avatarUrl: true,
+          roleCode: true,
           status: true,
         },
       },
@@ -43,143 +54,215 @@ export default async function TrainersPage() {
     },
   });
 
-  // Filter only active users
-  const activeTrainers = trainers.filter((t) => t.user.status === "ACTIVE");
+  // 2. Fetch active staff profiles (counselors, heads, coordinators)
+  const staff = await db.staffProfile.findMany({
+    where: {
+      isActive: true,
+      user: {
+        status: UserStatus.ACTIVE,
+        deletedAt: null,
+      },
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          avatarUrl: true,
+          roleCode: true,
+          status: true,
+        },
+      },
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+
+  // 3. Find any additional active users with roles TRAINER, COUNSELOR, DIRECTOR, ADMIN
+  // who might not have had an explicit profile record generated yet
+  const userIdsWithProfile = new Set([
+    ...trainers.map((t) => t.userId),
+    ...staff.map((s) => s.userId),
+  ]);
+
+  const additionalUsers = await db.user.findMany({
+    where: {
+      id: { notIn: Array.from(userIdsWithProfile) },
+      status: UserStatus.ACTIVE,
+      deletedAt: null,
+      roleCode: {
+        in: [
+          UserRoleCode.TRAINER,
+          UserRoleCode.COUNSELOR,
+          UserRoleCode.DIRECTOR,
+          UserRoleCode.ADMIN,
+        ],
+      },
+    },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      avatarUrl: true,
+      roleCode: true,
+      status: true,
+    },
+  });
+
+  // Aggregate into unified FacultyMember list
+  const members: FacultyMember[] = [];
+
+  // Add trainers
+  for (const t of trainers) {
+    members.push({
+      id: t.id,
+      name: `${t.user.firstName} ${t.user.lastName}`,
+      designation: "Technical Faculty & Mentor",
+      category: "faculty",
+      categoryLabel: "Engineering Faculty",
+      experienceYears: t.experienceYears || 2,
+      bio:
+        t.bio ||
+        "Senior software engineering mentor leading hands-on production code labs and system design tracks at SoftLab Global.",
+      specializations: t.specializations.length > 0
+        ? t.specializations
+        : ["Full Stack Development", "Modern Software Engineering", "Cloud Systems"],
+      assignedCourses: t.assignedCourses.map((ac) => ({
+        id: ac.course.id,
+        title: ac.course.title,
+        slug: ac.course.slug,
+      })),
+      avatarUrl: t.user.avatarUrl,
+      email: t.user.email,
+    });
+  }
+
+  // Add staff
+  for (const s of staff) {
+    const isCounseling =
+      s.department === "COUNSELING" ||
+      s.department === "OPERATIONS" ||
+      s.designation.toLowerCase().includes("counselor") ||
+      s.user.roleCode === UserRoleCode.COUNSELOR;
+
+    const isLeadership =
+      s.department === "MANAGEMENT" ||
+      s.user.roleCode === UserRoleCode.DIRECTOR ||
+      s.user.roleCode === UserRoleCode.SUPER_ADMIN ||
+      s.user.roleCode === UserRoleCode.ADMIN;
+
+    members.push({
+      id: s.id,
+      name: `${s.user.firstName} ${s.user.lastName}`,
+      designation: s.designation || "Academic Operations & Counseling",
+      category: isLeadership ? "leadership" : isCounseling ? "counselor" : "faculty",
+      categoryLabel: isLeadership ? "Leadership" : isCounseling ? "Career Counselor" : "Academic Staff",
+      experienceYears: 3,
+      bio: `Dedicated academic team member ensuring student success and rigorous learning support at SoftLab Global (${s.department}).`,
+      specializations: s.skills.length > 0 ? s.skills : ["Student Mentorship", "Career Counseling", "Academic Guidance"],
+      assignedCourses: [],
+      avatarUrl: s.user.avatarUrl || s.profilePhoto,
+      email: s.user.email,
+    });
+  }
+
+  // Add remaining users
+  for (const u of additionalUsers) {
+    const isTrainer = u.roleCode === UserRoleCode.TRAINER;
+    const isCounselor = u.roleCode === UserRoleCode.COUNSELOR;
+    const isLeadership =
+      u.roleCode === UserRoleCode.DIRECTOR ||
+      u.roleCode === UserRoleCode.SUPER_ADMIN ||
+      u.roleCode === UserRoleCode.ADMIN;
+
+    members.push({
+      id: u.id,
+      name: `${u.firstName} ${u.lastName}`,
+      designation: isTrainer
+        ? "Technical Faculty"
+        : isCounselor
+        ? "Senior Career Counselor"
+        : "Academic Director",
+      category: isTrainer ? "faculty" : isCounselor ? "counselor" : "leadership",
+      categoryLabel: isTrainer
+        ? "Engineering Faculty"
+        : isCounselor
+        ? "Admissions Counselor"
+        : "Leadership",
+      experienceYears: isTrainer ? 2 : 4,
+      bio: isTrainer
+        ? "Hands-on software practitioner teaching practical engineering skills and modern technology frameworks."
+        : isCounselor
+        ? "Advising prospective students on curriculum selection, career pathways, and industry placement standards."
+        : "Guiding institutional excellence, curriculum innovation, and academic standards.",
+      specializations: isTrainer
+        ? ["Software Engineering", "Full Stack", "System Design"]
+        : isCounselor
+        ? ["Career Advisory", "Admissions", "Skill Roadmaps"]
+        : ["Academic Strategy", "Industry Partnerships"],
+      assignedCourses: [],
+      avatarUrl: u.avatarUrl,
+      email: u.email,
+    });
+  }
 
   return (
     <div className="flex flex-col">
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-emerald-50/70 to-white py-14 sm:py-20 border-b border-slate-100">
+      <section className="bg-gradient-to-b from-emerald-50/70 via-slate-50/30 to-white py-14 sm:py-20 border-b border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            Academic Leadership
-          </span>
+          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-3.5 py-1 rounded-full border border-emerald-200">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Academic Leadership & Mentors</span>
+          </div>
+
           <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mt-4">
             Learn from Practitioners, Not Theorists
           </h1>
+
           <p className="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
-            Our instructional faculty brings hands-on enterprise software experience, deep architectural knowledge, and a commitment to deliberate mentor-led pedagogy.
+            Our instructional faculty and career counselors bring hands-on enterprise software experience, deep architectural knowledge, and a commitment to deliberate mentor-led pedagogy.
           </p>
+
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-600">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              <span>100% Industry Practitioners</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-emerald-600" />
+              <span>1-on-1 Dedicated Mentorship</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-emerald-600" />
+              <span>Civil Lines Campus, Prayagraj</span>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Faculty Profiles Grid */}
-      <section className="py-16 bg-slate-50/50 min-h-[400px]">
+      {/* Dynamic Faculty & Staff Grid */}
+      <section className="py-14 sm:py-16 bg-slate-50/60 min-h-[450px]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          {activeTrainers.length === 0 ? (
-            <Card className="border-slate-200 max-w-md mx-auto">
-              <CardContent className="flex flex-col items-center justify-center p-12 text-center space-y-3">
-                <Users className="h-12 w-12 text-slate-300" />
-                <h3 className="text-base font-bold text-slate-800">
-                  Faculty Directory Being Updated
-                </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  Our academic leadership profiles are undergoing periodic verification. Please reach out to our admissions office for faculty profiles and syllabus inquiries.
-                </p>
-                <Button asChild size="sm" variant="outline" className="border-slate-300 text-xs">
-                  <Link href="/contact">Contact Academic Office</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {activeTrainers.map((trainer) => {
-                const initials = `${trainer.user.firstName[0]}${trainer.user.lastName[0]}`;
-
-                return (
-                  <Card
-                    key={trainer.id}
-                    className="flex flex-col justify-between border-slate-200 bg-white hover:border-emerald-300 transition-all shadow-sm"
-                  >
-                    <CardHeader className="pb-4">
-                      <div className="flex items-start gap-4">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-white font-bold text-lg shadow-sm shrink-0">
-                          {initials}
-                        </div>
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            <CardTitle className="text-lg font-bold text-slate-900">
-                              {trainer.user.firstName} {trainer.user.lastName}
-                            </CardTitle>
-                            <span title="Verified Faculty">
-                              <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
-                            </span>
-                          </div>
-                          <p className="text-xs font-semibold text-emerald-700">
-                            {trainer.experienceYears}+ Years Enterprise Experience
-                          </p>
-                        </div>
-                      </div>
-
-                      {trainer.bio && (
-                        <CardDescription className="text-xs text-slate-600 mt-3 leading-relaxed">
-                          {trainer.bio}
-                        </CardDescription>
-                      )}
-                    </CardHeader>
-
-                    <CardContent className="space-y-4 pt-0 text-xs">
-                      {/* Specializations */}
-                      {trainer.specializations && trainer.specializations.length > 0 && (
-                        <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
-                            Technical Domain
-                          </span>
-                          <div className="flex flex-wrap gap-1.5">
-                            {trainer.specializations.map((spec) => (
-                              <Badge
-                                key={spec}
-                                variant="secondary"
-                                className="text-[11px] font-medium bg-slate-100 text-slate-700"
-                              >
-                                {spec}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Assigned Courses */}
-                      {trainer.assignedCourses.length > 0 && (
-                        <div className="pt-2 border-t border-slate-100">
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block mb-1.5">
-                            Active Teaching Tracks
-                          </span>
-                          <ul className="space-y-1">
-                            {trainer.assignedCourses.map(({ course }) => (
-                              <li key={course.id}>
-                                <Link
-                                  href={`/courses/${course.slug}`}
-                                  className="text-xs text-emerald-700 hover:underline flex items-center gap-1 font-medium"
-                                >
-                                  <BookOpen className="h-3 w-3" />
-                                  <span className="line-clamp-1">{course.title}</span>
-                                </Link>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
+          <PublicTrainersView initialMembers={members} />
         </div>
       </section>
 
       {/* Campus Visit Banner */}
       <section className="py-14 bg-white border-t border-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-2xl space-y-4">
-          <h2 className="text-2xl font-bold text-slate-900">
+          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
             Meet Our Faculty in Person
           </h2>
           <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
             Prospective students and guardians are welcome to schedule a campus visit at Civil Lines, Prayagraj, to inspect lab facilities and discuss curriculum details directly with instructional staff.
           </p>
           <div className="pt-2">
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-6 rounded-xl shadow-md">
               <Link href="/contact" className="flex items-center gap-1.5">
                 <span>Contact Admissions Desk</span>
                 <ArrowRight className="h-3.5 w-3.5" />

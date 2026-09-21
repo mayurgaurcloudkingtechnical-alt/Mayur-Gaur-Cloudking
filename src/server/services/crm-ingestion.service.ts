@@ -244,6 +244,7 @@ export class CrmIngestionService {
                   UserRoleCode.DIRECTOR,
                   UserRoleCode.ADMIN,
                   UserRoleCode.COUNSELOR,
+                  UserRoleCode.TELECALLER,
                 ],
               },
             },
