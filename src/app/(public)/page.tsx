@@ -6,6 +6,8 @@ import { ContentStatus } from "@prisma/client";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { CourseCard } from "@/components/public/course-card";
 import { HeroLeadForm } from "@/components/public/hero-lead-form";
+import { HeroTechShowcase } from "@/components/public/hero-tech-showcase";
+import { TalkToCounselorButton } from "@/components/public/talk-to-counselor-button";
 import { AiMlShowcase } from "@/components/public/ai-ml-showcase";
 import { Button } from "@/components/ui/button";
 import {
@@ -164,12 +166,7 @@ export default async function HomePage() {
                   </Link>
                 </Button>
 
-                <Button asChild variant="outline" size="lg" className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm h-11 px-5">
-                  <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-emerald-400" />
-                    <span>Talk to Counselor</span>
-                  </a>
-                </Button>
+                <TalkToCounselorButton className="border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs sm:text-sm h-11 px-5 rounded-xl shadow-md cursor-pointer" />
 
                 <Button asChild variant="ghost" size="lg" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-950/40 text-xs sm:text-sm h-11 px-4">
                   <Link href="/student-login" className="flex items-center gap-1.5">
@@ -192,9 +189,9 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Right Column: Hero Lead Capture Form */}
+            {/* Right Column: Animated AI/ML & Cyber Security Interactive Tech Showcase */}
             <div className="lg:col-span-5">
-              <HeroLeadForm courses={courseOptions} />
+              <HeroTechShowcase />
             </div>
           </div>
         </div>
@@ -460,7 +457,76 @@ export default async function HomePage() {
       </section>
 
       {/* ==================================================================== */}
-      {/* 7. CAMPUS VISIT & CONTACT BANNER                                     */}
+      {/* 7. QUICK ADMISSION & 1-ON-1 CAREER COUNSELING FORM DESK              */}
+      {/* ==================================================================== */}
+      <section id="book-counseling" className="py-16 sm:py-24 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900 text-white border-b border-slate-800 relative overflow-hidden">
+        {/* Ambient Glows */}
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:28px_28px] opacity-15 pointer-events-none" />
+        <div className="absolute top-1/4 -right-24 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 -left-24 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-center">
+            {/* Left Info Column */}
+            <div className="lg:col-span-6 space-y-6">
+              <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/50 bg-emerald-950/70 px-4 py-1.5 text-xs font-bold text-emerald-400 shadow-md">
+                <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse" />
+                <span>Direct Admissions & Career Advisory Cell</span>
+              </div>
+
+              <h2 className="text-3xl sm:text-4xl font-black tracking-tight text-white leading-tight">
+                Book Your Free 1-on-1{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400">
+                  Career Counseling Session
+                </span>
+              </h2>
+
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                Confused about whether to choose Full Stack, AI & Machine Learning, Cloud DevOps, or Cyber Security? 
+                Meet our senior software architects. Get customized syllabus guidance, placement reports, and transparent installment breakdown.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {[
+                  "100% Placement Assistance Guarantee",
+                  "₹5,000 Down Payment to Reserve Seat",
+                  "Live Hands-on Projects & GitHub Repos",
+                  "Classroom, Live Online & Weekend Batches",
+                  "1,200+ Corporate Hiring Partner Drives",
+                  "ISO 9001:2015 QR-Verified Credential",
+                ].map((perk) => (
+                  <div key={perk} className="flex items-center gap-2 text-xs text-slate-200">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                    <span>{perk}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Direct Hotline & Campus Desk Card */}
+              <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+                <div className="space-y-1 text-center sm:text-left">
+                  <span className="font-bold text-emerald-400">Civil Lines Campus Admissions Desk</span>
+                  <p className="text-slate-400 text-[11px]">{SITE_CONFIG.address.full}</p>
+                </div>
+                <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 px-4 rounded-xl shrink-0">
+                  <a href={`tel:${SITE_CONFIG.contact.phoneTel}`}>
+                    <Phone className="h-3.5 w-3.5 mr-1.5" />
+                    <span>Call Counselor</span>
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            {/* Right Column: Hero Lead Form */}
+            <div id="counseling-form" className="lg:col-span-6">
+              <HeroLeadForm courses={courseOptions} />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================================== */}
+      {/* 8. CAMPUS VISIT & CONTACT BANNER                                     */}
       {/* ==================================================================== */}
       <section className="py-14 bg-gradient-to-r from-emerald-600 to-teal-700 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
