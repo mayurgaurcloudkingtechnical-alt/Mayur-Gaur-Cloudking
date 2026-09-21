@@ -32,6 +32,7 @@ export interface FacultyMember {
   categoryLabel: string;
   courseCoverageLabel?: string;
   experienceYears?: number | null;
+  experienceBadgeLabel?: string;
   bio?: string | null;
   specializations: string[];
   assignedCourses: { id: string; title: string; slug: string }[];
@@ -251,11 +252,15 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
                             {member.designation}
                           </Badge>
 
-                          {typeof member.experienceYears === "number" && member.experienceYears > 0 && (
+                          {member.experienceBadgeLabel ? (
+                            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                              {member.experienceBadgeLabel}
+                            </span>
+                          ) : typeof member.experienceYears === "number" && member.experienceYears > 0 ? (
                             <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
                               {member.experienceYears}+ Years Experience
                             </span>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>

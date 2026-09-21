@@ -342,7 +342,7 @@ export default async function FranchisePage() {
               {
                 icon: GraduationCap,
                 title: "5. Trainer Recruitment & Master Onboarding",
-                desc: "Interview frameworks to hire qualified local instructors, complemented by intensive onboarding from Mr. Mayur Gaur and core faculty.",
+                desc: "Interview frameworks to hire qualified local instructors, complemented by intensive onboarding from Mr. Mayur Gaur (11+ years of leadership & entrepreneurship) and core faculty.",
               },
               {
                 icon: TrendingUp,
@@ -851,7 +851,7 @@ export default async function FranchisePage() {
                   <div className="font-bold text-slate-900">How are trainers trained and vetted?</div>
                   <p className="text-slate-600 leading-relaxed">
                     We provide comprehensive instructor guides, lecture notes, and conduct master-trainer evaluation sessions
-                    led by veteran engineering mentor Mr. Mayur Gaur before batch kickoff.
+                    led by veteran technology leader & entrepreneur Mr. Mayur Gaur (11+ years experience) before batch kickoff.
                   </p>
                 </div>
 

@@ -278,13 +278,13 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                           </p>
                           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
                         </div>
-                        <p className="text-xs font-medium text-emerald-700">
-                          Faculty / Trainer • 10+ Years Experience
+                        <p className="text-xs font-bold text-emerald-800">
+                          Faculty / Trainer • 11+ Years Experience (Leadership & Entrepreneur)
                         </p>
                       </div>
                     </div>
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                      Senior Software Architect & Principal Educator leading hands-on technical curriculum across all 21 SOFTLAB GLOBAL courses.
+                      Technology Leader & Entrepreneur with 11+ years of experience leading hands-on technical curriculum across all 21 SOFTLAB GLOBAL courses.
                     </p>
                   </div>
 
