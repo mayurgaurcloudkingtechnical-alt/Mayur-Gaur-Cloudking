@@ -173,7 +173,7 @@ export default function AboutPage() {
                 Mentorship by Practicing Software Engineers
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
-                Meet our full-time technical faculty, certified cloud instructors, and admissions counselors who guide every student from first line of code to corporate placement.
+                Led by Mr. Mayur Gaur (covering all 21 technology programs) and Mr. Nihal Singh (specializing in Linux, Cloud, Networking & Cyber Security), our faculty guides every student from first line of code to corporate placement.
               </p>
             </div>
 

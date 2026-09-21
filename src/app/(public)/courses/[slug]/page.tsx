@@ -21,6 +21,7 @@ import {
   UserCheck,
   Calendar,
   Layers,
+  ShieldCheck,
 } from "lucide-react";
 import { PublicEnquiryForm } from "@/components/public/public-enquiry-form";
 
@@ -251,11 +252,88 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               </div>
 
               {/* Faculty Instructors */}
-              {course.trainers.length > 0 && (
-                <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-4">
-                  <h2 className="text-xl font-bold text-slate-900">Assigned Faculty Team</h2>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {course.trainers.map(({ trainer }) => (
+              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-slate-900">Faculty & Mentors</h2>
+                  <Link
+                    href="/trainers"
+                    className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
+                  >
+                    <span>View All Faculty</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </Link>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Mr. Mayur Gaur (Covers All 21 Programs) */}
+                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                        MG
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-slate-900 text-sm truncate">
+                            Mr. Mayur Gaur
+                          </p>
+                          <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                        </div>
+                        <p className="text-xs font-medium text-emerald-700">
+                          Faculty / Trainer • 10+ Years Experience
+                        </p>
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                      Senior Software Architect & Principal Educator leading hands-on technical curriculum across all 21 SOFTLAB GLOBAL courses.
+                    </p>
+                  </div>
+
+                  {/* Mr. Nihal Singh (Displayed for Systems, Networking, Cloud & Cyber Security courses) */}
+                  {(course.slug.includes("linux") ||
+                    course.slug.includes("network") ||
+                    course.slug.includes("365") ||
+                    course.slug.includes("office") ||
+                    course.slug.includes("server") ||
+                    course.slug.includes("cloud") ||
+                    course.slug.includes("cyber") ||
+                    course.slug.includes("security") ||
+                    course.title.toLowerCase().includes("linux") ||
+                    course.title.toLowerCase().includes("network") ||
+                    course.title.toLowerCase().includes("365") ||
+                    course.title.toLowerCase().includes("server") ||
+                    course.title.toLowerCase().includes("cloud") ||
+                    course.title.toLowerCase().includes("cyber") ||
+                    course.title.toLowerCase().includes("security")) && (
+                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                          NS
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="font-bold text-slate-900 text-sm truncate">
+                              Mr. Nihal Singh
+                            </p>
+                            <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                          </div>
+                          <p className="text-xs font-medium text-teal-700">
+                            Faculty / Trainer • 8+ Years Experience
+                          </p>
+                        </div>
+                      </div>
+                      <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
+                        Senior Infrastructure, Systems & Cyber Defense Faculty specializing in Enterprise Linux, Cloud Administration, and Network Security.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Any additional DB-assigned trainers if present and not already displayed */}
+                  {course.trainers
+                    .filter(({ trainer }) => {
+                      const name = `${trainer.user.firstName} ${trainer.user.lastName}`.toLowerCase();
+                      return !name.includes("mayur") && !name.includes("nihal");
+                    })
+                    .map(({ trainer }) => (
                       <div key={trainer.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
@@ -272,15 +350,14 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                           </div>
                         </div>
                         {trainer.bio && (
-                          <p className="text-xs text-slate-600 line-clamp-3 mt-2 leading-relaxed">
+                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                             {trainer.bio}
                           </p>
                         )}
                       </div>
                     ))}
-                  </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Right Col: Admissions & Learning Support */}
