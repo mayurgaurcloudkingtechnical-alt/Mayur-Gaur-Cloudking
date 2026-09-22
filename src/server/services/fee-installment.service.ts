@@ -1,4 +1,4 @@
-﻿import { db } from "@/server/db/client";
+import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
@@ -92,7 +92,7 @@ export class FeeInstallmentService {
       });
 
       return created;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   /**

@@ -111,11 +111,20 @@ export function CreateApplicationDialog({
               className="flex h-9 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1 text-xs text-slate-900"
             >
               <option value="">-- Choose Program --</option>
-              {courses.map((c: { id: string; title: string }) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
+              <optgroup label="Dr. Preeti Global University Programs">
+                {courses.filter((c: any) => c.providerType === "UNIVERSITY").map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="SoftLab Global Training Courses">
+                {courses.filter((c: any) => c.providerType !== "UNIVERSITY").map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

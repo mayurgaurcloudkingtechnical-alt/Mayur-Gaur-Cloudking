@@ -48,6 +48,34 @@ const COURSES_LIST = [
   "Certificate in C Language",
 ];
 
+const UNIVERSITY_PROGRAMS_LIST = [
+  "Polytechnic Diploma",
+  "B.Tech (Bachelor of Technology)",
+  "M.Tech (Master of Technology)",
+  "B.Pharma (Bachelor of Pharmacy)",
+  "D.Pharma (Diploma in Pharmacy)",
+  "BBA (Bachelor of Business Administration)",
+  "MBA (Master of Business Administration)",
+  "B.Com (Honours)",
+  "B.Com (Computer Application)",
+  "M.Com (Master of Commerce)",
+  "B.Sc (Bachelor of Science)",
+  "M.Sc (Master of Science)",
+  "DCA (Diploma in Computer Applications)",
+  "BCA (Bachelor of Computer Applications)",
+  "PGDCA (Post Graduate Diploma in Computer Applications)",
+  "MCA (Master of Computer Applications)",
+  "M.A (Master of Arts)",
+  "B.A (Bachelor of Arts)",
+  "B.Ed (Bachelor of Education)",
+  "M.A in Education",
+  "LLB (Bachelor of Legislative Law)",
+  "BA-LLB (Integrated Bachelor of Law)",
+  "LLM (Master of Laws)",
+  "Ph.D — Technical (Doctor of Philosophy)",
+  "Ph.D — Non-Technical (Doctor of Philosophy)",
+];
+
 const STORAGE_KEY = "softlab_counseling_dismissed_until";
 
 export function CareerCounselingModal({
@@ -87,8 +115,25 @@ export function CareerCounselingModal({
     setTimeout(() => setState({ success: false }), 400);
   };
 
-  // Note: Modal never opens automatically on page load per user design.
-  // It only opens when the visitor explicitly clicks a counseling CTA.
+  // Configured automatic popup behavior:
+  // Opens automatically after 10 seconds on the public website if not dismissed.
+  React.useEffect(() => {
+    if (controlledOpen !== undefined) return;
+    try {
+      const dismissedUntil = localStorage.getItem(STORAGE_KEY);
+      if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
+        return;
+      }
+    } catch {
+      // Ignore storage error
+    }
+
+    const timer = setTimeout(() => {
+      setInternalOpen(true);
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [controlledOpen]);
 
   // Listen for global window trigger events
   React.useEffect(() => {
@@ -100,8 +145,11 @@ export function CareerCounselingModal({
       setInternalOpen(true);
     };
 
-    window.addEventListener("open-counseling-modal", handleOpenEvent);
-    return () => window.removeEventListener("open-counseling-modal", handleOpenEvent);
+    const eventNames = ["open-counseling-modal", "open-career-modal", "open-enquiry-popup"];
+    eventNames.forEach((name) => window.addEventListener(name, handleOpenEvent));
+    return () => {
+      eventNames.forEach((name) => window.removeEventListener(name, handleOpenEvent));
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -280,13 +328,30 @@ export function CareerCounselingModal({
                     name="interestedCourseId"
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 text-xs bg-white font-medium"
                   >
-                    {COURSES_LIST.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
+                    {selectedCourse &&
+                      !COURSES_LIST.includes(selectedCourse) &&
+                      !UNIVERSITY_PROGRAMS_LIST.includes(selectedCourse) &&
+                      !UNIVERSITY_PROGRAMS_LIST.some((p) => selectedCourse.includes(p)) && (
+                        <option value={selectedCourse}>{selectedCourse}</option>
+                      )}
+
+                    <optgroup label="Dr. Preeti Global University Programs">
+                      {UNIVERSITY_PROGRAMS_LIST.map((prog) => (
+                        <option key={prog} value={`Dr. Preeti Global University - ${prog}`}>
+                          {prog} (DPGU)
+                        </option>
+                      ))}
+                    </optgroup>
+
+                    <optgroup label="SoftLab Global IT & Engineering Courses">
+                      {COURSES_LIST.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </optgroup>
                     <option value="Other / General Career Counseling">Other / Need Career Guidance</option>
                   </select>
                 </div>

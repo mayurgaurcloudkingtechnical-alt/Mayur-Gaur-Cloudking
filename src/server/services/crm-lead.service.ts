@@ -3,7 +3,19 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
-import { LeadSource, LeadStatus, FollowUpType, Prisma, UserRoleCode, NotificationType, NotificationPriority } from "@prisma/client";
+import {
+  LeadSource,
+  LeadStatus,
+  FollowUpType,
+  Prisma,
+  UserRoleCode,
+  NotificationType,
+  NotificationPriority,
+  FranchiseStatus,
+  FranchisePackageType,
+  FeePaymentStatus,
+  PaymentMethod,
+} from "@prisma/client";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 
 export interface FranchiseEnquiryInput {
@@ -174,6 +186,41 @@ export class CrmLeadService {
     const cleanEmail = normalizeEmail(input.email);
     const leadSource = input.source || LeadSource.WEBSITE;
 
+    let matchedCourseId: string | null = null;
+    let providerType: string = "SOFTLAB";
+    let providerName: string = "SoftLab Global";
+    let universityName: string | null = null;
+    let universityProgram: string | null = null;
+
+    if (input.interestedCourseId) {
+      const cleanSearch = input.interestedCourseId
+        .replace(/^Dr\.?\s*Preeti\s*Global\s*University\s*-\s*/i, "")
+        .trim();
+
+      const foundCourse = await db.course.findFirst({
+        where: {
+          OR: [
+            { id: input.interestedCourseId },
+            { slug: input.interestedCourseId },
+            { title: { contains: cleanSearch, mode: "insensitive" } },
+          ],
+        },
+      });
+
+      if (foundCourse) {
+        matchedCourseId = foundCourse.id;
+        providerType = foundCourse.providerType || "SOFTLAB";
+        providerName = foundCourse.providerName || "SoftLab Global";
+        universityName = foundCourse.universityName || null;
+        universityProgram = foundCourse.providerType === "UNIVERSITY" ? foundCourse.title : null;
+      } else if (input.interestedCourseId.toLowerCase().includes("preeti") || input.interestedCourseId.toLowerCase().includes("dpgu")) {
+        providerType = "UNIVERSITY";
+        providerName = "Dr. Preeti Global University";
+        universityName = "Dr. Preeti Global University";
+        universityProgram = cleanSearch;
+      }
+    }
+
     const lead = await db.lead.create({
       data: {
         fullName: input.fullName.trim(),
@@ -184,7 +231,11 @@ export class CrmLeadService {
         source: leadSource,
         campaignName: input.campaignName?.trim() || null,
         status: LeadStatus.NEW,
-        interestedCourseId: input.interestedCourseId || null,
+        interestedCourseId: matchedCourseId,
+        providerType,
+        providerName,
+        universityName,
+        universityProgram,
         notes: input.notes?.trim() || null,
       },
     });
@@ -370,6 +421,13 @@ export class CrmLeadService {
             course: { select: { id: true, title: true } },
             batch: { select: { id: true, name: true, code: true } },
             counselor: { select: { id: true, firstName: true, lastName: true } },
+            payments: {
+              where: { status: "SUCCESS" },
+              select: { id: true, receiptNumber: true, transactionReference: true, amount: true, paidAt: true, paymentMethod: true },
+            },
+            convertedStudentProfile: {
+              select: { id: true, studentId: true },
+            },
           },
         },
       },
@@ -1538,4 +1596,604 @@ ${input.notes ? `Note: ${input.notes}` : ""}`.trim(),
 
     return updated;
   }
+
+  /**
+   * Manually creates a new franchise enquiry.
+   */
+  static async createFranchiseEnquiry(
+    user: AuthenticatedUser,
+    input: {
+      fullName: string;
+      email: string;
+      phone: string;
+      city: string;
+      franchiseState: string;
+      franchisePreferredLocation?: string;
+      franchiseProfile?: string;
+      franchiseInvestmentCapacity?: string;
+      franchiseExistingInstitute?: boolean;
+      franchiseExperience?: string;
+      franchiseLaunchTimeline?: string;
+      franchiseRequirements?: string;
+      requirements?: string;
+      notes?: string;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to create franchise enquiries.",
+      });
+    }
+
+    const cleanEmail = input.email.trim().toLowerCase();
+    const cleanPhone = input.phone.replace(/[^0-9]/g, "").slice(-10);
+
+    const lead = await db.lead.create({
+      data: {
+        fullName: input.fullName.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        city: input.city.trim(),
+        franchiseState: input.franchiseState.trim(),
+        franchisePreferredLocation: input.franchisePreferredLocation?.trim() || null,
+        franchiseProfile: input.franchiseProfile?.trim() || "Entrepreneur",
+        franchiseInvestmentCapacity: input.franchiseInvestmentCapacity || "Under ₹10 Lakh",
+        franchiseExistingInstitute: !!input.franchiseExistingInstitute,
+        franchiseExperience: input.franchiseExperience?.trim() || null,
+        franchiseLaunchTimeline: input.franchiseLaunchTimeline || "Within 30 Days",
+        franchiseRequirements: (input as any).franchiseRequirements || (input as any).requirements || null,
+        source: LeadSource.FRANCHISE,
+        status: LeadStatus.NEW,
+        qualityScore: "WARM",
+        notes: input.notes?.trim() || null,
+        createdById: user.id || null,
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: lead.id,
+        userId: user.id || null,
+        activityType: "ENQUIRY_CREATED",
+        notes: `Franchise enquiry manually added by ${user.firstName} ${user.lastName}`,
+      },
+    });
+
+    await AuditService.log({
+      action: "FRANCHISE_ENQUIRY_CREATED",
+      resourceType: "Lead",
+      resourceId: lead.id,
+      actorId: user.id || null,
+      newData: { fullName: lead.fullName, phone: lead.phone, state: lead.franchiseState },
+    });
+
+    return lead;
+  }
+
+  /**
+   * Updates an existing franchise enquiry.
+   */
+  static async updateFranchiseEnquiry(
+    user: AuthenticatedUser,
+    input: {
+      id: string;
+      fullName: string;
+      email: string;
+      phone: string;
+      city: string;
+      franchiseState: string;
+      franchisePreferredLocation?: string;
+      franchiseProfile?: string;
+      franchiseInvestmentCapacity?: string;
+      franchiseExistingInstitute?: boolean;
+      franchiseExperience?: string;
+      franchiseLaunchTimeline?: string;
+      franchiseRequirements?: string;
+      requirements?: string;
+      notes?: string;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to update franchise enquiries.",
+      });
+    }
+
+    const cleanEmail = input.email.trim().toLowerCase();
+    const cleanPhone = input.phone.replace(/[^0-9]/g, "").slice(-10);
+
+    const existing = await db.lead.findUnique({ where: { id: input.id } });
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Franchise enquiry not found." });
+    }
+
+    const updated = await db.lead.update({
+      where: { id: input.id },
+      data: {
+        fullName: input.fullName.trim(),
+        email: cleanEmail,
+        phone: cleanPhone,
+        city: input.city.trim(),
+        franchiseState: input.franchiseState.trim(),
+        franchisePreferredLocation: input.franchisePreferredLocation?.trim() || null,
+        franchiseProfile: input.franchiseProfile?.trim() || existing.franchiseProfile,
+        franchiseInvestmentCapacity: input.franchiseInvestmentCapacity || existing.franchiseInvestmentCapacity,
+        franchiseExistingInstitute: input.franchiseExistingInstitute ?? existing.franchiseExistingInstitute,
+        franchiseExperience: input.franchiseExperience?.trim() || existing.franchiseExperience,
+        franchiseLaunchTimeline: input.franchiseLaunchTimeline || existing.franchiseLaunchTimeline,
+        franchiseRequirements: (input as any).franchiseRequirements !== undefined ? (input as any).franchiseRequirements : (input as any).requirements !== undefined ? (input as any).requirements : existing.franchiseRequirements,
+        notes: input.notes !== undefined ? input.notes : existing.notes,
+      },
+    });
+
+    await db.leadActivity.create({
+      data: {
+        leadId: input.id,
+        userId: user.id || null,
+        activityType: "ENQUIRY_UPDATED",
+        notes: `Franchise enquiry updated by ${user.firstName} ${user.lastName}`,
+      },
+    });
+
+    return updated;
+  }
+
+  /**
+   * Deletes a franchise enquiry if not converted.
+   */
+  static async deleteFranchiseEnquiry(user: AuthenticatedUser, id: string) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to delete franchise enquiries.",
+      });
+    }
+
+    const existing = await db.lead.findUnique({
+      where: { id },
+      include: { convertedFranchise: true },
+    });
+
+    if (!existing) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Franchise enquiry not found." });
+    }
+
+    if (existing.convertedFranchise) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "Cannot delete enquiry with an active converted franchise partner. Please manage the partner center instead.",
+      });
+    }
+
+    await db.lead.delete({ where: { id } });
+
+    await AuditService.log({
+      action: "FRANCHISE_ENQUIRY_DELETED",
+      resourceType: "Lead",
+      resourceId: id,
+      actorId: user.id || null,
+      previousData: { fullName: existing.fullName, phone: existing.phone },
+    });
+
+    return { success: true };
+  }
+
+  /**
+   * Converts a franchise lead to an official Franchise Partner Center and records a FranchiseSale.
+   */
+  static async convertFranchiseToSale(
+    user: AuthenticatedUser,
+    input: {
+      leadId: string;
+      centerName: string;
+      legalName?: string;
+      contactPerson: string;
+      email: string;
+      phone: string;
+      alternatePhone?: string;
+      address: string;
+      city: string;
+      state: string;
+      pincode: string;
+      packageType?: FranchisePackageType;
+      packageName: string;
+      totalAmountPaise: number;
+      discountAmountPaise?: number;
+      paidAmountPaise: number;
+      paymentMethod: PaymentMethod;
+      referenceNumber?: string;
+      agreementDate?: Date;
+      validUntil?: Date;
+      notes?: string;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to convert franchise sales.",
+      });
+    }
+
+    const lead = await db.lead.findUnique({
+      where: { id: input.leadId },
+      include: { convertedFranchise: true },
+    });
+
+    if (!lead) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Franchise lead not found." });
+    }
+
+    if (lead.convertedFranchise) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: `This enquiry has already been converted to center: ${lead.convertedFranchise.centerName} (${lead.convertedFranchise.code}).`,
+      });
+    }
+
+    const totalPaise = Math.max(0, input.totalAmountPaise);
+    const discountPaise = Math.max(0, input.discountAmountPaise || 0);
+    const netPaise = Math.max(0, totalPaise - discountPaise);
+    const paidPaise = Math.min(netPaise, Math.max(0, input.paidAmountPaise));
+    const pendingPaise = netPaise - paidPaise;
+    const paymentStatus: FeePaymentStatus =
+      pendingPaise === 0
+        ? FeePaymentStatus.PAID
+        : paidPaise > 0
+        ? FeePaymentStatus.PARTIAL
+        : FeePaymentStatus.PENDING;
+
+    // Generate center code: SLG-FRN-XXXX
+    const centerCount = await db.franchise.count();
+    const centerCode = `SLG-FRN-${(centerCount + 1).toString().padStart(4, "0")}`;
+
+    // Generate invoice number: SLG-INV-FRN-YYYY-XXXX
+    const year = new Date().getFullYear();
+    const saleCount = await db.franchiseSale.count();
+    const invoiceNo = `SLG-INV-FRN-${year}-${(saleCount + 1).toString().padStart(4, "0")}`;
+
+    return await db.$transaction(async (tx) => {
+      const franchise = await tx.franchise.create({
+        data: {
+          code: centerCode,
+          centerName: input.centerName.trim(),
+          legalName: input.legalName?.trim() || null,
+          contactPerson: input.contactPerson.trim(),
+          email: input.email.trim().toLowerCase(),
+          phone: input.phone.trim(),
+          alternatePhone: input.alternatePhone?.trim() || null,
+          address: input.address.trim(),
+          city: input.city.trim(),
+          state: input.state.trim(),
+          pincode: input.pincode.trim(),
+          status: FranchiseStatus.ACTIVE,
+          packageType: input.packageType || FranchisePackageType.STANDARD_ATC,
+          leadId: lead.id,
+          agreementDate: input.agreementDate ? new Date(input.agreementDate) : new Date(),
+          validUntil: input.validUntil ? new Date(input.validUntil) : null,
+          territoryNotes: input.notes?.trim() || null,
+          totalRevenue: paidPaise,
+          createdById: user.id || null,
+        },
+      });
+
+      const sale = await tx.franchiseSale.create({
+        data: {
+          saleInvoiceNo: invoiceNo,
+          franchiseId: franchise.id,
+          packageName: input.packageName.trim(),
+          totalAmount: totalPaise,
+          discountAmount: discountPaise,
+          netAmount: netPaise,
+          paidAmount: paidPaise,
+          pendingAmount: pendingPaise,
+          paymentStatus,
+          paymentMethod: input.paymentMethod,
+          referenceNumber: input.referenceNumber?.trim() || null,
+          agreementDate: input.agreementDate ? new Date(input.agreementDate) : new Date(),
+          notes: input.notes?.trim() || null,
+          convertedById: user.id || null,
+        },
+      });
+
+      await tx.lead.update({
+        where: { id: lead.id },
+        data: {
+          status: LeadStatus.AGREEMENT,
+          notes: `${lead.notes || ""}\n[Converted to Franchise Center ${franchise.centerName} (${franchise.code}) by ${user.firstName}]: Invoice ${invoiceNo}`.trim(),
+        },
+      });
+
+      await tx.leadActivity.create({
+        data: {
+          leadId: lead.id,
+          userId: user.id || null,
+          activityType: "CONVERTED_TO_FRANCHISE",
+          notes: `Converted to active Franchise Partner: ${franchise.centerName} (${franchise.code}). Sale Invoice: ${invoiceNo}, Paid: ₹${(paidPaise / 100).toLocaleString("en-IN")}`,
+        },
+      });
+
+      await AuditService.log({
+        action: "FRANCHISE_CONVERTED",
+        resourceType: "Franchise",
+        resourceId: franchise.id,
+        actorId: user.id || null,
+        newData: {
+          code: franchise.code,
+          centerName: franchise.centerName,
+          invoiceNo,
+          paidPaise,
+          pendingPaise,
+        },
+      });
+
+      return { franchise, sale };
+    }, { maxWait: 15000, timeout: 30000 });
+  }
+
+  /**
+   * Lists all converted Franchise Centers / Partners.
+   */
+  static async listFranchisePartners(
+    user: AuthenticatedUser,
+    input: {
+      search?: string;
+      status?: FranchiseStatus;
+      page?: number;
+      limit?: number;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view franchise centers.",
+      });
+    }
+
+    const page = Math.max(1, input.page || 1);
+    const limit = Math.min(100, Math.max(1, input.limit || 25));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FranchiseWhereInput = {
+      ...(input.status ? { status: input.status } : {}),
+      ...(input.search?.trim()
+        ? {
+            OR: [
+              { centerName: { contains: input.search.trim(), mode: "insensitive" } },
+              { code: { contains: input.search.trim(), mode: "insensitive" } },
+              { contactPerson: { contains: input.search.trim(), mode: "insensitive" } },
+              { email: { contains: input.search.trim(), mode: "insensitive" } },
+              { phone: { contains: input.search.trim() } },
+              { city: { contains: input.search.trim(), mode: "insensitive" } },
+              { state: { contains: input.search.trim(), mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, partners] = await Promise.all([
+      db.franchise.count({ where }),
+      db.franchise.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          createdBy: { select: { id: true, firstName: true, lastName: true } },
+          sales: { orderBy: { createdAt: "desc" } },
+          lead: { select: { id: true, fullName: true, phone: true } },
+        },
+      }),
+    ]);
+
+    return {
+      partners,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Lists all franchise sales transactions / invoices.
+   */
+  static async listFranchiseSales(
+    user: AuthenticatedUser,
+    input: {
+      search?: string;
+      paymentStatus?: FeePaymentStatus;
+      page?: number;
+      limit?: number;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view franchise sales.",
+      });
+    }
+
+    const page = Math.max(1, input.page || 1);
+    const limit = Math.min(100, Math.max(1, input.limit || 25));
+    const skip = (page - 1) * limit;
+
+    const where: Prisma.FranchiseSaleWhereInput = {
+      ...(input.paymentStatus ? { paymentStatus: input.paymentStatus } : {}),
+      ...(input.search?.trim()
+        ? {
+            OR: [
+              { saleInvoiceNo: { contains: input.search.trim(), mode: "insensitive" } },
+              { packageName: { contains: input.search.trim(), mode: "insensitive" } },
+              { franchise: { centerName: { contains: input.search.trim(), mode: "insensitive" } } },
+              { franchise: { code: { contains: input.search.trim(), mode: "insensitive" } } },
+              { referenceNumber: { contains: input.search.trim(), mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    };
+
+    const [total, sales] = await Promise.all([
+      db.franchiseSale.count({ where }),
+      db.franchiseSale.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          franchise: true,
+          convertedBy: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      }),
+    ]);
+
+    return {
+      sales,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * Returns aggregated franchise financial overview.
+   */
+  static async getFranchiseSalesOverview(user: AuthenticatedUser) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to view franchise financial overview.",
+      });
+    }
+
+    const [totalCenters, activeCenters, salesAgg] = await Promise.all([
+      db.franchise.count(),
+      db.franchise.count({ where: { status: FranchiseStatus.ACTIVE } }),
+      db.franchiseSale.aggregate({
+        _count: { id: true },
+        _sum: {
+          totalAmount: true,
+          discountAmount: true,
+          netAmount: true,
+          paidAmount: true,
+          pendingAmount: true,
+        },
+      }),
+    ]);
+
+    return {
+      totalCenters,
+      activeCenters,
+      totalSalesCount: salesAgg._count.id || 0,
+      totalGrossPaise: salesAgg._sum.totalAmount || 0,
+      totalDiscountPaise: salesAgg._sum.discountAmount || 0,
+      totalNetPaise: salesAgg._sum.netAmount || 0,
+      totalCollectedPaise: salesAgg._sum.paidAmount || 0,
+      totalPendingPaise: salesAgg._sum.pendingAmount || 0,
+    };
+  }
+
+  /**
+   * Updates an existing franchise sale record (amounts, payment status, payment mode, reference, notes).
+   */
+  static async updateFranchiseSale(
+    user: AuthenticatedUser,
+    input: {
+      saleId: string;
+      packageName?: string;
+      totalAmount?: number;
+      discountAmount?: number;
+      paidAmount?: number;
+      pendingAmount?: number;
+      paymentStatus?: FeePaymentStatus;
+      paymentMethod?: PaymentMethod;
+      referenceNumber?: string;
+      notes?: string;
+    }
+  ) {
+    if (!canManageFranchise(user)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack permission to update franchise sales.",
+      });
+    }
+
+    const sale = await db.franchiseSale.findUnique({
+      where: { id: input.saleId },
+      include: { franchise: true },
+    });
+
+    if (!sale) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: "Franchise sale invoice not found.",
+      });
+    }
+
+    const totalAmount = input.totalAmount !== undefined ? input.totalAmount : sale.totalAmount;
+    const discountAmount = input.discountAmount !== undefined ? input.discountAmount : sale.discountAmount;
+    const netAmount = Math.max(0, totalAmount - discountAmount);
+    const paidAmount = input.paidAmount !== undefined ? input.paidAmount : sale.paidAmount;
+    const pendingAmount = input.pendingAmount !== undefined ? input.pendingAmount : Math.max(0, netAmount - paidAmount);
+
+    let paymentStatus = input.paymentStatus || sale.paymentStatus;
+    if (input.paidAmount !== undefined && !input.paymentStatus) {
+      if (paidAmount >= netAmount && netAmount > 0) {
+        paymentStatus = FeePaymentStatus.PAID;
+      } else if (paidAmount > 0) {
+        paymentStatus = FeePaymentStatus.PARTIAL;
+      } else {
+        paymentStatus = FeePaymentStatus.PENDING;
+      }
+    }
+
+    return await db.$transaction(async (tx) => {
+      const updatedSale = await tx.franchiseSale.update({
+        where: { id: input.saleId },
+        data: {
+          packageName: input.packageName ?? sale.packageName,
+          totalAmount,
+          discountAmount,
+          netAmount,
+          paidAmount,
+          pendingAmount,
+          paymentStatus,
+          paymentMethod: input.paymentMethod ?? sale.paymentMethod,
+          referenceNumber: input.referenceNumber !== undefined ? input.referenceNumber : sale.referenceNumber,
+          notes: input.notes !== undefined ? input.notes : sale.notes,
+        },
+        include: {
+          franchise: { select: { id: true, code: true, centerName: true } },
+        },
+      });
+
+      // Recalculate franchise total revenue
+      const totalRev = await tx.franchiseSale.aggregate({
+        where: { franchiseId: sale.franchiseId },
+        _sum: { paidAmount: true },
+      });
+      await tx.franchise.update({
+        where: { id: sale.franchiseId },
+        data: { totalRevenue: totalRev._sum.paidAmount || 0 },
+      });
+
+      await AuditService.log({
+        actorId: user.id,
+        action: "FRANCHISE_SALE_UPDATED",
+        resourceType: "FranchiseSale",
+        resourceId: sale.id,
+        newData: {
+          totalAmount,
+          paidAmount,
+          pendingAmount,
+          paymentStatus,
+        },
+      });
+
+      return updatedSale;
+    }, { maxWait: 15000, timeout: 30000 });
+  }
 }
+

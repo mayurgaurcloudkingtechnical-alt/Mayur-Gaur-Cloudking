@@ -21,12 +21,17 @@ import {
   Plus,
   Users,
   ChevronRight,
+  Printer,
 } from "lucide-react";
 import { FeeStructuresTable } from "./fee-structures-table";
+import { PaymentsTable } from "./payments-table";
 import { RecordPaymentDialog } from "./record-payment-dialog";
+import { GenerateReceiptDialog } from "./generate-receipt-dialog";
 
 export function FinanceOverviewView() {
   const [academicYear, setAcademicYear] = useState("2025-26");
+  const [activeTab, setActiveTab] = useState<"fees" | "payments">("fees");
+  const [generateReceiptOpen, setGenerateReceiptOpen] = useState(false);
   const [selectedFeeStructure, setSelectedFeeStructure] = useState<{
     id: string;
     studentName: string;
@@ -67,6 +72,14 @@ export function FinanceOverviewView() {
               <option value="2023-24">2023 - 2024</option>
             </select>
           </div>
+
+          <Button
+            size="sm"
+            onClick={() => setGenerateReceiptOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3.5 py-2 rounded shadow-sm uppercase tracking-wide transition-colors h-8"
+          >
+            <Printer className="w-3.5 h-3.5" /> GENERATE RECEIPT
+          </Button>
 
           <a
             href="#fee-ledger"
@@ -340,13 +353,47 @@ export function FinanceOverviewView() {
         </div>
       </div>
 
-      {/* Comprehensive Fee Structures Ledger Section */}
-      <div id="fee-ledger" className="space-y-3 pt-2">
-        <div>
-          <h3 className="text-base font-bold text-slate-900">Active Student Fee Structures</h3>
-          <p className="text-xs text-slate-500">Manage enrollment fee structures, installments, and offline collections</p>
+      {/* Comprehensive Fee Structures & Payment Ledger Section */}
+      <div id="fee-ledger" className="space-y-4 pt-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+          <div>
+            <h3 className="text-base font-bold text-slate-900">
+              {activeTab === "fees" ? "Student Fee Structures & Plans" : "Payment Transactions & Receipts Ledger"}
+            </h3>
+            <p className="text-xs text-slate-500">
+              {activeTab === "fees"
+                ? "Manage course fees, discounts, customizable EMI schedules, and offline payment collections"
+                : "Audit-compliant ledger of verified student fee collections with printable official receipts"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+            <button
+              type="button"
+              onClick={() => setActiveTab("fees")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                activeTab === "fees"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Fee Structures & Dues
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("payments")}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
+                activeTab === "payments"
+                  ? "bg-white text-slate-900 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Payment & Receipt Ledger
+            </button>
+          </div>
         </div>
-        <FeeStructuresTable />
+
+        {activeTab === "fees" ? <FeeStructuresTable /> : <PaymentsTable />}
       </div>
 
       {/* Record Payment Dialog */}
@@ -363,6 +410,13 @@ export function FinanceOverviewView() {
             refetch();
             setSelectedFeeStructure(null);
           }}
+        />
+      )}
+      {/* Generate Receipt Dialog */}
+      {generateReceiptOpen && (
+        <GenerateReceiptDialog
+          open={generateReceiptOpen}
+          onOpenChange={setGenerateReceiptOpen}
         />
       )}
     </div>

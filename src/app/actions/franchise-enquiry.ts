@@ -10,20 +10,20 @@ const franchiseEnquirySchema = z.object({
   email: z.string().email("Please enter a valid email address"),
   city: z.string().min(2, "City is required").max(100),
   state: z.string().min(2, "State is required").max(100),
-  preferredLocation: z.string().max(150).optional(),
+  preferredLocation: z.string().max(150).nullable().optional(),
   applicantProfile: z.string().min(2, "Please select your professional profile"),
   investmentCapacity: z.string().min(2, "Please select investment capacity"),
-  existingInstitute: z.string().optional(),
-  experience: z.string().max(500).optional(),
-  launchTimeline: z.string().max(100).optional(),
-  requirements: z.string().max(1000).optional(),
-  notes: z.string().max(1000).optional(),
-  campaignName: z.string().optional(),
-  adsetName: z.string().optional(),
-  adCreativeName: z.string().optional(),
-  keywordSearch: z.string().optional(),
-  landingPageUrl: z.string().optional(),
-  honeypot: z.string().optional(),
+  existingInstitute: z.string().nullable().optional(),
+  experience: z.string().max(500).nullable().optional(),
+  launchTimeline: z.string().max(100).nullable().optional(),
+  requirements: z.string().max(1000).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+  campaignName: z.string().nullable().optional(),
+  adsetName: z.string().nullable().optional(),
+  adCreativeName: z.string().nullable().optional(),
+  keywordSearch: z.string().nullable().optional(),
+  landingPageUrl: z.string().nullable().optional(),
+  honeypot: z.string().nullable().optional(),
 });
 
 export type FranchiseEnquiryState = {
@@ -71,10 +71,16 @@ export async function submitFranchiseEnquiryAction(
   }
 
   try {
-    const headersList = headers();
-    const forwardedFor = headersList.get("x-forwarded-for");
-    const ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
-    const userAgent = headersList.get("user-agent") || "unknown";
+    let ipAddress = "127.0.0.1";
+    let userAgent = "unknown";
+    try {
+      const headersList = headers();
+      const forwardedFor = headersList.get("x-forwarded-for");
+      ipAddress = forwardedFor ? forwardedFor.split(",")[0].trim() : "127.0.0.1";
+      userAgent = headersList.get("user-agent") || "unknown";
+    } catch {
+      // Fallback if headers() context unavailable
+    }
 
     const result = await CrmLeadService.submitFranchiseEnquiry(
       {

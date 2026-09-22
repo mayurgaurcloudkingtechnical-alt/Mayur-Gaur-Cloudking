@@ -251,11 +251,20 @@ export function PublicEnquiryForm({
               className="flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <option value="">-- Select a program (or General Inquiry) --</option>
-              {courses.map((c: PublicCourseItem) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
+              <optgroup label="Dr. Preeti Global University Programs">
+                {courses.filter((c: any) => c.providerType === "UNIVERSITY").map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="SoftLab Global IT Courses">
+                {courses.filter((c: any) => c.providerType !== "UNIVERSITY").map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           </div>
 

@@ -374,7 +374,7 @@ export const curriculumRouter = router({
         }
 
         return lesson;
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.session.user.id,

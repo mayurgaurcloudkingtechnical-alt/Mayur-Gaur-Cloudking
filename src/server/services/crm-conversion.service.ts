@@ -51,14 +51,15 @@ export class CrmConversionService {
     }
 
     // Process conversion in an atomic database transaction
+    const tempPassword = randomBytes(16).toString("hex");
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
     return await db.$transaction(async (tx) => {
       let targetUser = await tx.user.findUnique({
         where: { email: app.applicantEmail },
       });
 
       if (!targetUser) {
-        const tempPassword = randomBytes(16).toString("hex");
-        const passwordHash = await bcrypt.hash(tempPassword, 10);
         const nameParts = app.applicantName.trim().split(" ");
         const firstName = nameParts[0] || "Student";
         const lastName = nameParts.slice(1).join(" ") || "Learner";
@@ -188,6 +189,6 @@ export class CrmConversionService {
         studentProfile,
         enrollment,
       };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 }

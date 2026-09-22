@@ -1,4 +1,4 @@
-﻿import { requireRole } from "@/server/auth/rbac";
+import { requireRole } from "@/server/auth/rbac";
 import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -12,6 +12,7 @@ export default async function AdminFinancePage() {
     UserRoleCode.ADMIN,
     UserRoleCode.MANAGER,
     UserRoleCode.ACCOUNTANT,
+    UserRoleCode.COUNSELOR,
   ]);
 
   return (

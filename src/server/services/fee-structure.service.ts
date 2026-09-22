@@ -21,9 +21,24 @@ export interface ListFeeStructuresInput {
   paymentStatus?: FeePaymentStatus;
   courseId?: string;
   batchId?: string;
+  studentId?: string;
   search?: string;
   page?: number;
   limit?: number;
+}
+
+export interface UpdateFeeStructureInput {
+  feeStructureId: string;
+  totalCourseFee?: number; // In Paise
+  discountAmount?: number; // In Paise
+  scholarshipAmount?: number; // In Paise
+  remarks?: string;
+  installments?: Array<{
+    installmentNumber?: number;
+    amount: number; // In Paise
+    dueDate: Date | string;
+    notes?: string;
+  }>;
 }
 
 export class FeeStructureService {
@@ -172,7 +187,7 @@ export class FeeStructureService {
           course: { select: { id: true, title: true } },
         },
       });
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   /**
@@ -212,7 +227,9 @@ export class FeeStructureService {
       user.roleCode === "SUPER_ADMIN" ||
       user.roleCode === "DIRECTOR" ||
       user.roleCode === "ADMIN" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "COUNSELOR" ||
+      user.roleCode === "MANAGER";
 
     if (!canView) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to view institutional fee records." });
@@ -229,6 +246,7 @@ export class FeeStructureService {
     if (input.paymentStatus) where.paymentStatus = input.paymentStatus;
     if (input.courseId) where.courseId = input.courseId;
     if (input.batchId) where.batchId = input.batchId;
+    if (input.studentId) where.studentId = input.studentId;
 
     if (input.search) {
       const q = input.search.trim();
@@ -248,15 +266,168 @@ export class FeeStructureService {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
-          course: { select: { id: true, title: true } },
+          student: { include: { user: { select: { firstName: true, lastName: true, email: true, phone: true } } } },
+          course: { select: { id: true, title: true, baseFee: true } },
           batch: { select: { id: true, code: true, name: true } },
+          installments: { orderBy: { installmentNumber: "asc" } },
+          payments: {
+            where: { status: "SUCCESS" },
+            orderBy: { createdAt: "desc" },
+            select: {
+              id: true,
+              amount: true,
+              receiptNumber: true,
+              transactionReference: true,
+              paymentMethod: true,
+              paymentDate: true,
+              remarks: true,
+              status: true,
+            },
+          },
           _count: { select: { installments: true, payments: true } },
         },
       }),
     ]);
 
     return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+  }
+
+  /**
+   * Updates an existing fee structure atomically, recalculating net payable and outstanding balance.
+   */
+  static async updateFeeStructure(user: AuthenticatedUser, input: UpdateFeeStructureInput) {
+    const canEdit =
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "COUNSELOR" ||
+      user.roleCode === "MANAGER" ||
+      hasPermission(user.permissions, "payments:record_offline") ||
+      hasPermission(user.permissions, "admissions:create");
+
+    if (!canEdit) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You lack authority to edit student fee structures.",
+      });
+    }
+
+    const fee = await db.feeStructure.findUnique({
+      where: { id: input.feeStructureId },
+      include: {
+        installments: { orderBy: { installmentNumber: "asc" } },
+        payments: { where: { status: "SUCCESS" } },
+      },
+    });
+
+    if (!fee) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Fee structure '${input.feeStructureId}' not found.`,
+      });
+    }
+
+    const newTotalCourseFee =
+      input.totalCourseFee !== undefined ? Math.floor(input.totalCourseFee) : fee.totalCourseFee;
+    const newDiscount =
+      input.discountAmount !== undefined ? Math.floor(input.discountAmount) : fee.discountAmount;
+    const newScholarship =
+      input.scholarshipAmount !== undefined ? Math.floor(input.scholarshipAmount) : fee.scholarshipAmount;
+    const newRemarks = input.remarks !== undefined ? input.remarks : fee.remarks;
+
+    const newNetPayable = Math.max(0, newTotalCourseFee - newDiscount - newScholarship);
+
+    // Sum all recorded successful payments
+    const totalPaid = fee.payments.reduce((acc, p) => acc + p.amount, 0);
+    const newPending = Math.max(0, newNetPayable - totalPaid);
+    const newStatus =
+      newPending === 0
+        ? FeePaymentStatus.PAID
+        : totalPaid > 0
+        ? FeePaymentStatus.PARTIAL
+        : FeePaymentStatus.PENDING;
+
+    return await db.$transaction(async (tx) => {
+      // 1. Recreate/adjust installments if provided
+      if (input.installments && input.installments.length > 0) {
+        await tx.feeInstallment.deleteMany({
+          where: { feeStructureId: fee.id },
+        });
+
+        let remainingPaid = totalPaid;
+        for (let i = 0; i < input.installments.length; i++) {
+          const inst = input.installments[i];
+          const instAmount = Math.floor(inst.amount);
+          let instPaid = 0;
+          let instStatus: any = "PENDING";
+
+          if (remainingPaid > 0) {
+            if (remainingPaid >= instAmount) {
+              instPaid = instAmount;
+              instStatus = "PAID";
+              remainingPaid -= instAmount;
+            } else {
+              instPaid = remainingPaid;
+              instStatus = "PARTIAL";
+              remainingPaid = 0;
+            }
+          }
+
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: fee.id,
+              installmentNumber: inst.installmentNumber || i + 1,
+              amount: instAmount,
+              paidAmount: instPaid,
+              dueDate: new Date(inst.dueDate),
+              status: instStatus,
+              paidAt: instPaid > 0 ? new Date() : null,
+              notes: inst.notes || (i === 0 && instPaid > 0 ? "Initial installment payment" : null),
+            },
+          });
+        }
+      }
+
+      // 2. Update FeeStructure record
+      const updated = await tx.feeStructure.update({
+        where: { id: fee.id },
+        data: {
+          totalCourseFee: newTotalCourseFee,
+          discountAmount: newDiscount,
+          scholarshipAmount: newScholarship,
+          netPayableAmount: newNetPayable,
+          paidAmount: totalPaid,
+          pendingAmount: newPending,
+          paymentStatus: newStatus,
+          remarks: newRemarks,
+        },
+        include: {
+          student: { include: { user: true } },
+          course: true,
+          installments: { orderBy: { installmentNumber: "asc" } },
+          payments: { where: { status: "SUCCESS" } },
+        },
+      });
+
+      // 3. Audit log
+      await AuditService.log({
+        actorId: user.id,
+        action: "FEE_STRUCTURE_UPDATED",
+        resourceType: "FeeStructure",
+        resourceId: fee.id,
+        newData: {
+          totalCourseFee: newTotalCourseFee,
+          discountAmount: newDiscount,
+          netPayableAmount: newNetPayable,
+          paidAmount: totalPaid,
+          pendingAmount: newPending,
+          paymentStatus: newStatus,
+        },
+      });
+
+      return updated;
+    });
   }
 
   /**

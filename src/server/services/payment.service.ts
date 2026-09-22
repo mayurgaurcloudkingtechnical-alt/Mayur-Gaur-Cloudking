@@ -1,6 +1,7 @@
 import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { AuditService } from "@/server/services/audit.service";
+import { ReceiptService } from "@/server/services/receipt.service";
 import { TRPCError } from "@trpc/server";
 import {
   PaymentMethod,
@@ -18,6 +19,8 @@ export interface RecordOfflinePaymentInput {
   providerReference?: string; // Bank Ref / UTR / Cheque Number
   remarks?: string;
   paymentDate?: Date;
+  receiptNumber?: string;
+  isHistorical?: boolean;
 }
 
 export interface ListPaymentsInput {
@@ -96,6 +99,11 @@ export class PaymentService {
     }
 
     const ref = await this.generateTransactionReference();
+    const receiptNo = input.receiptNumber?.trim() || (await ReceiptService.generateReceiptNumber());
+    const payDate = input.paymentDate ? new Date(input.paymentDate) : new Date();
+    const isHist =
+      Boolean(input.isHistorical) ||
+      (input.paymentDate ? new Date(input.paymentDate).getFullYear() < new Date().getFullYear() : false);
 
     return await db.$transaction(async (tx) => {
       // 1. Create transaction record
@@ -107,9 +115,12 @@ export class PaymentService {
           studentId: fee.studentId,
           enrollmentId: fee.enrollmentId,
           amount: payAmount,
-          paymentDate: input.paymentDate ? new Date(input.paymentDate) : new Date(),
+          paymentDate: payDate,
+          paidAt: payDate,
           paymentMethod: input.paymentMethod,
           status: PaymentTransactionStatus.SUCCESS,
+          receiptNumber: receiptNo,
+          isHistorical: isHist,
           providerReference: input.providerReference?.trim() || null,
           remarks: input.remarks?.trim() || null,
           receivedById: user.id,
@@ -203,7 +214,7 @@ export class PaymentService {
         payment,
         feeStructure: updatedFee,
       };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   /**
@@ -287,4 +298,132 @@ export class PaymentService {
 
     return payment;
   }
+
+  /**
+   * Updates an existing payment transaction record (amount, payment method, reference, remarks, receipt number, payment date).
+   * Automatically recalculates fee structure paid/pending balances and installment schedules if amount changes.
+   */
+  static async updatePayment(
+    user: AuthenticatedUser,
+    input: {
+      paymentId: string;
+      amount?: number; // In Paise
+      paymentMethod?: PaymentMethod;
+      providerReference?: string;
+      remarks?: string;
+      receiptNumber?: string;
+      paymentDate?: Date;
+    }
+  ) {
+    const payment = await db.paymentTransaction.findUnique({
+      where: { id: input.paymentId },
+      include: {
+        student: true,
+        feeStructure: {
+          include: {
+            installments: { orderBy: { installmentNumber: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Payment transaction not found." });
+    }
+
+    const payDate = input.paymentDate ? new Date(input.paymentDate) : payment.paymentDate;
+    const newAmount = input.amount !== undefined ? Math.floor(input.amount) : payment.amount;
+
+    return await db.$transaction(async (tx) => {
+      const updated = await tx.paymentTransaction.update({
+        where: { id: input.paymentId },
+        data: {
+          amount: newAmount,
+          paymentMethod: input.paymentMethod ?? payment.paymentMethod,
+          providerReference: input.providerReference !== undefined ? input.providerReference : payment.providerReference,
+          remarks: input.remarks !== undefined ? input.remarks : payment.remarks,
+          receiptNumber: input.receiptNumber !== undefined ? input.receiptNumber : payment.receiptNumber,
+          paymentDate: payDate,
+          paidAt: payDate,
+        },
+      });
+
+      // Recalculate fee structure if associated
+      if (payment.feeStructureId) {
+        const allPayments = await tx.paymentTransaction.findMany({
+          where: { feeStructureId: payment.feeStructureId, status: PaymentTransactionStatus.SUCCESS },
+        });
+
+        const totalPaid = allPayments.reduce((acc, p) => acc + p.amount, 0);
+
+        const fee = await tx.feeStructure.findUnique({
+          where: { id: payment.feeStructureId },
+          include: { installments: { orderBy: { installmentNumber: "asc" } } },
+        });
+
+        if (fee) {
+          const newPending = Math.max(0, fee.netPayableAmount - totalPaid);
+          const newStatus =
+            newPending === 0
+              ? FeePaymentStatus.PAID
+              : totalPaid > 0
+              ? FeePaymentStatus.PARTIAL
+              : FeePaymentStatus.PENDING;
+
+          await tx.feeStructure.update({
+            where: { id: fee.id },
+            data: {
+              paidAmount: totalPaid,
+              pendingAmount: newPending,
+              paymentStatus: newStatus,
+            },
+          });
+
+          // Re-allocate installments if present
+          if (fee.installments.length > 0) {
+            let remaining = totalPaid;
+            for (const inst of fee.installments) {
+              let instPaid = 0;
+              let instStatus: InstallmentStatus = InstallmentStatus.PENDING;
+              if (remaining > 0) {
+                if (remaining >= inst.amount) {
+                  instPaid = inst.amount;
+                  instStatus = InstallmentStatus.PAID;
+                  remaining -= inst.amount;
+                } else {
+                  instPaid = remaining;
+                  instStatus = InstallmentStatus.PARTIAL;
+                  remaining = 0;
+                }
+              }
+              await tx.feeInstallment.update({
+                where: { id: inst.id },
+                data: {
+                  paidAmount: instPaid,
+                  status: instStatus,
+                  paidAt: instStatus === InstallmentStatus.PAID ? new Date() : null,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      await AuditService.log({
+        actorId: user.id,
+        action: "PAYMENT_RECORD_UPDATED",
+        resourceType: "PaymentTransaction",
+        resourceId: payment.id,
+        newData: {
+          amount: newAmount,
+          paymentMethod: updated.paymentMethod,
+          receiptNumber: updated.receiptNumber,
+          paymentDate: payDate,
+        },
+      });
+
+      return updated;
+    });
+  }
 }
+

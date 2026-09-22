@@ -28,6 +28,7 @@ enum UserRoleCode {
   PLACEMENT_OFFICER
   STUDENT
   MARKETING
+  FRANCHISE_PARTNER
 }
 
 enum UserStatus {
@@ -278,6 +279,10 @@ model User {
   // Audit & BI relations
   generatedAuditReports AuditReportExport[]    @relation("AuditReportGenerator")
 
+  // Franchise relations
+  createdFranchises      Franchise[]             @relation("FranchiseCreator")
+  convertedFranchiseSales FranchiseSale[]        @relation("FranchiseSaleConverter")
+
   // Universal In-App Notifications
   notifications         Notification[]
 
@@ -325,6 +330,30 @@ model StudentProfile {
   highestDegree String?
   guardianName  String?
   guardianPhone String?
+  fatherName    String?
+  motherName    String?
+  whatsappNumber String?
+  alternatePhone String?
+  schoolOrCollege String?
+  passingYear   String?
+  percentageOrCgpa String?
+  center        String?   @default("SOFTLAB GLOBAL Main Campus, Prayagraj")
+
+  // University Partner Programs Fields (Phases 46, 49)
+  educationProvider            String?   @default("SoftLab Global") // "SoftLab Global" | "Dr. Preeti Global University"
+  universityName               String?   // "Dr. Preeti Global University"
+  universityProgram            String?   // e.g. "B.Tech Computer Science"
+  universitySpecialization     String?   // e.g. "Computer Science & Engineering"
+  universityRegistrationNumber String?   // Added later by authorized staff
+  universityStudentId          String?   // Added later by authorized staff
+  universityPortalStatus       String?   @default("PENDING") // "PENDING" | "REGISTERED" | "ACTIVE"
+  universityAdmissionSession   String?   @default("2026")
+
+  // Historical & Document Tracking
+  isHistorical                 Boolean   @default(false)
+  admissionDate                DateTime?
+  photoUrl                     String?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -337,6 +366,8 @@ model StudentProfile {
   certificates         Certificate[]
   placementProfile     StudentPlacementProfile?
   jobApplications      PlacementApplication[]
+  idCard               StudentIdCard?
+  documents            StudentDocument[]
 
   @@index([studentId])
   @@map("student_profiles")
@@ -373,6 +404,22 @@ model Course {
   eligibility   String?       @default("Open to all learners and graduates")
   status        ContentStatus @default(DRAFT)
   sortOrder     Int           @default(0)
+
+  // University Partner Programs Fields (Phases 38, 39, 40)
+  providerType      String?       @default("SOFTLAB") // "SOFTLAB" | "UNIVERSITY"
+  providerName      String?       @default("SoftLab Global") // "SoftLab Global" | "Dr. Preeti Global University"
+  universityName    String?       // "Dr. Preeti Global University"
+  durationYears     String?       // "4 Years", "3/2 Years", "2 Years", "1 Year", etc.
+  specialization    String?       // e.g. "Civil, CS, ME, EC, EE, IT"
+  specializations   String[]      @default([])
+  programCategory   String?       // "DIPLOMA", "UNDERGRADUATE", "POSTGRADUATE", "PROFESSIONAL", "LAW", "RESEARCH"
+  admissionSession  String?       @default("2026")
+  registrationFee   Int?          @default(0) // in Paise (e.g. ₹1,000 = 100,000)
+  examinationFee    Int?          @default(0) // in Paise (e.g. ₹1,000 = 100,000)
+  universityFeeYear Int?          @default(0) // in Paise (Annual fee)
+  lateralEntryFee   Int?          @default(0) // in Paise
+  isLateralEligible Boolean       @default(false)
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   deletedAt     DateTime?
@@ -696,6 +743,12 @@ model Lead {
   franchiseExperience         String?
   franchiseLaunchTimeline     String?
   franchiseRequirements       String?      @db.Text
+  // University Partner Programs Lead Ingestion (Phase 48)
+  providerType                String?      @default("SOFTLAB") // "SOFTLAB" | "UNIVERSITY"
+  providerName                String?      @default("SoftLab Global")
+  universityName              String?      // "Dr. Preeti Global University"
+  universityProgram           String?
+  universitySpecialization    String?
 
   createdById         String?
   createdBy           User?        @relation("LeadCreator", fields: [createdById], references: [id], onDelete: SetNull)
@@ -705,6 +758,7 @@ model Lead {
   followUps           FollowUpHistory[]
   activities          LeadActivity[]
   applications        AdmissionApplication[]
+  convertedFranchise  Franchise?             @relation("LeadFranchise")
 
   @@index([email])
   @@index([phone])
@@ -777,7 +831,32 @@ model AdmissionApplication {
   state                     String?
   pincode                   String?
   highestQualification      String?
+  fatherName                String?
+  motherName                String?
+  whatsappNumber            String?
+  alternatePhone            String?
+  schoolOrCollege           String?
+  passingYear               String?
+  percentageOrCgpa          String?
+  deliveryMode              DeliveryMode?    @default(OFFLINE)
+  center                    String?          @default("SOFTLAB GLOBAL Main Campus, Prayagraj")
+  photoUrl                  String?
   decisionReason            String?          @db.Text
+
+  // University Partner Programs Fields (Phases 46, 48, 50)
+  providerType                 String?          @default("SOFTLAB") // "SOFTLAB" | "UNIVERSITY"
+  providerName                 String?          @default("SoftLab Global")
+  universityName               String?          // "Dr. Preeti Global University"
+  universityProgram            String?          // e.g. "B.Tech", "MBA"
+  universitySpecialization     String?          // Branch/Specialization
+  admissionSession             String?          @default("2026")
+  universityRegistrationFee    Int?             @default(0) // In Paise
+  universityExaminationFee     Int?             @default(0) // In Paise
+  universityFee                Int?             @default(0) // In Paise
+  universityRegistrationNumber String?
+  universityStudentId          String?
+  universityPortalStatus       String?          @default("PENDING")
+
   convertedStudentProfileId String?          @unique
   convertedStudentProfile   StudentProfile?  @relation(fields: [convertedStudentProfileId], references: [id], onDelete: SetNull)
   payments                  PaymentTransaction[]
@@ -809,6 +888,13 @@ model FeeStructure {
   batch              Batch?             @relation(fields: [batchId], references: [id], onDelete: SetNull)
   totalCourseFee     Int                // In Paise (e.g. 5000000 = ₹50,000)
   registrationFee    Int                @default(0) // In Paise
+
+  // University Fee Breakdown (Phases 50, 51)
+  examinationFee     Int                @default(0) // In Paise
+  universityFee      Int                @default(0) // In Paise
+  softlabServiceFee  Int                @default(0) // In Paise
+  otherCharges       Int                @default(0) // In Paise
+
   discountAmount     Int                @default(0) // In Paise
   scholarshipAmount  Int                @default(0) // In Paise
   netPayableAmount   Int                // In Paise (totalCourseFee + registrationFee - discountAmount - scholarshipAmount)
@@ -886,6 +972,7 @@ model PaymentTransaction {
   admission            AdmissionApplication?   @relation(fields: [admissionId], references: [id], onDelete: SetNull)
   paidAt               DateTime?
   metadata             Json?
+  isHistorical         Boolean                  @default(false)
   createdAt            DateTime                 @default(now())
   updatedAt            DateTime                 @updatedAt
 
@@ -1912,6 +1999,160 @@ model SystemSetting {
   @@map("system_settings")
 }
 
+// ==============================================================================
+// 16. STUDENT ID CARDS & EMAIL COMMUNICATION INFRASTRUCTURE
+// ==============================================================================
 
+model StudentIdCard {
+  id          String         @id @default(cuid())
+  studentId   String         @unique
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  cardNumber  String         @unique // e.g. "SLG-IDC-2026-00001"
+  issuedAt    DateTime       @default(now())
+  validUntil  DateTime
+  qrCodeData  String?        @db.Text
+  status      String         @default("ACTIVE") // ACTIVE, EXPIRED, BLOCKED
+
+  // University Partner Program ID Details
+  educationProvider String?    @default("SoftLab Global")
+  universityName    String?
+  universityProgram String?
+
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@map("student_id_cards")
+}
+
+model StudentDocument {
+  id            String         @id @default(cuid())
+  studentId     String
+  student       StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  title         String
+  documentType  String         // "AADHAAR", "MARKSHEET_10TH", "MARKSHEET_12TH", "GRADUATION", "TRANSFER_CERTIFICATE", "OTHER"
+  documentUrl   String         @db.Text
+  fileName      String?
+  fileSizeBytes Int?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([studentId])
+  @@map("student_documents")
+}
+
+model EmailTemplate {
+  id          String     @id @default(cuid())
+  code        String     @unique // "ADMISSION_CONFIRMATION", "STUDENT_CREDENTIALS", "STAFF_CREDENTIALS", "FEE_RECEIPT", "PASSWORD_RESET"
+  name        String
+  subject     String
+  bodyHtml    String     @db.Text
+  bodyText    String?    @db.Text
+  senderName  String     @default("SOFTLAB GLOBAL")
+  signature   String?    @db.Text
+  variables   String[]   @default([])
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  logs        EmailLog[]
+
+  @@map("email_templates")
+}
+
+model EmailLog {
+  id          String         @id @default(cuid())
+  templateId  String?
+  template    EmailTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  recipient   String
+  subject     String
+  status      String         // "SENT", "FAILED", "QUEUED"
+  error       String?        @db.Text
+  metadata    Json?
+  sentAt      DateTime       @default(now())
+
+  @@index([recipient])
+  @@index([status])
+  @@index([sentAt])
+  @@map("email_logs")
+}
+
+// ==============================================================================
+// 17. FRANCHISE MANAGEMENT & EXPANSION SALES PIPELINE
+// ==============================================================================
+
+enum FranchiseStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  TERMINATED
+}
+
+enum FranchisePackageType {
+  STANDARD_ATC
+  PREMIUM_HUB
+  DISTRICT_PARTNER
+  STATE_MASTER
+  CUSTOM
+}
+
+model Franchise {
+  id              String               @id @default(cuid())
+  code            String               @unique // e.g. "SLG-FRN-0001"
+  centerName      String
+  legalName       String?
+  contactPerson   String
+  email           String
+  phone           String
+  alternatePhone  String?
+  address         String
+  city            String
+  state           String
+  pincode         String
+  status          FranchiseStatus      @default(ACTIVE)
+  packageType     FranchisePackageType @default(STANDARD_ATC)
+  leadId          String?              @unique
+  lead            Lead?                @relation("LeadFranchise", fields: [leadId], references: [id], onDelete: SetNull)
+  agreementDate   DateTime?
+  validUntil      DateTime?
+  territoryNotes  String?              @db.Text
+  totalRevenue    Int                  @default(0) // In Paise
+  createdById     String?
+  createdBy       User?                @relation("FranchiseCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+
+  sales           FranchiseSale[]
+
+  @@index([city])
+  @@index([state])
+  @@index([status])
+  @@map("franchises")
+}
+
+model FranchiseSale {
+  id               String           @id @default(cuid())
+  saleInvoiceNo    String           @unique // e.g. "SLG-INV-FRN-2026-0001"
+  franchiseId      String
+  franchise        Franchise        @relation(fields: [franchiseId], references: [id], onDelete: Cascade)
+  packageName      String
+  totalAmount      Int              // In Paise
+  discountAmount   Int              @default(0) // In Paise
+  netAmount        Int              // In Paise (totalAmount - discountAmount)
+  paidAmount       Int              @default(0) // In Paise
+  pendingAmount    Int              @default(0) // In Paise
+  paymentStatus    FeePaymentStatus @default(PENDING) // PENDING, PARTIAL, PAID
+  paymentMethod    PaymentMethod    @default(BANK_TRANSFER)
+  referenceNumber  String?          // UTR, Cheque No, Bank Ref
+  agreementDate    DateTime?
+  notes            String?          @db.Text
+  convertedById    String?
+  convertedBy      User?            @relation("FranchiseSaleConverter", fields: [convertedById], references: [id], onDelete: SetNull)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([franchiseId])
+  @@index([paymentStatus])
+  @@map("franchise_sales")
+}
 
 

@@ -292,7 +292,7 @@ export const courseRouter = router({
             eligibility: input.eligibility,
           },
         });
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.user.id,

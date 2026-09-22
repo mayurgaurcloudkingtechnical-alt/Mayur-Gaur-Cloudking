@@ -7,10 +7,11 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2 } from "lucide-react";
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
-import { CreateApplicationDialog } from "./create-application-dialog";
+import { DirectAdmissionDialog } from "./direct-admission-dialog";
+import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 
 interface LeadDetailViewProps {
   leadId: string;
@@ -21,6 +22,7 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
   const [logOpen, setLogOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
 
   const utils = api.useUtils();
   const { data, isLoading, error } = api.crm.getLeadDetails.useQuery({ leadId });
@@ -47,6 +49,56 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
   }
 
   const { lead, potentialDuplicates } = data;
+
+  const latestPayment = (lead as any)?.applications
+    ?.flatMap((a: any) => a.payments || [])
+    ?.sort((a: any, b: any) => new Date(b.paidAt || 0).getTime() - new Date(a.paidAt || 0).getTime())?.[0];
+
+  const handlePrintReceipt = async (payment: any) => {
+    const appId = (lead as any).applications?.[0]?.id;
+    if (appId) {
+      try {
+        const res = await utils.crm.getAdmissionReceipt.fetch({ applicationId: appId });
+        if (res) {
+          setViewingReceipt({
+            receiptNumber: res.receiptNumber,
+            receiptDate: res.receiptDate,
+            studentName: res.student.name,
+            studentId: res.student.studentId || "SG-STUDENT",
+            admissionNumber: res.admission?.applicationNumber || "N/A",
+            courseTitle: res.course.title,
+            totalFee: res.financials.totalCourseFeePaise,
+            discountAmount: res.financials.discountPaise,
+            netPayable: res.financials.netPayablePaise,
+            amountPaid: res.financials.amountPaidPaise,
+            pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+            amountInWords: res.financials.amountInWords,
+            paymentMode: res.payment.paymentMethod,
+            transactionReference: res.payment.transactionReference,
+          });
+          return;
+        }
+      } catch {
+        // Fallback to basic state below
+      }
+    }
+    const course = lead.course;
+    setViewingReceipt({
+      receiptNumber: payment.receiptNumber || payment.transactionReference,
+      receiptDate: payment.paidAt || new Date(),
+      studentName: lead.fullName,
+      studentId: (lead as any).applications?.find((a: any) => a.convertedStudentProfile)?.convertedStudentProfile?.studentId || "SG-STUDENT",
+      admissionNumber: (lead as any).applications?.[0]?.applicationNumber || "N/A",
+      courseTitle: course?.title || "Professional Program",
+      totalFee: course?.baseFee || payment.amount,
+      discountAmount: 0,
+      netPayable: payment.amount,
+      amountPaid: payment.amount,
+      pendingAmount: 0,
+      paymentMode: payment.paymentMethod || "CASH",
+      transactionReference: payment.transactionReference || "PAY-TXN",
+    });
+  };
 
   const handleAssign = (newStaffId: string) => {
     assignMutation.mutate({
@@ -152,20 +204,32 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
               <Button
                 size="sm"
                 onClick={() => setLogOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5"
+                className="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5"
               >
                 <MessageSquare className="h-3.5 w-3.5" />
                 <span>Log Interaction / Call</span>
               </Button>
+
               <Button
                 size="sm"
-                variant="outline"
                 onClick={() => setAppOpen(true)}
-                className="border-slate-300 text-slate-700 hover:bg-slate-50 text-xs font-semibold flex items-center gap-1.5"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
               >
-                <FilePlus className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Generate Admission Application</span>
+                <GraduationCap className="h-4 w-4" />
+                <span>{lead.status === "ADMITTED" ? "Manage Admission & Fee Ledger" : "Convert Lead to Admission / Enroll"}</span>
               </Button>
+
+              {latestPayment && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handlePrintReceipt(latestPayment)}
+                  className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold flex items-center gap-1.5"
+                >
+                  <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Print Fee Receipt ({latestPayment.receiptNumber || latestPayment.transactionReference})</span>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -318,6 +382,18 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
         </Card>
       )}
 
+      {/* Dual Fee Receipt Viewer Modal */}
+      {viewingReceipt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-4xl w-full p-4 max-h-[90vh] overflow-y-auto">
+            <DualFeeReceipt
+              data={viewingReceipt}
+              onClose={() => setViewingReceipt(null)}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Dialogs */}
       <LogFollowUpDialog
         open={logOpen}
@@ -328,14 +404,11 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
         onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
       />
 
-      <CreateApplicationDialog
+      <DirectAdmissionDialog
         open={appOpen}
         onOpenChange={setAppOpen}
-        leadId={lead.id}
-        leadName={lead.fullName}
-        leadEmail={lead.email}
-        leadPhone={lead.phone}
-        defaultCourseId={lead.interestedCourseId}
+        initialLeadId={lead.id}
+        initialLead={lead}
         onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
       />
     </div>

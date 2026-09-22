@@ -44,17 +44,17 @@ export function UnifiedLiveDashboard() {
     });
 
   const kpi = metricsData?.kpi || {
-    activeBatches: 6,
-    batchesThisMonth: 1,
-    totalStudents: 49,
-    studentsThisMonth: 2,
-    moduleCourses: 9,
-    careerPrograms: 18,
-    certificateCourses: 8,
-    totalLeads: 718,
+    activeBatches: 0,
+    batchesThisMonth: 0,
+    totalStudents: 0,
+    studentsThisMonth: 0,
+    moduleCourses: 0,
+    careerPrograms: 0,
+    certificateCourses: 0,
+    totalLeads: 0,
     newLeadsThisMonth: 0,
-    enquiries: 73,
-    enrolments: 35,
+    enquiries: 0,
+    enrolments: 0,
     placedCount: 0,
     placementRate: "0.0",
     dropouts: 0,
@@ -279,40 +279,61 @@ export function UnifiedLiveDashboard() {
               <div>
                 <div className="flex justify-between text-xs font-semibold mb-1">
                   <span className="text-slate-600">Leads</span>
-                  <span className="text-slate-900">{charts?.funnel?.leads || 718}</span>
+                  <span className="text-slate-900">{charts?.funnel?.leads ?? 0}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-5 overflow-hidden">
-                  <div className="bg-blue-600 h-5 rounded-full" style={{ width: "100%" }} />
+                  <div className="bg-blue-600 h-5 rounded-full" style={{ width: (charts?.funnel?.leads ?? 0) > 0 ? "100%" : "0%" }} />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs font-semibold mb-1">
                   <span className="text-slate-600">Enquiries</span>
-                  <span className="text-slate-900">{charts?.funnel?.enquiries || 73}</span>
+                  <span className="text-slate-900">{charts?.funnel?.enquiries ?? 0}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-5 overflow-hidden">
-                  <div className="bg-amber-500 h-5 rounded-full" style={{ width: "10.2%" }} />
+                  <div
+                    className="bg-amber-500 h-5 rounded-full"
+                    style={{
+                      width: (charts?.funnel?.leads ?? 0) > 0
+                        ? `${Math.min(100, Math.round(((charts?.funnel?.enquiries ?? 0) / (charts?.funnel?.leads || 1)) * 100))}%`
+                        : "0%",
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs font-semibold mb-1">
                   <span className="text-slate-600">Enrolments</span>
-                  <span className="text-slate-900">{charts?.funnel?.enrolments || 35}</span>
+                  <span className="text-slate-900">{charts?.funnel?.enrolments ?? 0}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-5 overflow-hidden">
-                  <div className="bg-emerald-600 h-5 rounded-full" style={{ width: "4.8%" }} />
+                  <div
+                    className="bg-emerald-600 h-5 rounded-full"
+                    style={{
+                      width: (charts?.funnel?.leads ?? 0) > 0
+                        ? `${Math.min(100, Math.round(((charts?.funnel?.enrolments ?? 0) / (charts?.funnel?.leads || 1)) * 100))}%`
+                        : "0%",
+                    }}
+                  />
                 </div>
               </div>
 
               <div>
                 <div className="flex justify-between text-xs font-semibold mb-1">
                   <span className="text-slate-600">Placed</span>
-                  <span className="text-slate-900">{charts?.funnel?.placed || 0}</span>
+                  <span className="text-slate-900">{charts?.funnel?.placed ?? 0}</span>
                 </div>
                 <div className="w-full bg-slate-100 rounded-full h-5 overflow-hidden">
-                  <div className="bg-teal-500 h-5 rounded-full" style={{ width: "0%" }} />
+                  <div
+                    className="bg-teal-500 h-5 rounded-full"
+                    style={{
+                      width: (charts?.funnel?.enrolments ?? 0) > 0
+                        ? `${Math.min(100, Math.round(((charts?.funnel?.placed ?? 0) / (charts?.funnel?.enrolments || 1)) * 100))}%`
+                        : "0%",
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -378,19 +399,19 @@ export function UnifiedLiveDashboard() {
                 <div className="space-y-2 text-xs font-medium">
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-xs bg-emerald-600 shrink-0" />
-                    <span className="text-slate-600">Running ({charts?.batchDistribution?.running || 6})</span>
+                    <span className="text-slate-600">Running ({charts?.batchDistribution?.running ?? 0})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-xs bg-blue-500 shrink-0" />
-                    <span className="text-slate-600">Completed ({charts?.batchDistribution?.completed || 0})</span>
+                    <span className="text-slate-600">Completed ({charts?.batchDistribution?.completed ?? 0})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-xs bg-red-500 shrink-0" />
-                    <span className="text-slate-600">Delayed ({charts?.batchDistribution?.delayed || 0})</span>
+                    <span className="text-slate-600">Delayed ({charts?.batchDistribution?.delayed ?? 0})</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-3 h-3 rounded-xs bg-amber-500 shrink-0" />
-                    <span className="text-slate-600">Scheduled ({charts?.batchDistribution?.scheduled || 1})</span>
+                    <span className="text-slate-600">Scheduled ({charts?.batchDistribution?.scheduled ?? 0})</span>
                   </div>
                 </div>
               </div>
@@ -417,15 +438,9 @@ export function UnifiedLiveDashboard() {
 
               {/* 6-Month Trend Curve Simulation */}
               <div className="h-44 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100">
-                {(charts?.enrollmentTrend || [
-                  { month: "Apr", newEnrollments: 1 },
-                  { month: "May", newEnrollments: 2 },
-                  { month: "Jun", newEnrollments: 12 },
-                  { month: "Jul", newEnrollments: 16 },
-                  { month: "Aug", newEnrollments: 4 },
-                  { month: "Sep", newEnrollments: 2 },
-                ]).map((item: any) => {
-                  const heightPercent = Math.min(100, Math.max(8, (item.newEnrollments / 16) * 100));
+                {(charts?.enrollmentTrend || []).map((item: any) => {
+                  const maxVal = Math.max(1, ...(charts?.enrollmentTrend || []).map((t: any) => t.newEnrollments || 0));
+                  const heightPercent = item.newEnrollments > 0 ? Math.min(100, Math.max(10, (item.newEnrollments / maxVal) * 100)) : 4;
                   return (
                     <div key={item.month} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                       <span className="text-[10px] font-bold text-slate-700">{item.newEnrollments}</span>
@@ -447,15 +462,9 @@ export function UnifiedLiveDashboard() {
               </h2>
 
               <div className="h-44 flex items-end justify-between gap-3 pt-6 px-2 border-b border-slate-100">
-                {(charts?.revenueCollection || [
-                  { month: "Apr", lakhs: 0.2 },
-                  { month: "May", lakhs: 0.4 },
-                  { month: "Jun", lakhs: 2.4 },
-                  { month: "Jul", lakhs: 4.1 },
-                  { month: "Aug", lakhs: 1.3 },
-                  { month: "Sep", lakhs: 0.9 },
-                ]).map((item: any) => {
-                  const heightPercent = Math.min(100, Math.max(8, (item.lakhs / 4.5) * 100));
+                {(charts?.revenueCollection || []).map((item: any) => {
+                  const maxLakhs = Math.max(1, ...(charts?.revenueCollection || []).map((t: any) => t.lakhs || 0));
+                  const heightPercent = item.lakhs > 0 ? Math.min(100, Math.max(10, (item.lakhs / maxLakhs) * 100)) : 4;
                   return (
                     <div key={item.month} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
                       <span className="text-[10px] font-bold text-amber-800">₹{item.lakhs}L</span>

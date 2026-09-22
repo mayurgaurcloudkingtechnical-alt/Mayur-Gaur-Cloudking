@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { FeeStructureService } from "@/server/services/fee-structure.service";
 import { FeeInstallmentService } from "@/server/services/fee-installment.service";
 import { PaymentService } from "@/server/services/payment.service";
+import { ReceiptService } from "@/server/services/receipt.service";
 import { FeePaymentStatus, PaymentMethod } from "@prisma/client";
 import { db } from "@/server/db/client";
 import { AuthenticatedUser } from "@/server/auth/rbac";
@@ -33,6 +34,7 @@ export const financeRouter = router({
         paymentStatus: z.nativeEnum(FeePaymentStatus).optional(),
         courseId: z.string().optional(),
         batchId: z.string().optional(),
+        studentId: z.string().optional(),
         search: z.string().optional(),
         page: z.number().min(1).default(1),
         limit: z.number().min(1).max(50).default(20),
@@ -69,6 +71,34 @@ export const financeRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       return FeeStructureService.createFeeStructure(asAuthUser(ctx.user), input);
+    }),
+
+  updateFeeStructure: protectedProcedure
+    .input(
+      z.object({
+        feeStructureId: z.string(),
+        totalCourseFee: z.number().min(0).optional(),
+        discountAmount: z.number().min(0).optional(),
+        scholarshipAmount: z.number().min(0).optional(),
+        remarks: z.string().optional(),
+        installments: z
+          .array(
+            z.object({
+              installmentNumber: z.number().optional(),
+              amount: z.number().min(1),
+              dueDate: z.coerce.date(),
+              notes: z.string().optional(),
+            })
+          )
+          .optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const allowedRoles = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "ACCOUNTANT", "COUNSELOR", "MANAGER"];
+      if (!allowedRoles.includes(ctx.user.roleCode)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You lack permission to update fee structures." });
+      }
+      return FeeStructureService.updateFeeStructure(asAuthUser(ctx.user), input);
     }),
 
   // ==========================================
@@ -123,7 +153,9 @@ export const financeRouter = router({
         paymentMethod: z.nativeEnum(PaymentMethod),
         providerReference: z.string().optional(),
         remarks: z.string().optional(),
-        paymentDate: z.date().optional(),
+        paymentDate: z.coerce.date().optional(),
+        receiptNumber: z.string().optional(),
+        isHistorical: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -150,6 +182,32 @@ export const financeRouter = router({
       return PaymentService.getPaymentDetails(asAuthUser(ctx.user), input.paymentId);
     }),
 
+  getPaymentReceipt: protectedProcedure
+    .input(z.object({ identifier: z.string() }))
+    .query(async ({ input }) => {
+      return ReceiptService.getReceiptData(input.identifier);
+    }),
+
+  updatePayment: protectedProcedure
+    .input(
+      z.object({
+        paymentId: z.string(),
+        amount: z.number().min(1).optional(),
+        paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+        providerReference: z.string().optional(),
+        remarks: z.string().optional(),
+        receiptNumber: z.string().optional(),
+        paymentDate: z.coerce.date().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const allowedRoles = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "ACCOUNTANT", "COUNSELOR", "MANAGER"];
+      if (!allowedRoles.includes(ctx.user.roleCode)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "You lack permission to edit payment records." });
+      }
+      return PaymentService.updatePayment(asAuthUser(ctx.user), input);
+    }),
+
   // ==========================================
   // STUDENT SELF-SERVICE
   // ==========================================
@@ -160,6 +218,16 @@ export const financeRouter = router({
 
     const studentProfile = await db.studentProfile.findUnique({
       where: { userId: ctx.user.id },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+          },
+        },
+      },
     });
 
     if (!studentProfile) {
@@ -169,7 +237,7 @@ export const financeRouter = router({
     const feeStructures = await db.feeStructure.findMany({
       where: { studentId: studentProfile.id, status: "ACTIVE" },
       include: {
-        course: { select: { id: true, title: true } },
+        course: { select: { id: true, title: true, providerType: true, providerName: true, universityName: true } },
         batch: { select: { id: true, code: true, name: true } },
         installments: { orderBy: { installmentNumber: "asc" } },
         payments: { orderBy: { paymentDate: "desc" } },
@@ -178,6 +246,10 @@ export const financeRouter = router({
 
     return {
       studentId: studentProfile.studentId,
+      studentName: `${studentProfile.user.firstName} ${studentProfile.user.lastName}`.trim(),
+      studentEmail: studentProfile.user.email,
+      studentPhone: studentProfile.user.phone,
+      center: studentProfile.center,
       feeStructures,
     };
   }),

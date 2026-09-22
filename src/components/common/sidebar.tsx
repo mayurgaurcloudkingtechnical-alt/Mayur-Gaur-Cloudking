@@ -27,14 +27,17 @@ import {
   CreditCard,
   Share2,
   Building2,
+  ExternalLink,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
+import { DPGU_CONFIG } from "@/config/university.config";
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ReactNode;
   badge?: string;
+  external?: boolean;
 }
 
 interface SidebarProps {
@@ -52,6 +55,8 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
         return [
           { title: "Dashboard", href: "/student/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "My Courses", href: "/student/courses", icon: <BookOpen className="h-4 w-4" /> },
+          { title: "Student ID Card", href: "/student/id-card", icon: <CreditCard className="h-4 w-4" /> },
+          { title: "University Portal", href: DPGU_CONFIG.portals.studentPortalUrl, icon: <GraduationCap className="h-4 w-4" />, external: true, badge: "DPGU" },
           { title: "Marketplace", href: "/student/marketplace", icon: <ShoppingCart className="h-4 w-4" /> },
           { title: "Assignments", href: "/student/assignments", icon: <FileText className="h-4 w-4" /> },
           { title: "Exams & Quizzes", href: "/student/exams", icon: <ClipboardCheck className="h-4 w-4" /> },
@@ -74,6 +79,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Telecalling Desk", href: "/telecaller/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "External" },
           { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
@@ -82,6 +88,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
+          { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
           { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
@@ -91,6 +98,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Franchise Management", href: "/admin/franchise", icon: <Building2 className="h-4 w-4" /> },
           { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
+          { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
           { title: "Student Management", href: "/admin/students", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
           { title: "Batches & Cohorts", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
@@ -132,6 +140,28 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           </div>
           <nav className="space-y-1">
             {navItems.map((item) => {
+              if (item.external) {
+                return (
+                  <a
+                    key={item.href + item.title}
+                    href={item.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={onClose}
+                    className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-amber-700 hover:bg-amber-50 hover:text-amber-900 transition-colors border border-amber-200/50 my-1 bg-amber-50/40"
+                  >
+                    <span className="text-amber-600">{item.icon}</span>
+                    <span className="flex-1 font-semibold">{item.title}</span>
+                    {item.badge && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+                        {item.badge}
+                      </span>
+                    )}
+                    <ExternalLink className="h-3 w-3 text-amber-500 ml-1" />
+                  </a>
+                );
+              }
+
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link

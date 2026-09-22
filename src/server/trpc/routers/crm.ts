@@ -1,12 +1,25 @@
 import { router, publicProcedure, requireRoleProcedure } from "../init";
 import { z } from "zod";
-import { UserRoleCode, LeadStatus, LeadSource, FollowUpType, ApplicationStage } from "@prisma/client";
+import {
+  UserRoleCode,
+  LeadStatus,
+  LeadSource,
+  FollowUpType,
+  ApplicationStage,
+  PaymentMethod,
+  FranchiseStatus,
+  FranchisePackageType,
+  FeePaymentStatus,
+  DeliveryMode,
+} from "@prisma/client";
 import { META_ADS_CONFIG, INSTAGRAM_CONFIG } from "@/server/config/meta-ads.config";
 import { CrmLeadService, canReadAllLeads, META_SOURCES } from "@/server/services/crm-lead.service";
 import { CrmApplicationService } from "@/server/services/crm-application.service";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
+import { ReceiptService } from "@/server/services/receipt.service";
+import { TRPCError } from "@trpc/server";
 
 function asAuthUser(user: any): AuthenticatedUser {
   return {
@@ -112,7 +125,25 @@ export const crmRouter = router({
   listPublicCourses: publicProcedure.query(async () => {
     return db.course.findMany({
       where: { status: "PUBLISHED", deletedAt: null },
-      select: { id: true, title: true, slug: true, baseFee: true },
+      select: {
+        id: true,
+        title: true,
+        slug: true,
+        baseFee: true,
+        providerType: true,
+        providerName: true,
+        universityName: true,
+        durationYears: true,
+        specialization: true,
+        specializations: true,
+        programCategory: true,
+        admissionSession: true,
+        registrationFee: true,
+        examinationFee: true,
+        universityFeeYear: true,
+        lateralEntryFee: true,
+        isLateralEligible: true,
+      },
       orderBy: { title: "asc" },
     });
   }),
@@ -787,18 +818,73 @@ export const crmRouter = router({
         state: z.string().optional(),
         pincode: z.string().optional(),
         highestQualification: z.string().optional(),
+        fatherName: z.string().optional(),
+        motherName: z.string().optional(),
+        whatsappNumber: z.string().optional(),
+        alternatePhone: z.string().optional(),
+        schoolOrCollege: z.string().optional(),
+        passingYear: z.string().optional(),
+        percentageOrCgpa: z.string().optional(),
+        photoUrl: z.string().optional(),
+        paymentMethod: z.nativeEnum(PaymentMethod).optional(),
         leadId: z.string().optional(),
         source: z.nativeEnum(LeadSource).optional(),
+        totalCourseFee: z.number().min(0).optional(),
         discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
         discountValue: z.number().min(0).optional(),
         discountAmount: z.number().min(0).optional(),
+        discountReason: z.string().optional(),
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
+        paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
+        installmentCount: z.number().min(1).max(12).optional(),
+        installments: z
+          .array(
+            z.object({
+              installmentNumber: z.number(),
+              amount: z.number(),
+              dueDate: z.union([z.date(), z.string()]),
+              notes: z.string().optional(),
+            })
+          )
+          .optional(),
+        paymentType: z.enum(["OFFLINE", "ONLINE"]).optional(),
+        paymentReference: z.string().optional(),
         remarks: z.string().optional(),
+        providerType: z.string().optional(),
+        providerName: z.string().optional(),
+        universityName: z.string().optional(),
+        universityProgram: z.string().optional(),
+        universitySpecialization: z.string().optional(),
+        admissionSession: z.string().optional(),
+        universityRegistrationFee: z.number().optional(),
+        universityExaminationFee: z.number().optional(),
+        universityFee: z.number().optional(),
+        deliveryMode: z.nativeEnum(DeliveryMode).optional(),
+        center: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return CrmApplicationService.createDirectAdmission(asAuthUser(ctx.user), input);
+      return CrmApplicationService.createDirectAdmission(asAuthUser(ctx.user), input as any);
+    }),
+
+  /**
+   * Fetches official printable receipt data for an admission by its application ID.
+   */
+  getAdmissionReceipt: requireRoleProcedure(admissionRoles)
+    .input(z.object({ applicationId: z.string() }))
+    .query(async ({ input }) => {
+      const payment = await db.paymentTransaction.findFirst({
+        where: { admissionId: input.applicationId, status: "SUCCESS" },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!payment) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "No recorded payment receipt found for this admission.",
+        });
+      }
+      return ReceiptService.getReceiptData(payment.id);
     }),
 
   /**
@@ -972,4 +1058,157 @@ export const crmRouter = router({
     .mutation(async ({ input, ctx }) => {
       return CrmLeadService.assignFranchiseLead(asAuthUser(ctx.user), input);
     }),
+
+  /**
+   * Manually creates a new franchise enquiry.
+   */
+  createFranchiseEnquiry: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        fullName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(10),
+        city: z.string().min(2),
+        franchiseState: z.string().min(2),
+        franchisePreferredLocation: z.string().optional(),
+        franchiseProfile: z.string().optional(),
+        franchiseInvestmentCapacity: z.string().optional(),
+        franchiseExistingInstitute: z.boolean().optional(),
+        franchiseExperience: z.string().optional(),
+        franchiseLaunchTimeline: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.createFranchiseEnquiry(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Updates an existing franchise enquiry.
+   */
+  updateFranchiseEnquiry: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        id: z.string(),
+        fullName: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(10),
+        city: z.string().min(2),
+        franchiseState: z.string().min(2),
+        franchisePreferredLocation: z.string().optional(),
+        franchiseProfile: z.string().optional(),
+        franchiseInvestmentCapacity: z.string().optional(),
+        franchiseExistingInstitute: z.boolean().optional(),
+        franchiseExperience: z.string().optional(),
+        franchiseLaunchTimeline: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.updateFranchiseEnquiry(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Deletes a franchise enquiry if not converted.
+   */
+  deleteFranchiseEnquiry: requireRoleProcedure(franchiseRoles)
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.deleteFranchiseEnquiry(asAuthUser(ctx.user), input.id);
+    }),
+
+  /**
+   * Converts a franchise lead to an official Franchise Partner Center and records a FranchiseSale.
+   */
+  convertFranchiseToSale: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        centerName: z.string().min(2),
+        legalName: z.string().optional(),
+        contactPerson: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(10),
+        alternatePhone: z.string().optional(),
+        address: z.string().min(3),
+        city: z.string().min(2),
+        state: z.string().min(2),
+        pincode: z.string().min(4),
+        packageType: z.nativeEnum(FranchisePackageType).optional(),
+        packageName: z.string().min(2),
+        totalAmountPaise: z.number().int().nonnegative(),
+        discountAmountPaise: z.number().int().nonnegative().optional(),
+        paidAmountPaise: z.number().int().nonnegative(),
+        paymentMethod: z.nativeEnum(PaymentMethod),
+        referenceNumber: z.string().optional(),
+        agreementDate: z.coerce.date().optional(),
+        validUntil: z.coerce.date().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.convertFranchiseToSale(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Lists all converted Franchise Centers / Partners.
+   */
+  listFranchisePartners: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        status: z.nativeEnum(FranchiseStatus).optional(),
+        search: z.string().optional(),
+        page: z.number().int().positive().optional().default(1),
+        limit: z.number().int().positive().max(100).optional().default(25),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return CrmLeadService.listFranchisePartners(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Lists all franchise sales transactions / invoices.
+   */
+  listFranchiseSales: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        paymentStatus: z.nativeEnum(FeePaymentStatus).optional(),
+        search: z.string().optional(),
+        page: z.number().int().positive().optional().default(1),
+        limit: z.number().int().positive().max(100).optional().default(25),
+      })
+    )
+    .query(async ({ input, ctx }) => {
+      return CrmLeadService.listFranchiseSales(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Returns aggregated franchise financial overview.
+   */
+  getFranchiseSalesOverview: requireRoleProcedure(franchiseRoles).query(async ({ ctx }) => {
+    return CrmLeadService.getFranchiseSalesOverview(asAuthUser(ctx.user));
+  }),
+
+  /**
+   * Updates an existing franchise sale record (payment status, amounts, notes, reference).
+   */
+  updateFranchiseSale: requireRoleProcedure(franchiseRoles)
+    .input(
+      z.object({
+        saleId: z.string(),
+        packageName: z.string().min(2).optional(),
+        totalAmount: z.number().int().nonnegative().optional(),
+        discountAmount: z.number().int().nonnegative().optional(),
+        paidAmount: z.number().int().nonnegative().optional(),
+        pendingAmount: z.number().int().nonnegative().optional(),
+        paymentStatus: z.nativeEnum(FeePaymentStatus).optional(),
+        paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+        referenceNumber: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      return CrmLeadService.updateFranchiseSale(asAuthUser(ctx.user), input);
+    }),
 });
+

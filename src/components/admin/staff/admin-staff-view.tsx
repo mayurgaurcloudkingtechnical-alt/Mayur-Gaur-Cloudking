@@ -24,9 +24,12 @@ import {
   ChevronRight,
   TrendingUp,
   Download,
+  Copy,
+  KeyRound,
 } from "lucide-react";
 import {
   StaffDepartment,
+  UserRoleCode,
   LeaveRequestStatus,
   PayrollStatus,
   PaymentMethod,
@@ -111,7 +114,40 @@ export function AdminStaffView() {
   const { data: tasks, refetch: refetchTasks } = api.staffErp.listStaffTasks.useQuery();
   const { data: reviews, refetch: refetchReviews } = api.staffErp.listPerformanceReviews.useQuery();
 
+  // Credentials state
+  const [createdStaffCredentials, setCreatedStaffCredentials] = useState<any>(null);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+  const [copiedStaffCreds, setCopiedStaffCreds] = useState(false);
+
   // Mutations
+  const createStaffAccountMutation = api.staffErp.createStaffMemberWithAccount.useMutation({
+    onSuccess: (data) => {
+      setShowAddStaffModal(false);
+      setCreatedStaffCredentials(data.credentials);
+      setShowCredentialsModal(true);
+      refetchStaff();
+      refetchMetrics();
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to create staff member.");
+    },
+  });
+
+  const resetPasswordMutation = api.staffErp.resetStaffPassword.useMutation({
+    onSuccess: (data) => {
+      setCreatedStaffCredentials({
+        fullName: "Staff Member",
+        email: data.email,
+        temporaryPassword: data.temporaryPassword,
+        employeeId: data.employeeId,
+      });
+      setShowCredentialsModal(true);
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to reset password.");
+    },
+  });
+
   const createStaffMutation = api.staffErp.createStaffProfile.useMutation({
     onSuccess: () => {
       setShowAddStaffModal(false);
@@ -184,11 +220,16 @@ export function AdminStaffView() {
 
   // State forms
   const [staffForm, setStaffForm] = useState({
-    userId: "",
-    employeeId: "",
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    roleCode: UserRoleCode.TRAINER,
     department: StaffDepartment.ACADEMICS,
-    designation: "Assistant Professor",
+    designation: "Senior Faculty & Trainer",
     baseSalaryRupees: 45000,
+    employeeId: "",
+    password: "",
     bankAccountNumber: "",
     bankIfsc: "",
     panNumber: "",
@@ -490,6 +531,7 @@ export function AdminStaffView() {
                   <th className="py-3.5 px-4">Base Monthly Salary</th>
                   <th className="py-3.5 px-4">Monthly Attendance</th>
                   <th className="py-3.5 px-4">Status</th>
+                  <th className="py-3.5 px-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
@@ -530,12 +572,23 @@ export function AdminStaffView() {
                             {staff.isActive ? "Active" : "Inactive"}
                           </span>
                         </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => resetPasswordMutation.mutate({ staffId: staff.id })}
+                            disabled={resetPasswordMutation.isPending}
+                            className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition inline-flex items-center gap-1"
+                            title="Reset password and generate new credentials"
+                          >
+                            <KeyRound className="w-3 h-3" /> Reset Login
+                          </button>
+                        </td>
                       </tr>
                     );
                   })
                 ) : (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 text-sm">
+                    <td colSpan={8} className="py-12 text-center text-slate-400 text-sm">
                       No staff records found. Click "Onboard Staff" to add members.
                     </td>
                   </tr>
@@ -1070,11 +1123,16 @@ export function AdminStaffView() {
       {/* ========================================================================= */}
       {/* MODAL: ONBOARD STAFF MEMBER */}
       {/* ========================================================================= */}
+      {/* MODAL: ONBOARD STAFF MEMBER (PHASE 6 INSTANT LMS LOGIN) */}
+      {/* ========================================================================= */}
       {showAddStaffModal && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-xl">
+          <div className="bg-white rounded-xl max-w-xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="font-bold text-slate-900 text-lg">Onboard New Staff Member</h3>
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Onboard New Staff Member</h3>
+                <p className="text-xs text-slate-500">Automatically creates staff record, User account, and LMS credentials.</p>
+              </div>
               <button onClick={() => setShowAddStaffModal(false)}>
                 <X className="w-5 h-5 text-slate-400" />
               </button>
@@ -1082,12 +1140,16 @@ export function AdminStaffView() {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                createStaffMutation.mutate({
-                  userId: staffForm.userId,
-                  employeeId: staffForm.employeeId || undefined,
+                createStaffAccountMutation.mutate({
+                  firstName: staffForm.firstName.trim(),
+                  lastName: staffForm.lastName.trim(),
+                  email: staffForm.email.trim().toLowerCase(),
+                  phone: staffForm.phone.trim() || undefined,
+                  roleCode: staffForm.roleCode,
                   department: staffForm.department,
-                  designation: staffForm.designation,
+                  designation: staffForm.designation.trim(),
                   baseSalary: Math.round(Number(staffForm.baseSalaryRupees) * 100), // convert to paise
+                  password: staffForm.password.trim() || undefined,
                   bankAccountNumber: staffForm.bankAccountNumber || undefined,
                   bankIfsc: staffForm.bankIfsc || undefined,
                   panNumber: staffForm.panNumber || undefined,
@@ -1095,18 +1157,72 @@ export function AdminStaffView() {
               }}
               className="space-y-3 text-sm"
             >
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">User Account ID *</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="Paste User CUID (from user management)"
-                  value={staffForm.userId}
-                  onChange={(e) => setStaffForm({ ...staffForm, userId: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
               <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Mayur"
+                    value={staffForm.firstName}
+                    onChange={(e) => setStaffForm({ ...staffForm, firstName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
+                  <input
+                    required
+                    type="text"
+                    placeholder="e.g. Gaur"
+                    value={staffForm.lastName}
+                    onChange={(e) => setStaffForm({ ...staffForm, lastName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Official / Login Email *</label>
+                  <input
+                    required
+                    type="email"
+                    placeholder="staff@softlabglobal.com"
+                    value={staffForm.email}
+                    onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Phone</label>
+                  <input
+                    type="text"
+                    placeholder="10-digit number"
+                    value={staffForm.phone}
+                    onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">System Role *</label>
+                  <select
+                    value={staffForm.roleCode}
+                    onChange={(e) => setStaffForm({ ...staffForm, roleCode: e.target.value as any })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                  >
+                    <option value={UserRoleCode.TRAINER}>TRAINER / FACULTY</option>
+                    <option value={UserRoleCode.COUNSELOR}>COUNSELOR</option>
+                    <option value={UserRoleCode.TELECALLER}>TELECALLER</option>
+                    <option value={UserRoleCode.HR}>HR MANAGER</option>
+                    <option value={UserRoleCode.ACCOUNTANT}>ACCOUNTANT</option>
+                    <option value={UserRoleCode.PLACEMENT_OFFICER}>PLACEMENT OFFICER</option>
+                    <option value={UserRoleCode.ADMIN}>ADMINISTRATOR</option>
+                  </select>
+                </div>
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Department *</label>
                   <select
@@ -1119,27 +1235,45 @@ export function AdminStaffView() {
                     ))}
                   </select>
                 </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Designation *</label>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Designation Title *</label>
                   <input
                     required
                     type="text"
+                    placeholder="e.g. Senior Faculty & Trainer"
                     value={staffForm.designation}
                     onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                   />
                 </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">Monthly Base Salary (₹) *</label>
+                  <input
+                    required
+                    type="number"
+                    value={staffForm.baseSalaryRupees}
+                    onChange={(e) => setStaffForm({ ...staffForm, baseSalaryRupees: Number(e.target.value) })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  />
+                </div>
               </div>
+
               <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Monthly Base Salary (₹) *</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Custom Password (Optional - leave blank to auto-generate secure temporary password)
+                </label>
                 <input
-                  required
-                  type="number"
-                  value={staffForm.baseSalaryRupees}
-                  onChange={(e) => setStaffForm({ ...staffForm, baseSalaryRupees: Number(e.target.value) })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
+                  type="password"
+                  placeholder="Leave empty for auto-generated password"
+                  value={staffForm.password}
+                  onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
                 />
               </div>
+
               <div className="flex justify-end gap-3 pt-3 border-t">
                 <button
                   type="button"
@@ -1150,13 +1284,83 @@ export function AdminStaffView() {
                 </button>
                 <button
                   type="submit"
-                  disabled={createStaffMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700"
+                  disabled={createStaffAccountMutation.isPending}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-sm"
                 >
-                  Save Profile
+                  {createStaffAccountMutation.isPending ? "Creating Account..." : "Create Staff & Generate LMS Login"}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: STAFF CREDENTIALS DISPLAY (PHASE 6) */}
+      {/* ========================================================================= */}
+      {showCredentialsModal && createdStaffCredentials && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6 space-y-4 shadow-xl">
+            <div className="flex items-center gap-3 border-b pb-3">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                <CheckCircle2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg">Staff LMS Credentials</h3>
+                <p className="text-xs text-slate-500">Staff account is active and can log in immediately.</p>
+              </div>
+            </div>
+
+            <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-2.5 text-sm">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Employee ID:</span>
+                <span className="font-mono font-bold text-blue-800 text-sm">
+                  {createdStaffCredentials.employeeId}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Login Email:</span>
+                <span className="font-mono font-semibold text-slate-900 bg-white px-2 py-0.5 rounded border">
+                  {createdStaffCredentials.email}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Temporary Password:</span>
+                <span className="font-mono font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                  {createdStaffCredentials.temporaryPassword}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 pt-1">
+                Portal: <a href="/login" className="text-blue-600 underline font-medium">https://softlabglobal.com/login</a>
+              </p>
+            </div>
+
+            <div className="space-y-2 pt-1">
+              <button
+                type="button"
+                onClick={() => {
+                  const text = `SOFTLAB GLOBAL — STAFF ERP LOGIN CREDENTIALS
+Employee ID: ${createdStaffCredentials.employeeId}
+Portal URL: https://softlabglobal.com/login
+Login Email: ${createdStaffCredentials.email}
+Temporary Password: ${createdStaffCredentials.temporaryPassword}`;
+                  navigator.clipboard.writeText(text);
+                  setCopiedStaffCreds(true);
+                  setTimeout(() => setCopiedStaffCreds(false), 3000);
+                }}
+                className="w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 text-sm flex items-center justify-center gap-2 shadow-sm"
+              >
+                <Copy className="w-4 h-4" />
+                <span>{copiedStaffCreds ? "Copied Credentials!" : "Copy Full Credentials"}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCredentialsModal(false)}
+                className="w-full py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 text-sm font-medium"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

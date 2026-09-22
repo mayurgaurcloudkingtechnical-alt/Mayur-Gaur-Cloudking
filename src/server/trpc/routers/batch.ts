@@ -290,7 +290,7 @@ export const batchRouter = router({
         }
 
         return createdBatch;
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.user.id,
@@ -403,7 +403,7 @@ export const batchRouter = router({
             location: input.location?.trim(),
           },
         });
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.user.id,

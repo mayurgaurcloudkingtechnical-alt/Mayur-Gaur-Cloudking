@@ -237,7 +237,7 @@ export class OnlinePaymentService {
         status: PaymentTransactionStatus.SUCCESS,
         alreadyProcessed: false,
       };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   /**
@@ -630,7 +630,7 @@ export class OnlinePaymentService {
         status: PaymentTransactionStatus.SUCCESS,
         alreadyProcessed: false,
       };
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   /**

@@ -253,6 +253,8 @@ export function PipelineBoardView({ courseId }: PipelineBoardViewProps) {
             setAdmissionOpen(open);
             if (!open) setTargetLeadForAdmission(null);
           }}
+          initialLeadId={targetLeadForAdmission?.id}
+          initialLead={targetLeadForAdmission}
           onSuccess={() => {
             utils.crm.getPipelineOverview.invalidate();
           }}

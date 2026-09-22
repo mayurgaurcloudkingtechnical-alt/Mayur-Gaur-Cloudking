@@ -27,9 +27,11 @@ import {
   Globe,
   Radio,
   ExternalLink,
+  GraduationCap,
 } from "lucide-react";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
+import { DirectAdmissionDialog } from "./direct-admission-dialog";
 
 interface CounselorLeadsViewProps {
   basePath?: string;
@@ -42,6 +44,8 @@ export function CounselorLeadsView({
 }: CounselorLeadsViewProps) {
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
   const [selectedSource, setSelectedSource] = useState<string>("ALL");
   const [search, setSearch] = useState("");
@@ -545,9 +549,22 @@ export function CounselorLeadsView({
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">
-                            <Link href={`${basePath}/${lead.id}`}>View & Log</Link>
-                          </Button>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">
+                              <Link href={`${basePath}/${lead.id}`}>View & Log</Link>
+                            </Button>
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                setSelectedLeadForAdmission(lead);
+                                setDirectAdmissionOpen(true);
+                              }}
+                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
+                            >
+                              <GraduationCap className="h-3 w-3" />
+                              <span>{lead.status === "ADMITTED" ? "Manage" : "Admit"}</span>
+                            </Button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -592,6 +609,18 @@ export function CounselorLeadsView({
       <CreateLeadDialog
         open={createLeadOpen}
         onOpenChange={setCreateLeadOpen}
+      />
+
+      {/* Unified Direct Admission & Fee Collection Modal */}
+      <DirectAdmissionDialog
+        open={directAdmissionOpen}
+        onOpenChange={setDirectAdmissionOpen}
+        initialLeadId={selectedLeadForAdmission?.id}
+        initialLead={selectedLeadForAdmission}
+        onSuccess={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
       />
     </div>
   );

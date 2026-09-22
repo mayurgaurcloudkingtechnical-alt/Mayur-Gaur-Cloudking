@@ -1,8 +1,29 @@
 import { db } from "@/server/db/client";
-import { StaffDepartment, Prisma } from "@prisma/client";
+import { StaffDepartment, UserRoleCode, Prisma } from "@prisma/client";
 import { AuditService } from "@/server/services/audit.service";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 import { TRPCError } from "@trpc/server";
+import * as bcrypt from "bcryptjs";
+import { randomBytes } from "crypto";
+import { EmailService } from "@/server/services/email.service";
+
+export interface CreateStaffMemberWithAccountInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  roleCode: UserRoleCode;
+  department: StaffDepartment;
+  designation: string;
+  baseSalary: number; // in Paise
+  employeeId?: string;
+  password?: string;
+  bankAccountNumber?: string;
+  bankIfsc?: string;
+  panNumber?: string;
+  gender?: string;
+  workLocation?: string;
+}
 
 export interface CreateStaffProfileInput {
   userId: string;
@@ -48,6 +69,189 @@ export class StaffProfileService {
       employeeId = `SLG-EMP-${String(sequence).padStart(4, "0")}`;
     }
     return employeeId;
+  }
+
+  /**
+   * Phase 6: Complete Staff Onboarding creating User account, StaffProfile, and credentials in one step.
+   */
+  static async createStaffMemberWithAccount(
+    actor: AuthenticatedUser,
+    input: CreateStaffMemberWithAccountInput
+  ) {
+    const cleanEmail = input.email.trim().toLowerCase();
+    const cleanPhone = input.phone?.trim() || null;
+
+    const existingUser = await db.user.findFirst({
+      where: {
+        OR: [
+          { email: cleanEmail },
+          ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+        ],
+      },
+    });
+
+    if (existingUser) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: `An account already exists with this email (${cleanEmail}) or phone number.`,
+      });
+    }
+
+    const employeeId = input.employeeId?.trim() || (await this.generateEmployeeId());
+    const existingEmp = await db.staffProfile.findUnique({ where: { employeeId } });
+    if (existingEmp) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: `Employee ID ${employeeId} is already in use.`,
+      });
+    }
+
+    // Generate secure temporary password if not provided
+    const tempPassword = input.password?.trim() || `SoftLab@${new Date().getFullYear()}!${randomBytes(3).toString("hex")}`;
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    const result = await db.$transaction(async (tx) => {
+      // 1. Create User
+      const user = await tx.user.create({
+        data: {
+          email: cleanEmail,
+          phone: cleanPhone,
+          passwordHash,
+          firstName: input.firstName.trim(),
+          lastName: input.lastName.trim(),
+          roleCode: input.roleCode,
+        },
+      });
+
+      // 2. Create StaffProfile
+      const staffProfile = await tx.staffProfile.create({
+        data: {
+          userId: user.id,
+          employeeId,
+          department: input.department,
+          designation: input.designation.trim(),
+          baseSalary: input.baseSalary,
+          bankAccountNumber: input.bankAccountNumber?.trim() || null,
+          bankIfsc: input.bankIfsc?.trim().toUpperCase() || null,
+          panNumber: input.panNumber?.trim().toUpperCase() || null,
+          gender: input.gender || null,
+          workLocation: input.workLocation || "PRAYAGRAJ_CAMPUS",
+          isActive: true,
+        },
+      });
+
+      // 3. If Trainer, also create TrainerProfile
+      if (input.roleCode === UserRoleCode.TRAINER) {
+        await tx.trainerProfile.create({
+          data: {
+            userId: user.id,
+            specializations: [input.designation],
+            experienceYears: 1,
+          },
+        });
+      }
+
+      // 4. Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "STAFF_CREATED_WITH_LOGIN",
+          resourceType: "StaffProfile",
+          resourceId: staffProfile.id,
+          newData: {
+            userId: user.id,
+            employeeId,
+            email: user.email,
+            roleCode: user.roleCode,
+            department: staffProfile.department,
+            designation: staffProfile.designation,
+          },
+        },
+      });
+
+      return { user, staffProfile };
+    }, { maxWait: 15000, timeout: 30000 });
+
+    // 5. Asynchronously trigger staff credentials email notification
+    EmailService.sendStaffCredentials({
+      to: cleanEmail,
+      staffName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+      employeeId,
+      loginEmail: cleanEmail,
+      temporaryPassword: tempPassword,
+      roleName: input.roleCode,
+      designation: input.designation.trim(),
+    }).catch((err) => console.error("[StaffService] Email dispatch notice:", err));
+
+    return {
+      success: true,
+      user: {
+        id: result.user.id,
+        email: result.user.email,
+        firstName: result.user.firstName,
+        lastName: result.user.lastName,
+        roleCode: result.user.roleCode,
+      },
+      staffProfile: result.staffProfile,
+      credentials: {
+        email: cleanEmail,
+        temporaryPassword: tempPassword,
+        employeeId,
+        roleCode: input.roleCode,
+        fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+      },
+    };
+  }
+
+  /**
+   * Reset staff password and return new temporary password.
+   */
+  static async resetStaffPassword(actor: AuthenticatedUser, staffId: string) {
+    const profile = await db.staffProfile.findUnique({
+      where: { id: staffId },
+      include: { user: true },
+    });
+
+    if (!profile) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Staff profile '${staffId}' not found.`,
+      });
+    }
+
+    const tempPassword = `SoftLab@${new Date().getFullYear()}!${randomBytes(3).toString("hex")}`;
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    await db.user.update({
+      where: { id: profile.userId },
+      data: { passwordHash },
+    });
+
+    await AuditService.log({
+      actorId: actor.id,
+      action: "STAFF_PASSWORD_RESET",
+      resourceType: "StaffProfile",
+      resourceId: staffId,
+      newData: { email: profile.user.email },
+    });
+
+    // Dispatch email
+    EmailService.sendStaffCredentials({
+      to: profile.user.email,
+      staffName: `${profile.user.firstName} ${profile.user.lastName}`,
+      employeeId: profile.employeeId,
+      loginEmail: profile.user.email,
+      temporaryPassword: tempPassword,
+      roleName: profile.user.roleCode,
+      designation: profile.designation,
+    }).catch((err) => console.error("[StaffService] Reset email dispatch:", err));
+
+    return {
+      success: true,
+      email: profile.user.email,
+      temporaryPassword: tempPassword,
+      employeeId: profile.employeeId,
+    };
   }
 
   /**

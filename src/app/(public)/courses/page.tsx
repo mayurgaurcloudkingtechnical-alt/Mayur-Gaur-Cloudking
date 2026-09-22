@@ -17,6 +17,7 @@ export default async function CoursesPage() {
     where: {
       status: ContentStatus.PUBLISHED,
       deletedAt: null,
+      providerType: { not: "UNIVERSITY" },
     },
     orderBy: {
       sortOrder: "asc",

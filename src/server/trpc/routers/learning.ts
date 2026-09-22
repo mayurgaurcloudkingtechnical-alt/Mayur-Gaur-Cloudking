@@ -3,7 +3,44 @@ import { router, protectedProcedure } from "../init";
 import { LearningService } from "@/server/services/learning.service";
 import { LearningProgressService } from "@/server/services/learning-progress.service";
 
+import { TRPCError } from "@trpc/server";
+
 export const learningRouter = router({
+  /**
+   * Returns student's official ID card details and current enrollment.
+   */
+  getMyIdCard: protectedProcedure.query(async ({ ctx }) => {
+    const student = await ctx.db.studentProfile.findUnique({
+      where: { userId: ctx.user.id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phone: true,
+            avatarUrl: true,
+          },
+        },
+        enrollments: {
+          include: {
+            course: { select: { title: true } },
+            batch: { select: { name: true, code: true, startDate: true, endDate: true } },
+          },
+          orderBy: { enrolledAt: "desc" },
+          take: 1,
+        },
+        idCard: true,
+      },
+    });
+
+    if (!student) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Student profile not found for active user" });
+    }
+
+    return student;
+  }),
   /**
    * Returns overview statistics, enrolled courses with progress, and upcoming classes.
    */

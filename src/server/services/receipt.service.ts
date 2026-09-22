@@ -35,6 +35,8 @@ export interface FormattedReceiptData {
     amountInWords: string;
   };
   payment: {
+    id?: string;
+    feeStructureId?: string;
     gateway: string;
     transactionReference: string;
     gatewayOrderId?: string;
@@ -196,6 +198,8 @@ export class ReceiptService {
         amountInWords: this.amountInWords(payment.amount),
       },
       payment: {
+        id: payment.id,
+        feeStructureId: payment.feeStructureId || undefined,
         gateway: payment.gateway || "RAZORPAY",
         transactionReference: payment.transactionReference,
         gatewayOrderId: payment.gatewayOrderId || undefined,

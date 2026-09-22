@@ -9,6 +9,8 @@ import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { IndianRupee, Clock, CheckCircle2, AlertCircle, FileText, Calendar, CreditCard } from "lucide-react";
 import { FeePaymentStatus, InstallmentStatus } from "@prisma/client";
 import { UniversalPaymentDialog } from "@/components/payment/universal-payment-dialog";
+import { DualFeeReceipt } from "@/components/common/dual-fee-receipt";
+import { Printer } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -21,6 +23,7 @@ import {
 export function StudentFeesView() {
   const utils = api.useUtils();
   const { data, isLoading, error } = api.finance.getMyFeeOverview.useQuery();
+  const [selectedReceipt, setSelectedReceipt] = React.useState<any | null>(null);
   const [checkoutDialog, setCheckoutDialog] = React.useState<{
     open: boolean;
     feeStructureId: string;
@@ -259,6 +262,7 @@ export function StudentFeesView() {
                           <TableHead className="text-[11px] font-semibold text-slate-700">Payment Mode</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Transaction ID</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700 text-right">Amount Paid</TableHead>
+                          <TableHead className="text-[11px] font-semibold text-slate-700 text-right">Receipt</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -278,6 +282,40 @@ export function StudentFeesView() {
                             </TableCell>
                             <TableCell className="font-bold text-emerald-700 text-right">
                               {formatPaiseToRupees(p.amount)}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs flex items-center gap-1 border-slate-300 ml-auto"
+                                onClick={() => {
+                                  setSelectedReceipt({
+                                    receiptNumber: p.transactionReference,
+                                    receiptDate: p.paymentDate,
+                                    studentName: data.studentName || "Student",
+                                    studentId: data.studentId,
+                                    courseTitle: fee.course.title,
+                                    batchCode: fee.batch?.code,
+                                    providerType: (fee.course as any)?.providerType,
+                                    providerName: (fee.course as any)?.providerName,
+                                    universityName: (fee.course as any)?.universityName,
+                                    universityProgram: fee.course.title,
+                                    registrationFee: fee.registrationFee,
+                                    examinationFee: (fee as any)?.examinationFee,
+                                    universityFee: (fee as any)?.universityFee,
+                                    totalFee: fee.totalCourseFee,
+                                    discountAmount: fee.discountAmount,
+                                    netPayable: fee.netPayableAmount,
+                                    amountPaid: p.amount,
+                                    pendingAmount: fee.pendingAmount,
+                                    paymentMode: p.paymentMethod,
+                                    transactionReference: p.providerReference || p.transactionReference,
+                                  });
+                                }}
+                              >
+                                <Printer className="h-3 w-3 text-slate-600" />
+                                <span>Receipt</span>
+                              </Button>
                             </TableCell>
                           </TableRow>
                         ))}
@@ -304,6 +342,24 @@ export function StudentFeesView() {
           utils.finance.getMyFeeOverview.invalidate();
         }}
       />
+
+      {/* Dual Fee Receipt Modal */}
+      {selectedReceipt && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-4">
+              <div>
+                <h3 className="text-base font-bold text-slate-900">Official Fee Receipt</h3>
+                <p className="text-xs text-slate-500">Student Copy & Centre Copy on Single A4 Page</p>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedReceipt(null)}>
+                Close
+              </Button>
+            </div>
+            <DualFeeReceipt data={selectedReceipt} onClose={() => setSelectedReceipt(null)} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

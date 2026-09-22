@@ -20,7 +20,12 @@ import {
   GraduationCap,
   CreditCard,
   ClipboardCheck,
+  History,
+  Calendar,
+  IndianRupee,
+  FileText,
 } from "lucide-react";
+import { PaymentMethod } from "@prisma/client";
 
 export function StudentsView() {
   // Form filter state
@@ -38,6 +43,29 @@ export function StudentsView() {
   const [page, setPage] = useState(1);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [createOpen, setCreateOpen] = useState(false);
+  const [historicalOpen, setHistoricalOpen] = useState(false);
+
+  // Historical Student Dialog State
+  const [histStudentId, setHistStudentId] = useState("");
+  const [histAdmissionDate, setHistAdmissionDate] = useState("2024-06-15");
+  const [histFirstName, setHistFirstName] = useState("");
+  const [histLastName, setHistLastName] = useState("");
+  const [histEmail, setHistEmail] = useState("");
+  const [histPhone, setHistPhone] = useState("");
+  const [histCourseId, setHistCourseId] = useState("");
+  const [histBatchId, setHistBatchId] = useState("");
+  const [histGender, setHistGender] = useState("MALE");
+  const [histCity, setHistCity] = useState("Prayagraj");
+  const [histState, setHistState] = useState("Uttar Pradesh");
+  const [histPincode, setHistPincode] = useState("211001");
+  const [histHighestDegree, setHistHighestDegree] = useState("B.Tech / Graduate");
+  const [histGuardianName, setHistGuardianName] = useState("");
+  const [histGuardianPhone, setHistGuardianPhone] = useState("");
+  const [histTotalFeeRupees, setHistTotalFeeRupees] = useState("45000");
+  const [histInitialPaidRupees, setHistInitialPaidRupees] = useState("30000");
+  const [histPaymentMethod, setHistPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CASH);
+  const [histReceiptNumber, setHistReceiptNumber] = useState("");
+  const [histRemarks, setHistRemarks] = useState("Migrated historical student admission record");
 
   // New Student Registration Dialog State
   const [firstName, setFirstName] = useState("");
@@ -114,6 +142,79 @@ export function StudentsView() {
     setGuardianPhone("");
   };
 
+  const { data: histBatchesData } = api.batch.list.useQuery({
+    courseId: histCourseId || undefined,
+    pageSize: 50,
+  });
+
+  const createHistoricalStudentMutation = api.admin.createHistoricalStudent.useMutation({
+    onSuccess: (res) => {
+      setNotification({
+        type: "success",
+        message: `Historical student successfully registered! Enrollment ID: ${res.studentId}.`,
+      });
+      setHistoricalOpen(false);
+      resetHistoricalForm();
+      refetch();
+    },
+    onError: (err) => {
+      setNotification({ type: "error", message: err.message || "Failed to register historical student." });
+    },
+  });
+
+  const resetHistoricalForm = () => {
+    setHistStudentId("");
+    setHistAdmissionDate("2024-06-15");
+    setHistFirstName("");
+    setHistLastName("");
+    setHistEmail("");
+    setHistPhone("");
+    setHistCourseId("");
+    setHistBatchId("");
+    setHistGuardianName("");
+    setHistGuardianPhone("");
+    setHistTotalFeeRupees("45000");
+    setHistInitialPaidRupees("30000");
+    setHistReceiptNumber("");
+    setHistRemarks("Migrated historical student admission record");
+  };
+
+  const handleHistoricalSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!histFirstName.trim() || !histLastName.trim() || !histEmail.trim() || !histPhone.trim() || !histCourseId || !histAdmissionDate) {
+      setNotification({ type: "error", message: "Admission date, first name, last name, email, phone, and course are required." });
+      return;
+    }
+    const totalFee = parseFloat(histTotalFeeRupees);
+    const initialPaid = parseFloat(histInitialPaidRupees || "0");
+    if (isNaN(totalFee) || totalFee < 0) {
+      setNotification({ type: "error", message: "Total course fee must be non-negative." });
+      return;
+    }
+    createHistoricalStudentMutation.mutate({
+      studentId: histStudentId.trim() || undefined,
+      admissionDate: new Date(histAdmissionDate),
+      firstName: histFirstName.trim(),
+      lastName: histLastName.trim(),
+      email: histEmail.trim(),
+      phone: histPhone.trim(),
+      courseId: histCourseId,
+      batchId: histBatchId || undefined,
+      gender: histGender,
+      city: histCity.trim() || undefined,
+      state: histState.trim() || undefined,
+      pincode: histPincode.trim() || undefined,
+      highestDegree: histHighestDegree.trim() || undefined,
+      guardianName: histGuardianName.trim() || undefined,
+      guardianPhone: histGuardianPhone.trim() || undefined,
+      totalCourseFeeRupees: totalFee,
+      initialPaidAmountRupees: isNaN(initialPaid) ? 0 : initialPaid,
+      paymentMethod: histPaymentMethod,
+      receiptNumber: histReceiptNumber.trim() || undefined,
+      remarks: histRemarks.trim() || undefined,
+    });
+  };
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!firstName || !lastName || !email || !phone || !courseId) {
@@ -186,18 +287,27 @@ export function StudentsView() {
       )}
 
       {/* Top Header matching 1.pdf Candidate Search */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight">Candidate Search</h1>
           <p className="text-xs text-slate-500">Global student registry, enrollment directory, and comprehensive records</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-xs px-4 py-2 rounded shadow-sm uppercase tracking-wide transition-colors"
-        >
-          <UserPlus className="w-3.5 h-3.5" /> ADD NEW CANDIDATE
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setHistoricalOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-purple-700 hover:bg-purple-800 text-white font-bold text-xs px-3.5 py-2 rounded shadow-sm uppercase tracking-wide transition-colors"
+          >
+            <History className="w-3.5 h-3.5" /> ADD EXISTING / OLD STUDENT
+          </button>
+          <button
+            type="button"
+            onClick={() => setCreateOpen(true)}
+            className="inline-flex items-center gap-1.5 bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-xs px-4 py-2 rounded shadow-sm uppercase tracking-wide transition-colors"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> ADD NEW CANDIDATE
+          </button>
+        </div>
       </div>
 
       {/* Candidate Search Filter Card matching 1.pdf pages 8-10 */}
@@ -333,9 +443,16 @@ export function StudentsView() {
                         {s.studentId}
                       </td>
                       <td className="py-3 px-4 font-semibold text-slate-900">
-                        <Link href={`/admin/students/${s.id}`} className="hover:text-[#0088cc] hover:underline">
-                          {s.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          <Link href={`/admin/students/${s.id}`} className="hover:text-[#0088cc] hover:underline font-bold">
+                            {s.name}
+                          </Link>
+                          {s.isHistorical && (
+                            <Badge className="bg-purple-100 text-purple-800 border-purple-200 text-[10px] font-bold">
+                              Historical Record
+                            </Badge>
+                          )}
+                        </div>
                       </td>
                       <td className="py-3 px-4 text-slate-600">
                         {s.email}
@@ -350,14 +467,18 @@ export function StudentsView() {
                       <tr className="bg-[#f8fafc] border-t border-b border-slate-200">
                         <td colSpan={5} className="p-4">
                           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded border border-slate-200 shadow-sm">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs flex-1">
+                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-4 text-xs flex-1">
                               <div>
                                 <span className="text-slate-400 block text-[11px] uppercase font-semibold">Centre</span>
                                 <span className="text-slate-800 font-medium mt-0.5 block">{centre}</span>
                               </div>
                               <div>
-                                <span className="text-slate-400 block text-[11px] uppercase font-semibold">Father / Guardian</span>
-                                <span className="text-slate-800 font-medium mt-0.5 block">{s.guardianName || "Not Provided"}</span>
+                                <span className="text-slate-400 block text-[11px] uppercase font-semibold">Admission Date</span>
+                                <span className="text-slate-800 font-medium mt-0.5 block">
+                                  {s.admissionDate
+                                    ? new Date(s.admissionDate).toLocaleDateString("en-IN")
+                                    : new Date(s.createdAt).toLocaleDateString("en-IN")}
+                                </span>
                               </div>
                               <div>
                                 <span className="text-slate-400 block text-[11px] uppercase font-semibold">Course</span>
@@ -369,6 +490,12 @@ export function StudentsView() {
                                 <span className="text-slate-400 block text-[11px] uppercase font-semibold">Batch</span>
                                 <span className="text-slate-800 font-medium mt-0.5 block truncate" title={s.activeBatches?.join(", ") || "None"}>
                                   {s.activeBatches?.join(", ") || "None"}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400 block text-[11px] uppercase font-semibold">Fee Status</span>
+                                <span className="text-emerald-700 font-bold mt-0.5 block">
+                                  {s.feeStatus || "N/A"}{s.pendingAmount > 0 ? ` (₹${Math.round(s.pendingAmount / 100)} due)` : ""}
                                 </span>
                               </div>
                             </div>
@@ -591,6 +718,316 @@ export function StudentsView() {
                   className="px-5 py-2 bg-[#0088cc] hover:bg-[#0077b3] text-white rounded text-xs font-bold uppercase transition-colors shadow-sm disabled:opacity-50"
                 >
                   {createStudentMutation.isPending ? "REGISTERING..." : "CONFIRM & REGISTER"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Existing / Old Student (Historical Record) Modal */}
+      {historicalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 space-y-4 max-h-[92vh] overflow-y-auto border border-slate-200">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="h-9 w-9 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold">
+                  <History className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900">Add Existing / Old Student (Historical Migration)</h3>
+                  <p className="text-xs text-slate-500">Record institutional learners with past admission dates, IDs, and fee ledgers</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoricalOpen(false)}
+                className="text-slate-400 hover:text-slate-700 font-bold p-1 rounded-lg"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleHistoricalSubmit} className="space-y-4 text-xs">
+              {/* Identity & Past Admission Meta */}
+              <div className="p-3.5 rounded-lg bg-purple-50/50 border border-purple-200 space-y-3">
+                <span className="font-bold text-purple-900 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5 text-purple-700" />
+                  <span>Historical Admission & Credentials</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Existing Student / Enrollment ID (Optional)
+                    </label>
+                    <Input
+                      value={histStudentId}
+                      onChange={(e) => setHistStudentId(e.target.value)}
+                      placeholder="e.g. SG-2024-0012 (blank to auto-generate)"
+                      className="h-8 text-xs bg-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Original Admission Date *
+                    </label>
+                    <Input
+                      type="date"
+                      required
+                      value={histAdmissionDate}
+                      onChange={(e) => setHistAdmissionDate(e.target.value)}
+                      className="h-8 text-xs bg-white font-semibold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">First Name *</label>
+                    <Input
+                      required
+                      value={histFirstName}
+                      onChange={(e) => setHistFirstName(e.target.value)}
+                      placeholder="e.g. Amit"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Last Name *</label>
+                    <Input
+                      required
+                      value={histLastName}
+                      onChange={(e) => setHistLastName(e.target.value)}
+                      placeholder="e.g. Tripathi"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Email Address *</label>
+                    <Input
+                      type="email"
+                      required
+                      value={histEmail}
+                      onChange={(e) => setHistEmail(e.target.value)}
+                      placeholder="e.g. amit@gmail.com"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Mobile Phone *</label>
+                    <Input
+                      required
+                      value={histPhone}
+                      onChange={(e) => setHistPhone(e.target.value)}
+                      placeholder="10 digit mobile number"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Course & Cohort Allocation */}
+              <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+                <span className="font-bold text-slate-800 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <GraduationCap className="h-3.5 w-3.5 text-blue-600" />
+                  <span>Academic Course & Personal Details</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Enrolled Course *</label>
+                    <select
+                      required
+                      value={histCourseId}
+                      onChange={(e) => {
+                        const cid = e.target.value;
+                        setHistCourseId(cid);
+                        setHistBatchId("");
+                        const selectedC = coursesData?.courses.find((c) => c.id === cid);
+                        if (selectedC) {
+                          setHistTotalFeeRupees((selectedC.baseFee / 100).toString());
+                        }
+                      }}
+                      className="block w-full h-8 rounded border border-slate-200 bg-white px-2 text-xs text-slate-800 focus:border-purple-600 focus:outline-none"
+                    >
+                      <option value="">Select Enrolled Course</option>
+                      {coursesData?.courses.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.title} {c.providerType === "UNIVERSITY" ? "(DPGU)" : "(SoftLab)"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Cohort Batch (Optional)</label>
+                    <select
+                      value={histBatchId}
+                      onChange={(e) => setHistBatchId(e.target.value)}
+                      className="block w-full h-8 rounded border border-slate-200 bg-white px-2 text-xs text-slate-800 focus:border-purple-600 focus:outline-none"
+                    >
+                      <option value="">Select Cohort / Historical Batch</option>
+                      {histBatchesData?.batches.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {b.name} ({b.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Gender</label>
+                    <select
+                      value={histGender}
+                      onChange={(e) => setHistGender(e.target.value)}
+                      className="block w-full h-8 rounded border border-slate-200 bg-white px-2 text-xs text-slate-800"
+                    >
+                      <option value="MALE">Male</option>
+                      <option value="FEMALE">Female</option>
+                      <option value="OTHER">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Highest Degree</label>
+                    <Input
+                      value={histHighestDegree}
+                      onChange={(e) => setHistHighestDegree(e.target.value)}
+                      placeholder="e.g. B.Tech / BCA"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">City</label>
+                    <Input
+                      value={histCity}
+                      onChange={(e) => setHistCity(e.target.value)}
+                      placeholder="e.g. Prayagraj"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Father / Guardian Name</label>
+                    <Input
+                      value={histGuardianName}
+                      onChange={(e) => setHistGuardianName(e.target.value)}
+                      placeholder="Guardian Name"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Guardian Mobile</label>
+                    <Input
+                      value={histGuardianPhone}
+                      onChange={(e) => setHistGuardianPhone(e.target.value)}
+                      placeholder="Guardian Contact"
+                      className="h-8 text-xs bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Fee Ledger & Historical Payment */}
+              <div className="p-3.5 rounded-lg bg-emerald-50/60 border border-emerald-200 space-y-3">
+                <span className="font-bold text-emerald-900 uppercase tracking-wider text-[10px] flex items-center gap-1.5">
+                  <IndianRupee className="h-3.5 w-3.5 text-emerald-700" />
+                  <span>Historical Fee Ledger & Payment Migration</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Total Course Fee (₹) *</label>
+                    <Input
+                      required
+                      type="number"
+                      value={histTotalFeeRupees}
+                      onChange={(e) => setHistTotalFeeRupees(e.target.value)}
+                      className="h-8 text-xs bg-white font-mono font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Amount Paid in Past (₹)</label>
+                    <Input
+                      type="number"
+                      value={histInitialPaidRupees}
+                      onChange={(e) => setHistInitialPaidRupees(e.target.value)}
+                      className="h-8 text-xs bg-white font-mono font-bold text-emerald-800"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Balance Due (₹)</label>
+                    <div className="h-8 px-2 flex items-center rounded border border-slate-200 bg-slate-100 font-mono text-xs font-bold text-slate-700">
+                      ₹
+                      {Math.max(
+                        0,
+                        (parseFloat(histTotalFeeRupees) || 0) - (parseFloat(histInitialPaidRupees) || 0)
+                      ).toLocaleString("en-IN")}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Historical Payment Mode</label>
+                    <select
+                      value={histPaymentMethod}
+                      onChange={(e) => setHistPaymentMethod(e.target.value as PaymentMethod)}
+                      className="block w-full h-8 rounded border border-slate-200 bg-white px-2 text-xs text-slate-800"
+                    >
+                      <option value={PaymentMethod.CASH}>Cash Deposit</option>
+                      <option value={PaymentMethod.UPI}>UPI / Online QR</option>
+                      <option value={PaymentMethod.BANK_TRANSFER}>Bank Transfer / NEFT</option>
+                      <option value={PaymentMethod.CHEQUE}>Cheque / DD</option>
+                      <option value={PaymentMethod.CARD}>Card Payment</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Old Receipt / Voucher No. (Optional)</label>
+                    <Input
+                      value={histReceiptNumber}
+                      onChange={(e) => setHistReceiptNumber(e.target.value)}
+                      placeholder="e.g. SLG-HIST-2024-001"
+                      className="h-8 text-xs bg-white font-mono"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Internal Migration Remarks</label>
+                  <Input
+                    value={histRemarks}
+                    onChange={(e) => setHistRemarks(e.target.value)}
+                    className="h-8 text-xs bg-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-3 border-t">
+                <button
+                  type="button"
+                  onClick={() => setHistoricalOpen(false)}
+                  className="px-4 py-2 border rounded text-slate-600 hover:bg-slate-50 text-xs font-semibold uppercase"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createHistoricalStudentMutation.isPending}
+                  className="px-5 py-2 bg-purple-700 hover:bg-purple-800 text-white rounded text-xs font-bold uppercase transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {createHistoricalStudentMutation.isPending ? "MIGRATING..." : "CONFIRM & MIGRATE RECORD"}
                 </button>
               </div>
             </form>

@@ -86,14 +86,26 @@ export const dashboardRouter = router({
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
+    // Compute past 6 months dynamically: e.g. [Apr, May, Jun, Jul, Aug, Sep]
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const past6Months: { name: string; year: number; month: number; start: Date; end: Date }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      past6Months.push({
+        name: monthNames[d.getMonth()],
+        year: d.getFullYear(),
+        month: d.getMonth(),
+        start: new Date(d.getFullYear(), d.getMonth(), 1),
+        end: new Date(d.getFullYear(), d.getMonth() + 1, 0, 23, 59, 59, 999),
+      });
+    }
+
     const [
       activeBatches,
       batchesThisMonth,
       totalStudents,
       studentsThisMonth,
-      moduleCourses,
-      careerPrograms,
-      certificateCourses,
+      courses,
       totalLeads,
       newLeadsThisMonth,
       enquiries,
@@ -103,14 +115,14 @@ export const dashboardRouter = router({
       delayedBatchesCount,
       paymentsSuccess,
       allBatches,
+      allEnrollments,
+      allPlacements,
     ] = await Promise.all([
       ctx.db.batch.count({ where: { status: { in: ["ONGOING", "OPEN_FOR_ENROLLMENT"] } } }),
       ctx.db.batch.count({ where: { createdAt: { gte: startOfMonth } } }),
       ctx.db.studentProfile.count(),
       ctx.db.studentProfile.count({ where: { createdAt: { gte: startOfMonth } } }),
-      ctx.db.course.count({ where: { status: "PUBLISHED" } }),
-      ctx.db.course.count(),
-      ctx.db.certificate.count(),
+      ctx.db.course.findMany({ select: { durationWeeks: true } }),
       ctx.db.lead.count(),
       ctx.db.lead.count({ where: { createdAt: { gte: startOfMonth } } }),
       ctx.db.lead.count({ where: { source: "WEBSITE" } }),
@@ -120,10 +132,17 @@ export const dashboardRouter = router({
       ctx.db.batch.count({ where: { endDate: { lt: now }, status: "ONGOING" } }),
       ctx.db.paymentTransaction.findMany({
         where: { status: "SUCCESS" },
-        select: { amount: true, createdAt: true },
+        select: { amount: true, paymentDate: true },
       }),
       ctx.db.batch.findMany({
         select: { status: true },
+      }),
+      ctx.db.enrollment.findMany({
+        select: { enrolledAt: true },
+      }),
+      ctx.db.placementApplication.findMany({
+        where: { status: "PLACED" },
+        select: { updatedAt: true },
       }),
     ]);
 
@@ -137,63 +156,74 @@ export const dashboardRouter = router({
     const delayedBatches = delayedBatchesCount;
     const scheduledBatches = allBatches.filter((b) => b.status === "UPCOMING" || b.status === "DRAFT").length;
 
-    // Monthly revenue sums (last 6 months: Apr, May, Jun, Jul, Aug, Sep)
-    const months = ["Apr", "May", "Jun", "Jul", "Aug", "Sep"];
-    const revenueLakhs = [0.2, 0.4, 2.4, 4.1, 1.3, 0.9];
-    paymentsSuccess.forEach((p) => {
-      const pMonth = p.createdAt.getMonth();
-      if (pMonth >= 3 && pMonth <= 8) {
-        revenueLakhs[pMonth - 3] += Math.round((p.amount / 10000000) * 10) / 10;
-      }
+    // Course categories breakdown based on actual courses catalog
+    const moduleCourses = courses.filter((c) => c.durationWeeks <= 8).length;
+    const certificateCourses = courses.filter((c) => c.durationWeeks > 8 && c.durationWeeks <= 16).length;
+    const careerPrograms = courses.filter((c) => c.durationWeeks > 16).length;
+
+    // Dynamic 6-month trends
+    const enrollmentTrend = past6Months.map((m) => {
+      const count = allEnrollments.filter((e) => {
+        return e.enrolledAt >= m.start && e.enrolledAt <= m.end;
+      }).length;
+      const placed = allPlacements.filter((p) => p.updatedAt >= m.start && p.updatedAt <= m.end).length;
+      return {
+        month: m.name,
+        newEnrollments: count,
+        placements: placed,
+      };
+    });
+
+    const revenueCollection = past6Months.map((m) => {
+      const monthPayments = paymentsSuccess.filter((p) => {
+        return p.paymentDate >= m.start && p.paymentDate <= m.end;
+      });
+      const totalPaise = monthPayments.reduce((acc, curr) => acc + curr.amount, 0);
+      // In Lakhs: 1 Lakh = 100,000 INR = 10,000,000 Paise
+      const lakhs = totalPaise > 0 ? Math.round((totalPaise / 10000000) * 100) / 100 : 0;
+      return {
+        month: m.name,
+        lakhs,
+      };
     });
 
     return {
       kpi: {
-        activeBatches: activeBatches || 6,
-        batchesThisMonth: batchesThisMonth || 1,
-        totalStudents: totalStudents || 49,
-        studentsThisMonth: studentsThisMonth || 2,
-        moduleCourses: moduleCourses || 9,
-        careerPrograms: careerPrograms || 18,
-        certificateCourses: certificateCourses || 8,
-        totalLeads: totalLeads || 718,
-        newLeadsThisMonth: newLeadsThisMonth || 0,
-        enquiries: enquiries || 73,
-        enrolments: enrolments || 35,
-        placedCount: placedCount || 0,
+        activeBatches,
+        batchesThisMonth,
+        totalStudents,
+        studentsThisMonth,
+        moduleCourses,
+        careerPrograms,
+        certificateCourses,
+        totalLeads,
+        newLeadsThisMonth,
+        enquiries,
+        enrolments,
+        placedCount,
         placementRate,
-        dropouts: dropouts || 0,
-        delayedBatches: delayedBatchesCount || 0,
+        dropouts,
+        delayedBatches,
       },
       charts: {
         funnel: {
-          leads: totalLeads || 718,
-          enquiries: enquiries || 73,
-          enrolments: enrolments || 35,
-          placed: placedCount || 0,
+          leads: totalLeads,
+          enquiries,
+          enrolments,
+          placed: placedCount,
         },
         courseDistribution: {
-          moduleCourses: moduleCourses || 9,
-          certificateCourses: certificateCourses || 8,
-          careerPrograms: careerPrograms || 18,
+          moduleCourses,
+          certificateCourses,
+          careerPrograms,
         },
-        enrollmentTrend: [
-          { month: "Apr", newEnrollments: 1, placements: 0 },
-          { month: "May", newEnrollments: 2, placements: 0 },
-          { month: "Jun", newEnrollments: 12, placements: 0 },
-          { month: "Jul", newEnrollments: 16, placements: 0 },
-          { month: "Aug", newEnrollments: 4, placements: 0 },
-          { month: "Sep", newEnrollments: Math.max(1, enrolments), placements: placedCount },
-        ],
-        revenueCollection: months.map((m, idx) => ({
-          month: m,
-          lakhs: parseFloat(revenueLakhs[idx].toFixed(2)),
-        })),
+        enrollmentTrend,
+        revenueCollection,
         batchDistribution: {
-          running: runningBatches || 6,
-          completed: completedBatches || 0,
-          delayed: delayedBatches || 0,
-          scheduled: scheduledBatches || 1,
+          running: runningBatches,
+          completed: completedBatches,
+          delayed: delayedBatches,
+          scheduled: scheduledBatches,
         },
       },
       targets: [
@@ -201,7 +231,7 @@ export const dashboardRouter = router({
         { label: "PLACEMENT SUCCESS RATE", current: `${placementRate}%`, target: "80%", percentage: Math.min(100, parseFloat(placementRate)) },
         { label: "STUDENT RETENTION", current: "100%", target: "95%", percentage: 100 },
         { label: "ENQUIRY TO LEAD CONV.", current: `${enquiryToLeadConv}%`, target: "80%", percentage: Math.min(100, parseFloat(enquiryToLeadConv)) },
-        { label: "DELAYED BATCH COMPLETION", current: "100% On-time | 0% Delayed", target: "0% Delayed", percentage: 100 },
+        { label: "DELAYED BATCH COMPLETION", current: `${delayedBatches === 0 ? "100% On-time | 0% Delayed" : `${delayedBatches} Delayed`}`, target: "0% Delayed", percentage: delayedBatches === 0 ? 100 : 50 },
         { label: "COURSE COMPLETION RATE", current: "0%", target: "90%", percentage: 0 },
       ],
     };

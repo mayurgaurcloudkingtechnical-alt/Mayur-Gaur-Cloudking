@@ -127,6 +127,36 @@ export const staffErpRouter = router({
       return StaffProfileService.listStaffProfiles(input ?? {});
     }),
 
+  createStaffMemberWithAccount: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        firstName: z.string().min(1, "First name is required"),
+        lastName: z.string().min(1, "Last name is required"),
+        email: z.string().email("Valid email is required"),
+        phone: z.string().optional(),
+        roleCode: z.nativeEnum(UserRoleCode),
+        department: z.nativeEnum(StaffDepartment),
+        designation: z.string().min(1, "Designation is required"),
+        baseSalary: z.number().int().positive("Salary must be positive"), // in Paise
+        employeeId: z.string().optional(),
+        password: z.string().min(6).optional(),
+        bankAccountNumber: z.string().optional(),
+        bankIfsc: z.string().optional(),
+        panNumber: z.string().optional(),
+        gender: z.string().optional(),
+        workLocation: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StaffProfileService.createStaffMemberWithAccount(asAuthUser(ctx.user), input);
+    }),
+
+  resetStaffPassword: requireRoleProcedure(adminHRRoles)
+    .input(z.object({ staffId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return StaffProfileService.resetStaffPassword(asAuthUser(ctx.user), input.staffId);
+    }),
+
   createStaffProfile: requireRoleProcedure(adminHRRoles)
     .input(
       z.object({

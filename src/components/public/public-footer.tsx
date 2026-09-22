@@ -59,6 +59,28 @@ export function PublicFooter() {
                   <ArrowUpRight className="h-3 w-3" />
                 </Link>
               </li>
+              <li className="pt-1 border-t border-slate-100">
+                <a
+                  href="https://cons.dpguindia.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-700 font-semibold hover:text-sky-800 transition-colors flex items-center gap-1"
+                >
+                  <span>DPGU Partner Portal</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                <a
+                  href="http://student.dpguindia.com/Default.aspx?ReturnUrl=%2f"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sky-700 font-semibold hover:text-sky-800 transition-colors flex items-center gap-1"
+                >
+                  <span>DPGU Student Portal</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              </li>
             </ul>
           </div>
 

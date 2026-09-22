@@ -2,73 +2,212 @@
 
 import * as React from "react";
 import { useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { api } from "@/lib/trpc/react";
 import { PaymentMethod } from "@prisma/client";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPaiseToRupees, formatDate } from "@/lib/utils";
+import { EditPaymentDialog } from "./edit-payment-dialog";
+import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
+import { Edit, Printer, Loader2, Download, Filter, X } from "lucide-react";
 
-export function PaymentsTable() {
+interface PaymentsTableProps {
+  initialStudentId?: string;
+}
+
+export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const studentIdFromUrl = searchParams.get("studentId") || initialStudentId;
+
+  const [filterStudentId, setFilterStudentId] = useState<string | undefined>(studentIdFromUrl || undefined);
   const [page, setPage] = useState(1);
   const [methodFilter, setMethodFilter] = useState<PaymentMethod | undefined>(undefined);
 
+  // Edit payment modal state
+  const [editingPayment, setEditingPayment] = useState<any | null>(null);
+
+  // Dual fee receipt modal state
+  const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
+  const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
+
+  const utils = api.useUtils();
   const { data, isLoading } = api.finance.listPayments.useQuery({
     page,
     limit: 20,
+    studentId: filterStudentId || undefined,
     paymentMethod: methodFilter,
   });
 
+  const handleOpenReceipt = async (identifier: string) => {
+    try {
+      setLoadingReceiptId(identifier);
+      const res = await utils.finance.getPaymentReceipt.fetch({ identifier });
+      if (res) {
+        setViewingReceipt({
+          receiptNumber: res.receiptNumber,
+          receiptDate: res.receiptDate,
+          studentName: res.student.name,
+          studentId: res.student.studentId || "SG-STUDENT",
+          admissionNumber: res.admission?.applicationNumber || "N/A",
+          courseTitle: res.course.title,
+          totalFee: res.financials.totalCourseFeePaise,
+          discountAmount: res.financials.discountPaise,
+          netPayable: res.financials.netPayablePaise,
+          amountPaid: res.financials.amountPaidPaise,
+          pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+          amountInWords: res.financials.amountInWords,
+          paymentMode: res.payment.paymentMethod,
+          transactionReference: res.payment.transactionReference,
+          feeStructureId: res.payment.feeStructureId || undefined,
+          paymentId: res.payment.id || identifier,
+        });
+      }
+    } catch (err: any) {
+      alert("Failed to load fee receipt: " + (err.message || "Unknown error"));
+    } finally {
+      setLoadingReceiptId(null);
+    }
+  };
+
+  const clearStudentFilter = () => {
+    setFilterStudentId(undefined);
+    const url = new URL(window.location.href);
+    url.searchParams.delete("studentId");
+    router.replace(url.pathname);
+  };
+
+  const exportPaymentsCSV = () => {
+    if (!data?.items || data.items.length === 0) {
+      alert("No payments to export.");
+      return;
+    }
+    const headers = [
+      "Receipt Number",
+      "Student Name",
+      "Student ID",
+      "Course",
+      "Amount (INR)",
+      "Method",
+      "Provider Ref",
+      "Date",
+      "Remarks",
+    ];
+    const rows = data.items.map((p: any) => {
+      const studentName = p.student?.user
+        ? `${p.student.user.firstName} ${p.student.user.lastName}`
+        : p.admission?.applicantName || "Admitted Learner";
+      const studentCode = p.student?.studentId || p.admission?.applicationNumber || "";
+      const courseTitle =
+        p.feeStructure?.course?.title || p.admission?.course?.title || "Professional Course";
+      return [
+        `"${p.receiptNumber || p.transactionReference}"`,
+        `"${studentName}"`,
+        `"${studentCode}"`,
+        `"${courseTitle}"`,
+        (p.amount / 100).toFixed(2),
+        `"${p.paymentMethod}"`,
+        `"${p.gatewayOrderId || p.providerReference || ""}"`,
+        `"${new Date(p.paymentDate).toISOString().slice(0, 10)}"`,
+        `"${p.remarks || ""}"`,
+      ];
+    });
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `SoftLab_Payments_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
+      {/* Filter Notification Banner */}
+      {filterStudentId && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-center justify-between text-xs text-blue-900 shadow-sm">
+          <div className="flex items-center gap-2 font-medium">
+            <Filter className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>
+              Transactions filtered to student ID: <strong className="font-mono text-blue-800">{filterStudentId}</strong>
+            </span>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={clearStudentFilter}
+            className="h-7 text-xs text-blue-700 hover:text-blue-900 hover:bg-blue-100 flex items-center gap-1"
+          >
+            <X className="w-3.5 h-3.5" /> Clear Filter
+          </Button>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Button
+            size="sm"
+            variant={methodFilter === undefined ? "default" : "outline"}
+            onClick={() => { setMethodFilter(undefined); setPage(1); }}
+            className="text-xs h-8"
+          >
+            All Modes
+          </Button>
+          <Button
+            size="sm"
+            variant={methodFilter === PaymentMethod.UPI ? "default" : "outline"}
+            onClick={() => { setMethodFilter(PaymentMethod.UPI); setPage(1); }}
+            className="text-xs h-8"
+          >
+            UPI
+          </Button>
+          <Button
+            size="sm"
+            variant={methodFilter === PaymentMethod.CASH ? "default" : "outline"}
+            onClick={() => { setMethodFilter(PaymentMethod.CASH); setPage(1); }}
+            className="text-xs h-8"
+          >
+            Cash
+          </Button>
+          <Button
+            size="sm"
+            variant={methodFilter === PaymentMethod.BANK_TRANSFER ? "default" : "outline"}
+            onClick={() => { setMethodFilter(PaymentMethod.BANK_TRANSFER); setPage(1); }}
+            className="text-xs h-8"
+          >
+            Bank Transfer
+          </Button>
+          <Button
+            size="sm"
+            variant={methodFilter === PaymentMethod.CARD ? "default" : "outline"}
+            onClick={() => { setMethodFilter(PaymentMethod.CARD); setPage(1); }}
+            className="text-xs h-8"
+          >
+            Card
+          </Button>
+          <Button
+            size="sm"
+            variant={methodFilter === PaymentMethod.RAZORPAY ? "default" : "outline"}
+            onClick={() => { setMethodFilter(PaymentMethod.RAZORPAY); setPage(1); }}
+            className="text-xs h-8"
+          >
+            Razorpay
+          </Button>
+        </div>
+
         <Button
           size="sm"
-          variant={methodFilter === undefined ? "default" : "outline"}
-          onClick={() => { setMethodFilter(undefined); setPage(1); }}
-          className="text-xs h-8"
+          variant="outline"
+          onClick={exportPaymentsCSV}
+          className="text-xs h-8 border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
+          title="Export payments ledger CSV"
         >
-          All Modes
-        </Button>
-        <Button
-          size="sm"
-          variant={methodFilter === PaymentMethod.UPI ? "default" : "outline"}
-          onClick={() => { setMethodFilter(PaymentMethod.UPI); setPage(1); }}
-          className="text-xs h-8"
-        >
-          UPI
-        </Button>
-        <Button
-          size="sm"
-          variant={methodFilter === PaymentMethod.CASH ? "default" : "outline"}
-          onClick={() => { setMethodFilter(PaymentMethod.CASH); setPage(1); }}
-          className="text-xs h-8"
-        >
-          Cash
-        </Button>
-        <Button
-          size="sm"
-          variant={methodFilter === PaymentMethod.BANK_TRANSFER ? "default" : "outline"}
-          onClick={() => { setMethodFilter(PaymentMethod.BANK_TRANSFER); setPage(1); }}
-          className="text-xs h-8"
-        >
-          Bank Transfer
-        </Button>
-        <Button
-          size="sm"
-          variant={methodFilter === PaymentMethod.CARD ? "default" : "outline"}
-          onClick={() => { setMethodFilter(PaymentMethod.CARD); setPage(1); }}
-          className="text-xs h-8"
-        >
-          Card
-        </Button>
-        <Button
-          size="sm"
-          variant={methodFilter === PaymentMethod.RAZORPAY ? "default" : "outline"}
-          onClick={() => { setMethodFilter(PaymentMethod.RAZORPAY); setPage(1); }}
-          className="text-xs h-8"
-        >
-          Razorpay
+          <Download className="h-3.5 w-3.5 text-slate-500" />
+          <span>Export CSV</span>
         </Button>
       </div>
 
@@ -84,18 +223,19 @@ export function PaymentsTable() {
               <TableHead className="text-xs font-semibold text-slate-700">Amount</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Received By</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Date</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700 text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
                   Loading payment history...
                 </TableCell>
               </TableRow>
             ) : !data || data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
                   No payment records found.
                 </TableCell>
               </TableRow>
@@ -138,6 +278,49 @@ export function PaymentsTable() {
                       {receiverName}
                     </TableCell>
                     <TableCell className="text-slate-500">{formatDate(p.paymentDate)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Receipt Button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleOpenReceipt(p.id)}
+                          disabled={loadingReceiptId === p.id}
+                          className="h-7 px-2 text-xs border-slate-300 text-blue-700 hover:bg-blue-50 font-medium inline-flex items-center gap-1"
+                          title="Print official fee receipt"
+                        >
+                          {loadingReceiptId === p.id ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Printer className="h-3 w-3" />
+                          )}
+                          <span className="hidden sm:inline">Receipt</span>
+                        </Button>
+
+                        {/* Edit Payment Button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() =>
+                            setEditingPayment({
+                              id: p.id,
+                              studentName,
+                              amount: p.amount,
+                              paymentMethod: p.paymentMethod,
+                              providerReference: p.providerReference,
+                              receiptNumber: p.receiptNumber,
+                              paymentDate: p.paymentDate,
+                              remarks: p.remarks,
+                            })
+                          }
+                          className="h-7 px-2 text-xs border-slate-300 text-slate-700 hover:bg-slate-100 font-medium inline-flex items-center gap-1"
+                          title="Edit payment amount, mode, receipt number, or reference"
+                        >
+                          <Edit className="h-3 w-3 text-slate-600" />
+                          <span className="hidden sm:inline">Edit</span>
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -168,6 +351,33 @@ export function PaymentsTable() {
             >
               Next
             </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Payment Dialog */}
+      {editingPayment && (
+        <EditPaymentDialog
+          open={!!editingPayment}
+          onOpenChange={(open) => !open && setEditingPayment(null)}
+          payment={editingPayment}
+          onSuccess={() => {
+            utils.finance.listPayments.invalidate();
+            utils.finance.listFeeStructures.invalidate();
+            utils.finance.getOverviewMetrics.invalidate();
+            setEditingPayment(null);
+          }}
+        />
+      )}
+
+      {/* Dual Fee Receipt Viewer Modal */}
+      {viewingReceipt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-4xl w-full p-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <DualFeeReceipt
+              data={viewingReceipt}
+              onClose={() => setViewingReceipt(null)}
+            />
           </div>
         </div>
       )}

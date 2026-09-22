@@ -5,6 +5,9 @@ import {
   Prisma,
   AttendanceStatus,
   EnrollmentStatus,
+  PaymentMethod,
+  PaymentTransactionStatus,
+  FeePaymentStatus,
 } from "@prisma/client";
 import { AuditService } from "@/server/services/audit.service";
 import { PERMISSION_CATEGORIES, ALL_PERMISSIONS } from "@/server/auth/permissions";
@@ -523,7 +526,7 @@ export const adminRouter = router({
         }
 
         return createdUser;
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.user.id,
@@ -739,7 +742,7 @@ export const adminRouter = router({
             },
             enrollments: {
               include: {
-                course: { select: { id: true, title: true, slug: true } },
+                course: { select: { id: true, title: true, slug: true, providerType: true, providerName: true, universityName: true } },
                 batch: { select: { id: true, name: true, code: true } },
                 feeStructure: {
                   select: {
@@ -782,6 +785,9 @@ export const adminRouter = router({
           attendanceCount: s._count.attendanceEntries,
           examCount: s._count.examAttempts,
           certificatesCount: s._count.certificates,
+          isHistorical: s.isHistorical,
+          admissionDate: s.admissionDate,
+          photoUrl: s.photoUrl,
           createdAt: s.createdAt,
         })),
         total,
@@ -847,6 +853,9 @@ export const adminRouter = router({
               course: { select: { title: true } },
             },
           },
+          convertedApplication: true,
+          idCard: true,
+          documents: { orderBy: { createdAt: "desc" } },
         },
       });
 
@@ -900,6 +909,8 @@ export const adminRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Selected course not found." });
       }
 
+      const defaultPasswordHash = await bcrypt.hash("StudentSecure2026!", 10);
+
       return ctx.db.$transaction(async (tx) => {
         let user = await tx.user.findUnique({ where: { email: cleanEmail } });
 
@@ -916,7 +927,6 @@ export const adminRouter = router({
             });
           }
 
-          const defaultPasswordHash = await bcrypt.hash("StudentSecure2026!", 10);
           user = await tx.user.create({
             data: {
               firstName: input.firstName.trim(),
@@ -1005,7 +1015,202 @@ export const adminRouter = router({
         });
 
         return { success: true, studentId: studentProfile.studentId, id: studentProfile.id };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
+    }),
+
+  /**
+   * Registers a historical / existing student record with custom past admission date,
+   * custom student enrollment ID, optional past paid fee ledger, and historical receipt.
+   */
+  createHistoricalStudent: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN, UserRoleCode.DIRECTOR])
+    .input(
+      z.object({
+        studentId: z.string().optional(),
+        admissionDate: z.coerce.date(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        email: z.string().email(),
+        phone: z.string().min(10),
+        courseId: z.string(),
+        batchId: z.string().optional(),
+        dateOfBirth: z.coerce.date().optional(),
+        gender: z.string().optional(),
+        address: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        pincode: z.string().optional(),
+        highestDegree: z.string().optional(),
+        guardianName: z.string().optional(),
+        guardianPhone: z.string().optional(),
+        photoUrl: z.string().optional(),
+        totalCourseFeeRupees: z.number().int().nonnegative(),
+        initialPaidAmountRupees: z.number().int().nonnegative().default(0),
+        paymentMethod: z.nativeEnum(PaymentMethod).optional(),
+        receiptNumber: z.string().optional(),
+        providerReference: z.string().optional(),
+        remarks: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const cleanEmail = input.email.trim().toLowerCase();
+      const cleanPhone = input.phone.trim().replace(/[^0-9]/g, "").slice(-10);
+
+      const course = await ctx.db.course.findUnique({ where: { id: input.courseId } });
+      if (!course) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Selected course not found." });
+      }
+
+      const defaultPasswordHash = await bcrypt.hash("StudentSecure2026!", 10);
+
+      return ctx.db.$transaction(async (tx) => {
+        let user = await tx.user.findUnique({ where: { email: cleanEmail } });
+
+        if (!user) {
+          const existingPhone = await tx.user.findFirst({ where: { phone: cleanPhone } });
+          if (existingPhone) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `User with phone '${cleanPhone}' is already registered (${existingPhone.email}).`,
+            });
+          }
+
+          user = await tx.user.create({
+            data: {
+              firstName: input.firstName.trim(),
+              lastName: input.lastName.trim(),
+              email: cleanEmail,
+              phone: cleanPhone,
+              roleCode: UserRoleCode.STUDENT,
+              passwordHash: defaultPasswordHash,
+              status: UserStatus.ACTIVE,
+            },
+          });
+        }
+
+        let studentProfile = await tx.studentProfile.findUnique({
+          where: { userId: user.id },
+        });
+
+        if (!studentProfile) {
+          let customId = input.studentId?.trim();
+          if (!customId) {
+            const count = await tx.studentProfile.count();
+            const year = new Date(input.admissionDate).getFullYear();
+            customId = `SG-${year}-${(count + 1).toString().padStart(5, "0")}`;
+          }
+
+          studentProfile = await tx.studentProfile.create({
+            data: {
+              userId: user.id,
+              studentId: customId,
+              isHistorical: true,
+              admissionDate: new Date(input.admissionDate),
+              dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+              gender: input.gender,
+              address: input.address,
+              city: input.city,
+              state: input.state,
+              pincode: input.pincode,
+              highestDegree: input.highestDegree,
+              guardianName: input.guardianName,
+              guardianPhone: input.guardianPhone,
+              photoUrl: input.photoUrl || null,
+            },
+          });
+        }
+
+        const existingEnrollment = await tx.enrollment.findFirst({
+          where: {
+            studentId: studentProfile.id,
+            courseId: input.courseId,
+          },
+        });
+
+        if (existingEnrollment) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `Student is already enrolled in ${course.title}.`,
+          });
+        }
+
+        const enrollment = await tx.enrollment.create({
+          data: {
+            studentId: studentProfile.id,
+            courseId: input.courseId,
+            batchId: input.batchId || null,
+            status: EnrollmentStatus.ACTIVE,
+            enrolledAt: new Date(input.admissionDate),
+          },
+        });
+
+        const totalFeePaise = input.totalCourseFeeRupees * 100;
+        const paidPaise = Math.min(totalFeePaise, input.initialPaidAmountRupees * 100);
+        const pendingPaise = totalFeePaise - paidPaise;
+        const paymentStatus: FeePaymentStatus =
+          pendingPaise === 0
+            ? FeePaymentStatus.PAID
+            : paidPaise > 0
+            ? FeePaymentStatus.PARTIAL
+            : FeePaymentStatus.PENDING;
+
+        const feeStructure = await tx.feeStructure.create({
+          data: {
+            studentId: studentProfile.id,
+            enrollmentId: enrollment.id,
+            courseId: input.courseId,
+            batchId: input.batchId || null,
+            totalCourseFee: totalFeePaise,
+            netPayableAmount: totalFeePaise,
+            pendingAmount: pendingPaise,
+            paidAmount: paidPaise,
+            paymentStatus,
+            status: "ACTIVE",
+            createdById: ctx.user.id,
+            createdAt: new Date(input.admissionDate),
+          },
+        });
+
+        if (paidPaise > 0) {
+          const year = new Date(input.admissionDate).getFullYear();
+          const rand = Math.floor(1000 + Math.random() * 9000);
+          const ref = `PAY-${year}-${rand}`;
+          const receiptNo = input.receiptNumber?.trim() || `SLG-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+
+          await tx.paymentTransaction.create({
+            data: {
+              transactionReference: ref,
+              feeStructureId: feeStructure.id,
+              studentId: studentProfile.id,
+              enrollmentId: enrollment.id,
+              amount: paidPaise,
+              paymentDate: new Date(input.admissionDate),
+              paidAt: new Date(input.admissionDate),
+              paymentMethod: input.paymentMethod || PaymentMethod.CASH,
+              status: PaymentTransactionStatus.SUCCESS,
+              receiptNumber: receiptNo,
+              isHistorical: true,
+              providerReference: input.providerReference?.trim() || null,
+              remarks: input.remarks || "Historical initial payment migrated into system",
+              receivedById: ctx.user.id,
+            },
+          });
+        }
+
+        await AuditService.log({
+          actorId: ctx.user.id,
+          action: "HISTORICAL_STUDENT_REGISTERED",
+          resourceType: "StudentProfile",
+          resourceId: studentProfile.id,
+          newData: {
+            studentId: studentProfile.studentId,
+            courseId: course.id,
+            admissionDate: input.admissionDate,
+            initialPaid: paidPaise,
+          },
+        });
+
+        return { success: true, studentId: studentProfile.studentId, id: studentProfile.id };
+      }, { maxWait: 15000, timeout: 30000 });
     }),
 
   assignCourseToStudent: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
@@ -1074,7 +1279,7 @@ export const adminRouter = router({
         });
 
         return { success: true, enrollmentId: enrollment.id };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
     }),
 
   updateStudentProfile: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
@@ -1084,6 +1289,7 @@ export const adminRouter = router({
         firstName: z.string().optional(),
         lastName: z.string().optional(),
         phone: z.string().optional(),
+        photoUrl: z.string().optional(),
         gender: z.string().optional(),
         dateOfBirth: z.coerce.date().optional(),
         address: z.string().optional(),
@@ -1093,6 +1299,16 @@ export const adminRouter = router({
         highestDegree: z.string().optional(),
         guardianName: z.string().optional(),
         guardianPhone: z.string().optional(),
+        fatherName: z.string().optional(),
+        motherName: z.string().optional(),
+        whatsappNumber: z.string().optional(),
+        alternatePhone: z.string().optional(),
+        schoolOrCollege: z.string().optional(),
+        passingYear: z.string().optional(),
+        percentageOrCgpa: z.string().optional(),
+        center: z.string().optional(),
+        admissionDate: z.coerce.date().optional(),
+        isHistorical: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -1103,14 +1319,15 @@ export const adminRouter = router({
       if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Student record not found." });
 
       return ctx.db.$transaction(async (tx) => {
-        // Update user names and phone if provided
-        if (input.firstName || input.lastName || input.phone) {
+        // Update user names, phone and avatar if provided
+        if (input.firstName || input.lastName || input.phone || input.photoUrl) {
           await tx.user.update({
             where: { id: student.userId },
             data: {
               ...(input.firstName ? { firstName: input.firstName.trim() } : {}),
               ...(input.lastName ? { lastName: input.lastName.trim() } : {}),
               ...(input.phone ? { phone: input.phone.trim() } : {}),
+              ...(input.photoUrl !== undefined ? { avatarUrl: input.photoUrl.trim() || null } : {}),
             },
           });
         }
@@ -1119,6 +1336,7 @@ export const adminRouter = router({
         const updated = await tx.studentProfile.update({
           where: { id: input.studentProfileId },
           data: {
+            photoUrl: input.photoUrl !== undefined ? input.photoUrl.trim() || null : student.photoUrl,
             gender: input.gender ?? student.gender,
             dateOfBirth: input.dateOfBirth ?? student.dateOfBirth,
             address: input.address ?? student.address,
@@ -1128,6 +1346,16 @@ export const adminRouter = router({
             highestDegree: input.highestDegree ?? student.highestDegree,
             guardianName: input.guardianName ?? student.guardianName,
             guardianPhone: input.guardianPhone ?? student.guardianPhone,
+            fatherName: input.fatherName ?? student.fatherName,
+            motherName: input.motherName ?? student.motherName,
+            whatsappNumber: input.whatsappNumber ?? student.whatsappNumber,
+            alternatePhone: input.alternatePhone ?? student.alternatePhone,
+            schoolOrCollege: input.schoolOrCollege ?? student.schoolOrCollege,
+            passingYear: input.passingYear ?? student.passingYear,
+            percentageOrCgpa: input.percentageOrCgpa ?? student.percentageOrCgpa,
+            center: input.center ?? student.center,
+            admissionDate: input.admissionDate ?? student.admissionDate,
+            isHistorical: input.isHistorical !== undefined ? input.isHistorical : student.isHistorical,
           },
         });
 
@@ -1140,7 +1368,7 @@ export const adminRouter = router({
         });
 
         return { success: true, student: updated };
-      });
+      }, { maxWait: 15000, timeout: 30000 });
     }),
 
   updateEnrollmentBatch: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
@@ -1180,7 +1408,7 @@ export const adminRouter = router({
             data: { batchId: input.batchId },
           });
         }
-      });
+      }, { maxWait: 15000, timeout: 30000 });
 
       await AuditService.log({
         actorId: ctx.user.id,
@@ -1351,5 +1579,146 @@ export const adminRouter = router({
         recentSessions: formattedSessions,
         availableBatches: batchesList,
       };
+    }),
+
+  addStudentDocument: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.MANAGER,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+        title: z.string().min(2),
+        documentType: z.string().min(2),
+        documentUrl: z.string().min(2),
+        fileName: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const student = await ctx.db.studentProfile.findUnique({
+        where: { id: input.studentProfileId },
+      });
+      if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Student record not found." });
+
+      const doc = await ctx.db.studentDocument.create({
+        data: {
+          studentId: student.id,
+          title: input.title.trim(),
+          documentType: input.documentType.trim(),
+          documentUrl: input.documentUrl.trim(),
+          fileName: input.fileName?.trim() || null,
+        },
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "STUDENT_DOCUMENT_ADDED",
+        resourceType: "StudentDocument",
+        resourceId: doc.id,
+        newData: { title: doc.title, documentType: doc.documentType },
+      });
+
+      return doc;
+    }),
+
+  deleteStudentDocument: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.MANAGER,
+  ])
+    .input(z.object({ documentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const doc = await ctx.db.studentDocument.findUnique({
+        where: { id: input.documentId },
+      });
+      if (!doc) throw new TRPCError({ code: "NOT_FOUND", message: "Document not found." });
+
+      await ctx.db.studentDocument.delete({ where: { id: input.documentId } });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "STUDENT_DOCUMENT_DELETED",
+        resourceType: "StudentDocument",
+        resourceId: input.documentId,
+      });
+
+      return { success: true };
+    }),
+
+  generateStudentIdCard: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.MANAGER,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+        validYears: z.number().min(1).max(5).default(1),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const student = await ctx.db.studentProfile.findUnique({
+        where: { id: input.studentProfileId },
+        include: {
+          user: true,
+          enrollments: { include: { course: true, batch: true } },
+          idCard: true,
+        },
+      });
+      if (!student) throw new TRPCError({ code: "NOT_FOUND", message: "Student record not found." });
+
+      const year = new Date().getFullYear();
+      const validUntil = new Date(Date.now() + input.validYears * 365 * 24 * 60 * 60 * 1000);
+
+      let cardNumber = student.idCard?.cardNumber;
+      if (!cardNumber) {
+        const count = await ctx.db.studentIdCard.count();
+        cardNumber = `SLG-IDC-${year}-${String(count + 1).padStart(5, "0")}`;
+      }
+
+      const isUniversity = student.educationProvider === "Dr. Preeti Global University" || !!student.universityName;
+      const primaryEnrollment = student.enrollments[0];
+
+      const qrPayload = JSON.stringify({
+        inst: isUniversity ? "Dr. Preeti Global University / SOFTLAB GLOBAL" : "SOFTLAB GLOBAL",
+        sid: student.studentId,
+        name: `${student.user.firstName} ${student.user.lastName}`,
+        course: student.universityProgram || primaryEnrollment?.course?.title || "Professional Program",
+        valid: validUntil.getFullYear(),
+      });
+
+      const idCard = await ctx.db.studentIdCard.upsert({
+        where: { studentId: student.id },
+        create: {
+          studentId: student.id,
+          cardNumber,
+          validUntil,
+          qrCodeData: qrPayload,
+          educationProvider: student.educationProvider || "SoftLab Global",
+          universityName: student.universityName || null,
+          universityProgram: student.universityProgram || null,
+          status: "ACTIVE",
+        },
+        update: {
+          validUntil,
+          qrCodeData: qrPayload,
+          status: "ACTIVE",
+          updatedAt: new Date(),
+        },
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "STUDENT_ID_CARD_GENERATED",
+        resourceType: "StudentIdCard",
+        resourceId: idCard.id,
+        newData: { cardNumber: idCard.cardNumber, validUntil },
+      });
+
+      return idCard;
     }),
 });

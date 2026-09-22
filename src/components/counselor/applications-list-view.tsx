@@ -21,9 +21,11 @@ import {
   RotateCcw,
   Trash2,
   Loader2,
+  Printer,
 } from "lucide-react";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { EditApplicationDialog } from "./edit-application-dialog";
+import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 
 interface ApplicationsListViewProps {
   basePath?: string;
@@ -36,8 +38,39 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [isExporting, setIsExporting] = useState(false);
+  const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
+  const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
 
   const utils = api.useUtils();
+
+  const handleOpenReceipt = async (applicationId: string) => {
+    try {
+      setLoadingReceiptId(applicationId);
+      const res = await utils.crm.getAdmissionReceipt.fetch({ applicationId });
+      if (res) {
+        setViewingReceipt({
+          receiptNumber: res.receiptNumber,
+          receiptDate: res.receiptDate,
+          studentName: res.student.name,
+          studentId: res.student.studentId || "SG-STUDENT",
+          admissionNumber: res.admission?.applicationNumber || "N/A",
+          courseTitle: res.course.title,
+          totalFee: res.financials.totalCourseFeePaise,
+          discountAmount: res.financials.discountPaise,
+          netPayable: res.financials.netPayablePaise,
+          amountPaid: res.financials.amountPaidPaise,
+          pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+          amountInWords: res.financials.amountInWords,
+          paymentMode: res.payment.paymentMethod,
+          transactionReference: res.payment.transactionReference,
+        });
+      }
+    } catch (err: any) {
+      alert("Failed to load fee receipt: " + (err.message || "Unknown error"));
+    } finally {
+      setLoadingReceiptId(null);
+    }
+  };
 
   const { data, isLoading, error } = api.crm.listApplications.useQuery({
     stage: stage === "ALL" ? undefined : stage,
@@ -217,7 +250,14 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                         <div className="text-[11px] text-slate-400">{app.applicantEmail}</div>
                       </td>
                       <td className="py-3 px-3 text-slate-700">
-                        <div>{app.course.title}</div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="font-medium text-slate-900">{app.course.title}</span>
+                          {((app.course as any)?.providerType === "UNIVERSITY" || (app as any).providerType === "UNIVERSITY") && (
+                            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                              DPGU
+                            </span>
+                          )}
+                        </div>
                         {app.batch && (
                           <div className="text-[11px] text-slate-400">{app.batch.code}</div>
                         )}
@@ -251,6 +291,24 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                       </td>
                       <td className="py-3 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          {((app as any).payments?.length > 0 || app.stage === ApplicationStage.CONVERTED) && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={loadingReceiptId === app.id}
+                              onClick={() => handleOpenReceipt(app.id)}
+                              className="h-7 px-2 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50 flex items-center gap-1 font-medium"
+                              title="Print Fee Receipt"
+                            >
+                              {loadingReceiptId === app.id ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                              )}
+                              <span>Receipt</span>
+                            </Button>
+                          )}
                           <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-slate-300">
                             <Link href={`${basePath}/${app.id}`}>Review</Link>
                           </Button>
@@ -368,6 +426,18 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
         onOpenChange={(open) => !open && setEditingApp(null)}
         application={editingApp}
       />
+
+      {/* Dual Fee Receipt Viewer Modal */}
+      {viewingReceipt && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl max-w-4xl w-full p-4 max-h-[90vh] overflow-y-auto shadow-2xl">
+            <DualFeeReceipt
+              data={viewingReceipt}
+              onClose={() => setViewingReceipt(null)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
