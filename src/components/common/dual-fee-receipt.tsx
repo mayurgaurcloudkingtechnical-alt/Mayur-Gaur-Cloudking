@@ -57,7 +57,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   const [saveError, setSaveError] = useState<string | null>(null);
 
   // Editable form fields
-  const [receiptNumber, setReceiptNumber] = useState(data.receiptNumber || "CK-ND-2203");
+  const [receiptNumber, setReceiptNumber] = useState(data.receiptNumber || "SLG-2026-306281");
   const [receiptDate, setReceiptDate] = useState(() => {
     try {
       const d = new Date(data.receiptDate);
@@ -68,26 +68,26 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   });
 
   const [studentName, setStudentName] = useState(data.studentName || "Student");
-  const [studentId, setStudentId] = useState(data.studentId || data.admissionNumber || "CK-ENR-PJ-00001");
-  const [courseTitle, setCourseTitle] = useState(data.courseTitle || "Professional Training Program");
-  const [centerName, setCenterName] = useState(data.centerName || "CloudKing Technical Prayagraj Centre");
+  const [studentId, setStudentId] = useState(data.studentId || data.admissionNumber || "SG-2026-00005");
+  const [courseTitle, setCourseTitle] = useState(data.courseTitle || "Technical Support Engineer");
+  const [centerName, setCenterName] = useState(data.centerName || "SOFTLAB GLOBAL PRAYAGRAJ CENTRE");
   const [centerAddress, setCenterAddress] = useState(
     data.centerAddress ||
-      "Address: 3/11/8G, Tashkent Marg, Patrika Chauraha Opposite Rai and Company,Civil Lines, Prayagraj, Uttar Pradesh 211001"
+      "Address: Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001"
   );
-  const [gstNo, setGstNo] = useState(data.gstNo || "09JWDPS2938K1ZQ");
+  const [gstNo, setGstNo] = useState(data.gstNo || "09AFYFS5388G1ZX");
 
   const [particulars, setParticulars] = useState(data.particulars || "Registration/Enrollment Payment");
   const [registrationPayment, setRegistrationPayment] = useState<number>(data.registrationPayment ? toRupees(data.registrationPayment) : 0);
 
-  const [totalFees, setTotalFees] = useState<number>(toRupees(data.totalFee || 20000));
+  const [totalFees, setTotalFees] = useState<number>(toRupees(data.totalFee || 45000));
   const [totalDiscount, setTotalDiscount] = useState<number>(toRupees(data.discountAmount || 0));
-  const [totalPaid, setTotalPaid] = useState<number>(toRupees(data.amountPaid || 15000));
+  const [totalPaid, setTotalPaid] = useState<number>(toRupees(data.amountPaid || 10000));
   const [totalOutstanding, setTotalOutstanding] = useState<number>(
-    toRupees(data.pendingAmount || Math.max(0, toRupees(data.totalFee || 20000) - toRupees(data.discountAmount || 0) - toRupees(data.amountPaid || 15000)))
+    toRupees(data.pendingAmount || Math.max(0, toRupees(data.totalFee || 45000) - toRupees(data.discountAmount || 0) - toRupees(data.amountPaid || 10000)))
   );
 
-  const [paymentMode, setPaymentMode] = useState(data.paymentMode ? `${data.paymentMode} ${data.transactionReference || ""}`.trim() : "qr 13 Jun 2026");
+  const [paymentMode, setPaymentMode] = useState(data.paymentMode ? `${data.paymentMode} ${data.transactionReference || ""}`.trim() : "Cash");
   const [status, setStatus] = useState(data.status || "Completed");
   const [customWords, setCustomWords] = useState<string>("");
 
@@ -164,16 +164,20 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       <div className="grid grid-cols-12 border border-black mb-2">
         {/* Logo column */}
         <div className="col-span-3 border-r border-black p-2 flex flex-col items-center justify-center text-center">
-          <div className="flex items-center gap-1.5">
-            <div className="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center text-white font-extrabold text-sm tracking-tighter">
-              CK
-            </div>
+          <div className="flex items-center gap-2">
+            {/* SoftLab Global Official Logo */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/images/softlab-logo.png"
+              alt="SOFTLAB GLOBAL"
+              className="h-10 w-10 object-contain shrink-0"
+            />
             <div className="text-left">
-              <span className="block font-black text-red-600 leading-none text-[13px] tracking-tight">CLOUDKING</span>
-              <span className="block font-bold text-black text-[9px] tracking-widest uppercase">TECHNICAL</span>
+              <span className="block font-black text-[#0088cc] leading-none text-[13px] tracking-tight">SOFTLAB</span>
+              <span className="block font-bold text-slate-900 text-[9.5px] tracking-widest uppercase">GLOBAL</span>
             </div>
           </div>
-          <span className="text-[7.5px] font-semibold text-slate-500 uppercase mt-1 tracking-tight">SoftLab Global Partner</span>
+          <span className="text-[7.5px] font-semibold text-slate-500 uppercase mt-1 tracking-tight">Center for Excellence</span>
         </div>
 
         {/* Center column: Centre name, address, GST */}

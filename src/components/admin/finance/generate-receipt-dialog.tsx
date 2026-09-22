@@ -42,7 +42,7 @@ export function GenerateReceiptDialog({
               receiptNumber: res.receiptNumber,
               receiptDate: res.receiptDate,
               studentName: res.student.name,
-              studentId: res.student.studentId || "CK-ENR-001",
+              studentId: res.student.studentId || "SG-2026-00001",
               admissionNumber: res.admission?.applicationNumber || "N/A",
               courseTitle: res.course.title,
               totalFee: res.financials.totalCourseFeePaise,
@@ -73,10 +73,10 @@ export function GenerateReceiptDialog({
     const pending = Math.max(0, netPayable - paid);
 
     setReceiptData({
-      receiptNumber: latestPayment?.receiptNumber || `CK-ND-${Math.floor(1000 + Math.random() * 9000)}`,
+      receiptNumber: latestPayment?.receiptNumber || `SLG-2026-${Math.floor(100000 + Math.random() * 900000)}`,
       receiptDate: latestPayment?.paymentDate || new Date(),
       studentName,
-      studentId: fee.student.studentId || "CK-ENR-001",
+      studentId: fee.student.studentId || "SG-2026-00001",
       admissionNumber: fee.enrollmentId || "N/A",
       courseTitle: fee.course.title,
       totalFee,
@@ -95,18 +95,18 @@ export function GenerateReceiptDialog({
   // Start with a blank custom receipt
   const handleCreateBlankReceipt = () => {
     setReceiptData({
-      receiptNumber: `CK-ND-${Math.floor(1000 + Math.random() * 9000)}`,
+      receiptNumber: `SLG-2026-${Math.floor(100000 + Math.random() * 900000)}`,
       receiptDate: new Date(),
-      studentName: "Student Name",
-      studentId: "CK-ENR-PJ-00001",
-      courseTitle: "CK Certified AWS Cloud Professional",
-      totalFee: 20000,
+      studentName: "Admitted Learner",
+      studentId: "SG-2026-00001",
+      courseTitle: "Technical Support Engineer",
+      totalFee: 45000,
       discountAmount: 0,
-      netPayable: 20000,
-      amountPaid: 15000,
-      pendingAmount: 5000,
-      amountInWords: "Fifteen Thousand Rupees Only",
-      paymentMode: "qr " + new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+      netPayable: 45000,
+      amountPaid: 10000,
+      pendingAmount: 35000,
+      amountInWords: "Ten Thousand Rupees Only",
+      paymentMode: "Cash",
       status: "Completed",
     });
     setManualMode(true);

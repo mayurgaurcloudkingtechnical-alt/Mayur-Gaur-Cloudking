@@ -36,7 +36,7 @@ export function ReceiptPageView() {
               receiptNumber: res.receiptNumber,
               receiptDate: res.receiptDate,
               studentName: res.student.name,
-              studentId: res.student.studentId || "CK-ENR-PJ-00001",
+              studentId: res.student.studentId || "SG-2026-00001",
               admissionNumber: res.admission?.applicationNumber || "N/A",
               courseTitle: res.course.title,
               totalFee: res.financials.totalCourseFeePaise,
@@ -70,10 +70,10 @@ export function ReceiptPageView() {
             const paid = latestPayment ? latestPayment.amount : fee.paidAmount;
 
             setReceiptData({
-              receiptNumber: latestPayment?.receiptNumber || `CK-ND-${Math.floor(1000 + Math.random() * 9000)}`,
+              receiptNumber: latestPayment?.receiptNumber || `SLG-2026-${Math.floor(100000 + Math.random() * 900000)}`,
               receiptDate: latestPayment?.paymentDate || new Date(),
               studentName: studentFullName,
-              studentId: fee.student.studentId || "CK-ENR-PJ-00001",
+              studentId: fee.student.studentId || "SG-2026-00001",
               admissionNumber: fee.enrollmentId || "N/A",
               courseTitle: fee.course.title,
               totalFee: fee.totalCourseFee,
@@ -96,20 +96,20 @@ export function ReceiptPageView() {
           setLoading(false);
         }
       } else {
-        // Default editable demo template matching the PDF
+        // Default editable demo template matching SoftLab Global format
         setReceiptData({
-          receiptNumber: "CK-ND-2203",
+          receiptNumber: "SLG-2026-306281",
           receiptDate: "15-06-2026",
-          studentName: "Anupam Patel",
-          studentId: "CK-ENR-PJ-00001",
-          courseTitle: "CK Certified AWS Cloud Professional",
-          totalFee: 20000,
+          studentName: "Admitted Learner",
+          studentId: "SG-2026-00001",
+          courseTitle: "Technical Support Engineer",
+          totalFee: 45000,
           discountAmount: 0,
-          netPayable: 20000,
-          amountPaid: 15000,
-          pendingAmount: 5000,
-          amountInWords: "Fifteen Thousand Rupees Only",
-          paymentMode: "qr 13 Jun 2026",
+          netPayable: 45000,
+          amountPaid: 10000,
+          pendingAmount: 35000,
+          amountInWords: "Ten Thousand Rupees Only",
+          paymentMode: "Cash",
           status: "Completed",
         });
       }
