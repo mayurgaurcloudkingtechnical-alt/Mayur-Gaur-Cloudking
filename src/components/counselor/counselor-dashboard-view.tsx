@@ -6,7 +6,7 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle, PlusCircle, GraduationCap, Share2 } from "lucide-react";
+import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle, PlusCircle, GraduationCap, Share2, IndianRupee } from "lucide-react";
 import { LeadStatus } from "@prisma/client";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
@@ -61,6 +61,13 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
           >
             <GraduationCap className="h-4 w-4" />
             <span>New Admission</span>
+          </Button>
+
+          <Button asChild size="sm" variant="outline" className="text-xs font-semibold flex items-center gap-1.5 border-emerald-300 text-emerald-700 hover:bg-emerald-50">
+            <Link href="/counselor/fees">
+              <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
+              <span>Collect Fee / EMI</span>
+            </Link>
           </Button>
 
           <Button asChild size="sm" variant="outline" className="text-xs font-semibold flex items-center gap-1.5">

@@ -60,7 +60,11 @@ export class PaymentService {
     const canRecord =
       hasPermission(user.permissions, "payments:record_offline") ||
       user.roleCode === "SUPER_ADMIN" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "COUNSELOR" ||
+      user.roleCode === "MANAGER";
 
     if (!canRecord) {
       throw new TRPCError({

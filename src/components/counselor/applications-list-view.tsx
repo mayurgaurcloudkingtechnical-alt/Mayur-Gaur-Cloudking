@@ -22,6 +22,7 @@ import {
   Trash2,
   Loader2,
   Printer,
+  IndianRupee,
 } from "lucide-react";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { EditApplicationDialog } from "./edit-application-dialog";
@@ -307,6 +308,14 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                                 <Printer className="h-3.5 w-3.5 text-emerald-600" />
                               )}
                               <span>Receipt</span>
+                            </Button>
+                          )}
+                          {app.stage === ApplicationStage.CONVERTED && (
+                            <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1 font-medium">
+                              <Link href={`/counselor/fees?search=${encodeURIComponent(app.applicantName || "")}`}>
+                                <IndianRupee className="h-3 w-3 text-blue-600" />
+                                <span>Collect EMI</span>
+                              </Link>
                             </Button>
                           )}
                           <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-slate-300">
