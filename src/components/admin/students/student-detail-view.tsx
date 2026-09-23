@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
 import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -37,6 +37,7 @@ import {
   Download,
   UploadCloud,
   Eye,
+  Camera,
 } from "lucide-react";
 import { PaymentMethod, UserStatus } from "@prisma/client";
 import { StudentIdCardView } from "@/components/common/student-id-card-view";
@@ -76,6 +77,10 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
   // Modals / subforms
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+
+  // Photo upload (counselor/admin can upload student photo)
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [assignCourseOpen, setAssignCourseOpen] = useState(false);
   const [reassignBatchEnrollmentId, setReassignBatchEnrollmentId] = useState<string | null>(null);
@@ -202,6 +207,49 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
       setNotification({ type: "error", message: err.message || "Failed to update profile." });
     },
   });
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setNotification({ type: "error", message: "Please upload a valid image file (JPEG, PNG, WEBP)." });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setNotification({ type: "error", message: "Image size exceeds 5MB limit." });
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload/photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setEditPhotoUrl(data.url);
+      if (student?.id) {
+        updateProfileMutation.mutate({
+          studentProfileId: student.id,
+          photoUrl: data.url,
+        });
+      }
+    } catch (err: any) {
+      setNotification({ type: "error", message: err.message || "Failed to upload photo." });
+    } finally {
+      setIsUploadingPhoto(false);
+    }
+  };
 
   const recordPaymentMutation = api.finance.recordOfflinePayment.useMutation({
     onSuccess: () => {
@@ -349,18 +397,40 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
               <ArrowLeft className="h-4 w-4 text-slate-600" />
             </Button>
           </Link>
-          {((student as any).photoUrl || student.user.avatarUrl) ? (
-            <img
-              src={(student as any).photoUrl || student.user.avatarUrl || ""}
-              alt={student.user.firstName}
-              className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
+          <div className="relative group shrink-0">
+            {((student as any).photoUrl || student.user.avatarUrl) ? (
+              <img
+                src={(student as any).photoUrl || student.user.avatarUrl || ""}
+                alt={student.user.firstName}
+                className="w-14 h-14 rounded-full object-cover border-2 border-emerald-500 shadow-sm"
+              />
+            ) : (
+              <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg border border-emerald-200">
+                {student.user.firstName[0]}
+                {student.user.lastName?.[0] || ""}
+              </div>
+            )}
+            <input
+              type="file"
+              ref={photoInputRef}
+              onChange={handlePhotoUpload}
+              accept="image/*"
+              className="hidden"
             />
-          ) : (
-            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-lg border border-emerald-200">
-              {student.user.firstName[0]}
-              {student.user.lastName?.[0] || ""}
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={isUploadingPhoto}
+              title="Upload / Change Student Photo"
+              className="absolute -bottom-1 -right-1 p-1 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-md transition-all flex items-center justify-center cursor-pointer border-2 border-white"
+            >
+              {isUploadingPhoto ? (
+                <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <Camera className="w-3 h-3" />
+              )}
+            </button>
+          </div>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-2xl font-bold text-slate-900">
@@ -604,15 +674,28 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                     )}
                   </div>
                   <div className="flex-1 w-full">
-                    <Label className="text-xs font-semibold text-slate-700">Student Photograph URL</Label>
-                    <Input
-                      placeholder="Paste image URL (e.g. https://... or leave unchanged to preserve existing photo)"
-                      value={editPhotoUrl}
-                      onChange={(e) => setEditPhotoUrl(e.target.value)}
-                      className="mt-1 text-xs"
-                    />
+                    <Label className="text-xs font-semibold text-slate-700">Student Photograph</Label>
+                    <div className="flex gap-2 items-center mt-1">
+                      <Input
+                        placeholder="Paste image URL or click Upload"
+                        value={editPhotoUrl}
+                        onChange={(e) => setEditPhotoUrl(e.target.value)}
+                        className="text-xs flex-1"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => photoInputRef.current?.click()}
+                        disabled={isUploadingPhoto}
+                        className="text-xs h-9 shrink-0 gap-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>{isUploadingPhoto ? "Uploading..." : "Upload Device Photo"}</span>
+                      </Button>
+                    </div>
                     <p className="text-[11px] text-slate-400 mt-1">
-                      Supports direct JPEG/PNG image links. Leave unchanged to keep the current photograph.
+                      Supports direct JPEG, PNG, WEBP files or direct image links.
                     </p>
                   </div>
                 </div>

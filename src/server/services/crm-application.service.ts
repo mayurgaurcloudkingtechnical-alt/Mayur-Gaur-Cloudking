@@ -436,18 +436,24 @@ export class CrmApplicationService {
             universitySpecialization: univSpec,
             universityAdmissionSession: admSession,
             universityPortalStatus: isUniversity ? "PROVISIONED" : null,
+            photoUrl: input.photoUrl?.trim() || null,
           },
         });
-      } else if (isUniversity) {
+      } else {
         studentProfile = await tx.studentProfile.update({
           where: { id: studentProfile.id },
           data: {
-            educationProvider: "Dr. Preeti Global University",
-            universityName: univName,
-            universityProgram: univProg,
-            universitySpecialization: univSpec,
-            universityAdmissionSession: admSession,
-            universityPortalStatus: "PROVISIONED",
+            ...(input.photoUrl ? { photoUrl: input.photoUrl.trim() } : {}),
+            ...(isUniversity
+              ? {
+                  educationProvider: "Dr. Preeti Global University",
+                  universityName: univName,
+                  universityProgram: univProg,
+                  universitySpecialization: univSpec,
+                  universityAdmissionSession: admSession,
+                  universityPortalStatus: "PROVISIONED",
+                }
+              : {}),
           },
         });
       }

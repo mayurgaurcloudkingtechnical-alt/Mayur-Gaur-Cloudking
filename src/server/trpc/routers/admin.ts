@@ -1289,7 +1289,13 @@ export const adminRouter = router({
       }, { maxWait: 15000, timeout: 30000 });
     }),
 
-  updateStudentProfile: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+  updateStudentProfile: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.MANAGER,
+  ])
     .input(
       z.object({
         studentProfileId: z.string(),

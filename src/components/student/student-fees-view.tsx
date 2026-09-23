@@ -9,8 +9,6 @@ import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { IndianRupee, Clock, CheckCircle2, AlertCircle, FileText, Calendar, CreditCard } from "lucide-react";
 import { FeePaymentStatus, InstallmentStatus } from "@prisma/client";
 import { UniversalPaymentDialog } from "@/components/payment/universal-payment-dialog";
-import { DualFeeReceipt } from "@/components/common/dual-fee-receipt";
-import { Printer } from "lucide-react";
 import {
   Table,
   TableHeader,
@@ -23,7 +21,6 @@ import {
 export function StudentFeesView() {
   const utils = api.useUtils();
   const { data, isLoading, error } = api.finance.getMyFeeOverview.useQuery();
-  const [selectedReceipt, setSelectedReceipt] = React.useState<any | null>(null);
   const [checkoutDialog, setCheckoutDialog] = React.useState<{
     open: boolean;
     feeStructureId: string;
@@ -41,7 +38,7 @@ export function StudentFeesView() {
   if (isLoading) {
     return (
       <div className="py-12 text-center text-xs text-slate-500">
-        Loading tuition fee ledger & receipts...
+        Loading tuition fee ledger...
       </div>
     );
   }
@@ -149,7 +146,7 @@ export function StudentFeesView() {
                     {formatPaiseToRupees(fee.paidAmount)}
                   </span>
                   <span className="text-[10px] text-emerald-600 block mt-0.5">
-                    {fee.payments.length} verified receipts
+                    {fee.payments.length} verified payments
                   </span>
                 </div>
 
@@ -242,27 +239,26 @@ export function StudentFeesView() {
                 </div>
               )}
 
-              {/* Verified Receipts Table */}
+              {/* Payment History Table — view only, no receipt download for students */}
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-                  <span>Verified Payment Receipts ({fee.payments.length})</span>
+                  <span>Payment History ({fee.payments.length})</span>
                 </h4>
                 {fee.payments.length === 0 ? (
                   <p className="text-xs text-slate-400 italic py-2">
-                    No payment receipts logged yet. Offline payments can be submitted at the campus office.
+                    No payments logged yet. Visit the campus accounts desk for offline payment.
                   </p>
                 ) : (
                   <div className="rounded-lg border border-slate-200 overflow-hidden">
                     <Table>
                       <TableHeader className="bg-slate-50">
                         <TableRow>
-                          <TableHead className="text-[11px] font-semibold text-slate-700">Receipt Ref</TableHead>
+                          <TableHead className="text-[11px] font-semibold text-slate-700">Ref No.</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Date</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Payment Mode</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700">Transaction ID</TableHead>
                           <TableHead className="text-[11px] font-semibold text-slate-700 text-right">Amount Paid</TableHead>
-                          <TableHead className="text-[11px] font-semibold text-slate-700 text-right">Receipt</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -283,40 +279,6 @@ export function StudentFeesView() {
                             <TableCell className="font-bold text-emerald-700 text-right">
                               {formatPaiseToRupees(p.amount)}
                             </TableCell>
-                            <TableCell className="text-right">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 text-xs flex items-center gap-1 border-slate-300 ml-auto"
-                                onClick={() => {
-                                  setSelectedReceipt({
-                                    receiptNumber: p.transactionReference,
-                                    receiptDate: p.paymentDate,
-                                    studentName: data.studentName || "Student",
-                                    studentId: data.studentId,
-                                    courseTitle: fee.course.title,
-                                    batchCode: fee.batch?.code,
-                                    providerType: (fee.course as any)?.providerType,
-                                    providerName: (fee.course as any)?.providerName,
-                                    universityName: (fee.course as any)?.universityName,
-                                    universityProgram: fee.course.title,
-                                    registrationFee: fee.registrationFee,
-                                    examinationFee: (fee as any)?.examinationFee,
-                                    universityFee: (fee as any)?.universityFee,
-                                    totalFee: fee.totalCourseFee,
-                                    discountAmount: fee.discountAmount,
-                                    netPayable: fee.netPayableAmount,
-                                    amountPaid: p.amount,
-                                    pendingAmount: fee.pendingAmount,
-                                    paymentMode: p.paymentMethod,
-                                    transactionReference: p.providerReference || p.transactionReference,
-                                  });
-                                }}
-                              >
-                                <Printer className="h-3 w-3 text-slate-600" />
-                                <span>Receipt</span>
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -324,6 +286,10 @@ export function StudentFeesView() {
                   </div>
                 )}
               </div>
+
+              <p className="text-[10px] text-slate-400 italic">
+                * For official fee receipts, please contact your counselor or the accounts desk.
+              </p>
             </CardContent>
           </Card>
         </div>
@@ -342,24 +308,6 @@ export function StudentFeesView() {
           utils.finance.getMyFeeOverview.invalidate();
         }}
       />
-
-      {/* Dual Fee Receipt Modal */}
-      {selectedReceipt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full p-6 my-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-4">
-              <div>
-                <h3 className="text-base font-bold text-slate-900">Official Fee Receipt</h3>
-                <p className="text-xs text-slate-500">Student Copy & Centre Copy on Single A4 Page</p>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedReceipt(null)}>
-                Close
-              </Button>
-            </div>
-            <DualFeeReceipt data={selectedReceipt} onClose={() => setSelectedReceipt(null)} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

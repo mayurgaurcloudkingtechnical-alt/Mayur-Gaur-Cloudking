@@ -1,16 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { api } from "@/lib/trpc/react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Receipt, CheckCircle2, AlertCircle, Clock, CreditCard } from "lucide-react";
-import { StudentReceiptModal } from "./student-receipt-modal";
+import { CheckCircle2, AlertCircle, Clock, CreditCard } from "lucide-react";
 
 export function StudentPaymentsView() {
-  const [selectedReceipt, setSelectedReceipt] = useState<string | null>(null);
-
   const { data: payments, isLoading } = api.payment.getMyPayments.useQuery();
 
   const formatPaise = (paise: number) => {
@@ -72,89 +67,68 @@ export function StudentPaymentsView() {
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base font-semibold">Payment Transactions</CardTitle>
-          <CardDescription className="text-xs">
-            Complete record of online gateway and authorized offline payments.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-muted/40 text-muted-foreground border-y font-medium">
-                <tr>
-                  <th className="py-2.5 px-4">Date</th>
-                  <th className="py-2.5 px-4">Transaction Ref</th>
-                  <th className="py-2.5 px-4">Course</th>
-                  <th className="py-2.5 px-4">Method</th>
-                  <th className="py-2.5 px-4 text-right">Amount</th>
-                  <th className="py-2.5 px-4 text-center">Status</th>
-                  <th className="py-2.5 px-4 text-right">Receipt</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {payments.map((tx: any) => {
-                  const courseTitle =
-                    tx.feeStructure?.course?.title ||
-                    tx.enrollment?.course?.title ||
-                    tx.admission?.course?.title ||
-                    "Course";
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-base font-semibold">Payment Transactions</CardTitle>
+        <CardDescription className="text-xs">
+          Complete record of online gateway and authorized offline payments.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs text-left">
+            <thead className="bg-muted/40 text-muted-foreground border-y font-medium">
+              <tr>
+                <th className="py-2.5 px-4">Date</th>
+                <th className="py-2.5 px-4">Transaction Ref</th>
+                <th className="py-2.5 px-4">Course</th>
+                <th className="py-2.5 px-4">Method</th>
+                <th className="py-2.5 px-4 text-right">Amount</th>
+                <th className="py-2.5 px-4 text-center">Status</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {payments.map((tx: any) => {
+                const courseTitle =
+                  tx.feeStructure?.course?.title ||
+                  tx.enrollment?.course?.title ||
+                  tx.admission?.course?.title ||
+                  "Course";
 
-                  return (
-                    <tr key={tx.id} className="hover:bg-muted/20 transition-colors">
-                      <td className="py-3 px-4 whitespace-nowrap text-muted-foreground">
-                        {new Date(tx.paidAt || tx.paymentDate).toLocaleDateString("en-IN", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="py-3 px-4 font-mono font-medium text-foreground">
-                        {tx.transactionReference}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-foreground max-w-[200px] truncate">
-                        {courseTitle}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-mono text-[11px] bg-muted/50 px-2 py-0.5 rounded border">
-                          {tx.paymentMethod}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
-                        {formatPaise(tx.amount)}
-                      </td>
-                      <td className="py-3 px-4 text-center">{getStatusBadge(tx.status)}</td>
-                      <td className="py-3 px-4 text-right">
-                        {tx.status === "SUCCESS" ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedReceipt(tx.receiptNumber || tx.id)}
-                            className="h-7 text-xs gap-1 text-primary hover:text-primary"
-                          >
-                            <Receipt className="h-3 w-3" />
-                            <span>Receipt</span>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground text-[11px]">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      <StudentReceiptModal
-        receiptIdentifier={selectedReceipt}
-        isOpen={Boolean(selectedReceipt)}
-        onClose={() => setSelectedReceipt(null)}
-      />
-    </>
+                return (
+                  <tr key={tx.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="py-3 px-4 whitespace-nowrap text-muted-foreground">
+                      {new Date(tx.paidAt || tx.paymentDate).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td className="py-3 px-4 font-mono font-medium text-foreground">
+                      {tx.transactionReference}
+                    </td>
+                    <td className="py-3 px-4 font-medium text-foreground max-w-[200px] truncate">
+                      {courseTitle}
+                    </td>
+                    <td className="py-3 px-4">
+                      <span className="font-mono text-[11px] bg-muted/50 px-2 py-0.5 rounded border">
+                        {tx.paymentMethod}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right font-mono font-bold text-foreground">
+                      {formatPaise(tx.amount)}
+                    </td>
+                    <td className="py-3 px-4 text-center">{getStatusBadge(tx.status)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-[10px] text-slate-400 italic px-4 py-3 border-t border-slate-100">
+          * For official payment receipts, please contact your counselor or the accounts desk.
+        </p>
+      </CardContent>
+    </Card>
   );
 }

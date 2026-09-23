@@ -1,4 +1,4 @@
-﻿import { requireRole } from "@/server/auth/rbac";
+import { requireRole } from "@/server/auth/rbac";
 import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { PageHeader } from "@/components/common/page-header";
@@ -11,8 +11,8 @@ export default async function StudentFeesPage() {
   return (
     <DashboardShell user={user}>
       <PageHeader
-        title="Tuition Fees & Verified Receipts"
-        description="Transparent breakdown of course fee structures, installment due dates, and verified payment transactions."
+        title="Tuition Fees & Financial Breakdown"
+        description="Transparent breakdown of course fee structures, installment due dates, and payment history."
         action={
           <Badge variant="default" className="text-xs bg-emerald-600 text-white font-medium">
             Student Financial Portal
