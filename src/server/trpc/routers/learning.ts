@@ -41,6 +41,40 @@ export const learningRouter = router({
 
     return student;
   }),
+
+  /**
+   * Returns whether the active student is enrolled in a DPGU / University course.
+   */
+  isUniversityEnrolled: protectedProcedure.query(async ({ ctx }) => {
+    if (ctx.user.roleCode !== "STUDENT") return false;
+    const student = await ctx.db.studentProfile.findUnique({
+      where: { userId: ctx.user.id },
+      select: {
+        educationProvider: true,
+        universityName: true,
+        enrollments: {
+          select: {
+            course: {
+              select: {
+                providerType: true,
+                universityName: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!student) return false;
+    const isUnivProfile =
+      student.educationProvider === "Dr. Preeti Global University" ||
+      Boolean(student.universityName && student.universityName.trim().length > 0);
+    const hasUnivCourse = student.enrollments.some(
+      (e) =>
+        e.course.providerType === "UNIVERSITY" ||
+        Boolean(e.course.universityName && e.course.universityName.trim().length > 0)
+    );
+    return isUnivProfile || hasUnivCourse;
+  }),
   /**
    * Returns overview statistics, enrolled courses with progress, and upcoming classes.
    */

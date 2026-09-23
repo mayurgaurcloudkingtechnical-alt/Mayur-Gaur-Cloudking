@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG } from "@/config/university.config";
+import { api } from "@/lib/trpc/react";
 
 interface NavItem {
   title: string;
@@ -49,6 +50,10 @@ interface SidebarProps {
 export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
 
+  const { data: isUniversityEnrolled } = api.learning.isUniversityEnrolled.useQuery(undefined, {
+    enabled: roleCode === "STUDENT",
+  });
+
   const getNavItems = (): NavItem[] => {
     switch (roleCode) {
       case "STUDENT":
@@ -56,7 +61,17 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Dashboard", href: "/student/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "My Courses", href: "/student/courses", icon: <BookOpen className="h-4 w-4" /> },
           { title: "Student ID Card", href: "/student/id-card", icon: <CreditCard className="h-4 w-4" /> },
-          { title: "University Portal", href: DPGU_CONFIG.portals.studentPortalUrl, icon: <GraduationCap className="h-4 w-4" />, external: true, badge: "DPGU" },
+          ...(isUniversityEnrolled
+            ? [
+                {
+                  title: "University Portal",
+                  href: DPGU_CONFIG.portals.studentPortalUrl,
+                  icon: <GraduationCap className="h-4 w-4" />,
+                  external: true,
+                  badge: "DPGU",
+                },
+              ]
+            : []),
           { title: "Marketplace", href: "/student/marketplace", icon: <ShoppingCart className="h-4 w-4" /> },
           { title: "Assignments", href: "/student/assignments", icon: <FileText className="h-4 w-4" /> },
           { title: "Exams & Quizzes", href: "/student/exams", icon: <ClipboardCheck className="h-4 w-4" /> },
@@ -79,7 +94,6 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Telecalling Desk", href: "/telecaller/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
-          { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "External" },
           { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
@@ -98,7 +112,17 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Franchise Management", href: "/admin/franchise", icon: <Building2 className="h-4 w-4" /> },
           { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/admin/admissions", icon: <GraduationCap className="h-4 w-4" /> },
-          { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
+          ...(roleCode === "SUPER_ADMIN"
+            ? [
+                {
+                  title: "DPGU Partner Portal",
+                  href: DPGU_CONFIG.portals.consultantPortalUrl,
+                  icon: <Building2 className="h-4 w-4" />,
+                  external: true,
+                  badge: "DPGU",
+                },
+              ]
+            : []),
           { title: "Student Management", href: "/admin/students", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
           { title: "Batches & Cohorts", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
