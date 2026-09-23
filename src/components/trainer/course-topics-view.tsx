@@ -443,12 +443,12 @@ export function CourseTopicsView() {
 
   return (
     <div className="space-y-5 pb-16">
-      {/* Top Header matching CloudKing LMS | Course Topics */}
+      {/* Top Header matching SoftLab Global LMS | Course Topics */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-semibold mb-1 border border-blue-200">
             <Sparkles className="h-3 w-3 text-blue-600" />
-            <span>CloudKing LMS • Course Topics & Curriculum</span>
+            <span>SoftLab Global LMS • Course Topics & Curriculum</span>
           </div>
           <h1 className="text-xl font-black text-slate-900 tracking-tight">Course Topics</h1>
           <p className="text-xs text-slate-500 mt-0.5">

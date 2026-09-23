@@ -75,7 +75,7 @@ export function TrainerDashboardView() {
               Core Performance Metrics
             </h1>
             <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-[#0088cc]/10 text-[#0088cc] border border-[#0088cc]/20">
-              CloudKing LMS
+              SoftLab Global LMS
             </span>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">

@@ -41,6 +41,7 @@ import {
 import { PaymentMethod, UserStatus } from "@prisma/client";
 import { StudentIdCardView } from "@/components/common/student-id-card-view";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
+import { EditFeeStructureDialog } from "@/components/admin/finance/edit-fee-structure-dialog";
 
 interface StudentDetailViewProps {
   studentId: string;
@@ -53,6 +54,25 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [selectedReceiptData, setSelectedReceiptData] = useState<DualReceiptData | null>(null);
+  const [editingFeeStructure, setEditingFeeStructure] = useState<{
+    id: string;
+    studentName: string;
+    studentId?: string;
+    courseTitle: string;
+    totalCourseFee: number;
+    discountAmount: number;
+    scholarshipAmount?: number;
+    paidAmount: number;
+    pendingAmount: number;
+    remarks?: string | null;
+    installments?: Array<{
+      id: string;
+      installmentNumber: number;
+      amount: number;
+      dueDate: Date | string;
+      notes?: string | null;
+    }>;
+  } | null>(null);
 
   // Modals / subforms
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -1156,6 +1176,79 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
               <p className="text-xs text-slate-500">Track tuition installments, offline collections, and receipts</p>
             </div>
             <div className="flex items-center gap-2 flex-wrap">
+              {/* PRINT OFFICIAL RECEIPT - Most prominent action */}
+              <Button
+                size="sm"
+                onClick={() => {
+                  const fs = student.enrollments[0]?.feeStructure;
+                  const enrollment = student.enrollments[0];
+                  if (fs) {
+                    const latestPayment = fs.payments && fs.payments.length > 0 ? fs.payments[0] : null;
+                    setSelectedReceiptData({
+                      receiptNumber: latestPayment?.receiptNumber || latestPayment?.transactionReference || `SLG-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+                      receiptDate: latestPayment?.paymentDate || new Date(),
+                      studentName: `${student.user.firstName} ${student.user.lastName}`,
+                      studentId: student.studentId,
+                      admissionNumber: (student as any).convertedApplication?.applicationNumber || undefined,
+                      courseTitle: enrollment?.course?.title || "Professional Course",
+                      batchCode: enrollment?.batch?.code || undefined,
+                      totalFee: fs.totalCourseFee,
+                      discountAmount: fs.discountAmount,
+                      netPayable: fs.netPayableAmount,
+                      amountPaid: fs.paidAmount,
+                      pendingAmount: fs.pendingAmount,
+                      paymentMode: latestPayment?.paymentMethod || "Cash",
+                      transactionReference: latestPayment?.providerReference || latestPayment?.transactionReference || "Direct Receipt",
+                      feeStructureId: fs.id,
+                      paymentId: latestPayment?.id,
+                    });
+                  } else {
+                    setNotification({ type: "error", message: "No active fee structure found for student." });
+                  }
+                }}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs gap-1.5 shadow-sm font-semibold"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                <span>Print Official Receipt</span>
+              </Button>
+
+              {/* EDIT FEE STRUCTURE */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const fs = student.enrollments[0]?.feeStructure;
+                  const enrollment = student.enrollments[0];
+                  if (fs) {
+                    setEditingFeeStructure({
+                      id: fs.id,
+                      studentName: `${student.user.firstName} ${student.user.lastName}`,
+                      studentId: student.studentId,
+                      courseTitle: enrollment?.course?.title || "Professional Course",
+                      totalCourseFee: fs.totalCourseFee,
+                      discountAmount: fs.discountAmount,
+                      scholarshipAmount: (fs as any).scholarshipAmount || 0,
+                      paidAmount: fs.paidAmount,
+                      pendingAmount: fs.pendingAmount,
+                      remarks: (fs as any).remarks || "",
+                      installments: (fs.installments || []).map((i: any) => ({
+                        id: i.id,
+                        installmentNumber: i.installmentNumber,
+                        amount: i.amount,
+                        dueDate: i.dueDate,
+                        notes: i.notes,
+                      })),
+                    });
+                  } else {
+                    setNotification({ type: "error", message: "No active fee structure found for student." });
+                  }
+                }}
+                className="border-slate-300 text-slate-700 bg-white hover:bg-slate-50 text-xs gap-1.5 shadow-sm font-semibold"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                <span>Edit Fee Structure</span>
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -1227,6 +1320,67 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                   >
                     {fs.paymentStatus}
                   </Badge>
+                  <div className="flex items-center gap-2 ml-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedReceiptData({
+                          receiptNumber: fs.payments?.[0]?.receiptNumber || fs.payments?.[0]?.transactionReference || `SLG-${new Date().getFullYear()}-${Math.floor(100000 + Math.random() * 900000)}`,
+                          receiptDate: fs.payments?.[0]?.paymentDate || new Date(),
+                          studentName: `${student.user.firstName} ${student.user.lastName}`,
+                          studentId: student.studentId,
+                          admissionNumber: (student as any).convertedApplication?.applicationNumber || undefined,
+                          courseTitle: enrollment.course.title,
+                          batchCode: enrollment.batch?.code || undefined,
+                          totalFee: fs.totalCourseFee,
+                          discountAmount: fs.discountAmount,
+                          netPayable: fs.netPayableAmount,
+                          amountPaid: fs.paidAmount,
+                          pendingAmount: fs.pendingAmount,
+                          paymentMode: fs.payments?.[0]?.paymentMethod || "Cash",
+                          transactionReference: fs.payments?.[0]?.providerReference || fs.payments?.[0]?.transactionReference || "Direct Receipt",
+                          feeStructureId: fs.id,
+                          paymentId: fs.payments?.[0]?.id,
+                        });
+                      }}
+                      className="text-[10px] h-7 px-2.5 gap-1 text-blue-700 border-blue-200 hover:bg-blue-50 font-semibold"
+                      title="Print Official Fee Receipt"
+                    >
+                      <Printer className="h-3 w-3" />
+                      <span>Receipt</span>
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setEditingFeeStructure({
+                          id: fs.id,
+                          studentName: `${student.user.firstName} ${student.user.lastName}`,
+                          studentId: student.studentId,
+                          courseTitle: enrollment.course.title,
+                          totalCourseFee: fs.totalCourseFee,
+                          discountAmount: fs.discountAmount,
+                          scholarshipAmount: (fs as any).scholarshipAmount || 0,
+                          paidAmount: fs.paidAmount,
+                          pendingAmount: fs.pendingAmount,
+                          remarks: (fs as any).remarks || "",
+                          installments: (fs.installments || []).map((i: any) => ({
+                            id: i.id,
+                            installmentNumber: i.installmentNumber,
+                            amount: i.amount,
+                            dueDate: i.dueDate,
+                            notes: i.notes,
+                          })),
+                        });
+                      }}
+                      className="text-[10px] h-7 px-2.5 gap-1 text-slate-700 border-slate-300 hover:bg-slate-50 font-semibold"
+                      title="Edit Fee Structure"
+                    >
+                      <Edit3 className="h-3 w-3" />
+                      <span>Edit Fee</span>
+                    </Button>
+                  </div>
                 </CardHeader>
 
                 <CardContent className="p-5 space-y-5">
@@ -2313,6 +2467,22 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
         </div>
       )}
 
+      {/* EDIT FEE STRUCTURE DIALOG */}
+      {editingFeeStructure && (
+        <EditFeeStructureDialog
+          open={!!editingFeeStructure}
+          onOpenChange={(open) => {
+            if (!open) setEditingFeeStructure(null);
+          }}
+          feeStructure={editingFeeStructure}
+          onSuccess={() => {
+            setEditingFeeStructure(null);
+            setNotification({ type: "success", message: "Fee structure updated successfully!" });
+            refetch();
+          }}
+        />
+      )}
+
       {/* DUAL A4 FEE RECEIPT MODAL (PHASE 11: STUDENT COPY + CENTRE COPY) */}
       {selectedReceiptData && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
@@ -2320,6 +2490,7 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
             <DualFeeReceipt
               data={selectedReceiptData}
               onClose={() => setSelectedReceiptData(null)}
+              onSaved={() => refetch()}
             />
           </div>
         </div>

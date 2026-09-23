@@ -95,7 +95,7 @@ async function runVerification() {
     source: LeadSource.WALK_IN,
   });
 
-  console.log(`  ✓ Direct Admission Application created: ${admissionApp.applicationNumber} (Applicant: ${admissionApp.applicantName})`);
+  console.log(`  ✓ Direct Admission Application created: ${admissionApp.application.applicationNumber} (Applicant: ${admissionApp.application.applicantName})`);
 
   // -------------------------------------------------------------
   // Test 4: Pipeline Kanban Stages & Progression

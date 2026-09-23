@@ -797,7 +797,14 @@ export const adminRouter = router({
       };
     }),
 
-  getStudentDetails: requireRoleProcedure(privilegedAdminRoles)
+  getStudentDetails: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.MANAGER,
+    UserRoleCode.ACCOUNTANT,
+  ])
     .input(z.object({ id: z.string() }))
     .query(async ({ ctx, input }) => {
       const student = await ctx.db.studentProfile.findFirst({
