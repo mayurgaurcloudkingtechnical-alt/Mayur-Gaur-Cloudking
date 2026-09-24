@@ -5,15 +5,32 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "@/lib/trpc/react";
-import { PlayCircle, FileText, FileDown, ExternalLink, ShieldCheck, AlertCircle, Clock } from "lucide-react";
+import {
+  PlayCircle,
+  FileText,
+  FileDown,
+  ExternalLink,
+  ShieldCheck,
+  AlertCircle,
+  Clock,
+  BookOpen,
+  CheckCircle2,
+  ArrowRight,
+  Sparkles,
+} from "lucide-react";
+import { TopicStudyModal } from "./topic-study-modal";
 
 interface CoursePlayerContentProps {
   enrollmentId: string;
+  courseTitle?: string;
   currentLesson: {
     id: string;
     title: string;
     type: string;
     summary?: string | null;
+    moduleId?: string;
+    moduleTitle?: string;
+    topics?: string[];
     contentDetails?: {
       id?: string;
       fileName?: string | null;
@@ -35,12 +52,63 @@ interface CoursePlayerContentProps {
 
 export function CoursePlayerContent({
   enrollmentId,
+  courseTitle,
   currentLesson,
   watermark,
 }: CoursePlayerContentProps) {
   const [downloadUrl, setDownloadUrl] = React.useState<string | null>(null);
   const [downloadFileName, setDownloadFileName] = React.useState<string | null>(null);
   const [storageMessage, setStorageMessage] = React.useState<string | null>(null);
+
+  // Interactive Topic Study Explorer state
+  const [selectedTopic, setSelectedTopic] = React.useState<string | null>(null);
+  const [completedTopics, setCompletedTopics] = React.useState<Set<string>>(new Set());
+
+  // Restore completed topics from localStorage
+  React.useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`softlab_completed_topics_${enrollmentId}`);
+      if (saved) {
+        setCompletedTopics(new Set(JSON.parse(saved)));
+      }
+    } catch {}
+  }, [enrollmentId]);
+
+  const handleMarkComplete = (topic: string) => {
+    const norm = topic.toLowerCase().trim();
+    setCompletedTopics((prev) => {
+      const next = new Set(prev);
+      if (next.has(norm)) {
+        next.delete(norm);
+      } else {
+        next.add(norm);
+      }
+      try {
+        localStorage.setItem(
+          `softlab_completed_topics_${enrollmentId}`,
+          JSON.stringify(Array.from(next))
+        );
+      } catch {}
+      return next;
+    });
+  };
+
+  // Derive clean topics list
+  const displayTopics = React.useMemo(() => {
+    const list: string[] = [];
+    if (currentLesson.topics && currentLesson.topics.length > 0) {
+      for (const t of currentLesson.topics) {
+        const cleaned = t
+          .replace(/[\uF0B7\u2022\u25CF\uFEFF]/g, "")
+          .replace(/^[-–—o•*]\s*/, "")
+          .trim();
+        if (cleaned && cleaned.length > 1 && !list.includes(cleaned)) {
+          list.push(cleaned);
+        }
+      }
+    }
+    return list;
+  }, [currentLesson.topics]);
 
   // Reset download link on lesson switch to ensure fresh per-lesson authorization
   React.useEffect(() => {
@@ -137,9 +205,90 @@ export function CoursePlayerContent({
         </div>
       )}
 
+      {/* Interactive Curriculum Topics Study Explorer */}
+      {displayTopics.length > 0 && (
+        <div className="rounded-2xl border border-emerald-200/90 bg-gradient-to-br from-emerald-50/70 via-white to-slate-50 p-5 sm:p-6 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-sm">
+                  <BookOpen className="h-4 w-4" />
+                </span>
+                <h3 className="font-bold text-slate-900 text-base">Key Curriculum Topics</h3>
+                <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-semibold">
+                  Click to Study Deeply
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">
+                Select any topic below to open comprehensive study notes, architecture diagrams, practical commands, troubleshooting, and interview prep.
+              </p>
+            </div>
+            <div className="text-xs text-emerald-800 bg-emerald-100/60 font-semibold px-2.5 py-1 rounded-lg border border-emerald-200 self-start sm:self-auto">
+              {displayTopics.filter((t) => completedTopics.has(t.toLowerCase().trim())).length} of{" "}
+              {displayTopics.length} Mastered
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {displayTopics.map((topic, tIdx) => {
+              const isDone = completedTopics.has(topic.toLowerCase().trim());
+              return (
+                <button
+                  key={tIdx}
+                  type="button"
+                  onClick={() => setSelectedTopic(topic)}
+                  className={`group text-left p-3 rounded-xl border transition-all duration-150 flex items-center justify-between gap-3 text-xs font-semibold cursor-pointer ${
+                    isDone
+                      ? "bg-emerald-50/80 border-emerald-300 text-emerald-950 shadow-sm"
+                      : "bg-white hover:bg-emerald-50/50 border-slate-200 hover:border-emerald-300 text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.03)]"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full flex-shrink-0 transition-colors ${
+                        isDone ? "bg-emerald-600 ring-2 ring-emerald-200" : "bg-emerald-400 group-hover:bg-emerald-600"
+                      }`}
+                    />
+                    <span className="truncate">{topic}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0 text-[11px] font-medium">
+                    {isDone ? (
+                      <span className="flex items-center gap-1 text-emerald-700 font-bold">
+                        <CheckCircle2 className="h-3.5 w-3.5" /> Done
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-slate-500 group-hover:text-emerald-700">
+                        Study <ArrowRight className="h-3 w-3" />
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Rich Text Lesson */}
       {(currentLesson.type === "RICH_TEXT" || currentLesson.contentDetails?.bodyHtml || currentLesson.contentDetails?.bodyText) && (
-        <div className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm">
+        <div
+          className="rounded-xl border border-slate-200 bg-white p-6 sm:p-8 shadow-sm"
+          onClick={(e) => {
+            const target = e.target as HTMLElement;
+            // Support clicking any element with data-topic or class topic-item / topic-pill / border card
+            const card = target.closest(".topic-card, .topic-pill, [data-topic]");
+            if (card) {
+              const text = card.getAttribute("data-topic") || card.textContent;
+              if (text) {
+                const cleaned = text
+                  .replace(/[\uF0B7\u2022\u25CF\uFEFF]/g, "")
+                  .replace(/^[-–—o•*]\s*/, "")
+                  .trim();
+                if (cleaned && cleaned.length > 2) setSelectedTopic(cleaned);
+              }
+            }
+          }}
+        >
           {currentLesson.contentDetails?.bodyHtml ? (
             <div
               className="prose prose-slate max-w-none text-slate-800 leading-relaxed"
@@ -243,6 +392,19 @@ export function CoursePlayerContent({
           </CardContent>
         </Card>
       )}
+
+      {/* Topic Study Interactive Reader Modal */}
+      <TopicStudyModal
+        isOpen={Boolean(selectedTopic)}
+        onClose={() => setSelectedTopic(null)}
+        topicTitle={selectedTopic}
+        courseTitle={courseTitle}
+        moduleTitle={currentLesson.moduleTitle}
+        allTopics={displayTopics}
+        onSelectTopic={(t) => setSelectedTopic(t)}
+        onMarkComplete={handleMarkComplete}
+        completedTopics={completedTopics}
+      />
     </div>
   );
 }

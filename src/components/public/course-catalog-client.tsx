@@ -47,7 +47,7 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
   return (
     <div className="space-y-8">
       {/* Search & Filter Controls */}
-      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-xl shadow-slate-950/40">
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
@@ -55,12 +55,12 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
             placeholder="Search courses by keyword, technology, or title..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 text-sm h-11 border-slate-200 focus-visible:ring-emerald-500"
+            className="pl-10 text-sm h-11 bg-slate-950/80 border-slate-700/80 text-slate-100 placeholder:text-slate-400 focus-visible:ring-emerald-500 focus-visible:border-emerald-500 rounded-xl"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -76,8 +76,8 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
             onClick={() => setSelectedLevel("ALL")}
             className={
               selectedLevel === "ALL"
-                ? "bg-emerald-600 hover:bg-emerald-700 text-xs h-9"
-                : "border-slate-200 text-slate-700 text-xs h-9"
+                ? "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 shadow-md shadow-emerald-950/40 border border-emerald-500"
+                : "bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 text-xs h-9 hover:text-white"
             }
           >
             All Levels ({courses.length})
@@ -94,8 +94,8 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
                 onClick={() => setSelectedLevel(lvl)}
                 className={
                   isSelected
-                    ? "bg-emerald-600 hover:bg-emerald-700 text-xs h-9"
-                    : "border-slate-200 text-slate-700 text-xs h-9"
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 shadow-md shadow-emerald-950/40 border border-emerald-500"
+                    : "bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700/80 text-xs h-9 hover:text-white"
                 }
               >
                 {lvl} ({count})
@@ -106,15 +106,15 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
       </div>
 
       {/* Results Header */}
-      <div className="flex items-center justify-between text-xs text-slate-500 px-1">
+      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
         <span>
-          Showing <strong className="text-slate-900">{filteredCourses.length}</strong> of{" "}
-          <strong className="text-slate-900">{courses.length}</strong> published programs
+          Showing <strong className="text-slate-100">{filteredCourses.length}</strong> of{" "}
+          <strong className="text-slate-100">{courses.length}</strong> published programs
         </span>
         {(searchQuery || selectedLevel !== "ALL") && (
           <button
             onClick={handleResetFilters}
-            className="text-emerald-700 hover:text-emerald-800 font-medium underline"
+            className="text-emerald-400 hover:text-emerald-300 font-semibold underline"
           >
             Reset Filters
           </button>
@@ -123,13 +123,13 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
 
       {/* Course Grid or Empty State */}
       {filteredCourses.length === 0 ? (
-        <Card className="border-slate-200">
+        <Card className="border-slate-800 bg-slate-900/80 shadow-xl rounded-2xl">
           <CardContent className="flex flex-col items-center justify-center p-12 text-center">
-            <BookOpen className="h-12 w-12 text-slate-300 mb-3" />
-            <h3 className="text-base font-semibold text-slate-800">
+            <BookOpen className="h-12 w-12 text-slate-600 mb-3" />
+            <h3 className="text-base font-semibold text-white">
               No matching courses found
             </h3>
-            <p className="text-xs text-slate-500 max-w-md mt-1 mb-4">
+            <p className="text-xs text-slate-400 max-w-md mt-1 mb-4 leading-relaxed">
               We could not find any published curriculum matching &ldquo;{searchQuery}&rdquo;.
               Try adjusting your search terms or view all programs.
             </p>
@@ -137,7 +137,7 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
               variant="outline"
               size="sm"
               onClick={handleResetFilters}
-              className="border-slate-300 text-xs"
+              className="border-slate-700 bg-slate-800/70 text-slate-200 hover:bg-slate-800 text-xs"
             >
               Reset All Filters
             </Button>

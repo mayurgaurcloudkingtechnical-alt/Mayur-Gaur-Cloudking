@@ -231,23 +231,27 @@ export default async function HomePage() {
       {/* ==================================================================== */}
       {/* 4. FEATURED PROGRAMS & BROCHURES SHOWCASE                           */}
       {/* ==================================================================== */}
-      <section className="py-16 sm:py-20 bg-slate-50 border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 bg-[#030914] border-b border-slate-800/80 relative overflow-hidden">
+        {/* Subtle tech ambient background */}
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:28px_28px] opacity-10 pointer-events-none" />
+        <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-12 gap-4">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-3 py-1 rounded-full mb-2">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-300 bg-emerald-950/70 border border-emerald-800/70 px-3 py-1 rounded-full mb-2">
                 <BookOpen className="w-3.5 h-3.5" />
                 <span>Job-Oriented Programs</span>
               </div>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
                 Our Flagship Certification Courses
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1 max-w-xl">
+              <p className="text-xs sm:text-sm text-slate-400 mt-1 max-w-xl">
                 Comprehensive practical curriculum designed by senior software architects with hands-on lab projects and complete placement support.
               </p>
             </div>
 
-            <Button asChild variant="outline" className="border-slate-300 hover:border-emerald-600 hover:text-emerald-700 text-xs font-semibold self-start sm:self-auto">
+            <Button asChild variant="outline" className="border-slate-700 bg-slate-900/80 text-slate-300 hover:bg-slate-800 hover:text-white hover:border-emerald-500 text-xs font-semibold self-start sm:self-auto">
               <Link href="/courses" className="flex items-center gap-1.5">
                 <span>View All Courses</span>
                 <ArrowRight className="h-3.5 w-3.5" />
@@ -256,10 +260,10 @@ export default async function HomePage() {
           </div>
 
           {featuredCourses.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center">
-              <Code className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-700">Upcoming Batches Opening Soon</p>
-              <p className="text-xs text-slate-500 mt-1">
+            <div className="bg-slate-900/80 rounded-2xl border border-slate-800 p-12 text-center">
+              <Code className="h-10 w-10 text-slate-500 mx-auto mb-3" />
+              <p className="text-sm font-semibold text-slate-200">Upcoming Batches Opening Soon</p>
+              <p className="text-xs text-slate-400 mt-1">
                 Please contact our counselor desk for immediate enrollment schedule.
               </p>
             </div>

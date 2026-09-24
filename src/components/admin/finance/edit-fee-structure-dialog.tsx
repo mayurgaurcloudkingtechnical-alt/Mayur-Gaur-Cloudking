@@ -239,7 +239,33 @@ export function EditFeeStructureDialog({
           </div>
 
           <div className="space-y-1.5">
-            <label className="font-semibold text-slate-700 block">Discount Allowance (in ₹ INR)</label>
+            <div className="flex items-center justify-between">
+              <label className="font-semibold text-slate-700 block">Discount Allowance (in ₹ INR)</label>
+              {numDiscount > 0 && numTotal > 0 && (
+                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  {Math.round((numDiscount / numTotal) * 100)}% Off
+                </span>
+              )}
+            </div>
+            {/* Quick 5% to 45% Discount Buttons */}
+            <div className="flex flex-wrap gap-1 items-center pb-0.5">
+              <span className="text-[10px] text-slate-400 font-medium">Quick %:</span>
+              {[5, 10, 15, 20, 25, 30, 35, 40, 45].map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => {
+                    if (numTotal > 0) {
+                      const calculated = Math.round((numTotal * pct) / 100);
+                      setDiscountRupees(String(calculated));
+                    }
+                  }}
+                  className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 transition cursor-pointer"
+                >
+                  {pct}%
+                </button>
+              ))}
+            </div>
             <Input
               type="number"
               step="1"
@@ -247,7 +273,7 @@ export function EditFeeStructureDialog({
               placeholder="e.g. 5000"
               value={discountRupees}
               onChange={(e) => setDiscountRupees(e.target.value)}
-              className="h-9 text-xs"
+              className="h-9 text-xs font-mono font-semibold"
             />
           </div>
         </div>

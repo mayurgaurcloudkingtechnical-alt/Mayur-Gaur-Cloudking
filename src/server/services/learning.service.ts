@@ -274,24 +274,39 @@ export class LearningService {
     const completedLessons = flatLessons.filter((l) => completedLessonIds.has(l.id)).length;
     const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
 
-    return {
-      enrollment: {
-        id: enrollment.id,
-        status: enrollment.status,
-        batchCode: enrollment.batch?.code ?? null,
-        batchName: enrollment.batch?.name ?? null,
-      },
-      course: { id: course.id, title: course.title, slug: course.slug },
-      modules,
-      currentLesson: {
-        id: currentLesson.id,
-        moduleId: currentLesson.moduleId,
-        moduleTitle: currentLesson.moduleTitle,
-        title: currentLesson.title,
-        type: currentLesson.type,
-        durationMin: currentLesson.durationMin,
-        summary: currentLesson.summary,
-        isCompleted: completedLessonIds.has(currentLesson.id),
+      const activeModule = course.modules.find((m: any) => m.id === currentLesson.moduleId);
+      const extractedTopics: string[] = [];
+      if (activeModule?.description) {
+        const lines = activeModule.description.split("\n");
+        for (const line of lines) {
+          if (line.trim().startsWith("•")) {
+            const t = line.replace(/^[•\s*-]+/, "").trim();
+            if (t && t.length > 1 && !t.includes("") && !t.includes("\uF0B7")) {
+              extractedTopics.push(t);
+            }
+          }
+        }
+      }
+
+      return {
+        enrollment: {
+          id: enrollment.id,
+          status: enrollment.status,
+          batchCode: enrollment.batch?.code ?? null,
+          batchName: enrollment.batch?.name ?? null,
+        },
+        course: { id: course.id, title: course.title, slug: course.slug },
+        modules,
+        currentLesson: {
+          id: currentLesson.id,
+          moduleId: currentLesson.moduleId,
+          moduleTitle: currentLesson.moduleTitle,
+          title: currentLesson.title,
+          type: currentLesson.type,
+          durationMin: currentLesson.durationMin,
+          summary: currentLesson.summary,
+          topics: extractedTopics,
+          isCompleted: completedLessonIds.has(currentLesson.id),
         contentDetails: currentLesson.contentDetails
           ? {
               id: currentLesson.contentDetails.id,

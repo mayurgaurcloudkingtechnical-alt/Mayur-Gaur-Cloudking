@@ -78,7 +78,7 @@ export function CoursePlayerSidebar({
         {modules.map((mod, modIdx) => (
           <div key={mod.id} className="space-y-1">
             <div className="px-2 py-1 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Module {modIdx + 1}: {mod.title}
+              Module {modIdx + 1}: {mod.title.replace(/^(module|phase|month)\s*\d+[:\s–—-]*/i, "").trim()}
             </div>
             <div className="space-y-0.5">
               {mod.lessons.map((les) => {

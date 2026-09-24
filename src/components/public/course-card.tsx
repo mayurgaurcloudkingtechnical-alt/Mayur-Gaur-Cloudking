@@ -332,7 +332,7 @@ export function CourseCard({ course }: CourseCardProps) {
   const brochureImg = course.thumbnailUrl || getCourseBrochureImage(course.slug, course.title);
 
   return (
-    <Card className="flex flex-col justify-between border-slate-200 bg-white hover:border-emerald-500 hover:shadow-2xl transition-all duration-300 rounded-3xl overflow-hidden group">
+    <Card className="flex flex-col justify-between border-slate-800/90 bg-slate-900/90 hover:border-emerald-500/70 hover:shadow-2xl hover:shadow-emerald-950/40 transition-all duration-300 rounded-3xl overflow-hidden group backdrop-blur-sm">
       {/* 1. Course Promotional Visual Header */}
       <div className="relative aspect-[16/10] w-full overflow-hidden bg-slate-950">
         {brochureImg ? (
@@ -386,12 +386,12 @@ export function CourseCard({ course }: CourseCardProps) {
 
         {/* Bottom Metadata Ribbon */}
         <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-white text-[11px] z-10">
-          <span className="text-emerald-300 font-bold flex items-center gap-1 bg-slate-950/70 px-2 py-0.5 rounded-md backdrop-blur-sm">
-            <Clock className="w-3 h-3" />
+          <span className="text-emerald-300 font-bold flex items-center gap-1 bg-slate-950/80 px-2 py-0.5 rounded-md backdrop-blur-sm border border-slate-800/80">
+            <Clock className="w-3 h-3 text-emerald-400" />
             <span>{course.durationWeeks} Weeks Cohort</span>
           </span>
 
-          <span className="text-slate-300 text-[10px] font-medium bg-slate-950/70 px-2 py-0.5 rounded-md backdrop-blur-sm">
+          <span className="text-slate-300 text-[10px] font-medium bg-slate-950/80 px-2 py-0.5 rounded-md backdrop-blur-sm border border-slate-800/80">
             Classroom & Online
           </span>
         </div>
@@ -399,13 +399,13 @@ export function CourseCard({ course }: CourseCardProps) {
 
       {/* 2. Course Body Content */}
       <CardHeader className="p-5 pb-2">
-        <CardTitle className="text-base font-bold text-slate-900 line-clamp-2 leading-snug group-hover:text-emerald-700 transition-colors">
+        <CardTitle className="text-base font-bold text-white line-clamp-2 leading-snug group-hover:text-emerald-400 transition-colors">
           <Link href={`/courses/${course.slug}`}>
             {course.title}
           </Link>
         </CardTitle>
 
-        <CardDescription className="text-xs text-slate-600 line-clamp-2 mt-1.5 leading-relaxed">
+        <CardDescription className="text-xs text-slate-400 line-clamp-2 mt-1.5 leading-relaxed">
           {course.summary}
         </CardDescription>
 
@@ -414,7 +414,7 @@ export function CourseCard({ course }: CourseCardProps) {
           {meta.technologies.slice(0, 4).map((tech) => (
             <span
               key={tech}
-              className="text-[10px] font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200/70 px-2 py-0.5 rounded-md"
+              className="text-[10px] font-semibold bg-emerald-950/70 text-emerald-300 border border-emerald-800/70 px-2 py-0.5 rounded-md"
             >
               {tech}
             </span>
@@ -423,15 +423,15 @@ export function CourseCard({ course }: CourseCardProps) {
       </CardHeader>
 
       {/* 3. Career Outcome & Assurance */}
-      <CardContent className="px-5 py-2 text-xs space-y-1.5 border-t border-slate-100 mt-2">
+      <CardContent className="px-5 py-2.5 text-xs space-y-1.5 border-t border-slate-800/80 mt-2">
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500 font-medium">Career Role:</span>
-          <span className="font-bold text-slate-900">{meta.careerOutcome}</span>
+          <span className="text-slate-400 font-medium">Career Role:</span>
+          <span className="font-bold text-slate-200">{meta.careerOutcome}</span>
         </div>
 
         <div className="flex items-center justify-between text-[11px]">
-          <span className="text-slate-500 font-medium">Placement Drives:</span>
-          <span className="font-bold text-emerald-700 flex items-center gap-1">
+          <span className="text-slate-400 font-medium">Placement Drives:</span>
+          <span className="font-bold text-emerald-400 flex items-center gap-1">
             <Award className="w-3 h-3" />
             <span>1,200+ Partner MNCs</span>
           </span>
@@ -439,23 +439,23 @@ export function CourseCard({ course }: CourseCardProps) {
       </CardContent>
 
       {/* 4. Fee & 3 Distinct CTAs */}
-      <CardFooter className="p-4 px-5 border-t border-slate-100 flex flex-col gap-3 bg-slate-50/70">
+      <CardFooter className="p-4 px-5 border-t border-slate-800/80 flex flex-col gap-3 bg-slate-950/80">
         <div className="flex items-baseline justify-between w-full">
           <div>
             <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
               Tuition Fee
             </span>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-base sm:text-lg font-black text-slate-900">
+              <span className="text-base sm:text-lg font-black text-white">
                 {formattedFee}
               </span>
-              <span className="text-xs text-slate-400 line-through">
+              <span className="text-xs text-slate-500 line-through">
                 {formattedOriginalFee}
               </span>
             </div>
           </div>
 
-          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
+          <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800/70 px-2 py-0.5 rounded-md">
             Save 20% Direct
           </span>
         </div>
@@ -468,7 +468,7 @@ export function CourseCard({ course }: CourseCardProps) {
             onClick={() => openCareerCounselingModal(course.title)}
             size="sm"
             variant="outline"
-            className="border-emerald-500 text-emerald-700 hover:bg-emerald-50 text-[11px] font-bold h-8 px-1"
+            className="border-emerald-500/70 text-emerald-300 hover:bg-emerald-950/60 hover:text-emerald-200 hover:border-emerald-400 text-[11px] font-bold h-8 px-1"
           >
             Enquire Now
           </Button>
@@ -478,7 +478,7 @@ export function CourseCard({ course }: CourseCardProps) {
             asChild
             size="sm"
             variant="outline"
-            className="border-slate-300 text-slate-700 hover:border-slate-400 text-[11px] font-semibold h-8 px-1"
+            className="border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-600 text-[11px] font-semibold h-8 px-1"
           >
             <Link href={`/courses/${course.slug}`}>
               View Course
@@ -489,7 +489,7 @@ export function CourseCard({ course }: CourseCardProps) {
           <Button
             asChild
             size="sm"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] h-8 px-1 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] h-8 px-1 shadow-md shadow-emerald-950/50"
           >
             <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`}>
               Apply Now

@@ -13,7 +13,7 @@ async function main() {
   const valid21Slugs: string[] = [];
 
   for (let cIdx = 0; cIdx < coursesData.length; cIdx++) {
-    const c = coursesData[cIdx];
+    const c = coursesData[cIdx] as any;
     valid21Slugs.push(c.slug);
 
     console.log(`[${cIdx + 1}/21] Upserting Course: ${c.title} (${c.durationWeeks} weeks, Rs.${c.baseFee / 100})`);

@@ -189,7 +189,7 @@ export function DirectAdmissionDialog({
   const finalFeeInr = Math.max(0, courseFeeInr - discountAmountInr);
   const pendingAmountInr = Math.max(0, finalFeeInr - (paidAmount || 0));
   const discountPercentCalculated = courseFeeInr > 0 ? Math.round((discountAmountInr / courseFeeInr) * 100) : 0;
-  const isDiscountOverLimit = discountPercentCalculated > 15 && !isSuperAdminOrDirector;
+  const isDiscountOverLimit = discountPercentCalculated > 45 && !isSuperAdminOrDirector;
 
   // Auto-fill course baseFee into customTotalFee when course changes
   const handleCourseSelect = (selectedId: string) => {
@@ -266,7 +266,7 @@ export function DirectAdmissionDialog({
   // Recalculate EMI Slots whenever paymentPlan, finalFeeInr, or installmentCount changes
   React.useEffect(() => {
     if (paymentPlan === "EMI" && finalFeeInr > 0) {
-      const count = Math.max(2, Math.min(6, installmentCount));
+      const count = Math.max(2, Math.min(10, installmentCount));
       const baseInstAmount = Math.floor(finalFeeInr / count);
       const remainder = finalFeeInr - (baseInstAmount * count);
       const newSchedule = [];
@@ -1169,13 +1169,51 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                     </span>
                   </div>
 
-                  <div className="space-y-1">
-                    <Label className="text-[11px] font-semibold text-slate-700">Discount Mode & Value</Label>
-                    <div className="flex gap-1.5">
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[11px] font-semibold text-slate-700">Discount Mode & Value</Label>
+                      {discountAmountInr > 0 && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                          -₹{discountAmountInr.toLocaleString("en-IN")} ({discountPercentCalculated}% Off)
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Quick Discount Selector Buttons 5% to 45% */}
+                    <div className="space-y-1">
+                      <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
+                        <span>Quick Discount:</span>
+                        <span className="text-emerald-700 font-bold">5% to 45% Auto-Deduct</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {[5, 10, 15, 20, 25, 30, 35, 40, 45].map((pct) => (
+                          <button
+                            key={pct}
+                            type="button"
+                            onClick={() => {
+                              setDiscountType("PERCENTAGE");
+                              setDiscountValue(pct);
+                              if (!discountReason || discountReason.includes("Scholarship")) {
+                                setDiscountReason(`Special Counselor Scholarship (${pct}% Off)`);
+                              }
+                            }}
+                            className={`px-1.5 py-0.5 text-[10px] rounded font-bold border transition ${
+                              discountType === "PERCENTAGE" && discountValue === pct
+                                ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                                : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                            }`}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-1.5 pt-1">
                       <select
                         value={discountType}
                         onChange={(e) => setDiscountType(e.target.value as any)}
-                        className="h-8 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs shrink-0 w-24"
+                        className="h-8 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs shrink-0 w-24 font-medium"
                       >
                         <option value="PERCENTAGE">% Off</option>
                         <option value="FIXED">Flat ₹</option>
@@ -1183,15 +1221,16 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                       <Input
                         type="number"
                         min={0}
+                        max={discountType === "PERCENTAGE" ? 100 : courseFeeInr}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(Number(e.target.value))}
-                        placeholder="Discount"
-                        className="h-8 text-xs font-mono"
+                        placeholder={discountType === "PERCENTAGE" ? "5 - 45%" : "Flat Discount ₹"}
+                        className="h-8 text-xs font-mono font-bold"
                       />
                     </div>
                     {discountAmountInr > 0 && (
                       <span className="text-[10px] text-emerald-700 font-medium block">
-                        Deducts ₹{discountAmountInr.toLocaleString("en-IN")} from total
+                        Deducts ₹{discountAmountInr.toLocaleString("en-IN")} from total fee
                       </span>
                     )}
                   </div>
@@ -1209,10 +1248,10 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                     {isDiscountOverLimit ? (
                       <div className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold mt-0.5">
                         <AlertTriangle className="h-3 w-3 shrink-0" />
-                        <span>Exceeds 15% Counselor limit (Requires Director Reason)</span>
+                        <span>Exceeds 45% Counselor limit (Requires Director Reason)</span>
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-400 block">Required if discount &gt; 15%</span>
+                      <span className="text-[10px] text-slate-400 block">Counselor approved scholarship up to 45%</span>
                     )}
                   </div>
                 </div>
@@ -1225,7 +1264,7 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                       <span>Payment Structure / Fee Collection Plan *</span>
                     </Label>
                     <span className="text-[10px] text-slate-500 font-medium">
-                      Select Lumpsum (One-Time) or EMI Installments
+                      Select Lumpsum (One-Time) or EMI Installments (Up to 10 Months)
                     </span>
                   </div>
 
@@ -1252,28 +1291,30 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                       }`}
                     >
                       <CalendarIcon className="h-3.5 w-3.5" />
-                      <span>EMI Slot / Installment Schedule</span>
+                      <span>EMI Slot (Up to 10 Months)</span>
                     </button>
                   </div>
 
                   {/* EMI Slot Configuration Box */}
                   {paymentPlan === "EMI" && (
                     <div className="pt-2 border-t border-slate-200 space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-slate-700">Select Number of EMI Slots:</span>
-                        <div className="flex gap-1.5">
-                          {[2, 3, 4, 6].map((count) => (
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <span className="text-[11px] font-bold text-slate-700">
+                          Select EMI Installments (2 to 10 Months):
+                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
                             <button
                               key={count}
                               type="button"
                               onClick={() => setInstallmentCount(count)}
-                              className={`px-2.5 py-1 text-xs rounded font-bold border transition ${
+                              className={`px-2 py-1 text-xs rounded font-bold border transition ${
                                 installmentCount === count
-                                  ? "bg-blue-600 text-white border-blue-700"
+                                  ? "bg-blue-600 text-white border-blue-700 shadow-xs"
                                   : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
                               }`}
                             >
-                              {count} EMIs
+                              {count}M
                             </button>
                           ))}
                         </div>

@@ -242,98 +242,101 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
         dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
       />
 
-      {/* Header Banner */}
-      <section className="bg-gradient-to-b from-emerald-50/80 via-white to-white py-12 sm:py-16 border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* Header Banner - Deep Cyber Emerald & Slate */}
+      <section className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#030914] via-[#071626] to-[#040914] text-white py-12 sm:py-16">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
+        <div className="absolute top-0 right-1/4 w-[500px] h-[300px] bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
           <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
             <div className="max-w-3xl space-y-4">
               <div className="flex flex-wrap items-center gap-2">
                 <Link
                   href="/courses"
-                  className="text-xs font-semibold text-emerald-700 hover:underline flex items-center gap-1"
+                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 hover:underline flex items-center gap-1"
                 >
                   <span>All Courses</span>
-                  <span className="text-slate-400">/</span>
+                  <span className="text-slate-500">/</span>
                 </Link>
                 {course.level && (
-                  <Badge variant="secondary" className="text-xs font-medium text-slate-700">
+                  <Badge variant="secondary" className="text-xs font-medium bg-slate-800/90 text-slate-200 border-slate-700">
                     {course.level}
                   </Badge>
                 )}
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                <span className="text-xs font-bold text-emerald-300 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-800/80">
                   {course.durationWeeks} Weeks Cohort
                 </span>
-                <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                <span className="text-xs font-bold text-teal-300 bg-teal-950/80 px-2.5 py-0.5 rounded-full border border-teal-800/80">
                   {course.modules.length} Detailed Modules
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
                 {course.title}
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-medium">
+              <p className="text-base sm:text-lg text-slate-300 leading-relaxed font-medium">
                 {course.summary}
               </p>
 
-              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-600 font-semibold">
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-300 font-semibold">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-emerald-600" />
+                  <Clock className="h-4 w-4 text-emerald-400" />
                   <span><strong>{course.durationWeeks} Weeks</strong> Intensive</span>
                 </div>
                 {course.language && (
                   <div className="flex items-center gap-2">
-                    <Globe className="h-4 w-4 text-emerald-600" />
+                    <Globe className="h-4 w-4 text-emerald-400" />
                     <span>Language: <strong>{course.language}</strong></span>
                   </div>
                 )}
                 <div className="flex items-center gap-2">
-                  <Award className="h-4 w-4 text-emerald-600" />
+                  <Award className="h-4 w-4 text-emerald-400" />
                   <span>Verifiable Course Certificate</span>
                 </div>
               </div>
             </div>
 
             {/* Quick Enrollment Card */}
-            <Card className="w-full lg:w-80 border-slate-200 shadow-md shrink-0 bg-white rounded-3xl">
+            <Card className="w-full lg:w-80 border-slate-800 bg-slate-900/95 shadow-2xl shrink-0 text-white rounded-3xl backdrop-blur-md">
               <CardContent className="p-6 space-y-4">
                 <div>
                   <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">
                     Total Tuition Fee
                   </span>
                   <div className="flex items-baseline gap-2 mt-1">
-                    <span className="text-3xl font-extrabold text-slate-900">
+                    <span className="text-3xl font-extrabold text-white">
                       {formattedFee}
                     </span>
-                    <span className="text-xs text-slate-500 font-medium">inclusive</span>
+                    <span className="text-xs text-slate-400 font-medium">inclusive</span>
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100 text-xs">
-                  <div className="flex items-center justify-between text-slate-600">
+                <div className="space-y-2 pt-2 border-t border-slate-800 text-xs">
+                  <div className="flex items-center justify-between text-slate-400">
                     <span>Delivery Format:</span>
-                    <span className="font-semibold text-slate-900">Classroom & Hybrid</span>
+                    <span className="font-semibold text-slate-200">Classroom & Hybrid</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center justify-between text-slate-400">
                     <span>Batch Capacity:</span>
-                    <span className="font-semibold text-slate-900">Limited (30 learners)</span>
+                    <span className="font-semibold text-slate-200">Limited (30 learners)</span>
                   </div>
-                  <div className="flex items-center justify-between text-slate-600">
+                  <div className="flex items-center justify-between text-slate-400">
                     <span>Campus Location:</span>
-                    <span className="font-semibold text-slate-900">Civil Lines, Prayagraj</span>
+                    <span className="font-semibold text-slate-200">Civil Lines, Prayagraj</span>
                   </div>
                 </div>
 
                 {/* Enquiry Action Button */}
                 <div className="space-y-2 pt-2">
-                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 shadow-sm rounded-xl">
+                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 shadow-lg shadow-emerald-950/40 rounded-xl">
                     <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center justify-center gap-2">
                       <Phone className="h-4 w-4" />
                       <span>Call Admissions Desk</span>
                     </a>
                   </Button>
 
-                  <Button asChild variant="outline" className="w-full border-slate-300 text-xs font-semibold h-9 rounded-xl">
+                  <Button asChild variant="outline" className="w-full border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white text-xs font-semibold h-9 rounded-xl">
                     <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`} className="flex items-center justify-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
                       <span>Apply for Admission</span>
@@ -341,7 +344,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   </Button>
                 </div>
 
-                <p className="text-[11px] text-slate-500 text-center leading-tight">
+                <p className="text-[11px] text-slate-400 text-center leading-tight">
                   Direct counseling & campus tours available Mon–Sat.
                 </p>
               </CardContent>

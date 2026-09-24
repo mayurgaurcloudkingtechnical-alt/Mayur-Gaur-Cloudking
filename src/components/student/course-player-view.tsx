@@ -103,8 +103,8 @@ export function CoursePlayerView({ enrollmentId }: CoursePlayerViewProps) {
           {/* Top Control Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
-              <div className="text-xs font-medium text-slate-500">
-                {currentLesson.moduleTitle}
+              <div className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">
+                {currentLesson.moduleTitle.replace(/^(module|phase|month)\s*\d+[:\s–—-]*/i, "").trim()}
               </div>
               <h1 className="text-2xl font-bold text-slate-900 mt-1">{currentLesson.title}</h1>
               <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
@@ -135,6 +135,7 @@ export function CoursePlayerView({ enrollmentId }: CoursePlayerViewProps) {
 
           <CoursePlayerContent
             enrollmentId={enrollmentId}
+            courseTitle={course.title}
             currentLesson={currentLesson}
             watermark={watermark}
           />
