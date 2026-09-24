@@ -185,13 +185,13 @@ export function GenerateReceiptDialog({
             )}
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between pb-2 border-b">
+          <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+            <div className="w-full max-w-[210mm] py-2 px-2 flex justify-start print:hidden">
               <Button
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => setReceiptData(null)}
-                className="text-xs h-7 text-slate-600 hover:text-slate-900"
+                className="text-xs h-7 text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 font-semibold"
               >
                 ← Back to Student List
               </Button>

@@ -395,13 +395,11 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
 
       {/* Dual Fee Receipt Viewer Modal */}
       {viewingReceipt && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-xl max-w-4xl w-full p-4 max-h-[90vh] overflow-y-auto shadow-2xl">
-            <DualFeeReceipt
-              data={viewingReceipt}
-              onClose={() => setViewingReceipt(null)}
-            />
-          </div>
+        <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+          <DualFeeReceipt
+            data={viewingReceipt}
+            onClose={() => setViewingReceipt(null)}
+          />
         </div>
       )}
     </div>

@@ -159,11 +159,18 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   };
 
   const renderSingleReceipt = (copyTitle: "Student Copy" | "Center Copy") => (
-    <div className="receipt-box border border-black bg-white text-black p-3.5 flex flex-col justify-between box-border text-[11px] leading-tight select-text">
+    <div
+      className="receipt-box border-2 border-black bg-white text-black p-3 flex flex-col justify-between box-border text-[11px] leading-tight select-text shrink-0"
+      style={{
+        height: "136.5mm",
+        maxHeight: "136.5mm",
+        boxSizing: "border-box",
+      }}
+    >
       {/* Header section matching uploaded PDF reference */}
-      <div className="grid grid-cols-12 border border-black mb-2">
+      <div className="grid grid-cols-12 border-2 border-black mb-1.5 shrink-0">
         {/* Logo column */}
-        <div className="col-span-3 border-r border-black p-2 flex flex-col items-center justify-center text-center">
+        <div className="col-span-3 border-r-2 border-black p-2 flex flex-col items-center justify-center text-center">
           <div className="flex items-center gap-2">
             {/* SoftLab Global Official Logo */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -181,18 +188,18 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         </div>
 
         {/* Center column: Centre name, address, GST */}
-        <div className="col-span-6 border-r border-black p-2 text-center flex flex-col justify-center">
+        <div className="col-span-6 border-r-2 border-black p-2 text-center flex flex-col justify-center">
           {isEditing ? (
             <div className="space-y-1">
               <Input
                 value={centerName}
                 onChange={(e) => setCenterName(e.target.value)}
-                className="h-6 text-[11px] font-bold text-center p-1"
+                className="h-6 text-[11px] font-bold text-center p-1 bg-white border-black"
               />
               <textarea
                 value={centerAddress}
                 onChange={(e) => setCenterAddress(e.target.value)}
-                className="w-full text-[9px] border p-1 rounded resize-none"
+                className="w-full text-[9px] border border-black p-1 rounded resize-none bg-white"
                 rows={2}
               />
               <div className="flex items-center justify-center gap-1">
@@ -200,7 +207,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                 <Input
                   value={gstNo}
                   onChange={(e) => setGstNo(e.target.value)}
-                  className="h-5 text-[10px] w-36 font-mono p-1"
+                  className="h-5 text-[10px] w-36 font-mono p-1 bg-white border-black"
                 />
               </div>
             </div>
@@ -222,7 +229,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                 <Input
                   value={receiptNumber}
                   onChange={(e) => setReceiptNumber(e.target.value)}
-                  className="h-5 text-[10.5px] font-mono font-bold w-28 p-0.5 text-right inline-block"
+                  className="h-5 text-[10.5px] font-mono font-bold w-28 p-0.5 text-right inline-block bg-white border-black"
                 />
               ) : (
                 <span className="font-bold font-mono">{receiptNumber}</span>
@@ -234,21 +241,21 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                 <Input
                   value={receiptDate}
                   onChange={(e) => setReceiptDate(e.target.value)}
-                  className="h-5 text-[10.5px] font-mono font-bold w-24 p-0.5 text-right inline-block"
+                  className="h-5 text-[10.5px] font-mono font-bold w-24 p-0.5 text-right inline-block bg-white border-black"
                 />
               ) : (
                 <span className="font-bold">{receiptDate}</span>
               )}
             </div>
           </div>
-          <div className="mt-2 text-right">
+          <div className="mt-1 text-right">
             <span className="font-bold text-[11px] underline tracking-wide uppercase">{copyTitle}</span>
           </div>
         </div>
       </div>
 
       {/* Student Details Bar */}
-      <div className="border border-black p-1.5 mb-2 bg-white">
+      <div className="border-2 border-black p-1.5 mb-1.5 bg-white shrink-0">
         <div className="flex flex-wrap justify-between items-center text-[11px] mb-1">
           <div className="flex items-center gap-1">
             <span className="font-bold">Student Name -</span>
@@ -256,7 +263,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               <Input
                 value={studentName}
                 onChange={(e) => setStudentName(e.target.value)}
-                className="h-5 text-[11px] font-bold w-48 p-0.5"
+                className="h-5 text-[11px] font-bold w-48 p-0.5 bg-white border-black"
               />
             ) : (
               <span className="font-extrabold">{studentName}</span>
@@ -268,7 +275,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               <Input
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                className="h-5 text-[11px] font-mono font-bold w-36 p-0.5"
+                className="h-5 text-[11px] font-mono font-bold w-36 p-0.5 bg-white border-black"
               />
             ) : (
               <span className="font-mono font-bold">{studentId}</span>
@@ -281,7 +288,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
             <Input
               value={courseTitle}
               onChange={(e) => setCourseTitle(e.target.value)}
-              className="h-5 text-[11px] font-bold flex-1 p-0.5"
+              className="h-5 text-[11px] font-bold flex-1 p-0.5 bg-white border-black"
             />
           ) : (
             <span className="font-semibold">{courseTitle}</span>
@@ -290,9 +297,9 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       </div>
 
       {/* Main Breakdown Table matching the exact layout of the PDF */}
-      <table className="w-full border-collapse border border-black text-[10px] text-center mb-2">
+      <table className="w-full border-collapse border-2 border-black text-[10px] text-center mb-1.5 shrink-0">
         <thead>
-          <tr className="border-b border-black font-bold">
+          <tr className="border-b-2 border-black font-bold h-6">
             <th className="border-r border-black p-1 w-6">#</th>
             <th className="border-r border-black p-1 text-left">Particulars</th>
             <th className="border-r border-black p-1 w-10">SAC</th>
@@ -306,14 +313,14 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         </thead>
         <tbody>
           {/* Row 1: Registration/Enrollment Payment */}
-          <tr className="border-b border-black">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">1</td>
             <td className="border-r border-black p-0.5 text-left font-medium">
               {isEditing ? (
                 <Input
                   value={particulars}
                   onChange={(e) => setParticulars(e.target.value)}
-                  className="h-4 text-[9.5px] p-0.5 border-none"
+                  className="h-4 text-[9.5px] p-0.5 border-none bg-white"
                 />
               ) : (
                 particulars
@@ -331,7 +338,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                   type="number"
                   value={registrationPayment}
                   onChange={(e) => setRegistrationPayment(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-right p-0.5 w-20 ml-auto"
+                  className="h-4 text-[9.5px] font-mono text-right p-0.5 w-20 ml-auto bg-white border-black"
                 />
               ) : registrationPayment > 0 ? (
                 registrationPayment.toLocaleString("en-IN") + ".00/-"
@@ -342,7 +349,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 2: Empty Spacer */}
-          <tr className="border-b border-black h-4">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">2</td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
@@ -355,7 +362,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 3: Total Amount Before */}
-          <tr className="border-b border-black">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">3</td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
@@ -370,7 +377,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 4: Empty */}
-          <tr className="border-b border-black h-4">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">4</td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
@@ -383,7 +390,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 5: Total Fees & SGST */}
-          <tr className="border-b border-black">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">5</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2">
               Total Fees
@@ -394,7 +401,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                   type="number"
                   value={totalFees}
                   onChange={(e) => handleTotalFeesChange(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold"
+                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold bg-white border-black"
                 />
               ) : (
                 totalFees.toLocaleString("en-IN")
@@ -407,7 +414,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 7: Total Discount & GST */}
-          <tr className="border-b border-black">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">7</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2">
               Total Discount
@@ -418,7 +425,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                   type="number"
                   value={totalDiscount}
                   onChange={(e) => handleDiscountChange(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold"
+                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold bg-white border-black"
                 />
               ) : (
                 totalDiscount.toLocaleString("en-IN")
@@ -431,7 +438,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 6: Total Paid & IGST */}
-          <tr className="border-b border-black">
+          <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">6</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2">
               Total Paid
@@ -442,7 +449,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                   type="number"
                   value={totalPaid}
                   onChange={(e) => handlePaidChange(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold text-emerald-800"
+                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold text-emerald-800 bg-white border-black"
                 />
               ) : (
                 totalPaid.toLocaleString("en-IN")
@@ -455,7 +462,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
           </tr>
 
           {/* Row 8: Total Outstanding & Total Amount After Tax */}
-          <tr className="border-b border-black font-bold">
+          <tr className="border-b border-black font-bold h-5">
             <td className="border-r border-black p-0.5">8</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2 text-rose-700">
               Total Outstanding
@@ -466,7 +473,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                   type="number"
                   value={totalOutstanding}
                   onChange={(e) => setTotalOutstanding(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold text-rose-700"
+                  className="h-4 text-[9.5px] font-mono text-center p-0.5 w-24 mx-auto font-bold text-rose-700 bg-white border-black"
                 />
               ) : (
                 totalOutstanding.toLocaleString("en-IN")
@@ -483,7 +490,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       </table>
 
       {/* Words, Status, Paid By, & Disclaimers */}
-      <div className="border border-black text-[10px]">
+      <div className="border-2 border-black text-[10px] bg-white shrink-0">
         {/* Amount in words & Status row */}
         <div className="flex border-b border-black">
           <div className="flex-1 p-1 border-r border-black flex items-center gap-1">
@@ -492,7 +499,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               <Input
                 value={customWords || computedWords}
                 onChange={(e) => setCustomWords(e.target.value)}
-                className="h-4 text-[9.5px] font-semibold italic flex-1 p-0.5"
+                className="h-4 text-[9.5px] font-semibold italic flex-1 p-0.5 bg-white border-black"
               />
             ) : (
               <span className="font-bold italic">{computedWords}</span>
@@ -504,7 +511,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
-                className="h-4 text-[9.5px] font-bold border border-black rounded px-1"
+                className="h-4 text-[9.5px] font-bold border border-black rounded px-1 bg-white"
               >
                 <option value="Completed">Completed</option>
                 <option value="Partial">Partial</option>
@@ -524,7 +531,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               <Input
                 value={paymentMode}
                 onChange={(e) => setPaymentMode(e.target.value)}
-                className="h-4 text-[9.5px] font-mono flex-1 p-0.5"
+                className="h-4 text-[9.5px] font-mono flex-1 p-0.5 bg-white border-black"
               />
             ) : (
               <span className="font-mono">{paymentMode}</span>
@@ -536,7 +543,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         </div>
 
         {/* Mandatory Refund Policy Statements */}
-        <div className="p-1 text-center text-[8.5px] leading-tight text-black space-y-0.5 bg-slate-50">
+        <div className="p-1 text-center text-[8.5px] leading-tight text-black space-y-0.5 bg-white">
           <p className="font-medium">
             Please note that there will not be any refund on or Vocational Course Effective immediately
           </p>
@@ -549,21 +556,72 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   );
 
   return (
-    <div className="space-y-4">
+    <div className="w-full min-h-screen bg-slate-100 py-6 px-2 flex flex-col items-center justify-start print:bg-white print:p-0 print:m-0 print:min-h-0 print:w-full">
+      {/* Global Print & Page Styling */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @page {
+              size: A4 portrait;
+              margin: 0mm;
+            }
+            @media print {
+              html, body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: #ffffff !important;
+                background-color: #ffffff !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                overflow: hidden !important;
+              }
+              body * {
+                visibility: hidden;
+              }
+              .a4-receipt-page, .a4-receipt-page * {
+                visibility: visible;
+              }
+              .a4-receipt-page {
+                position: fixed !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 210mm !important;
+                height: 297mm !important;
+                min-height: 297mm !important;
+                max-height: 297mm !important;
+                padding: 5mm 6mm !important;
+                margin: 0 !important;
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                box-sizing: border-box !important;
+                page-break-after: avoid !important;
+                page-break-inside: avoid !important;
+              }
+              .print-hidden-toolbar {
+                display: none !important;
+              }
+            }
+          `,
+        }}
+      />
+
       {/* Top Controls Bar (hidden during print) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 text-white p-3 rounded-lg print:hidden shadow-lg">
+      <div className="print-hidden-toolbar print:hidden w-full max-w-[210mm] flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-300 text-slate-800 p-3 rounded-xl shadow-md mb-4">
         <div className="flex items-center gap-2">
-          <span className="font-extrabold text-sm tracking-tight text-emerald-400">
+          <span className="font-extrabold text-sm tracking-tight text-emerald-700">
             Official A4 Payment Receipt
           </span>
-          <span className="text-xs text-slate-300 font-mono">({receiptNumber})</span>
+          <span className="text-xs text-slate-600 font-mono font-semibold">({receiptNumber})</span>
           {saveSuccess && (
-            <span className="text-xs bg-emerald-700 text-white px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+            <span className="text-xs bg-emerald-600 text-white px-2 py-0.5 rounded font-semibold flex items-center gap-1">
               <Check className="w-3 h-3" /> Saved & Synced!
             </span>
           )}
           {saveError && (
-            <span className="text-xs bg-rose-700 text-white px-2 py-0.5 rounded font-semibold flex items-center gap-1">
+            <span className="text-xs bg-rose-600 text-white px-2 py-0.5 rounded font-semibold flex items-center gap-1">
               <AlertCircle className="w-3 h-3" /> {saveError}
             </span>
           )}
@@ -576,7 +634,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
             variant="outline"
             onClick={() => setIsEditing(!isEditing)}
             className={`text-xs h-8 gap-1.5 font-bold ${
-              isEditing ? "bg-amber-500 text-slate-900 hover:bg-amber-400 border-amber-600" : "bg-slate-800 text-white hover:bg-slate-700 border-slate-700"
+              isEditing ? "bg-amber-500 text-slate-900 hover:bg-amber-400 border-amber-600" : "bg-slate-100 text-slate-800 hover:bg-slate-200 border-slate-300"
             }`}
           >
             <Edit3 className="w-3.5 h-3.5" />
@@ -608,7 +666,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 gap-1.5 font-bold shadow-sm"
           >
             <Printer className="w-3.5 h-3.5" />
-            <span>Print A4 Receipt (Both Copies)</span>
+            <span>Print A4 Receipt (Full Sheet)</span>
           </Button>
 
           {onClose && (
@@ -616,7 +674,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
               size="sm"
               variant="outline"
               onClick={onClose}
-              className="text-white border-slate-700 hover:bg-slate-800 text-xs h-8"
+              className="text-slate-700 border-slate-300 hover:bg-slate-100 text-xs h-8 font-semibold"
             >
               Close
             </Button>
@@ -626,10 +684,12 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
 
       {/* A4 Container: Student Copy (Top) + Scissor Perforation + Center Copy (Bottom) */}
       <div
-        className="a4-receipt-page bg-white p-4 mx-auto space-y-2 border border-slate-300 shadow-xl print:p-0 print:border-none print:shadow-none print:m-0"
+        className="a4-receipt-page bg-white p-[6mm] mx-auto flex flex-col justify-between border border-slate-300 shadow-2xl print:p-[4mm] print:border-none print:shadow-none print:m-0"
         style={{
           width: "210mm",
-          maxWidth: "100%",
+          height: "297mm",
+          minHeight: "297mm",
+          maxHeight: "297mm",
           boxSizing: "border-box",
         }}
       >
@@ -637,10 +697,10 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         {renderSingleReceipt("Student Copy")}
 
         {/* Scissor Perforation Line matching the uploaded PDF reference */}
-        <div className="relative py-1 flex items-center justify-center select-none">
-          <div className="w-full border-t border-dashed border-black"></div>
-          <span className="absolute bg-white px-4 text-sm text-black flex items-center gap-1 font-bold">
-            ✂
+        <div className="relative h-[8mm] flex items-center justify-center select-none shrink-0 print:py-0">
+          <div className="w-full border-t-2 border-dashed border-black"></div>
+          <span className="absolute bg-white px-3 text-xs text-black flex items-center gap-1 font-bold">
+            ✂ ----------------- CUT HERE ----------------- ✂
           </span>
         </div>
 

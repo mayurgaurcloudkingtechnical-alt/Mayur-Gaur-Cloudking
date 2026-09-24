@@ -119,10 +119,10 @@ export function ReceiptPageView() {
   }, [paymentId, studentId, receiptNo, utils]);
 
   return (
-    <div className="space-y-4">
+    <div className="min-h-screen bg-slate-100 py-6 px-2 flex flex-col items-center print:bg-white print:p-0 print:m-0">
       {/* Top back navigation */}
-      <div className="flex items-center justify-between print:hidden">
-        <Button asChild variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 hover:text-slate-900">
+      <div className="w-full max-w-[210mm] flex items-center justify-between print:hidden mb-3">
+        <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 font-semibold">
           <Link href="/admin/finance">
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to Finance Dashboard</span>
@@ -131,14 +131,14 @@ export function ReceiptPageView() {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center p-12 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center justify-center p-12 bg-white rounded-xl border border-slate-200 shadow-sm max-w-[210mm] w-full">
           <Loader2 className="w-6 h-6 animate-spin text-[#0088cc] mr-2" />
           <span className="text-xs font-semibold text-slate-700">Loading official receipt...</span>
         </div>
       )}
 
       {error && (
-        <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs">
+        <div className="p-4 bg-red-50 text-red-700 rounded-lg border border-red-200 text-xs max-w-[210mm] w-full">
           <strong>Error: </strong> {error}
         </div>
       )}

@@ -2568,14 +2568,12 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
       {/* DUAL A4 FEE RECEIPT MODAL (PHASE 11: STUDENT COPY + CENTRE COPY) */}
       {selectedReceiptData && (
-        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto print:p-0 print:bg-white">
-          <div className="bg-white rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl max-h-[95vh] overflow-y-auto print:max-w-none print:max-h-none print:shadow-none print:p-0 print:border-none">
-            <DualFeeReceipt
-              data={selectedReceiptData}
-              onClose={() => setSelectedReceiptData(null)}
-              onSaved={() => refetch()}
-            />
-          </div>
+        <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+          <DualFeeReceipt
+            data={selectedReceiptData}
+            onClose={() => setSelectedReceiptData(null)}
+            onSaved={() => refetch()}
+          />
         </div>
       )}
     </div>
