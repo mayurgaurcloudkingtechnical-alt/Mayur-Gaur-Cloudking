@@ -27,6 +27,7 @@ import {
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { EditApplicationDialog } from "./edit-application-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
+import { formatPaiseToRupees } from "@/lib/utils";
 
 interface ApplicationsListViewProps {
   basePath?: string;
@@ -234,6 +235,7 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                     <th className="py-2.5 px-4 font-semibold">Application #</th>
                     <th className="py-2.5 px-3 font-semibold">Applicant</th>
                     <th className="py-2.5 px-3 font-semibold">Target Program</th>
+                    <th className="py-2.5 px-3 font-semibold">Total Fee</th>
                     <th className="py-2.5 px-3 font-semibold">Stage</th>
                     <th className="py-2.5 px-3 font-semibold">Counselor</th>
                     <th className="py-2.5 px-3 font-semibold">Date</th>
@@ -262,6 +264,23 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                         {app.batch && (
                           <div className="text-[11px] text-slate-400">{app.batch.code}</div>
                         )}
+                      </td>
+                      <td className="py-3 px-3">
+                        {(() => {
+                          const enrolledFee = (app as any).convertedStudentProfile?.feeStructures?.[0];
+                          const totalFeePaise = enrolledFee?.netPayableAmount || enrolledFee?.totalCourseFee || (app.course as any)?.baseFee || 0;
+                          const paidFeePaise = enrolledFee?.paidAmount || ((app as any).payments?.[0]?.amount ?? 0);
+                          return (
+                            <>
+                              <div className="font-bold text-slate-900">
+                                {totalFeePaise > 0 ? formatPaiseToRupees(totalFeePaise) : "—"}
+                              </div>
+                              <div className="text-[10px] text-emerald-700 font-semibold">
+                                Paid: {formatPaiseToRupees(paidFeePaise)}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </td>
                       <td className="py-3 px-3">
                         <Badge

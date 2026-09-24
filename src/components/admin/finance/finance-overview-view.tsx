@@ -22,6 +22,7 @@ import {
   Users,
   ChevronRight,
   Printer,
+  Briefcase,
 } from "lucide-react";
 import { FeeStructuresTable } from "./fee-structures-table";
 import { PaymentsTable } from "./payments-table";
@@ -40,6 +41,8 @@ export function FinanceOverviewView() {
 
   const { data: metrics, isLoading, refetch } = api.finance.getOverviewMetrics.useQuery();
 
+  const totalBusiness = (metrics as any)?.totalBusiness || metrics?.totalReceivable || 0;
+  const totalDiscount = (metrics as any)?.totalDiscount || 0;
   const totalReceivable = metrics?.totalReceivable || 0;
   const totalCollected = metrics?.totalCollected || 0;
   const totalOutstanding = metrics?.totalOutstanding || 0;
@@ -90,9 +93,25 @@ export function FinanceOverviewView() {
         </div>
       </div>
 
-      {/* 4 KPI Cards matching EdumonX Image 8 */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {/* Card 1: Fees Collected */}
+      {/* 5 KPI Cards: Total Business, Fees Collected, Fees Pending, Overdue Fees, Collection Rate */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Card 1: Total Business (Committed Fees) */}
+        <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Business</span>
+            <span className="p-2 rounded bg-purple-50 text-purple-600">
+              <Briefcase className="h-4 w-4" />
+            </span>
+          </div>
+          <div className="mt-2 text-2xl font-bold text-purple-900">
+            {isLoading ? "..." : formatPaiseToRupees(totalBusiness)}
+          </div>
+          <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+            <span>{metrics?.totalEnrolledFees || 0} active enrollment contracts</span>
+          </div>
+        </div>
+
+        {/* Card 2: Fees Collected */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Collected</span>
@@ -109,7 +128,7 @@ export function FinanceOverviewView() {
           </div>
         </div>
 
-        {/* Card 2: Fees Pending */}
+        {/* Card 3: Fees Pending */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Pending</span>
@@ -125,7 +144,7 @@ export function FinanceOverviewView() {
           </p>
         </div>
 
-        {/* Card 3: Overdue Fees */}
+        {/* Card 4: Overdue Fees */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Overdue Fees</span>
@@ -141,7 +160,7 @@ export function FinanceOverviewView() {
           </p>
         </div>
 
-        {/* Card 4: Collection Rate */}
+        {/* Card 5: Collection Rate */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection Rate</span>
@@ -193,6 +212,14 @@ export function FinanceOverviewView() {
 
             {/* Breakdown Legend Cards */}
             <div className="space-y-2.5 pt-2">
+              <div className="flex items-center justify-between p-2.5 rounded bg-purple-50/60 border border-purple-100 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                  <span className="font-semibold text-slate-700">Total Business (Committed)</span>
+                </div>
+                <span className="font-bold text-purple-900">{formatPaiseToRupees(totalBusiness || totalReceivable)}</span>
+              </div>
+
               <div className="flex items-center justify-between p-2.5 rounded bg-emerald-50/60 border border-emerald-100 text-xs">
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -218,8 +245,13 @@ export function FinanceOverviewView() {
               </div>
             </div>
 
-            <div className="pt-2 border-t text-[11px] text-slate-500">
-              Total Receivable Committed: <span className="font-bold text-slate-800">{formatPaiseToRupees(totalReceivable)}</span>
+            <div className="pt-2 border-t text-[11px] text-slate-500 flex items-center justify-between">
+              <span>Total Contract Committed: <span className="font-bold text-slate-800">{formatPaiseToRupees(totalReceivable)}</span></span>
+              {totalDiscount > 0 && (
+                <span className="text-amber-700 font-medium">
+                  Discounts: -{formatPaiseToRupees(totalDiscount)}
+                </span>
+              )}
             </div>
           </div>
         </div>

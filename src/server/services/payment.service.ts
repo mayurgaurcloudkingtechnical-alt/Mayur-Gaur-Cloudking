@@ -251,8 +251,13 @@ export class PaymentService {
     } else {
       const canView =
         hasPermission(user.permissions, "payments:view_ledger") ||
+        hasPermission(user.permissions, "admissions:read") ||
         user.roleCode === "SUPER_ADMIN" ||
-        user.roleCode === "ACCOUNTANT";
+        user.roleCode === "DIRECTOR" ||
+        user.roleCode === "ADMIN" ||
+        user.roleCode === "ACCOUNTANT" ||
+        user.roleCode === "COUNSELOR" ||
+        user.roleCode === "MANAGER";
       if (!canView) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to payment history." });
       }
@@ -271,8 +276,26 @@ export class PaymentService {
         orderBy: { paymentDate: "desc" },
         include: {
           student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
-          feeStructure: { include: { course: { select: { id: true, title: true } } } },
-          admission: { include: { course: { select: { id: true, title: true } } } },
+          feeStructure: {
+            select: {
+              id: true,
+              totalCourseFee: true,
+              discountAmount: true,
+              netPayableAmount: true,
+              paidAmount: true,
+              pendingAmount: true,
+              paymentStatus: true,
+              course: { select: { id: true, title: true } },
+            },
+          },
+          admission: {
+            select: {
+              id: true,
+              applicantName: true,
+              applicationNumber: true,
+              course: { select: { id: true, title: true, baseFee: true } },
+            },
+          },
           receivedBy: { select: { id: true, firstName: true, lastName: true, roleCode: true } },
         },
       }),

@@ -89,7 +89,9 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
       "Student Name",
       "Student ID",
       "Course",
-      "Amount (INR)",
+      "Amount Paid (INR)",
+      "Total Fee (INR)",
+      "Pending Balance (INR)",
       "Method",
       "Provider Ref",
       "Date",
@@ -102,12 +104,16 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
       const studentCode = p.student?.studentId || p.admission?.applicationNumber || "";
       const courseTitle =
         p.feeStructure?.course?.title || p.admission?.course?.title || "Professional Course";
+      const totalFeeVal = p.feeStructure?.totalCourseFee || p.feeStructure?.netPayableAmount || (p.admission?.finalFee ? p.admission.finalFee * 100 : p.amount);
+      const pendingVal = p.feeStructure?.pendingAmount ?? (p.feeStructure && p.feeStructure.netPayableAmount ? Math.max(0, p.feeStructure.netPayableAmount - p.feeStructure.paidAmount) : 0);
       return [
         `"${p.receiptNumber || p.transactionReference}"`,
         `"${studentName}"`,
         `"${studentCode}"`,
         `"${courseTitle}"`,
         (p.amount / 100).toFixed(2),
+        (totalFeeVal / 100).toFixed(2),
+        (pendingVal / 100).toFixed(2),
         `"${p.paymentMethod}"`,
         `"${p.gatewayOrderId || p.providerReference || ""}"`,
         `"${new Date(p.paymentDate).toISOString().slice(0, 10)}"`,
@@ -220,7 +226,9 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
               <TableHead className="text-xs font-semibold text-slate-700">Course</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Mode</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Provider Ref</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-700">Amount</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Amount Paid</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Total Fee</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Pending</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Received By</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Date</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700 text-right">Actions</TableHead>
@@ -229,13 +237,13 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={11} className="py-8 text-center text-xs text-slate-400">
                   Loading payment history...
                 </TableCell>
               </TableRow>
             ) : !data || data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={11} className="py-8 text-center text-xs text-slate-400">
                   No payment records found.
                 </TableCell>
               </TableRow>
@@ -250,6 +258,15 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
                 const receiverName = p.receivedBy
                   ? `${p.receivedBy.firstName} ${p.receivedBy.lastName}`
                   : "Razorpay Gateway";
+                const totalFee =
+                  p.feeStructure?.totalCourseFee ||
+                  p.feeStructure?.netPayableAmount ||
+                  (p.admission?.finalFee ? p.admission.finalFee * 100 : null);
+                const pendingAmount =
+                  p.feeStructure?.pendingAmount ??
+                  (p.feeStructure && p.feeStructure.netPayableAmount
+                    ? Math.max(0, p.feeStructure.netPayableAmount - p.feeStructure.paidAmount)
+                    : null);
 
                 return (
                   <TableRow key={p.id} className="text-xs hover:bg-slate-50/50">
@@ -273,6 +290,12 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
                     </TableCell>
                     <TableCell className="font-bold text-emerald-700">
                       {formatPaiseToRupees(p.amount)}
+                    </TableCell>
+                    <TableCell className="font-medium text-slate-700">
+                      {totalFee ? formatPaiseToRupees(totalFee) : "—"}
+                    </TableCell>
+                    <TableCell className="font-medium text-rose-600">
+                      {pendingAmount !== null ? formatPaiseToRupees(pendingAmount) : "—"}
                     </TableCell>
                     <TableCell className="text-slate-600">
                       {receiverName}

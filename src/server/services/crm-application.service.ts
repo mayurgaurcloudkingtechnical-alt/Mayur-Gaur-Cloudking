@@ -878,7 +878,7 @@ export class CrmApplicationService {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          course: { select: { id: true, title: true, providerType: true, providerName: true, universityName: true } },
+          course: { select: { id: true, title: true, baseFee: true, providerType: true, providerName: true, universityName: true } },
           batch: { select: { id: true, name: true, code: true } },
           counselor: { select: { id: true, firstName: true, lastName: true } },
           reviewer: { select: { id: true, firstName: true, lastName: true } },
@@ -892,7 +892,7 @@ export class CrmApplicationService {
               paidAt: true,
               paymentMethod: true,
             },
-            take: 1,
+            take: 5,
             orderBy: { createdAt: "desc" },
           },
           convertedStudentProfile: {
@@ -904,6 +904,18 @@ export class CrmApplicationService {
                 select: {
                   avatarUrl: true,
                 },
+              },
+              feeStructures: {
+                select: {
+                  id: true,
+                  totalCourseFee: true,
+                  netPayableAmount: true,
+                  paidAmount: true,
+                  pendingAmount: true,
+                  paymentStatus: true,
+                },
+                take: 1,
+                orderBy: { createdAt: "desc" },
               },
             },
           },

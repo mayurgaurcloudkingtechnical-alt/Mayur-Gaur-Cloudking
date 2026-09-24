@@ -436,11 +436,15 @@ export class FeeStructureService {
   static async getOverviewMetrics(user: AuthenticatedUser) {
     const canView =
       hasPermission(user.permissions, "payments:view_ledger") ||
+      hasPermission(user.permissions, "admissions:read") ||
       user.roleCode === "SUPER_ADMIN" ||
       user.roleCode === "DIRECTOR" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "COUNSELOR" ||
+      user.roleCode === "MANAGER";
 
-    if (!canView) {
+    if (!canView || user.roleCode === "STUDENT") {
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to financial ledger metrics." });
     }
 
@@ -450,6 +454,8 @@ export class FeeStructureService {
       db.feeStructure.aggregate({
         where: { status: FeeStructureStatus.ACTIVE },
         _sum: {
+          totalCourseFee: true,
+          discountAmount: true,
           netPayableAmount: true,
           paidAmount: true,
           pendingAmount: true,
@@ -486,6 +492,8 @@ export class FeeStructureService {
       }),
     ]);
 
+    const totalBusiness = aggregates._sum.totalCourseFee || aggregates._sum.netPayableAmount || 0;
+    const totalDiscount = aggregates._sum.discountAmount || 0;
     const totalReceivable = aggregates._sum.netPayableAmount || 0;
     const totalCollected = aggregates._sum.paidAmount || 0;
     const totalOutstanding = aggregates._sum.pendingAmount || 0;
@@ -498,6 +506,8 @@ export class FeeStructureService {
     const collectionRate = totalReceivable > 0 ? Math.round((totalCollected / totalReceivable) * 100) : 100;
 
     return {
+      totalBusiness,
+      totalDiscount,
       totalReceivable,
       totalCollected,
       totalOutstanding,
