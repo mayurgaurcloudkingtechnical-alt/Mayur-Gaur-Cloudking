@@ -577,11 +577,24 @@ export const crmRouter = router({
         highestQualification: z.string().optional(),
         address: z.string().optional(),
         decisionReason: z.string().optional(),
+        totalCourseFee: z.number().min(0).optional(),
         discountType: z.enum(["PERCENTAGE", "FIXED"]).optional(),
         discountValue: z.number().min(0).optional(),
         discountAmount: z.number().min(0).optional(),
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
+        paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
+        installmentCount: z.number().min(1).max(12).optional(),
+        installments: z
+          .array(
+            z.object({
+              installmentNumber: z.number(),
+              amount: z.number().min(0),
+              dueDate: z.union([z.date(), z.string()]),
+              notes: z.string().optional(),
+            })
+          )
+          .optional(),
         remarks: z.string().optional(),
       })
     )

@@ -114,6 +114,25 @@ export function EditFeeStructureDialog({
     setInstallmentList(updated);
   };
 
+  const handleGenerateEmi = (months: number) => {
+    setAdjustInstallments(true);
+    const targetAmount = newPendingRupees > 0 ? newPendingRupees : numNetPayable;
+    if (targetAmount <= 0) return;
+    const perSlot = Math.floor(targetAmount / months);
+    const remainder = targetAmount - perSlot * months;
+    const newSlots = [];
+    for (let i = 0; i < months; i++) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + (i + 1));
+      newSlots.push({
+        amountRupees: String(i === 0 ? perSlot + remainder : perSlot),
+        dueDate: d.toISOString().slice(0, 10),
+        notes: `EMI Month ${i + 1} of ${months}`,
+      });
+    }
+    setInstallmentList(newSlots);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!feeStructure) return;
@@ -318,9 +337,27 @@ export function EditFeeStructureDialog({
 
           {adjustInstallments && (
             <div className="space-y-2 pt-1">
+              <div className="flex flex-wrap items-center gap-1.5 p-2 bg-blue-50/60 rounded border border-blue-200">
+                <span className="text-[11px] font-bold text-blue-900">
+                  Quick Split EMI (2 to 10 Months):
+                </span>
+                <div className="flex flex-wrap gap-1">
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => handleGenerateEmi(m)}
+                      className="px-2 py-0.5 text-[11px] font-bold rounded bg-white text-blue-800 border border-blue-300 hover:bg-blue-600 hover:text-white transition cursor-pointer shadow-xs"
+                    >
+                      {m}M
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {installmentList.length === 0 ? (
                 <p className="text-slate-400 italic text-[11px] py-1">
-                  No installment slots. Click &quot;Add Slot&quot; to configure EMI due dates and amounts.
+                  No installment slots. Choose an EMI month above or click &quot;Add Slot&quot; to configure EMI due dates and amounts.
                 </p>
               ) : (
                 installmentList.map((inst, idx) => (

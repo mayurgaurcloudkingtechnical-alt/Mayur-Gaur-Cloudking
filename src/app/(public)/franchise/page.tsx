@@ -95,7 +95,7 @@ export default async function FranchisePage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100">
       {/* Schema.org Structured Data */}
       <script
         type="application/ld+json"
@@ -103,7 +103,7 @@ export default async function FranchisePage() {
       />
 
       {/* 1. HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950 text-white pt-16 pb-20 md:pt-24 md:pb-28 border-b border-emerald-900/40">
+      <section className="relative overflow-hidden bg-gradient-to-b from-slate-950 via-slate-900 to-emerald-950 text-white pt-16 pb-20 md:pt-24 md:pb-28 border-b border-emerald-900/40">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
         
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
@@ -209,16 +209,16 @@ export default async function FranchisePage() {
       </section>
 
       {/* 2. FRANCHISE BUSINESS MODEL (APPROVED UNDER ₹10 LAKH) */}
-      <section className="py-16 md:py-20 bg-slate-50 border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Transparent Financial Architecture
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
               The SOFTLAB GLOBAL Franchise Model
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-3 leading-relaxed">
               Designed for high sustainability, low overhead, and fast execution. We do not burden franchise partners with
               exorbitant brand royalties or unnecessary software retainers.
             </p>
@@ -226,63 +226,63 @@ export default async function FranchisePage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Card 1: Investment positioning */}
-            <Card className="border-2 border-emerald-500/40 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-emerald-500/40 bg-slate-900/90 shadow-xl hover:border-emerald-400 transition-all">
               <CardContent className="p-6 sm:p-7 space-y-4">
-                <div className="p-3 w-12 h-12 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center font-bold">
+                <div className="p-3 w-12 h-12 rounded-xl bg-emerald-950/60 text-emerald-400 border border-emerald-500/30 flex items-center justify-center font-bold">
                   ₹10L
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-emerald-700 uppercase tracking-wider">Approved Positioning</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Investment: Under ₹10 Lakh</h3>
+                  <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">Approved Positioning</span>
+                  <h3 className="text-lg font-bold text-white mt-0.5">Investment: Under ₹10 Lakh</h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed">
                   Total capital commitment typically remains <strong>Under ₹10 Lakh</strong>, covering center branding,
                   lab setup guidance, curriculum licenses, trainer development, and local marketing enablement.
                 </p>
-                <div className="pt-2 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
                   <span>No hidden franchise surcharges</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Card 2: Operating Margin & Returns */}
-            <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-slate-800 bg-slate-900/90 shadow-xl hover:border-blue-500/40 transition-all">
               <CardContent className="p-6 sm:p-7 space-y-4">
-                <div className="p-3 w-12 h-12 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                <div className="p-3 w-12 h-12 rounded-xl bg-blue-950/60 text-blue-400 border border-blue-500/30 flex items-center justify-center">
                   <TrendingUp className="h-6 w-6" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">Revenue Potential</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Diversified Course Revenue</h3>
+                  <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Revenue Potential</span>
+                  <h3 className="text-lg font-bold text-white mt-0.5">Diversified Course Revenue</h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed">
                   Earn through short-term certifications (6-8 weeks), career-track diplomas (3-6 months), corporate
                   workshops, and campus recruitment drives with average student fees ranging from ₹5,000 to ₹35,000+.
                 </p>
-                <div className="pt-2 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-600" />
+                <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-blue-400" />
                   <span>21+ active courses across multiple streams</span>
                 </div>
               </CardContent>
             </Card>
 
             {/* Card 3: Technology & LMS Included */}
-            <Card className="border-slate-200 bg-white shadow-sm hover:shadow-md transition-shadow">
+            <Card className="border border-slate-800 bg-slate-900/90 shadow-xl hover:border-teal-500/40 transition-all">
               <CardContent className="p-6 sm:p-7 space-y-4">
-                <div className="p-3 w-12 h-12 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center">
+                <div className="p-3 w-12 h-12 rounded-xl bg-teal-950/60 text-teal-400 border border-teal-500/30 flex items-center justify-center">
                   <Layers className="h-6 w-6" />
                 </div>
                 <div>
-                  <span className="text-xs font-bold text-teal-700 uppercase tracking-wider">Turnkey Technology</span>
-                  <h3 className="text-lg font-bold text-slate-900 mt-0.5">Central LMS & CRM Included</h3>
+                  <span className="text-xs font-bold text-teal-400 uppercase tracking-wider">Turnkey Technology</span>
+                  <h3 className="text-lg font-bold text-white mt-0.5">Central LMS & CRM Included</h3>
                 </div>
-                <p className="text-xs text-slate-600 leading-relaxed">
+                <p className="text-xs text-slate-300 leading-relaxed">
                   No need to build your own software. Every partner receives complete access to the SOFTLAB GLOBAL ERP/LMS
                   suite, student portal, marksheet engine, and automated CRM lead pipeline.
                 </p>
-                <div className="pt-2 border-t border-slate-100 text-xs text-slate-500 flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-teal-600" />
+                <div className="pt-2 border-t border-slate-800 text-xs text-slate-400 flex items-center gap-1.5">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-teal-400" />
                   <span>Instant student & counselor logins</span>
                 </div>
               </CardContent>
@@ -290,7 +290,7 @@ export default async function FranchisePage() {
           </div>
 
           {/* Realistic Disclaimer Banner */}
-          <div className="mt-8 rounded-xl border border-slate-200 bg-white p-4 text-xs text-slate-500 flex items-start gap-3">
+          <div className="mt-8 rounded-xl border border-slate-800 bg-slate-900/80 p-4 text-xs text-slate-400 flex items-start gap-3">
             <ShieldAlert className="h-4 w-4 text-slate-400 shrink-0 mt-0.5" />
             <p className="leading-relaxed">
               <strong>Statutory Disclosure & Market Disclaimer:</strong> Projected revenue, enrollment metrics, and return
@@ -303,16 +303,16 @@ export default async function FranchisePage() {
       </section>
 
       {/* 3. 6 MONTHS COMPLETE SUPPORT FRAMEWORK */}
-      <section id="support-framework" className="py-16 md:py-24 bg-gradient-to-b from-white via-slate-50/50 to-white border-b border-slate-200">
+      <section id="support-framework" className="py-16 md:py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Comprehensive Enablement • 180 Days Turnkey Backing
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
               6 Months Complete Operational Support Framework
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-3 leading-relaxed">
               We stand side-by-side with every franchise partner through the critical first 180 days. From initial lab
               blueprints and trainer onboarding to filling your cohorts and delivering job-ready graduates.
               Click any pillar below to inspect confidential deliverables, SOP blueprints, and SLAs.
@@ -324,7 +324,7 @@ export default async function FranchisePage() {
       </section>
 
       {/* 4. WHY PARTNER WITH SOFTLAB GLOBAL (8 STRATEGIC ADVANTAGES) */}
-      <section className="py-16 md:py-20 bg-slate-900 text-white border-b border-emerald-900/40">
+      <section className="py-16 md:py-20 bg-slate-950 text-white border-b border-emerald-900/40">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
             <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
@@ -376,7 +376,7 @@ export default async function FranchisePage() {
             ].map((adv, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border border-white/10 bg-white/5 p-6 hover:border-emerald-500/50 hover:bg-white/[0.08] transition-all"
+                className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 hover:border-emerald-500/50 hover:bg-slate-900 transition-all shadow-md"
               >
                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold mb-4">
                   0{idx + 1}
@@ -390,24 +390,24 @@ export default async function FranchisePage() {
       </section>
 
       {/* 5. DYNAMIC COURSE PORTFOLIO (FROM DATABASE) */}
-      <section className="py-16 md:py-20 bg-white border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
             <div className="max-w-2xl">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
                 Live Academic Offering
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
                 Dynamic Course Portfolio
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 mt-2 leading-relaxed">
                 As a franchise partner, your institute is licensed to offer our entire suite of published programs,
                 including curricula, project guidelines, and certification tracks.
               </p>
             </div>
             <div className="mt-4 md:mt-0">
-              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-3 py-2 rounded-xl">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-300 bg-emerald-950/60 border border-emerald-500/30 px-3 py-2 rounded-xl shadow-sm">
+                <CheckCircle2 className="h-4 w-4 text-emerald-400" />
                 <span>{publishedCourses.length} Certified Courses Available</span>
               </span>
             </div>
@@ -417,33 +417,33 @@ export default async function FranchisePage() {
             {publishedCourses.map((course) => (
               <div
                 key={course.id}
-                className="rounded-2xl border border-slate-200 bg-white p-5 hover:border-emerald-400 hover:shadow-lg transition-all flex flex-col justify-between"
+                className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-950/40 transition-all flex flex-col justify-between"
               >
                 <div>
                   <div className="flex items-center justify-between text-[11px] mb-2">
-                    <span className="font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100">
+                    <span className="font-semibold text-emerald-400 bg-emerald-950/70 px-2.5 py-0.5 rounded-md border border-emerald-500/30">
                       {course.level || "Enterprise IT"}
                     </span>
-                    <span className="text-slate-500 font-medium">
+                    <span className="text-slate-400 font-medium">
                       {course.durationWeeks ? `${course.durationWeeks} Weeks` : "Structured"}
                     </span>
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2">
+                  <h3 className="text-sm font-bold text-white leading-snug line-clamp-2">
                     {course.title}
                   </h3>
-                  <div className="mt-2 text-[11px] text-slate-500 flex items-center gap-2">
-                    <span>Level: <strong className="text-slate-700">{course.level || "Industry"}</strong></span>
+                  <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-2">
+                    <span>Level: <strong className="text-slate-200">{course.level || "Industry"}</strong></span>
                     <span>•</span>
-                    <span>Fee: <strong className="text-emerald-700">{formatPaiseToRupees(course.baseFee)}</strong></span>
+                    <span>Fee: <strong className="text-emerald-400 font-mono">{formatPaiseToRupees(course.baseFee)}</strong></span>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <span className="text-[11px] font-mono text-slate-400">COURSE-{course.id.slice(-4).toUpperCase()}</span>
+                <div className="mt-4 pt-3 border-t border-slate-800 flex items-center justify-between">
+                  <span className="text-[11px] font-mono text-slate-500">COURSE-{course.id.slice(-4).toUpperCase()}</span>
                   <Link
                     href={`/courses/${course.slug}`}
                     target="_blank"
-                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 inline-flex items-center gap-1"
+                    className="text-xs font-bold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1 transition-colors"
                   >
                     <span>View Syllabus</span>
                     <ChevronRight className="h-3.5 w-3.5" />
@@ -456,17 +456,17 @@ export default async function FranchisePage() {
       </section>
 
       {/* 6. WHAT YOU GET (DELIVERABLES CHECKLIST) */}
-      <section className="py-16 md:py-20 bg-slate-50 border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
             <div className="lg:col-span-6 space-y-6">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-300">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
                 Institutional Deliverables
               </span>
-              <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
                 Everything You Need to Run an Education Academy
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 When you partner with SOFTLAB GLOBAL, you receive a full-spectrum business-in-a-box. We eliminate guesswork
                 so you can focus on student counseling, teaching excellence, and local market leadership.
               </p>
@@ -482,8 +482,8 @@ export default async function FranchisePage() {
                   "Verified student project portfolio templates for corporate hiring",
                   "Placement cell support with multi-city recruitment tie-ups",
                 ].map((item, idx) => (
-                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-700">
-                    <CheckSquare className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <div key={idx} className="flex items-start gap-2.5 text-xs text-slate-200">
+                    <CheckSquare className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     <span className="leading-relaxed font-medium">{item}</span>
                   </div>
                 ))}
@@ -492,36 +492,36 @@ export default async function FranchisePage() {
 
             {/* Visual Box */}
             <div className="lg:col-span-6">
-              <div className="rounded-3xl border border-slate-200 bg-white p-6 sm:p-8 shadow-xl space-y-6">
-                <div className="border-b border-slate-100 pb-5">
-                  <span className="text-xs font-semibold text-emerald-700 uppercase tracking-wider">
+              <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-8 shadow-2xl space-y-6 backdrop-blur">
+                <div className="border-b border-slate-800 pb-5">
+                  <span className="text-xs font-semibold text-emerald-400 uppercase tracking-wider">
                     Package Inclusions
                   </span>
-                  <h3 className="text-xl font-bold text-slate-900 mt-1">Franchise Asset Matrix</h3>
+                  <h3 className="text-xl font-bold text-white mt-1">Franchise Asset Matrix</h3>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4 text-xs">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <div className="font-bold text-slate-900">Academic Assets</div>
-                    <div className="text-slate-500">21+ Curricula & Labs</div>
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Academic Assets</div>
+                    <div className="text-slate-400">21+ Curricula & Labs</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <div className="font-bold text-slate-900">Digital Portal</div>
-                    <div className="text-slate-500">Full Cloud LMS / CRM</div>
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Digital Portal</div>
+                    <div className="text-slate-400">Full Cloud LMS / CRM</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <div className="font-bold text-slate-900">Faculty Enablement</div>
-                    <div className="text-slate-500">Master Trainer Training</div>
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Faculty Enablement</div>
+                    <div className="text-slate-400">Master Trainer Training</div>
                   </div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100 space-y-1">
-                    <div className="font-bold text-slate-900">Certification</div>
-                    <div className="text-slate-500">QR-Verified Credentials</div>
+                  <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-1">
+                    <div className="font-bold text-white">Certification</div>
+                    <div className="text-slate-400">QR-Verified Credentials</div>
                   </div>
                 </div>
 
-                <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4 text-xs text-emerald-900 space-y-1">
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/40 p-4 text-xs text-emerald-300 space-y-1">
                   <span className="font-bold">Zero Re-Engineering Requirement</span>
-                  <p className="text-emerald-800 text-[11px] leading-relaxed">
+                  <p className="text-emerald-200/90 text-[11px] leading-relaxed">
                     You do not need to build portals, record syllabi, or prepare assignments. All course material is updated
                     centrally by our core engineering team in Prayagraj.
                   </p>
@@ -533,16 +533,16 @@ export default async function FranchisePage() {
       </section>
 
       {/* 7. WHO CAN PARTNER (IDEAL PARTNER PROFILES) */}
-      <section className="py-16 md:py-20 bg-white border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Target Partner Archetypes
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
               Who is an Ideal SOFTLAB GLOBAL Franchise Partner?
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-3 leading-relaxed">
               We look for individuals and institutions committed to educational rigor, high student outcomes, and
               long-term community reputation.
             </p>
@@ -569,13 +569,13 @@ export default async function FranchisePage() {
             ].map((prof, idx) => (
               <div
                 key={idx}
-                className="rounded-2xl border border-slate-200 bg-slate-50/70 p-6 hover:border-emerald-400 hover:bg-white transition-all shadow-sm"
+                className="rounded-2xl border border-slate-800 bg-slate-900/90 p-6 hover:border-emerald-400 hover:bg-slate-900 transition-all shadow-md"
               >
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm mb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-950 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-sm mb-4">
                   0{idx + 1}
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 mb-2">{prof.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{prof.desc}</p>
+                <h3 className="text-sm font-bold text-white mb-2">{prof.title}</h3>
+                <p className="text-xs text-slate-300 leading-relaxed">{prof.desc}</p>
               </div>
             ))}
           </div>
@@ -583,60 +583,60 @@ export default async function FranchisePage() {
       </section>
 
       {/* 8. PHYSICAL & OPERATIONAL REQUIREMENTS */}
-      <section className="py-16 md:py-20 bg-slate-50 border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/70 px-3 py-1 rounded-full border border-emerald-300">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Infrastructure Blueprint
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
               Infrastructure & Operational Setup
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-3 leading-relaxed">
               Realistic physical parameters designed to keep capital expenditure lean while ensuring comfortable,
               high-performance lab learning for students.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-              <div className="p-2.5 w-10 h-10 rounded-xl bg-emerald-50 text-emerald-700 flex items-center justify-center">
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md space-y-3">
+              <div className="p-2.5 w-10 h-10 rounded-xl bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 flex items-center justify-center">
                 <Building2 className="h-5 w-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">Carpet Area</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h3 className="text-sm font-bold text-white">Carpet Area</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
                 <strong>800 to 1,500 sq. ft.</strong> in a visible, accessible commercial coaching or educational zone with
                 student transit access.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-              <div className="p-2.5 w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md space-y-3">
+              <div className="p-2.5 w-10 h-10 rounded-xl bg-blue-950/60 border border-blue-500/30 text-blue-400 flex items-center justify-center">
                 <Laptop className="h-5 w-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">Computer Lab</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h3 className="text-sm font-bold text-white">Computer Lab</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
                 <strong>15 to 30 workstations</strong> (i5/Ryzen 5, 16GB RAM, SSD) capable of running Docker, Node, VS Code,
                 and modern dev environments.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-              <div className="p-2.5 w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md space-y-3">
+              <div className="p-2.5 w-10 h-10 rounded-xl bg-purple-950/60 border border-purple-500/30 text-purple-400 flex items-center justify-center">
                 <Compass className="h-5 w-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">Connectivity & Power</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h3 className="text-sm font-bold text-white">Connectivity & Power</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
                 <strong>100+ Mbps lease or optical broadband</strong> with inverter/UPS backup to guarantee uninterrupted coding sessions.
               </p>
             </div>
 
-            <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-3">
-              <div className="p-2.5 w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+            <div className="p-6 rounded-2xl bg-slate-900/90 border border-slate-800 shadow-md space-y-3">
+              <div className="p-2.5 w-10 h-10 rounded-xl bg-amber-950/60 border border-amber-500/30 text-amber-400 flex items-center justify-center">
                 <Users className="h-5 w-5" />
               </div>
-              <h3 className="text-sm font-bold text-slate-900">Reception & Staff</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+              <h3 className="text-sm font-bold text-white">Reception & Staff</h3>
+              <p className="text-xs text-slate-300 leading-relaxed">
                 Professional front-office counseling area, 1 academic counselor, and 1-2 core technical instructors.
               </p>
             </div>
@@ -645,16 +645,16 @@ export default async function FranchisePage() {
       </section>
 
       {/* 9. 5-STEP ONBOARDING ROADMAP */}
-      <section className="py-16 md:py-20 bg-white border-b border-slate-200">
+      <section className="py-16 md:py-20 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-3xl mx-auto mb-14">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Clear Onboarding Path
             </span>
-            <h2 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight mt-3">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight mt-3">
               5-Step Franchise Onboarding Roadmap
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-3 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-300 mt-3 leading-relaxed">
               From application to opening day within 30 to 45 days.
             </p>
           </div>
@@ -690,13 +690,13 @@ export default async function FranchisePage() {
               ].map((st, idx) => (
                 <div
                   key={idx}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-3 relative group hover:border-emerald-400 hover:bg-emerald-50/20 transition-all"
+                  className="rounded-2xl border border-slate-800 bg-slate-900/90 p-5 space-y-3 relative group hover:border-emerald-400 hover:bg-slate-900 transition-all shadow-md"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center font-extrabold text-sm group-hover:bg-emerald-600 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-800 text-white flex items-center justify-center font-extrabold text-sm group-hover:bg-emerald-600 group-hover:border-emerald-500 transition-colors">
                     {st.step}
                   </div>
-                  <h3 className="text-sm font-bold text-slate-900 leading-tight">{st.title}</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">{st.desc}</p>
+                  <h3 className="text-sm font-bold text-white leading-tight">{st.title}</h3>
+                  <p className="text-xs text-slate-300 leading-relaxed">{st.desc}</p>
                 </div>
               ))}
             </div>
@@ -705,43 +705,43 @@ export default async function FranchisePage() {
       </section>
 
       {/* 10. FRANCHISE ENQUIRY FORM */}
-      <section id="franchise-enquiry-form" className="py-16 md:py-24 bg-gradient-to-b from-slate-50 to-emerald-50/30 border-b border-slate-200">
+      <section id="franchise-enquiry-form" className="py-16 md:py-24 bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
           <FranchiseEnquiryForm defaultCity="" defaultState="Uttar Pradesh" />
         </div>
       </section>
 
       {/* 11. FAQ & CORPORATE CONTACT */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-slate-950 text-slate-100">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             <div className="lg:col-span-5 space-y-4">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
                 Direct Expansion Office
               </span>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+              <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight">
                 Connect Directly With Corporate Development
               </h2>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 Prefer to discuss territory expansion over a telephone conference or campus visit? Our corporate
                 partnership team is available Monday through Saturday.
               </p>
 
-              <div className="space-y-3 pt-3 text-xs text-slate-700">
+              <div className="space-y-3 pt-3 text-xs text-slate-300">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <MapPin className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-slate-900">Headquarters Campus:</strong>
-                    <p className="text-slate-600 mt-0.5">{SITE_CONFIG.address.full}</p>
+                    <strong className="text-white">Headquarters Campus:</strong>
+                    <p className="text-slate-400 mt-0.5">{SITE_CONFIG.address.full}</p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <PhoneCall className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <PhoneCall className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-slate-900">Franchise Inquiry Desk:</strong>
-                    <p className="text-slate-600 mt-0.5">
-                      <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="hover:text-emerald-700 font-semibold">
+                    <strong className="text-white">Franchise Inquiry Desk:</strong>
+                    <p className="text-slate-400 mt-0.5">
+                      <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="hover:text-emerald-400 font-semibold text-slate-200">
                         {SITE_CONFIG.contact.phone}
                       </a>
                     </p>
@@ -749,10 +749,10 @@ export default async function FranchisePage() {
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Clock className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <Clock className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="text-slate-900">Office Hours:</strong>
-                    <p className="text-slate-600 mt-0.5">
+                    <strong className="text-white">Office Hours:</strong>
+                    <p className="text-slate-400 mt-0.5">
                       {SITE_CONFIG.businessHours.days} ({SITE_CONFIG.businessHours.hours})
                     </p>
                   </div>
@@ -761,27 +761,27 @@ export default async function FranchisePage() {
             </div>
 
             <div className="lg:col-span-7 space-y-4">
-              <h3 className="text-lg font-bold text-slate-900 mb-2">Frequently Asked Questions</h3>
+              <h3 className="text-lg font-bold text-white mb-2">Frequently Asked Questions</h3>
               <div className="space-y-3 text-xs">
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-1.5">
-                  <div className="font-bold text-slate-900">Can I convert my existing computer institute to SOFTLAB GLOBAL?</div>
-                  <p className="text-slate-600 leading-relaxed">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-1.5 shadow-md">
+                  <div className="font-bold text-white">Can I convert my existing computer institute to SOFTLAB GLOBAL?</div>
+                  <p className="text-slate-300 leading-relaxed">
                     Yes. We actively support established computer centers and coaching institutes in upgrading to our modern IT
                     curriculum, LMS platform, and placement ecosystem.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-1.5">
-                  <div className="font-bold text-slate-900">How are trainers trained and vetted?</div>
-                  <p className="text-slate-600 leading-relaxed">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-1.5 shadow-md">
+                  <div className="font-bold text-white">How are trainers trained and vetted?</div>
+                  <p className="text-slate-300 leading-relaxed">
                     We provide comprehensive instructor guides, lecture notes, and conduct master-trainer evaluation sessions
                     led by veteran technology leader & entrepreneur Mr. Mayur Gaur (11+ years experience) before batch kickoff.
                   </p>
                 </div>
 
-                <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 space-y-1.5">
-                  <div className="font-bold text-slate-900">Do you offer territorial exclusivity?</div>
-                  <p className="text-slate-600 leading-relaxed">
+                <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-4 space-y-1.5 shadow-md">
+                  <div className="font-bold text-white">Do you offer territorial exclusivity?</div>
+                  <p className="text-slate-300 leading-relaxed">
                     Yes. We provide designated micro-market exclusivity per center based on geographic radius and population
                     density to ensure healthy enrollment without self-competition.
                   </p>

@@ -119,11 +119,20 @@ export interface UpdateApplicationInput {
   highestQualification?: string;
   address?: string;
   decisionReason?: string;
+  totalCourseFee?: number;
   discountType?: "PERCENTAGE" | "FIXED";
   discountValue?: number;
   discountAmount?: number;
   finalFee?: number;
   paidAmount?: number;
+  paymentPlan?: "LUMPSUM" | "EMI";
+  installmentCount?: number;
+  installments?: Array<{
+    installmentNumber: number;
+    amount: number;
+    dueDate: Date | string;
+    notes?: string;
+  }>;
   remarks?: string;
 }
 
@@ -909,10 +918,24 @@ export class CrmApplicationService {
                 select: {
                   id: true,
                   totalCourseFee: true,
+                  discountAmount: true,
                   netPayableAmount: true,
                   paidAmount: true,
                   pendingAmount: true,
                   paymentStatus: true,
+                  remarks: true,
+                  installments: {
+                    select: {
+                      id: true,
+                      installmentNumber: true,
+                      amount: true,
+                      paidAmount: true,
+                      dueDate: true,
+                      status: true,
+                      notes: true,
+                    },
+                    orderBy: { installmentNumber: "asc" },
+                  },
                 },
                 take: 1,
                 orderBy: { createdAt: "desc" },
@@ -959,6 +982,16 @@ export class CrmApplicationService {
             user: {
               select: {
                 avatarUrl: true,
+              },
+            },
+            feeStructures: {
+              include: {
+                installments: {
+                  orderBy: { installmentNumber: "asc" },
+                },
+                payments: {
+                  orderBy: { createdAt: "desc" },
+                },
               },
             },
             createdAt: true,
@@ -1177,6 +1210,90 @@ export class CrmApplicationService {
             ...(input.photoUrl ? { avatarUrl: input.photoUrl.trim() } : {}),
           },
         });
+      }
+
+      // Synchronize FeeStructure and FeeInstallments if financial terms were updated
+      if (
+        input.totalCourseFee !== undefined ||
+        input.discountAmount !== undefined ||
+        input.paymentPlan !== undefined ||
+        input.installments !== undefined ||
+        input.finalFee !== undefined
+      ) {
+        const existingFee = await db.feeStructure.findFirst({
+          where: { studentId: app.convertedStudentProfileId },
+          orderBy: { createdAt: "desc" },
+        });
+
+        if (existingFee) {
+          const totalFee =
+            input.totalCourseFee !== undefined
+              ? Math.floor(input.totalCourseFee)
+              : existingFee.totalCourseFee;
+          const discountAmt =
+            input.discountAmount !== undefined
+              ? Math.floor(input.discountAmount)
+              : existingFee.discountAmount;
+          const netPayable = Math.max(0, totalFee - discountAmt);
+          const newPending = Math.max(0, netPayable - existingFee.paidAmount);
+
+          await db.feeStructure.update({
+            where: { id: existingFee.id },
+            data: {
+              totalCourseFee: totalFee,
+              discountAmount: discountAmt,
+              netPayableAmount: netPayable,
+              pendingAmount: newPending,
+              paymentStatus:
+                newPending === 0
+                  ? FeePaymentStatus.PAID
+                  : existingFee.paidAmount > 0
+                  ? FeePaymentStatus.PARTIAL
+                  : FeePaymentStatus.PENDING,
+              remarks: input.remarks || existingFee.remarks,
+            },
+          });
+
+          // Recreate or update EMI installment milestones if EMI plan is active
+          if (input.paymentPlan === "EMI" && input.installments && input.installments.length > 0) {
+            await db.feeInstallment.deleteMany({
+              where: { feeStructureId: existingFee.id },
+            });
+
+            let remainingPaid = existingFee.paidAmount;
+            for (let i = 0; i < input.installments.length; i++) {
+              const inst = input.installments[i];
+              const instAmt = Math.floor(inst.amount);
+              let instPaid = 0;
+              let instStatus: InstallmentStatus = InstallmentStatus.PENDING;
+
+              if (remainingPaid > 0) {
+                if (remainingPaid >= instAmt) {
+                  instPaid = instAmt;
+                  instStatus = InstallmentStatus.PAID;
+                  remainingPaid -= instAmt;
+                } else {
+                  instPaid = remainingPaid;
+                  instStatus = InstallmentStatus.PARTIAL;
+                  remainingPaid = 0;
+                }
+              }
+
+              await db.feeInstallment.create({
+                data: {
+                  feeStructureId: existingFee.id,
+                  installmentNumber: inst.installmentNumber || i + 1,
+                  amount: instAmt,
+                  paidAmount: instPaid,
+                  dueDate: new Date(inst.dueDate),
+                  status: instStatus,
+                  paidAt: instPaid > 0 ? new Date() : null,
+                  notes: inst.notes?.trim() || null,
+                },
+              });
+            }
+          }
+        }
       }
     }
 

@@ -200,61 +200,68 @@ export default async function TrainersPage() {
   const members: FacultyMember[] = [mayurGaurMember, nihalSinghMember, ...staffMembers];
 
   return (
-    <div className="flex flex-col">
-      {/* Header Banner */}
-      <section className="bg-gradient-to-b from-emerald-50/70 via-slate-50/30 to-white py-14 sm:py-20 border-b border-slate-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
-          <div className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-100/60 px-3.5 py-1 rounded-full border border-emerald-200">
-            <Sparkles className="w-3.5 h-3.5" />
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
+      {/* 1. Header Banner */}
+      <section className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#030914] via-[#071626] to-[#040914] py-16 sm:py-24">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
+        <div className="absolute top-0 left-1/3 -translate-x-1/2 w-[650px] h-[350px] bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 -right-10 w-[500px] h-[500px] bg-teal-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-3xl z-10 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
             <span>Academic Leadership & Mentors</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mt-4">
-            Learn from Practitioners, Not Theorists
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+            Learn from Practitioners,{" "}
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+              Not Theorists
+            </span>
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
             Our instructional faculty brings hands-on enterprise software experience, deep architectural knowledge, and a commitment to deliberate mentor-led pedagogy across all 21 technology tracks.
           </p>
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-600">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-6 text-xs text-slate-400">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
-              <span>100% Industry Practitioners</span>
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="text-slate-300">100% Industry Practitioners</span>
             </div>
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-emerald-600" />
-              <span>1-on-1 Dedicated Mentorship</span>
+              <Users className="w-4 h-4 text-emerald-400" />
+              <span className="text-slate-300">1-on-1 Dedicated Mentorship</span>
             </div>
             <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-emerald-600" />
-              <span>Civil Lines Campus, Prayagraj</span>
+              <MapPin className="w-4 h-4 text-emerald-400" />
+              <span className="text-slate-300">Civil Lines Campus, Prayagraj</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Dynamic Faculty & Staff Grid */}
-      <section className="py-14 sm:py-16 bg-slate-50/60 min-h-[450px]">
+      {/* 2. Dynamic Faculty & Staff Grid */}
+      <section className="py-16 sm:py-20 bg-slate-950 border-b border-slate-800/80 min-h-[450px]">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <PublicTrainersView initialMembers={members} />
         </div>
       </section>
 
-      {/* Campus Visit Banner */}
-      <section className="py-14 bg-white border-t border-slate-100">
+      {/* 3. Campus Visit Banner */}
+      <section className="py-16 bg-[#040813] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-2xl space-y-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Meet Our Faculty in Person
           </h2>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
             Prospective students and guardians are welcome to schedule a campus visit at Civil Lines, Prayagraj, to inspect lab facilities and discuss curriculum details directly with instructional staff.
           </p>
-          <div className="pt-2">
-            <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-10 px-6 rounded-xl shadow-md">
-              <Link href="/contact" className="flex items-center gap-1.5">
+          <div className="pt-3">
+            <Button asChild size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs h-11 px-6 rounded-xl shadow-lg shadow-emerald-500/20">
+              <Link href="/contact" className="flex items-center gap-2">
                 <span>Contact Admissions Desk</span>
-                <ArrowRight className="h-3.5 w-3.5" />
+                <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>

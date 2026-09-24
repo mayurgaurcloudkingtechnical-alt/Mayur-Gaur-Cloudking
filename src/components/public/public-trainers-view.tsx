@@ -89,7 +89,7 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
   return (
     <div className="flex flex-col space-y-10">
       {/* Category Pills & Real-time Search */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-900/90 p-4 sm:p-5 rounded-3xl border border-slate-800 shadow-xl">
         {/* Category Filter Tabs */}
         <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <button
@@ -97,8 +97,8 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             onClick={() => setActiveTab("faculty")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeTab === "faculty"
-                ? "bg-emerald-600 text-white shadow-md shadow-emerald-700/20"
-                : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800"
             }`}
           >
             <GraduationCap className="h-3.5 w-3.5" />
@@ -109,8 +109,8 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             onClick={() => setActiveTab("ALL")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === "ALL"
-                ? "bg-slate-900 text-white shadow-sm"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800"
             }`}
           >
             All Academic Team ({stats.total})
@@ -120,8 +120,8 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             onClick={() => setActiveTab("counselor")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === "counselor"
-                ? "bg-teal-600 text-white shadow-sm"
-                : "bg-teal-50 text-teal-800 hover:bg-teal-100"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800"
             }`}
           >
             Admissions & Counselors ({stats.counselors})
@@ -131,8 +131,8 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             onClick={() => setActiveTab("leadership")}
             className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
               activeTab === "leadership"
-                ? "bg-blue-600 text-white shadow-sm"
-                : "bg-blue-50 text-blue-800 hover:bg-blue-100"
+                ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "bg-slate-800/80 text-slate-300 hover:text-white hover:bg-slate-800"
             }`}
           >
             Leadership ({stats.leadership})
@@ -147,13 +147,13 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             placeholder="Search faculty or tech stack..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 text-xs h-9 bg-slate-50 border-slate-200 rounded-xl focus:bg-white"
+            className="pl-9 text-xs h-9 bg-slate-950/80 border-slate-700 text-white placeholder:text-slate-500 rounded-xl focus:border-emerald-500"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-600"
+              className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-slate-200"
             >
               ✕
             </button>
@@ -163,13 +163,13 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
 
       {/* Grid of Faculty & Staff Cards */}
       {filteredMembers.length === 0 ? (
-        <Card className="border-slate-200 max-w-md mx-auto">
-          <CardContent className="flex flex-col items-center justify-center p-12 text-center space-y-3">
-            <Users className="h-12 w-12 text-slate-300" />
-            <h3 className="text-base font-bold text-slate-800">
+        <Card className="border-slate-800 bg-slate-900/90 text-white max-w-md mx-auto rounded-3xl p-6">
+          <CardContent className="flex flex-col items-center justify-center p-8 text-center space-y-3">
+            <Users className="h-12 w-12 text-slate-600" />
+            <h3 className="text-base font-bold text-white">
               No Faculty Members Matching Query
             </h3>
-            <p className="text-xs text-slate-500 leading-relaxed">
+            <p className="text-xs text-slate-400 leading-relaxed">
               No faculty or staff matched your current filter criteria. Clear your search or contact our academic desk for custom assistance.
             </p>
             <Button
@@ -180,7 +180,7 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
                 setActiveTab("faculty");
                 setSearchQuery("");
               }}
-              className="text-xs"
+              className="text-xs border-slate-700 bg-slate-800 text-white hover:bg-slate-700"
             >
               Reset Filters
             </Button>
@@ -204,15 +204,15 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
             return (
               <Card
                 key={member.id}
-                className="flex flex-col justify-between border-slate-200 bg-white hover:border-emerald-400 hover:shadow-xl transition-all rounded-2xl overflow-hidden group border-2"
+                className="flex flex-col justify-between border border-slate-800 bg-slate-900/90 text-slate-100 hover:border-emerald-500/60 hover:shadow-2xl transition-all rounded-3xl overflow-hidden group shadow-xl"
               >
                 <div>
-                  <div className="h-2 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+                  <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
                   <CardHeader className="p-6 sm:p-7 pb-4">
                     <div className="flex items-start gap-4">
                       {/* Avatar */}
                       {member.avatarUrl ? (
-                        <div className="relative h-16 w-16 rounded-2xl overflow-hidden shadow-md shrink-0 border-2 border-emerald-500">
+                        <div className="relative h-16 w-16 rounded-2xl overflow-hidden shadow-md shrink-0 border-2 border-emerald-500/80">
                           <Image
                             src={member.avatarUrl}
                             alt={member.name}
@@ -236,28 +236,28 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
 
                       <div className="space-y-1.5 flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <CardTitle className="text-xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors">
+                          <CardTitle className="text-xl font-black text-white group-hover:text-emerald-300 transition-colors">
                             {member.name}
                           </CardTitle>
                           <span title="Verified Institutional Faculty">
-                            <ShieldCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+                            <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0" />
                           </span>
                         </div>
 
                         {/* Title: Faculty / Trainer */}
                         <div className="flex items-center gap-2 flex-wrap">
                           <Badge
-                            className="bg-emerald-600 text-white font-bold text-xs px-2.5 py-0.5 shadow-sm"
+                            className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-bold text-xs px-2.5 py-0.5 shadow-sm"
                           >
                             {member.designation}
                           </Badge>
 
                           {member.experienceBadgeLabel ? (
-                            <span className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
+                            <span className="text-xs font-bold text-teal-300 bg-teal-950/80 border border-teal-800 px-2.5 py-0.5 rounded-full">
                               {member.experienceBadgeLabel}
                             </span>
                           ) : typeof member.experienceYears === "number" && member.experienceYears > 0 ? (
-                            <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full">
+                            <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2.5 py-0.5 rounded-full border border-slate-700">
                               {member.experienceYears}+ Years Experience
                             </span>
                           ) : null}
@@ -267,24 +267,24 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
 
                     {/* Course Coverage Highlight Banner */}
                     {member.courseCoverageLabel && (
-                      <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200/80 flex items-center justify-between gap-3">
+                      <div className="mt-4 p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/70 via-teal-950/50 to-slate-950/80 border border-emerald-800/70 flex items-center justify-between gap-3">
                         <div className="flex items-center gap-2">
-                          <Sparkles className="h-4 w-4 text-emerald-600 shrink-0" />
+                          <Sparkles className="h-4 w-4 text-emerald-400 shrink-0 animate-pulse" />
                           <div className="text-xs">
-                            <span className="text-slate-600 font-medium">Course coverage: </span>
-                            <strong className="text-emerald-900 font-extrabold text-sm">
+                            <span className="text-slate-400 font-medium">Course coverage: </span>
+                            <strong className="text-emerald-300 font-extrabold text-sm">
                               {member.courseCoverageLabel}
                             </strong>
                           </div>
                         </div>
-                        <Badge variant="outline" className="bg-white text-emerald-800 font-bold border-emerald-300 text-[11px] shrink-0">
+                        <Badge variant="outline" className="bg-emerald-900/60 text-emerald-300 font-bold border-emerald-700 text-[11px] shrink-0">
                           {member.assignedCourses.length} Programs
                         </Badge>
                       </div>
                     )}
 
                     {member.bio && (
-                      <CardDescription className="text-xs text-slate-600 mt-4 leading-relaxed line-clamp-3">
+                      <CardDescription className="text-xs text-slate-300 mt-4 leading-relaxed line-clamp-3">
                         {member.bio}
                       </CardDescription>
                     )}
@@ -302,7 +302,7 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
                             <Badge
                               key={spec}
                               variant="secondary"
-                              className="text-[11px] font-medium bg-slate-100/80 text-slate-800 border border-slate-200"
+                              className="text-[11px] font-medium bg-slate-800/80 text-slate-200 border border-slate-700"
                             >
                               {spec}
                             </Badge>
@@ -313,36 +313,36 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
 
                     {/* Assigned Courses List */}
                     {member.assignedCourses.length > 0 && (
-                      <div className="pt-3 border-t border-slate-100">
+                      <div className="pt-3 border-t border-slate-800">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                          <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                             {member.name.includes("Mayur")
                               ? "All 21 SOFTLAB GLOBAL Courses"
                               : "Courses (7 Core Programs)"}
                           </span>
-                          <span className="text-[11px] text-emerald-700 font-semibold">
+                          <span className="text-[11px] text-emerald-400 font-semibold">
                             {member.assignedCourses.length} Courses
                           </span>
                         </div>
 
                         {/* Interactive Course Box */}
-                        <div className="max-h-56 overflow-y-auto pr-1.5 space-y-1.5 rounded-xl border border-slate-200/70 p-2 bg-slate-50/50">
+                        <div className="max-h-56 overflow-y-auto pr-1.5 space-y-1.5 rounded-2xl border border-slate-800 p-2 bg-slate-950/80">
                           {member.assignedCourses.map((c, idx) => (
                             <Link
                               key={`${c.slug}-${idx}`}
                               href={`/courses/${c.slug}`}
-                              className="group/course flex items-center justify-between p-2 rounded-lg bg-white hover:bg-emerald-50 border border-slate-100 hover:border-emerald-300 transition-all text-xs shadow-2xs"
+                              className="group/course flex items-center justify-between p-2 rounded-xl bg-slate-900/90 hover:bg-slate-800 border border-slate-800 hover:border-emerald-500/50 transition-all text-xs"
                             >
                               <div className="flex items-center gap-2 min-w-0">
-                                <span className="h-5 w-5 rounded-md bg-emerald-100/70 text-emerald-800 font-bold text-[10px] flex items-center justify-center shrink-0">
+                                <span className="h-5 w-5 rounded-md bg-emerald-950 text-emerald-400 font-bold text-[10px] flex items-center justify-center shrink-0 border border-emerald-800">
                                   {idx + 1}
                                 </span>
-                                <BookOpen className="h-3.5 w-3.5 shrink-0 text-emerald-600 group-hover/course:scale-110 transition-transform" />
-                                <span className="font-semibold text-slate-800 group-hover/course:text-emerald-800 truncate">
+                                <BookOpen className="h-3.5 w-3.5 shrink-0 text-emerald-400 group-hover/course:scale-110 transition-transform" />
+                                <span className="font-semibold text-slate-200 group-hover/course:text-emerald-300 truncate">
                                   {c.title}
                                 </span>
                               </div>
-                              <ArrowRight className="h-3 w-3 text-slate-400 group-hover/course:text-emerald-700 shrink-0 ml-2 group-hover/course:translate-x-0.5 transition-transform" />
+                              <ArrowRight className="h-3 w-3 text-slate-500 group-hover/course:text-emerald-400 shrink-0 ml-2 group-hover/course:translate-x-0.5 transition-transform" />
                             </Link>
                           ))}
                         </div>
@@ -352,16 +352,16 @@ export function PublicTrainersView({ initialMembers }: PublicTrainersViewProps) 
                 </div>
 
                 {/* Footer Action */}
-                <div className="p-4 sm:px-7 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-                    <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
+                <div className="p-4 sm:px-7 bg-slate-950/70 border-t border-slate-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                    <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0" />
                     <span>Civil Lines Campus • Prayagraj</span>
                   </div>
                   <Button
                     type="button"
                     size="sm"
                     onClick={() => openCareerCounselingModal(member.assignedCourses[0]?.title)}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-8 px-4 rounded-lg shadow-sm gap-1.5"
+                    className="text-xs bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold h-8 px-4 rounded-xl shadow-xs gap-1.5"
                   >
                     <span>Book 1-on-1 Counseling</span>
                     <ArrowRight className="h-3 w-3" />

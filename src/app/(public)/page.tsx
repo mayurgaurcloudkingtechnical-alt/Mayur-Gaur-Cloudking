@@ -280,16 +280,17 @@ export default async function HomePage() {
       {/* ==================================================================== */}
       {/* 4. WHY CHOOSE US — INSTITUTIONAL ADVANTAGES                          */}
       {/* ==================================================================== */}
-      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 bg-slate-950 text-white border-b border-slate-850 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-14">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-800">
               Why Softlab Global
             </span>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="mt-3 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
               Designed for Real-World Tech Careers
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-slate-600">
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">
               We eliminate traditional theoretical fluff and focus on rigorous enterprise development skills that get you hired.
             </p>
           </div>
@@ -331,13 +332,13 @@ export default async function HomePage() {
               return (
                 <div
                   key={pillar.title}
-                  className="p-6 rounded-2xl border border-slate-200 bg-white hover:border-emerald-500 hover:shadow-lg transition-all space-y-3"
+                  className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 hover:border-emerald-500/60 hover:bg-slate-900 shadow-xl transition-all space-y-3"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
                     <Icon className="w-6 h-6" />
                   </div>
-                  <h3 className="text-base font-bold text-slate-900">{pillar.title}</h3>
-                  <p className="text-xs text-slate-600 leading-relaxed">{pillar.desc}</p>
+                  <h3 className="text-base font-bold text-white">{pillar.title}</h3>
+                  <p className="text-xs text-slate-400 leading-relaxed">{pillar.desc}</p>
                 </div>
               );
             })}
@@ -406,16 +407,17 @@ export default async function HomePage() {
       {/* ==================================================================== */}
       {/* 6. STUDENT REVIEWS & TESTIMONIALS                                    */}
       {/* ==================================================================== */}
-      <section className="py-16 sm:py-20 bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="py-16 sm:py-20 bg-slate-950 text-white border-b border-slate-800 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-800">
               Verified Student Feedback
             </span>
-            <h2 className="mt-3 text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="mt-3 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
               Real Stories from Our Alumni
             </h2>
-            <p className="mt-2 text-xs sm:text-sm text-slate-600">
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">
               Hear directly from students who transformed their careers at SOFTLAB GLOBAL.
             </p>
           </div>
@@ -440,19 +442,19 @@ export default async function HomePage() {
             ].map((review) => (
               <div
                 key={review.name}
-                className="p-6 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white hover:shadow-lg hover:border-emerald-500 transition-all space-y-4"
+                className="p-6 rounded-2xl border border-slate-800 bg-slate-900/80 hover:bg-slate-900 hover:border-emerald-500/60 transition-all space-y-4 shadow-xl"
               >
-                <div className="flex items-center gap-1 text-amber-500">
+                <div className="flex items-center gap-1 text-amber-400">
                   {[...Array(5)].map((_, i) => (
                     <Star key={i} className="w-4 h-4 fill-amber-400 text-amber-400" />
                   ))}
                 </div>
-                <p className="text-xs text-slate-700 leading-relaxed italic">
+                <p className="text-xs text-slate-300 leading-relaxed italic">
                   &ldquo;{review.text}&rdquo;
                 </p>
-                <div className="pt-2 border-t border-slate-200">
-                  <p className="text-xs font-bold text-slate-900">{review.name}</p>
-                  <p className="text-[11px] text-emerald-700 font-medium">{review.role}</p>
+                <div className="pt-2 border-t border-slate-800">
+                  <p className="text-xs font-bold text-white">{review.name}</p>
+                  <p className="text-[11px] text-emerald-400 font-medium">{review.role}</p>
                 </div>
               </div>
             ))}

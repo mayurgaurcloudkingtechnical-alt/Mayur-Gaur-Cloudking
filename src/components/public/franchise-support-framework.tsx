@@ -474,7 +474,7 @@ export function FranchiseSupportFramework() {
             <div
               key={pillar.id}
               onClick={() => handleOpenPillar(pillar)}
-              className="relative cursor-pointer group rounded-3xl border-2 border-slate-200 bg-white p-6 sm:p-7 hover:border-emerald-500 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden"
+              className="relative cursor-pointer group rounded-3xl border border-slate-800 bg-slate-900/90 p-6 sm:p-7 hover:border-emerald-500/60 hover:shadow-2xl transition-all duration-300 flex flex-col justify-between overflow-hidden shadow-xl"
             >
               {/* Top Accent Gradient Bar */}
               <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -483,7 +483,7 @@ export function FranchiseSupportFramework() {
                 {/* Header Row: Pillar # + Category Badge */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-extrabold text-emerald-700 bg-emerald-50 border border-emerald-200/80 px-2.5 py-0.5 rounded-full">
+                    <span className="font-mono text-xs font-extrabold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 rounded-full">
                       Pillar {pillar.numberStr}
                     </span>
                     <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">
@@ -492,7 +492,7 @@ export function FranchiseSupportFramework() {
                   </div>
 
                   {isViewed && (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800/80 px-2.5 py-0.5 rounded-full">
                       <CheckCircle2 className="h-3 w-3" />
                       <span>Explored</span>
                     </span>
@@ -501,32 +501,32 @@ export function FranchiseSupportFramework() {
 
                 {/* Icon & Title */}
                 <div className="flex items-start gap-3.5">
-                  <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200/60 shadow-xs group-hover:bg-emerald-600 group-hover:text-white group-hover:scale-110 transition-all shrink-0">
+                  <div className="p-3 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-xs group-hover:bg-gradient-to-br group-hover:from-emerald-500 group-hover:to-teal-600 group-hover:text-slate-950 group-hover:scale-110 transition-all shrink-0">
                     <IconComponent className="h-6 w-6" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-800 transition-colors leading-snug">
+                    <h4 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors leading-snug">
                       {pillar.title}
                     </h4>
-                    <p className="text-[11px] font-medium text-emerald-600 mt-0.5">
+                    <p className="text-[11px] font-medium text-emerald-400 mt-0.5">
                       {pillar.tagline}
                     </p>
                   </div>
                 </div>
 
                 {/* Short Description */}
-                <p className="text-xs text-slate-600 leading-relaxed line-clamp-3">
+                <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
                   {pillar.shortDesc}
                 </p>
               </div>
 
               {/* Action Hint Bar */}
-              <div className="mt-5 pt-3.5 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] font-bold text-emerald-700 group-hover:text-emerald-800 inline-flex items-center gap-1">
+              <div className="mt-5 pt-3.5 border-t border-slate-800 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-400 group-hover:text-emerald-300 inline-flex items-center gap-1">
                   <span>Open Deliverables & Blueprint</span>
                   <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1.5 transition-transform" />
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium group-hover:text-slate-600">
+                <span className="text-[10px] text-slate-500 font-medium group-hover:text-slate-400">
                   Tap to view →
                 </span>
               </div>
@@ -537,26 +537,26 @@ export function FranchiseSupportFramework() {
 
       {/* Interactive Detail Modal (Clickable Deep-Dive) */}
       {selectedPillar && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in">
           <div
             className="fixed inset-0"
             onClick={() => setSelectedPillar(null)}
             aria-hidden="true"
           />
 
-          <div className="relative z-10 w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95">
+          <div className="relative z-10 w-full max-w-2xl bg-slate-900 rounded-3xl shadow-2xl border border-slate-800 overflow-hidden max-h-[92vh] flex flex-col animate-in zoom-in-95 text-slate-100">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-emerald-950 p-6 text-white flex items-start justify-between border-b border-emerald-900/40 relative">
+            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 p-6 text-white flex items-start justify-between border-b border-slate-800 relative">
               <div className="flex items-start gap-4 pr-6">
                 <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shrink-0">
                   {React.createElement(selectedPillar.icon, { className: "h-7 w-7" })}
                 </div>
                 <div>
                   <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-400/30 px-2.5 py-0.5 rounded-full">
+                    <span className="font-mono text-xs font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-2.5 py-0.5 rounded-full">
                       Pillar {selectedPillar.numberStr} of 12
                     </span>
-                    <Badge variant="outline" className="border-slate-600 text-slate-300 text-[10px]">
+                    <Badge variant="outline" className="border-slate-700 text-slate-300 text-[10px] bg-slate-800">
                       {selectedPillar.categoryLabel}
                     </Badge>
                     <span className="text-[11px] text-emerald-300 font-semibold flex items-center gap-1">
@@ -575,7 +575,7 @@ export function FranchiseSupportFramework() {
               <button
                 type="button"
                 onClick={() => setSelectedPillar(null)}
-                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0"
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors shrink-0"
                 aria-label="Close"
               >
                 <X className="h-5 w-5" />
@@ -583,14 +583,14 @@ export function FranchiseSupportFramework() {
             </div>
 
             {/* Modal Scrollable Body */}
-            <div className="p-6 sm:p-7 space-y-6 overflow-y-auto text-xs text-slate-700 leading-relaxed">
+            <div className="p-6 sm:p-7 space-y-6 overflow-y-auto text-xs text-slate-300 leading-relaxed">
               {/* Strategic Objective */}
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1.5">
-                <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-1">
-                  <Target className="h-3.5 w-3.5 text-emerald-600" />
+              <div className="rounded-2xl border border-slate-800 bg-slate-950/80 p-4 space-y-1.5">
+                <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-400 flex items-center gap-1">
+                  <Target className="h-3.5 w-3.5 text-emerald-400" />
                   <span>Strategic Operational Objective</span>
                 </span>
-                <p className="text-xs text-slate-800 leading-relaxed font-medium">
+                <p className="text-xs text-slate-200 leading-relaxed font-medium">
                   {selectedPillar.longObjective}
                 </p>
               </div>
@@ -598,11 +598,11 @@ export function FranchiseSupportFramework() {
               {/* Turnkey Deliverables List */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-slate-900 flex items-center gap-1.5">
-                    <FileCheck className="h-4 w-4 text-emerald-600" />
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-white flex items-center gap-1.5">
+                    <FileCheck className="h-4 w-4 text-emerald-400" />
                     <span>Turnkey Deliverables Handed to Franchise Partner</span>
                   </span>
-                  <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
+                  <span className="text-[10px] font-semibold text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded-md border border-emerald-800">
                     HQ Handled
                   </span>
                 </div>
@@ -611,12 +611,12 @@ export function FranchiseSupportFramework() {
                   {selectedPillar.deliverables.map((item, idx) => (
                     <div
                       key={idx}
-                      className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-100 bg-white shadow-2xs hover:border-emerald-300 transition-colors"
+                      className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-800 bg-slate-950/70 shadow-2xs hover:border-emerald-500/50 transition-colors"
                     >
-                      <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
+                      <div className="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">
                         {idx + 1}
                       </div>
-                      <span className="text-xs text-slate-700 font-medium leading-relaxed">{item}</span>
+                      <span className="text-xs text-slate-200 font-medium leading-relaxed">{item}</span>
                     </div>
                   ))}
                 </div>
@@ -624,21 +624,21 @@ export function FranchiseSupportFramework() {
 
               {/* Key Metric & Commercial Edge */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div className="p-4 rounded-2xl border border-emerald-200 bg-emerald-50/70 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                <div className="p-4 rounded-2xl border border-emerald-800/80 bg-emerald-950/60 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
                     Execution SLA / Benchmark
                   </span>
-                  <div className="text-xl font-extrabold text-emerald-950">
+                  <div className="text-xl font-extrabold text-white">
                     {selectedPillar.keyMetric.value}
                   </div>
-                  <p className="text-[11px] text-emerald-800">{selectedPillar.keyMetric.label}</p>
+                  <p className="text-[11px] text-emerald-300">{selectedPillar.keyMetric.label}</p>
                 </div>
 
-                <div className="p-4 rounded-2xl border border-blue-200 bg-blue-50/70 space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-800">
+                <div className="p-4 rounded-2xl border border-slate-800 bg-slate-950/80 space-y-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     Why This Matters
                   </span>
-                  <p className="text-[11px] text-blue-900 leading-relaxed font-medium">
+                  <p className="text-[11px] text-slate-300 leading-relaxed font-medium">
                     {selectedPillar.whyItMatters}
                   </p>
                 </div>
@@ -646,14 +646,14 @@ export function FranchiseSupportFramework() {
             </div>
 
             {/* Modal Footer with Navigation & Action CTAs */}
-            <div className="p-4 sm:p-5 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+            <div className="p-4 sm:p-5 bg-slate-950 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
               {/* Prev / Next controls */}
               <div className="flex items-center gap-1.5 w-full sm:w-auto justify-between sm:justify-start">
                 <Button
                   size="sm"
                   variant="outline"
                   onClick={handlePrevPillar}
-                  className="text-xs h-9 px-3 text-slate-700"
+                  className="text-xs h-9 px-3 text-slate-300 border-slate-700 bg-slate-800 hover:bg-slate-700"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
                   <span>Previous</span>
@@ -662,7 +662,7 @@ export function FranchiseSupportFramework() {
                   size="sm"
                   variant="outline"
                   onClick={handleNextPillar}
-                  className="text-xs h-9 px-3 text-slate-700"
+                  className="text-xs h-9 px-3 text-slate-300 border-slate-700 bg-slate-800 hover:bg-slate-700"
                 >
                   <span>Next Pillar</span>
                   <ChevronRight className="h-4 w-4 ml-1" />
@@ -677,7 +677,7 @@ export function FranchiseSupportFramework() {
                   )}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-teal-300 text-teal-800 bg-teal-50 hover:bg-teal-100 transition-colors"
+                  className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-teal-800 text-teal-300 bg-teal-950/80 hover:bg-teal-900 transition-colors"
                 >
                   <MessageSquare className="h-3.5 w-3.5" />
                   <span>Ask on WhatsApp</span>
@@ -685,7 +685,7 @@ export function FranchiseSupportFramework() {
 
                 <Button
                   onClick={() => handleInquireAboutPillar(selectedPillar)}
-                  className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm"
+                  className="flex-1 sm:flex-initial bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-sm"
                 >
                   <span>Inquire About This Pillar</span>
                   <ArrowRight className="h-3.5 w-3.5 ml-1.5" />

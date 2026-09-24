@@ -77,7 +77,19 @@ export function EditApplicationDialog({
   const [stage, setStage] = useState<ApplicationStage>(ApplicationStage.UNDER_REVIEW);
   const [remarks, setRemarks] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"personal" | "contact" | "academic" | "admission">("personal");
+  const [activeTab, setActiveTab] = useState<"personal" | "contact" | "academic" | "admission" | "fee">("personal");
+
+  // Financial & Installments State
+  const [totalCourseFeeInr, setTotalCourseFeeInr] = useState<number>(0);
+  const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FIXED">("PERCENTAGE");
+  const [discountValue, setDiscountValue] = useState<number>(0);
+  const [discountReason, setDiscountReason] = useState<string>("");
+  const [paidAmountInr, setPaidAmountInr] = useState<number>(0);
+  const [paymentPlan, setPaymentPlan] = useState<"LUMPSUM" | "EMI">("LUMPSUM");
+  const [installmentCount, setInstallmentCount] = useState<number>(6);
+  const [installmentsSchedule, setInstallmentsSchedule] = useState<
+    Array<{ installmentNumber: number; amount: number; dueDate: string; notes?: string }>
+  >([]);
 
   const utils = api.useUtils();
 
@@ -86,6 +98,48 @@ export function EditApplicationDialog({
     { enabled: !!application?.courseId && open }
   );
   const batches = batchesData?.batches || [];
+
+  const discountAmountInr =
+    discountValue > 0
+      ? discountType === "PERCENTAGE"
+        ? Math.round((totalCourseFeeInr * discountValue) / 100)
+        : Math.min(totalCourseFeeInr, discountValue)
+      : 0;
+
+  const finalFeeInr = Math.max(0, totalCourseFeeInr - discountAmountInr);
+  const pendingAmountInr = Math.max(0, finalFeeInr - paidAmountInr);
+
+  const generateInstallments = (count: number, netPayable: number, alreadyPaid: number) => {
+    const slots = [];
+    const today = new Date();
+    const firstAmt = alreadyPaid > 0 ? alreadyPaid : Math.round(netPayable / count);
+
+    slots.push({
+      installmentNumber: 1,
+      amount: firstAmt,
+      dueDate: today.toISOString().split("T")[0],
+      notes: "Slot 1 (Admission / Down-payment)",
+    });
+
+    const remaining = Math.max(0, netPayable - firstAmt);
+    const remMonths = Math.max(1, count - 1);
+    const perMonth = Math.floor(remaining / remMonths);
+    let allocated = 0;
+
+    for (let i = 2; i <= count; i++) {
+      const d = new Date(today);
+      d.setMonth(d.getMonth() + (i - 1));
+      const amt = i === count ? remaining - allocated : perMonth;
+      allocated += amt;
+      slots.push({
+        installmentNumber: i,
+        amount: Math.max(0, amt),
+        dueDate: d.toISOString().split("T")[0],
+        notes: `Month ${i} EMI Installment`,
+      });
+    }
+    setInstallmentsSchedule(slots);
+  };
 
   useEffect(() => {
     if (application) {
@@ -119,6 +173,43 @@ export function EditApplicationDialog({
       setPassingYear(application.passingYear || "");
       setPercentageOrCgpa(application.percentageOrCgpa || "");
 
+      // Financial Details
+      const fs = application.convertedStudentProfile?.feeStructures?.[0];
+      const initialTotal = fs?.totalCourseFee
+        ? fs.totalCourseFee / 100
+        : application.course?.baseFee
+        ? application.course.baseFee / 100
+        : 0;
+      const initialPaid = fs?.paidAmount ? fs.paidAmount / 100 : 0;
+      const initialDiscount = fs?.discountAmount ? fs.discountAmount / 100 : 0;
+
+      setTotalCourseFeeInr(initialTotal);
+      setPaidAmountInr(initialPaid);
+
+      if (initialDiscount > 0 && initialTotal > 0) {
+        setDiscountType("PERCENTAGE");
+        setDiscountValue(Math.round((initialDiscount / initialTotal) * 100));
+      } else {
+        setDiscountValue(0);
+      }
+
+      if (fs?.installments && fs.installments.length > 0) {
+        setPaymentPlan("EMI");
+        setInstallmentCount(fs.installments.length);
+        setInstallmentsSchedule(
+          fs.installments.map((i: any) => ({
+            installmentNumber: i.installmentNumber,
+            amount: i.amount / 100,
+            dueDate: new Date(i.dueDate).toISOString().split("T")[0],
+            notes: i.notes || "",
+          }))
+        );
+      } else {
+        setPaymentPlan("LUMPSUM");
+        setInstallmentCount(6);
+        generateInstallments(6, initialTotal - initialDiscount, initialPaid);
+      }
+
       // Initial photo from application or converted profile/user
       const initialPhoto =
         application.photoUrl ||
@@ -129,7 +220,7 @@ export function EditApplicationDialog({
 
       setBatchId(application.batchId || "");
       setStage(application.stage || ApplicationStage.UNDER_REVIEW);
-      setRemarks(application.remarks || "");
+      setRemarks(application.remarks || fs?.remarks || "");
       setErrorMsg(null);
       setActiveTab("personal");
     }
@@ -223,6 +314,22 @@ export function EditApplicationDialog({
       photoUrl: photoUrl || undefined,
       batchId: batchId || null,
       stage,
+      totalCourseFee: totalCourseFeeInr > 0 ? totalCourseFeeInr * 100 : undefined,
+      discountType: discountValue > 0 ? discountType : undefined,
+      discountValue: discountValue > 0 ? discountValue : undefined,
+      discountAmount: discountAmountInr > 0 ? discountAmountInr * 100 : undefined,
+      finalFee: finalFeeInr * 100,
+      paymentPlan,
+      installmentCount: paymentPlan === "EMI" ? installmentCount : undefined,
+      installments:
+        paymentPlan === "EMI"
+          ? installmentsSchedule.map((s) => ({
+              installmentNumber: s.installmentNumber,
+              amount: s.amount * 100,
+              dueDate: new Date(s.dueDate),
+              notes: s.notes,
+            }))
+          : undefined,
       remarks: remarks.trim() || undefined,
     });
   };
@@ -245,7 +352,7 @@ export function EditApplicationDialog({
             )}
           </div>
           <DialogDescription className="text-xs text-slate-500">
-            Edit full candidate credentials, passport photo (updates ID card live), academic, and contact details.
+            Edit full candidate credentials, passport photo (updates ID card live), academic, fee, discount (5-45%), and 10M EMI details.
           </DialogDescription>
         </DialogHeader>
 
@@ -256,11 +363,11 @@ export function EditApplicationDialog({
         )}
 
         {/* Tab Buttons */}
-        <div className="flex border-b border-slate-200 text-xs font-medium space-x-1">
+        <div className="flex border-b border-slate-200 text-xs font-medium space-x-1 overflow-x-auto pb-1">
           <button
             type="button"
             onClick={() => setActiveTab("personal")}
-            className={`pb-2 px-3 border-b-2 transition-colors ${
+            className={`pb-2 px-3 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === "personal"
                 ? "border-emerald-600 text-emerald-700 font-semibold"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -271,7 +378,7 @@ export function EditApplicationDialog({
           <button
             type="button"
             onClick={() => setActiveTab("contact")}
-            className={`pb-2 px-3 border-b-2 transition-colors ${
+            className={`pb-2 px-3 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === "contact"
                 ? "border-emerald-600 text-emerald-700 font-semibold"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -282,7 +389,7 @@ export function EditApplicationDialog({
           <button
             type="button"
             onClick={() => setActiveTab("academic")}
-            className={`pb-2 px-3 border-b-2 transition-colors ${
+            className={`pb-2 px-3 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === "academic"
                 ? "border-emerald-600 text-emerald-700 font-semibold"
                 : "border-transparent text-slate-500 hover:text-slate-800"
@@ -293,13 +400,27 @@ export function EditApplicationDialog({
           <button
             type="button"
             onClick={() => setActiveTab("admission")}
-            className={`pb-2 px-3 border-b-2 transition-colors ${
+            className={`pb-2 px-3 border-b-2 transition-colors whitespace-nowrap ${
               activeTab === "admission"
                 ? "border-emerald-600 text-emerald-700 font-semibold"
                 : "border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
             4. Cohort & Stage
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("fee")}
+            className={`pb-2 px-3 border-b-2 transition-colors whitespace-nowrap flex items-center gap-1.5 ${
+              activeTab === "fee"
+                ? "border-emerald-600 text-emerald-700 font-semibold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            <span>5. Fee, 5-45% Discount & 10M EMI</span>
+            <span className="bg-emerald-100 text-emerald-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full border border-emerald-300">
+              Live
+            </span>
           </button>
         </div>
 
@@ -661,6 +782,278 @@ export function EditApplicationDialog({
                   placeholder="Add any internal admission or verification remarks..."
                   className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                 />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 5: Fee, 5-45% Discount & 10M EMI */}
+          {activeTab === "fee" && (
+            <div className="space-y-4">
+              {/* Financial Metrics Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs">
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase">Total Fee</span>
+                  <span className="font-bold text-slate-900 font-mono text-sm">
+                    ₹{totalCourseFeeInr.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase">Discount</span>
+                  <span className="font-bold text-emerald-700 font-mono text-sm">
+                    -₹{discountAmountInr.toLocaleString("en-IN")}
+                    {discountValue > 0 && discountType === "PERCENTAGE" && ` (${discountValue}%)`}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase">Net Payable</span>
+                  <span className="font-bold text-blue-700 font-mono text-sm">
+                    ₹{finalFeeInr.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase">Paid So Far</span>
+                  <span className="font-bold text-emerald-800 font-mono text-sm">
+                    ₹{paidAmountInr.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px] font-semibold uppercase">Balance Due</span>
+                  <span className={`font-bold font-mono text-sm ${pendingAmountInr > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                    ₹{pendingAmountInr.toLocaleString("en-IN")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Editable Fee & Discount Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-lg border border-slate-200">
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-bold text-slate-800">
+                    Editable Total Course Fee (₹) *
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={totalCourseFeeInr}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) || 0;
+                      setTotalCourseFeeInr(val);
+                      if (paymentPlan === "EMI") {
+                        const newNet = Math.max(0, val - discountAmountInr);
+                        generateInstallments(installmentCount, newNet, paidAmountInr);
+                      }
+                    }}
+                    required
+                    className="h-8 text-xs font-mono font-bold text-slate-900"
+                  />
+                  <span className="text-[10px] text-slate-400 block">
+                    Base course tuition fee. Updates live in student profile.
+                  </span>
+                </div>
+
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] font-semibold text-slate-700">Quick Scholarship Discount</Label>
+                    {discountAmountInr > 0 && (
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        -₹{discountAmountInr.toLocaleString("en-IN")} Off
+                      </span>
+                    )}
+                  </div>
+
+                  {/* 5% to 45% Quick Buttons */}
+                  <div className="flex flex-wrap gap-1 items-center pb-1">
+                    {[5, 10, 15, 20, 25, 30, 35, 40, 45].map((pct) => (
+                      <button
+                        key={pct}
+                        type="button"
+                        onClick={() => {
+                          setDiscountType("PERCENTAGE");
+                          setDiscountValue(pct);
+                          setDiscountReason(`Counselor Scholarship (${pct}% Off)`);
+                          if (paymentPlan === "EMI") {
+                            const newDiscount = Math.round((totalCourseFeeInr * pct) / 100);
+                            const newNet = Math.max(0, totalCourseFeeInr - newDiscount);
+                            generateInstallments(installmentCount, newNet, paidAmountInr);
+                          }
+                        }}
+                        className={`px-1.5 py-0.5 text-[10px] rounded font-bold border transition ${
+                          discountType === "PERCENTAGE" && discountValue === pct
+                            ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                            : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
+                        }`}
+                      >
+                        {pct}%
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="flex gap-1.5">
+                    <select
+                      value={discountType}
+                      onChange={(e) => setDiscountType(e.target.value as any)}
+                      className="h-8 rounded-md border border-slate-300 bg-white px-2 py-1 text-xs shrink-0 w-24 font-medium"
+                    >
+                      <option value="PERCENTAGE">% Off</option>
+                      <option value="FIXED">Flat ₹</option>
+                    </select>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={discountValue}
+                      onChange={(e) => {
+                        const val = Number(e.target.value) || 0;
+                        setDiscountValue(val);
+                        if (paymentPlan === "EMI") {
+                          const discAmt = discountType === "PERCENTAGE" ? Math.round((totalCourseFeeInr * val) / 100) : val;
+                          const newNet = Math.max(0, totalCourseFeeInr - discAmt);
+                          generateInstallments(installmentCount, newNet, paidAmountInr);
+                        }
+                      }}
+                      placeholder={discountType === "PERCENTAGE" ? "5 - 45%" : "Flat Discount ₹"}
+                      className="h-8 text-xs font-mono font-bold"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Plan: Lumpsum vs EMI Slot */}
+              <div className="space-y-2.5 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                    <span>Payment Structure & EMI Schedule</span>
+                  </Label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Lumpsum or Monthly EMI (Up to 10 Months)
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentPlan("LUMPSUM")}
+                    className={`py-1.5 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                      paymentPlan === "LUMPSUM"
+                        ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                    }`}
+                  >
+                    <span>Lumpsum (One-Time Payment)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentPlan("EMI");
+                      generateInstallments(installmentCount, finalFeeInr, paidAmountInr);
+                    }}
+                    className={`py-1.5 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
+                      paymentPlan === "EMI"
+                        ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
+                    }`}
+                  >
+                    <span>EMI Plan (Up to 10 Months)</span>
+                  </button>
+                </div>
+
+                {/* EMI Slot Configuration Box */}
+                {paymentPlan === "EMI" && (
+                  <div className="pt-2 border-t border-slate-200 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <span className="text-[11px] font-bold text-slate-700">
+                        Select EMI Duration (2 to 10 Months):
+                      </span>
+                      <div className="flex flex-wrap gap-1">
+                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                          <button
+                            key={count}
+                            type="button"
+                            onClick={() => {
+                              setInstallmentCount(count);
+                              generateInstallments(count, finalFeeInr, paidAmountInr);
+                            }}
+                            className={`px-2 py-1 text-xs rounded font-bold border transition ${
+                              installmentCount === count
+                                ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                                : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
+                            }`}
+                          >
+                            {count}M
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Interactive Installments Schedule Table */}
+                    <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                      <table className="w-full text-xs">
+                        <thead className="bg-slate-100 text-slate-600 font-semibold">
+                          <tr>
+                            <th className="py-1.5 px-3 text-left">Slot</th>
+                            <th className="py-1.5 px-3 text-left">Due Date</th>
+                            <th className="py-1.5 px-3 text-right">Amount (₹)</th>
+                            <th className="py-1.5 px-3 text-left">Notes / Terms</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 font-mono">
+                          {installmentsSchedule.map((slot, index) => (
+                            <tr key={slot.installmentNumber} className={index === 0 ? "bg-emerald-50/50" : ""}>
+                              <td className="py-2 px-3 font-bold text-slate-800">
+                                {index === 0 ? (
+                                  <span className="inline-flex items-center gap-1 text-emerald-800 font-sans text-[11px] font-bold">
+                                    Slot 1 (Admission)
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-600 font-sans text-[11px]">
+                                    Slot {slot.installmentNumber}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="date"
+                                  value={slot.dueDate}
+                                  onChange={(e) => {
+                                    const updated = [...installmentsSchedule];
+                                    updated[index].dueDate = e.target.value;
+                                    setInstallmentsSchedule(updated);
+                                  }}
+                                  className="h-7 rounded border border-slate-300 px-2 py-0.5 text-xs font-mono"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-right">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={slot.amount}
+                                  onChange={(e) => {
+                                    const updated = [...installmentsSchedule];
+                                    updated[index].amount = Number(e.target.value) || 0;
+                                    setInstallmentsSchedule(updated);
+                                  }}
+                                  className="h-7 w-24 text-right rounded border border-slate-300 px-2 py-0.5 text-xs font-mono font-bold"
+                                />
+                              </td>
+                              <td className="py-2 px-3 font-sans text-slate-500 text-[11px]">
+                                <input
+                                  type="text"
+                                  value={slot.notes || ""}
+                                  onChange={(e) => {
+                                    const updated = [...installmentsSchedule];
+                                    updated[index].notes = e.target.value;
+                                    setInstallmentsSchedule(updated);
+                                  }}
+                                  placeholder="Slot notes"
+                                  className="h-7 w-full rounded border border-slate-200 px-2 text-xs"
+                                />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

@@ -25,6 +25,7 @@ import {
   User,
   Building,
   School,
+  IndianRupee,
 } from "lucide-react";
 import { RazorpayCheckoutButton } from "@/components/payment/razorpay-checkout-button";
 import { EditApplicationDialog } from "./edit-application-dialog";
@@ -284,6 +285,131 @@ export function ApplicationDetailView({
                 )}
               </div>
             )}
+
+            {/* Financial Dossier & EMI Schedule */}
+            {(() => {
+              const feeStructure = (app as any).convertedStudentProfile?.feeStructures?.[0];
+              const courseFee = feeStructure ? feeStructure.totalCourseFee / 100 : (app.course.baseFee || 0) / 100;
+              const discount = feeStructure ? feeStructure.discountAmount / 100 : 0;
+              const netPayable = feeStructure ? feeStructure.netPayableAmount / 100 : courseFee;
+              const paid = feeStructure ? feeStructure.paidAmount / 100 : 0;
+              const pending = feeStructure ? feeStructure.pendingAmount / 100 : netPayable;
+              const discountPercent = courseFee > 0 ? Math.round((discount / courseFee) * 100) : 0;
+              const installments = feeStructure?.installments || [];
+
+              return (
+                <div className="space-y-2.5 pt-1">
+                  <div className="flex items-center justify-between border-b pb-1">
+                    <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-[11px] text-slate-500 flex items-center gap-1.5">
+                      <IndianRupee className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Financial Structure, Discounts & EMI Plans</span>
+                    </h4>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setEditOpen(true)}
+                      className="h-6 px-2 text-[10px] text-blue-700 border-blue-200 hover:bg-blue-50 gap-1 font-bold"
+                    >
+                      <Edit className="h-3 w-3" />
+                      <span>Edit Fee & 10M EMI (5-45% Discount)</span>
+                    </Button>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50/80 p-2.5 rounded-lg border border-slate-200">
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Total Fee</span>
+                      <span className="font-bold text-slate-900 font-mono text-sm">
+                        ₹{courseFee.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Discount Applied</span>
+                      <span className="font-bold text-emerald-700 font-mono text-sm">
+                        {discount > 0 ? `-₹${discount.toLocaleString("en-IN")}` : "₹0"}
+                        {discountPercent > 0 && ` (${discountPercent}%)`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Net Payable</span>
+                      <span className="font-bold text-blue-700 font-mono text-sm">
+                        ₹{netPayable.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-500 uppercase block font-semibold">Pending Due</span>
+                      <span className={`font-bold font-mono text-sm ${pending > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                        ₹{pending.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+
+                  {installments.length > 0 ? (
+                    <div className="space-y-1.5 pt-1">
+                      <span className="text-[11px] font-bold text-slate-700 block">
+                        Configured EMI Schedule ({installments.length} Months):
+                      </span>
+                      <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
+                        <table className="w-full text-xs">
+                          <thead className="bg-slate-50 text-slate-600 font-semibold border-b">
+                            <tr>
+                              <th className="py-1 px-2.5 text-left text-[11px]">Slot</th>
+                              <th className="py-1 px-2.5 text-left text-[11px]">Due Date</th>
+                              <th className="py-1 px-2.5 text-right text-[11px]">Amount</th>
+                              <th className="py-1 px-2.5 text-right text-[11px]">Paid</th>
+                              <th className="py-1 px-2.5 text-left text-[11px]">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                            {installments.map((inst: any, idx: number) => {
+                              const isPaid = inst.paidAmount >= inst.amount;
+                              return (
+                                <tr key={inst.id || idx} className={isPaid ? "bg-emerald-50/30" : ""}>
+                                  <td className="py-1.5 px-2.5 font-bold text-slate-800 font-sans">
+                                    Slot {inst.installmentNumber}
+                                  </td>
+                                  <td className="py-1.5 px-2.5 text-slate-600 font-sans">
+                                    {new Date(inst.dueDate).toLocaleDateString("en-IN")}
+                                  </td>
+                                  <td className="py-1.5 px-2.5 text-right font-bold text-slate-900">
+                                    ₹{((inst.amount || 0) / 100).toLocaleString("en-IN")}
+                                  </td>
+                                  <td className="py-1.5 px-2.5 text-right text-emerald-700">
+                                    ₹{((inst.paidAmount || 0) / 100).toLocaleString("en-IN")}
+                                  </td>
+                                  <td className="py-1.5 px-2.5 font-sans">
+                                    {isPaid ? (
+                                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                        PAID
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                        PENDING
+                                      </span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="p-2.5 bg-slate-50 rounded border border-slate-200 text-[11px] text-slate-500 flex items-center justify-between">
+                      <span>Standard lumpsum or no EMI installments scheduled yet.</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditOpen(true)}
+                        className="text-blue-700 font-bold hover:underline cursor-pointer"
+                      >
+                        Set 2 to 10 Months EMI →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Conversion Success Card */}
             {app.convertedStudentProfile && (

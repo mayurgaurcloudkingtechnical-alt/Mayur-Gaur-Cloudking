@@ -14,6 +14,7 @@ import {
   Building,
   GraduationCap,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -24,64 +25,70 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="flex flex-col">
-      {/* Header Banner */}
-      <section className="bg-gradient-to-b from-emerald-50/70 to-white py-14 sm:py-20 border-b border-slate-100">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-3xl">
-          <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-            About Our Institution
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight mt-4">
-            Transforming Engineering Education with Real Production Standards
+    <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
+      {/* 1. Header Banner */}
+      <section className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#030914] via-[#071626] to-[#040914] py-16 sm:py-24">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
+        <div className="absolute top-0 left-1/3 -translate-x-1/2 w-[650px] h-[350px] bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 -right-10 w-[500px] h-[500px] bg-teal-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 text-center max-w-3xl z-10 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-xs">
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+            <span>About Our Institution • Excellence in Tech</span>
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+            Transforming Engineering Education with{" "}
+            <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+              Real Production Standards
+            </span>
           </h1>
-          <p className="text-sm sm:text-base text-slate-600 mt-4 leading-relaxed">
+
+          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl mx-auto">
             SOFTLAB GLOBAL is an advanced IT education institution headquartered in Prayagraj, Uttar Pradesh. We engineer career-accelerating learning environments for aspiring developers, data scientists, and cloud professionals.
           </p>
         </div>
       </section>
 
-      {/* Mission & Vision */}
-      <section className="py-16 bg-white border-b border-slate-100">
+      {/* 2. Mission & Vision */}
+      <section className="py-16 bg-slate-950 border-b border-slate-800/80 relative">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card className="border-slate-200 bg-emerald-50/30">
-              <CardContent className="p-8 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-600 text-white">
-                  <Target className="h-6 w-6" />
-                </div>
-                <h2 className="text-xl font-bold text-slate-900">Our Mission</h2>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  To democratize enterprise-grade software engineering education by delivering practical, industry-aligned curricula, direct mentor guidance, and rigorous code reviews that empower students to build real software systems with confidence.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-8 space-y-4 shadow-xl hover:border-emerald-500/50 transition-all">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <Target className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Our Mission</h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                To democratize enterprise-grade software engineering education by delivering practical, industry-aligned curricula, direct mentor guidance, and rigorous code reviews that empower students to build real software systems with confidence.
+              </p>
+            </div>
 
-            <Card className="border-slate-200 bg-slate-50/50">
-              <CardContent className="p-8 space-y-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900 text-white">
-                  <Compass className="h-6 w-6" />
-                </div>
-                <h2 className="text-xl font-bold text-slate-900">Our Vision</h2>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                  To establish a premier regional center for technical excellence in Uttar Pradesh that consistently produces job-ready software craftspeople recognized for strong fundamentals, architectural discipline, and problem-solving velocity.
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/90 p-8 space-y-4 shadow-xl hover:border-teal-500/50 transition-all">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                <Compass className="h-6 w-6" />
+              </div>
+              <h2 className="text-xl font-bold text-white">Our Vision</h2>
+              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                To establish a premier regional center for technical excellence in Uttar Pradesh that consistently produces job-ready software craftspeople recognized for strong fundamentals, architectural discipline, and problem-solving velocity.
+              </p>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Pedagogical Methodology */}
-      <section className="py-16 bg-slate-50/50 border-b border-slate-100">
+      {/* 3. Pedagogical Methodology */}
+      <section className="py-16 bg-[#040813] border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mb-12">
-            <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Learning Architecture
             </span>
-            <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
+            <h2 className="text-2xl sm:text-4xl font-extrabold text-white mt-3">
               How We Teach: The Hands-On Approach
             </h2>
-            <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-400 mt-2 leading-relaxed">
               We eliminate passive video watching in favor of active system construction. Every module is structured around tangible deliverables:
             </p>
           </div>
@@ -109,51 +116,57 @@ export default function AboutPage() {
                 desc: "Learn to containerize with Docker, configure CI/CD pipelines, and deploy on modern cloud infrastructure.",
               },
             ].map((item) => (
-              <div key={item.step} className="bg-white p-6 rounded-xl border border-slate-200 space-y-2">
-                <span className="text-xs font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+              <div key={item.step} className="bg-slate-900/90 p-6 rounded-2xl border border-slate-800 hover:border-emerald-500/50 transition-all space-y-2.5 shadow-lg">
+                <span className="text-xs font-mono font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-lg border border-emerald-800">
                   Phase {item.step}
                 </span>
-                <h3 className="text-base font-bold text-slate-900 pt-1">{item.title}</h3>
-                <p className="text-xs text-slate-600 leading-relaxed">{item.desc}</p>
+                <h3 className="text-base font-bold text-white pt-1">{item.title}</h3>
+                <p className="text-xs text-slate-400 leading-relaxed">{item.desc}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Core Institutional Values */}
-      <section className="py-16 bg-white border-b border-slate-100">
+      {/* 4. Core Institutional Values */}
+      <section className="py-16 bg-slate-950 border-b border-slate-800/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-12">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-emerald-700">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
               Guiding Principles
-            </h2>
-            <p className="text-2xl sm:text-3xl font-bold text-slate-900 mt-1">
+            </span>
+            <p className="text-2xl sm:text-4xl font-extrabold text-white mt-3">
               Our Core Values
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-xl border border-slate-200 bg-white space-y-3">
-              <Shield className="h-6 w-6 text-emerald-600" />
-              <h3 className="font-bold text-slate-900 text-base">Academic Integrity</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+            <div className="p-7 rounded-3xl border border-slate-800 bg-slate-900/90 space-y-3.5 shadow-xl hover:border-emerald-500/50 transition-all">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center justify-center">
+                <Shield className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-white text-base">Academic Integrity</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 We believe in transparent educational outcomes. We do not sell shortcuts, unverified promises, or rote certifications. Genuine engineering capability is built through deliberate effort.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-slate-200 bg-white space-y-3">
-              <Lightbulb className="h-6 w-6 text-emerald-600" />
-              <h3 className="font-bold text-slate-900 text-base">Curricular Currency</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+            <div className="p-7 rounded-3xl border border-slate-800 bg-slate-900/90 space-y-3.5 shadow-xl hover:border-emerald-500/50 transition-all">
+              <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-400 border border-teal-500/20 flex items-center justify-center">
+                <Lightbulb className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-white text-base">Curricular Currency</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Our syllabus evolves continuously to match the engineering stacks currently demanded by modern technology organizations, including TypeScript, Next.js, and cloud ecosystems.
               </p>
             </div>
 
-            <div className="p-6 rounded-xl border border-slate-200 bg-white space-y-3">
-              <GraduationCap className="h-6 w-6 text-emerald-600" />
-              <h3 className="font-bold text-slate-900 text-base">Student-Centric Support</h3>
-              <p className="text-xs text-slate-600 leading-relaxed">
+            <div className="p-7 rounded-3xl border border-slate-800 bg-slate-900/90 space-y-3.5 shadow-xl hover:border-emerald-500/50 transition-all">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 flex items-center justify-center">
+                <GraduationCap className="h-6 w-6" />
+              </div>
+              <h3 className="font-bold text-white text-base">Student-Centric Support</h3>
+              <p className="text-xs text-slate-400 leading-relaxed">
                 Small batch sizes ensure no learner falls behind. Faculty, academic counselors, and teaching assistants maintain dedicated office hours for doubt resolution and project reviews.
               </p>
             </div>
@@ -161,23 +174,24 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Faculty & Mentors Callout */}
-      <section className="py-14 bg-gradient-to-r from-slate-900 to-slate-950 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      {/* 5. Faculty & Mentors Callout */}
+      <section className="py-16 bg-gradient-to-r from-[#030a16] via-[#061528] to-[#040c1a] border-b border-slate-800/80 text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+            <div className="space-y-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
                 Academic Leadership
               </span>
-              <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
+              <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
                 Mentorship by Practicing Software Engineers
               </h2>
-              <p className="text-xs sm:text-sm text-slate-300 max-w-xl leading-relaxed">
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
                 Led by Mr. Mayur Gaur (11+ years of experience in leadership, enterprise technology & entrepreneurship, covering all 21 technology programs) and Mr. Nihal Singh (specializing in Linux, Cloud, Networking & Cyber Security), our faculty guides every student from first line of code to corporate placement.
               </p>
             </div>
 
-            <Button asChild size="lg" className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shrink-0 h-11 px-6 rounded-xl shadow-lg shadow-emerald-950">
+            <Button asChild size="lg" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shrink-0 h-12 px-6 rounded-xl shadow-lg shadow-emerald-500/20">
               <Link href="/trainers" className="flex items-center gap-2">
                 <span>Meet Our Faculty & Staff</span>
                 <ArrowRight className="h-4 w-4" />
@@ -187,26 +201,26 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Campus Location Card */}
-      <section className="py-16 bg-slate-50/60">
+      {/* 6. Campus Location Card */}
+      <section className="py-16 bg-slate-950">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl border border-slate-200 p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-                <Building className="h-4 w-4" />
+          <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-8 sm:p-10 flex flex-col md:flex-row items-center justify-between gap-6 shadow-2xl">
+            <div className="space-y-2.5">
+              <div className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-950/80 px-3 py-1 rounded-full border border-emerald-800">
+                <Building className="h-3.5 w-3.5" />
                 <span>Prayagraj Headquarters</span>
               </div>
-              <h3 className="text-xl font-bold text-slate-900">Visit Our Campus in Civil Lines</h3>
-              <p className="text-xs text-slate-600 max-w-xl">
+              <h3 className="text-xl sm:text-2xl font-bold text-white">Visit Our Campus in Civil Lines</h3>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
                 Experience our workstation labs and consult directly with our academic faculty. Located opposite Rai and Company, Tashkent Marg, Patrika Chauraha.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button asChild size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold h-10 px-5 rounded-xl shadow-md">
                 <Link href="/contact">Campus Details & Directions</Link>
               </Button>
-              <Button asChild variant="outline" size="sm" className="border-slate-300">
+              <Button asChild variant="outline" size="sm" className="border-slate-700 bg-slate-800/80 text-white hover:bg-slate-800 h-10 px-5 rounded-xl">
                 <Link href="/courses">View Programs</Link>
               </Button>
             </div>

@@ -113,22 +113,22 @@ export function PublicEnquiryForm({
 
   if (submitted) {
     return (
-      <Card className={`border-emerald-200 bg-emerald-50/50 ${className || ""}`}>
+      <Card className={`border border-emerald-500/40 bg-slate-900/95 text-slate-100 shadow-2xl rounded-3xl overflow-hidden ${className || ""}`}>
         <CardContent className="pt-8 pb-8 text-center space-y-4">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             <CheckCircle2 className="h-8 w-8" />
           </div>
           <div className="space-y-1">
-            <h3 className="text-xl font-bold text-slate-900">Enquiry Received Successfully!</h3>
-            <p className="text-sm text-slate-600 max-w-md mx-auto leading-relaxed">
-              Thank you for reaching out to SOFTLAB GLOBAL. An academic counselor will review your inquiry and contact you via phone or email shortly.
+            <h3 className="text-xl font-bold text-white">Enquiry Received Successfully!</h3>
+            <p className="text-xs text-slate-300 max-w-md mx-auto leading-relaxed">
+              Thank you for reaching out to SOFTLAB GLOBAL. An academic counselor will review your inquiry and contact you via phone or WhatsApp shortly.
             </p>
           </div>
           <Button
             variant="outline"
             size="sm"
             onClick={() => setSubmitted(false)}
-            className="border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+            className="border-slate-700 bg-slate-800/80 text-white hover:bg-slate-800"
           >
             Submit Another Enquiry
           </Button>
@@ -138,12 +138,12 @@ export function PublicEnquiryForm({
   }
 
   return (
-    <Card className={`border-slate-200 bg-white shadow-sm ${className || ""}`}>
+    <Card className={`border border-slate-800 bg-slate-900/95 text-slate-100 shadow-2xl rounded-3xl backdrop-blur-md ${className || ""}`}>
       <CardHeader className="pb-4">
-        <CardTitle className="text-xl font-bold text-slate-900">
+        <CardTitle className="text-xl font-bold text-white">
           Request Academic Consultation
         </CardTitle>
-        <CardDescription className="text-xs text-slate-500">
+        <CardDescription className="text-xs text-slate-400">
           Leave your details and our senior counselor will call you to discuss syllabus, batch timings, workstation prerequisites, and eligibility.
         </CardDescription>
       </CardHeader>
@@ -151,8 +151,8 @@ export function PublicEnquiryForm({
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {errorMessage && (
-            <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3 text-xs text-red-800 border border-red-200">
-              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-600" />
+            <div className="flex items-start gap-2 rounded-xl bg-red-950/60 p-3 text-xs text-red-200 border border-red-900/50">
+              <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-400" />
               <span>{errorMessage}</span>
             </div>
           )}
@@ -173,8 +173,8 @@ export function PublicEnquiryForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="enquiry-fullName" className="text-xs font-semibold text-slate-700">
-                Full Name <span className="text-red-500">*</span>
+              <Label htmlFor="enquiry-fullName" className="text-xs font-semibold text-slate-300">
+                Full Name <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="enquiry-fullName"
@@ -184,13 +184,13 @@ export function PublicEnquiryForm({
                 onChange={(e) => setFullName(e.target.value)}
                 required
                 disabled={submitMutation.isPending}
-                className="h-9 text-xs"
+                className="h-9 text-xs bg-slate-950/80 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="enquiry-email" className="text-xs font-semibold text-slate-700">
-                Email Address <span className="text-red-500">*</span>
+              <Label htmlFor="enquiry-email" className="text-xs font-semibold text-slate-300">
+                Email Address <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="enquiry-email"
@@ -200,15 +200,15 @@ export function PublicEnquiryForm({
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={submitMutation.isPending}
-                className="h-9 text-xs"
+                className="h-9 text-xs bg-slate-950/80 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <Label htmlFor="enquiry-phone" className="text-xs font-semibold text-slate-700">
-                Contact Mobile <span className="text-red-500">*</span>
+              <Label htmlFor="enquiry-phone" className="text-xs font-semibold text-slate-300">
+                Contact Mobile <span className="text-red-400">*</span>
               </Label>
               <Input
                 id="enquiry-phone"
@@ -218,13 +218,13 @@ export function PublicEnquiryForm({
                 onChange={(e) => setPhone(e.target.value)}
                 required
                 disabled={submitMutation.isPending}
-                className="h-9 text-xs"
+                className="h-9 text-xs bg-slate-950/80 border-slate-700 text-white placeholder:text-slate-500 font-mono"
               />
-              <span className="text-[10px] text-slate-400">10-digit Indian mobile number</span>
+              <span className="text-[10px] text-slate-500">10-digit Indian mobile number</span>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="enquiry-city" className="text-xs font-semibold text-slate-700">
+              <Label htmlFor="enquiry-city" className="text-xs font-semibold text-slate-300">
                 Current City / Location
               </Label>
               <Input
@@ -234,13 +234,13 @@ export function PublicEnquiryForm({
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
                 disabled={submitMutation.isPending}
-                className="h-9 text-xs"
+                className="h-9 text-xs bg-slate-950/80 border-slate-700 text-white placeholder:text-slate-500"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="enquiry-course" className="text-xs font-semibold text-slate-700">
+            <Label htmlFor="enquiry-course" className="text-xs font-semibold text-slate-300">
               Course of Interest
             </Label>
             <select
@@ -248,19 +248,19 @@ export function PublicEnquiryForm({
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
               disabled={submitMutation.isPending || isLoadingCourses}
-              className="flex h-9 w-full rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex h-9 w-full rounded-md border border-slate-700 bg-slate-950/80 px-3 py-1.5 text-xs text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <option value="">-- Select a program (or General Inquiry) --</option>
-              <optgroup label="Dr. Preeti Global University Programs">
+              <option value="" className="bg-slate-900 text-slate-300">-- Select a program (or General Inquiry) --</option>
+              <optgroup label="Dr. Preeti Global University Programs" className="bg-slate-900 text-amber-400">
                 {courses.filter((c: any) => c.providerType === "UNIVERSITY").map((c: any) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-slate-900 text-white">
                     {c.title}
                   </option>
                 ))}
               </optgroup>
-              <optgroup label="SoftLab Global IT Courses">
+              <optgroup label="SoftLab Global IT Courses" className="bg-slate-900 text-emerald-400">
                 {courses.filter((c: any) => c.providerType !== "UNIVERSITY").map((c: any) => (
-                  <option key={c.id} value={c.id}>
+                  <option key={c.id} value={c.id} className="bg-slate-900 text-white">
                     {c.title}
                   </option>
                 ))}
@@ -269,7 +269,7 @@ export function PublicEnquiryForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="enquiry-notes" className="text-xs font-semibold text-slate-700">
+            <Label htmlFor="enquiry-notes" className="text-xs font-semibold text-slate-300">
               Questions or Notes
             </Label>
             <textarea
@@ -279,7 +279,7 @@ export function PublicEnquiryForm({
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={submitMutation.isPending}
-              className="flex w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full rounded-md border border-slate-700 bg-slate-950/80 p-2.5 text-xs text-white placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
             />
           </div>
 
@@ -287,7 +287,7 @@ export function PublicEnquiryForm({
             <Button
               type="submit"
               disabled={submitMutation.isPending}
-              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-2.5 flex items-center justify-center gap-2"
+              className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs font-bold py-2.5 h-10 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2"
             >
               {submitMutation.isPending ? (
                 <>
@@ -301,7 +301,7 @@ export function PublicEnquiryForm({
                 </>
               )}
             </Button>
-            <p className="text-[11px] text-slate-400 text-center mt-2">
+            <p className="text-[11px] text-slate-500 text-center mt-2">
               Protected by rate limiting. We respect your privacy and do not share contact details.
             </p>
           </div>
