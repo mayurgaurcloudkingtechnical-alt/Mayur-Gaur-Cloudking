@@ -32,6 +32,7 @@ export default async function CoursesPage() {
       level: true,
       language: true,
       eligibility: true,
+      thumbnailUrl: true,
     },
   });
 

@@ -232,22 +232,55 @@ function getCourseMetadata(slug: string, title: string): CourseMetadata {
 
 function getCourseBrochureImage(slug: string, title: string): string | null {
   const lower = (slug + " " + title).toLowerCase();
-  if (lower.includes("ai") || lower.includes("machine learning")) {
+  if (lower.includes("ai") || lower.includes("artificial intelligence") || lower.includes("machine learning")) {
     return "/courses/ai-ml-brochure.jpg";
   }
   if (lower.includes("data science")) {
     return "/courses/data-science-brochure.jpg";
   }
-  if (lower.includes("cyber") || lower.includes("security")) {
+  if (lower.includes("cyber") || lower.includes("security") || lower.includes("ethical hacking")) {
     return "/courses/cyber-security-brochure.jpg";
   }
   if (lower.includes("c++") || lower.includes("cpp")) {
     return "/courses/cpp-programming-brochure.jpg";
   }
-  if (lower.includes("c language") || lower.includes("c programming")) {
+  if (lower.includes("c language") || lower.includes("c programming") || slug === "certificate-in-c-language") {
     return "/courses/c-programming-brochure.jpg";
   }
-  return null;
+  if (lower.includes("java")) {
+    return "/courses/java-full-stack-brochure.jpg";
+  }
+  if (lower.includes("python")) {
+    return "/courses/python-full-stack-brochure.jpg";
+  }
+  if (lower.includes("mern")) {
+    return "/courses/mern-full-stack-brochure.jpg";
+  }
+  if (lower.includes("mysql")) {
+    return "/courses/mysql-brochure.jpg";
+  }
+  if (lower.includes("oracle")) {
+    return "/courses/oracle-dba-brochure.jpg";
+  }
+  if (lower.includes("graphics") || lower.includes("designing")) {
+    return "/courses/graphics-designing-brochure.jpg";
+  }
+  if (lower.includes("marketing") || lower.includes("seo")) {
+    return "/courses/digital-marketing-brochure.jpg";
+  }
+  if (lower.includes("technical support")) {
+    return "/courses/technical-support-brochure.jpg";
+  }
+  if (lower.includes("web development") || lower.includes("website")) {
+    return "/courses/web-development-brochure.jpg";
+  }
+  if (lower.includes("networking")) {
+    return "/courses/technical-support-brochure.jpg";
+  }
+  if (lower.includes("server") || lower.includes("linux") || lower.includes("office 365") || lower.includes("cloud")) {
+    return "/courses/technical-support-brochure.jpg";
+  }
+  return "/courses/softlab-global-poster.jpg";
 }
 
 export function CourseCard({ course }: CourseCardProps) {

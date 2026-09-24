@@ -1,5 +1,6 @@
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/server/db/client";
@@ -22,8 +23,13 @@ import {
   Calendar,
   Layers,
   ShieldCheck,
+  Code,
+  Terminal,
+  FileCheck,
+  Sparkles,
 } from "lucide-react";
 import { PublicEnquiryForm } from "@/components/public/public-enquiry-form";
+import { CourseBrochureModal } from "@/components/public/course-brochure-modal";
 
 interface CourseDetailPageProps {
   params: {
@@ -61,6 +67,26 @@ export async function generateMetadata({
   };
 }
 
+function getBrochureUrl(course: { thumbnailUrl: string | null; slug: string; title: string }) {
+  if (course.thumbnailUrl) return course.thumbnailUrl;
+  const lower = (course.slug + " " + course.title).toLowerCase();
+  if (lower.includes("ai") || lower.includes("machine learning")) return "/courses/ai-ml-brochure.jpg";
+  if (lower.includes("data science")) return "/courses/data-science-brochure.jpg";
+  if (lower.includes("cyber") || lower.includes("security")) return "/courses/cyber-security-brochure.jpg";
+  if (lower.includes("c++") || lower.includes("cpp")) return "/courses/cpp-programming-brochure.jpg";
+  if (lower.includes("c language") || lower.includes("c programming") || course.slug === "certificate-in-c-language") return "/courses/c-programming-brochure.jpg";
+  if (lower.includes("java")) return "/courses/java-full-stack-brochure.jpg";
+  if (lower.includes("python")) return "/courses/python-full-stack-brochure.jpg";
+  if (lower.includes("mern")) return "/courses/mern-full-stack-brochure.jpg";
+  if (lower.includes("mysql")) return "/courses/mysql-brochure.jpg";
+  if (lower.includes("oracle")) return "/courses/oracle-dba-brochure.jpg";
+  if (lower.includes("graphics")) return "/courses/graphics-designing-brochure.jpg";
+  if (lower.includes("marketing") || lower.includes("seo")) return "/courses/digital-marketing-brochure.jpg";
+  if (lower.includes("technical support")) return "/courses/technical-support-brochure.jpg";
+  if (lower.includes("web development") || lower.includes("website")) return "/courses/web-development-brochure.jpg";
+  return "/courses/softlab-global-poster.jpg";
+}
+
 export default async function CourseDetailPage({ params }: CourseDetailPageProps) {
   const course = await db.course.findFirst({
     where: {
@@ -78,6 +104,33 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
           },
         },
       },
+      modules: {
+        where: {
+          status: ContentStatus.PUBLISHED,
+          deletedAt: null,
+        },
+        orderBy: {
+          sortOrder: "asc",
+        },
+        include: {
+          lessons: {
+            where: {
+              status: ContentStatus.PUBLISHED,
+              deletedAt: null,
+            },
+            orderBy: {
+              sortOrder: "asc",
+            },
+            select: {
+              id: true,
+              title: true,
+              summary: true,
+              type: true,
+              durationMin: true,
+            },
+          },
+        },
+      },
     },
   });
 
@@ -86,6 +139,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
   }
 
   const formattedFee = formatPaiseToRupees(course.baseFee);
+  const brochureUrl = getBrochureUrl(course);
 
   // Structured Data (JSON-LD) for Course Schema
   const courseJsonLd = {
@@ -100,28 +154,24 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
     },
     offers: {
       "@type": "Offer",
-      category: "Tuition",
+      category: "Paid",
       price: course.baseFee / 100,
       priceCurrency: "INR",
       availability: "https://schema.org/InStock",
     },
-    hasCourseInstance: {
-      "@type": "CourseInstance",
-      courseMode: ["onsite", "online", "blended"],
-      duration: `P${course.durationWeeks}W`,
-      inLanguage: course.language || "en",
-    },
+    educationalCredentialAwarded: "SOFTLAB GLOBAL Certification of Completion",
+    timeRequired: `P${course.durationWeeks}W`,
   };
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col min-h-screen bg-slate-50/50">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(courseJsonLd) }}
       />
 
       {/* Header Banner */}
-      <section className="bg-gradient-to-b from-emerald-50/80 via-white to-white py-12 sm:py-16 border-b border-slate-100">
+      <section className="bg-gradient-to-b from-emerald-50/80 via-white to-white py-12 sm:py-16 border-b border-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-start justify-between gap-8">
             <div className="max-w-3xl space-y-4">
@@ -138,20 +188,23 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                     {course.level}
                   </Badge>
                 )}
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
-                  {course.durationWeeks} Weeks
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  {course.durationWeeks} Weeks Cohort
+                </span>
+                <span className="text-xs font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
+                  {course.modules.length} Detailed Modules
                 </span>
               </div>
 
-              <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 tracking-tight leading-tight">
                 {course.title}
               </h1>
 
-              <p className="text-base sm:text-lg text-slate-600 leading-relaxed">
+              <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-medium">
                 {course.summary}
               </p>
 
-              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-600">
+              <div className="flex flex-wrap items-center gap-6 pt-2 text-xs text-slate-600 font-semibold">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-emerald-600" />
                   <span><strong>{course.durationWeeks} Weeks</strong> Intensive</span>
@@ -169,12 +222,12 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               </div>
             </div>
 
-            {/* Sticky/Card Enrollment Box */}
-            <Card className="w-full lg:w-80 border-slate-200 shadow-md shrink-0 bg-white">
+            {/* Quick Enrollment Card */}
+            <Card className="w-full lg:w-80 border-slate-200 shadow-md shrink-0 bg-white rounded-3xl">
               <CardContent className="p-6 space-y-4">
                 <div>
-                  <span className="text-xs uppercase font-semibold text-slate-500 block">
-                    Tuition Fee
+                  <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">
+                    Total Tuition Fee
                   </span>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span className="text-3xl font-extrabold text-slate-900">
@@ -201,17 +254,17 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
                 {/* Enquiry Action Button */}
                 <div className="space-y-2 pt-2">
-                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold">
+                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 shadow-sm rounded-xl">
                     <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center justify-center gap-2">
                       <Phone className="h-4 w-4" />
                       <span>Call Admissions Desk</span>
                     </a>
                   </Button>
 
-                  <Button asChild variant="outline" className="w-full border-slate-300 text-xs">
-                    <Link href={`/contact?course=${encodeURIComponent(course.title)}`} className="flex items-center justify-center gap-1.5">
+                  <Button asChild variant="outline" className="w-full border-slate-300 text-xs font-semibold h-9 rounded-xl">
+                    <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`} className="flex items-center justify-center gap-1.5">
                       <Mail className="h-3.5 w-3.5" />
-                      <span>Contact / Visit Campus</span>
+                      <span>Apply for Admission</span>
                     </Link>
                   </Button>
                 </div>
@@ -229,18 +282,85 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
       <section className="py-14 bg-slate-50/50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left 2 Cols: Description & Eligibility */}
+            {/* Left 2 Cols: Description, Complete Modules Syllabus & Eligibility */}
             <div className="lg:col-span-2 space-y-8">
-              {/* Program Description */}
-              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-4">
-                <h2 className="text-xl font-bold text-slate-900">Curriculum Overview</h2>
+              {/* Program Overview */}
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-5 w-5 text-emerald-600" />
+                  <h2 className="text-xl font-bold text-slate-900">Course Overview & Objectives</h2>
+                </div>
                 <div className="text-sm text-slate-700 leading-relaxed whitespace-pre-line space-y-4">
                   {course.description}
                 </div>
               </div>
 
+              {/* Complete Authoritative Syllabus & Curriculum Breakdown */}
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Layers className="h-5 w-5 text-emerald-600" />
+                      <h2 className="text-xl font-bold text-slate-900">Complete Course Curriculum</h2>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      {course.modules.length} Comprehensive Modules • Step-by-Step Hands-on Labs & Projects
+                    </p>
+                  </div>
+
+                  <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
+                    Job-Ready 2026
+                  </span>
+                </div>
+
+                <div className="space-y-4">
+                  {course.modules.map((mod, idx) => (
+                    <div
+                      key={mod.id}
+                      className="border border-slate-200 rounded-2xl p-5 hover:border-emerald-300 transition-colors bg-slate-50/40 space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-700">
+                            Module {idx + 1}
+                          </span>
+                          <h3 className="text-base font-bold text-slate-900">
+                            {mod.title}
+                          </h3>
+                        </div>
+
+                        <Badge variant="outline" className="text-[11px] bg-white text-slate-700 border-slate-200 shrink-0">
+                          {mod.lessons.length} Learning Units
+                        </Badge>
+                      </div>
+
+                      {mod.description && (
+                        <p className="text-xs text-slate-600 whitespace-pre-line leading-relaxed">
+                          {mod.description}
+                        </p>
+                      )}
+
+                      {/* Sub-lessons */}
+                      {mod.lessons.length > 0 && (
+                        <div className="pt-2 border-t border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {mod.lessons.map((lesson) => (
+                            <div
+                              key={lesson.id}
+                              className="flex items-center gap-2 text-xs text-slate-700 p-2 rounded-xl bg-white border border-slate-100 font-medium"
+                            >
+                              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
+                              <span className="truncate">{lesson.title}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
               {/* Eligibility & Prerequisites */}
-              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-4">
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
                 <h2 className="text-xl font-bold text-slate-900">Eligibility & Recommended Prerequisites</h2>
                 <div className="flex items-start gap-3 text-sm text-slate-700">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -252,7 +372,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               </div>
 
               {/* Faculty Instructors */}
-              <div className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 space-y-4">
+              <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
                 <div className="flex items-center justify-between">
                   <h2 className="text-xl font-bold text-slate-900">Faculty & Mentors</h2>
                   <Link
@@ -266,7 +386,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Mr. Mayur Gaur (Covers All 21 Programs) */}
-                  <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
+                  <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                         MG
@@ -279,16 +399,16 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                           <ShieldCheck className="h-4 w-4 text-emerald-600 shrink-0" />
                         </div>
                         <p className="text-xs font-bold text-emerald-800">
-                          Faculty / Trainer • 11+ Years Experience (Leadership & Entrepreneur)
+                          Faculty / Trainer • 11+ Years Experience
                         </p>
                       </div>
                     </div>
                     <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                      Technology Leader & Entrepreneur with 11+ years of experience leading hands-on technical curriculum across all 21 SOFTLAB GLOBAL courses.
+                      Technology Leader & Entrepreneur with 11+ years leading hands-on technical curriculum across SOFTLAB GLOBAL programs.
                     </p>
                   </div>
 
-                  {/* Mr. Nihal Singh (Displayed for Systems, Networking, Cloud & Cyber Security courses) */}
+                  {/* Mr. Nihal Singh */}
                   {(course.slug.includes("linux") ||
                     course.slug.includes("network") ||
                     course.slug.includes("365") ||
@@ -304,7 +424,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                     course.title.toLowerCase().includes("cloud") ||
                     course.title.toLowerCase().includes("cyber") ||
                     course.title.toLowerCase().includes("security")) && (
-                    <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
+                    <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 space-y-2 hover:border-emerald-300 transition-colors">
                       <div className="flex items-center gap-3">
                         <div className="h-10 w-10 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                           NS
@@ -326,45 +446,19 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                       </p>
                     </div>
                   )}
-
-                  {/* Any additional DB-assigned trainers if present and not already displayed */}
-                  {course.trainers
-                    .filter(({ trainer }) => {
-                      const name = `${trainer.user.firstName} ${trainer.user.lastName}`.toLowerCase();
-                      return !name.includes("mayur") && !name.includes("nihal");
-                    })
-                    .map(({ trainer }) => (
-                      <div key={trainer.id} className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-sm">
-                            {trainer.user.firstName[0]}
-                            {trainer.user.lastName[0]}
-                          </div>
-                          <div>
-                            <p className="font-bold text-slate-900 text-sm">
-                              {trainer.user.firstName} {trainer.user.lastName}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {trainer.experienceYears}+ years enterprise experience
-                            </p>
-                          </div>
-                        </div>
-                        {trainer.bio && (
-                          <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                            {trainer.bio}
-                          </p>
-                        )}
-                      </div>
-                    ))}
                 </div>
               </div>
             </div>
 
-            {/* Right Col: Admissions & Learning Support */}
+            {/* Right Col: Official Course Flyer, Admissions Form & Support */}
             <div className="space-y-6">
+              {/* Official Course Flyer / Brochure with Interactive Modal */}
+              <CourseBrochureModal courseTitle={course.title} brochureUrl={brochureUrl} />
+
+              {/* Direct Enquiry Form */}
               <PublicEnquiryForm preselectedCourseId={course.id} preselectedCourseSlug={course.slug} />
 
-              <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-4">
+              <div className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-4">
                 <h3 className="text-base font-bold text-slate-900">What You Receive</h3>
                 <ul className="space-y-3 text-xs text-slate-600">
                   <li className="flex items-start gap-2">
@@ -386,7 +480,7 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                 </ul>
               </div>
 
-              <div className="bg-emerald-50/60 p-6 rounded-2xl border border-emerald-200 space-y-3">
+              <div className="bg-emerald-50/60 p-6 rounded-3xl border border-emerald-200 space-y-3">
                 <h3 className="text-base font-bold text-emerald-950">Have Questions?</h3>
                 <p className="text-xs text-emerald-800 leading-relaxed">
                   Visit our campus in Civil Lines or speak directly with an academic counselor to review course syllabus and schedules.

@@ -1,0 +1,5867 @@
+[
+  {
+    "slug": "cpp-programming-complete-course",
+    "title": "C++ Programming Complete Course (Basic To Advanced)",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Advanced",
+    "flyer": "/courses/cpp-programming-brochure.jpg",
+    "startPage": 1,
+    "endPage": 11,
+    "category": "Programming & Software Development",
+    "overview": "The Softlab Global C++ Programming Course is designed to build strong programming and object-oriented programming (OOP) skills from scratch. Students will learn procedural programming, object-oriented concepts, memory management, file handling, Standard Template",
+    "objectives": [
+      "After completing this course, students will be able to:",
+      "Understand programming fundamentals",
+      "Master Object-Oriented Programming (OOP)",
+      "Develop real-world C++ applications"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Introduction to C++",
+        "sortOrder": 1,
+        "topics": [
+          "",
+          "Introduction to Programming",
+          "",
+          "History of C++",
+          "",
+          "Features of C++",
+          "",
+          "Applications of C++",
+          "",
+          "Difference Between C and C++",
+          "",
+          "Installing Compiler (GCC, MinGW)",
+          "",
+          "IDE Setup (Visual Studio Code, Code::Blocks, Visual Studio)",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 2: Variables & Data Types",
+        "sortOrder": 2,
+        "topics": [
+          "",
+          "Variables",
+          "",
+          "Constants",
+          "",
+          "Keywords",
+          "",
+          "Identifiers",
+          "",
+          "Primitive Data Types",
+          "",
+          "Type Modifiers",
+          "",
+          "Type Casting",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 3: Operators",
+        "sortOrder": 3,
+        "topics": [
+          "",
+          "Arithmetic Operators",
+          "",
+          "Relational Operators",
+          "",
+          "Logical Operators",
+          "",
+          "Assignment Operators",
+          "",
+          "Bitwise Operators",
+          "",
+          "Unary Operators",
+          "",
+          "Increment & Decrement",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 4: Input & Output",
+        "sortOrder": 4,
+        "topics": [
+          "",
+          "cin",
+          "",
+          "cout",
+          "",
+          "getline()",
+          "",
+          "Formatting Output",
+          "",
+          "Manipulators",
+          "",
+          "setw()",
+          "",
+          "setprecision()",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 5: Decision Making",
+        "sortOrder": 5,
+        "topics": [
+          "",
+          "if",
+          "",
+          "if-else",
+          "",
+          "Nested if",
+          "",
+          "else-if Ladder",
+          "",
+          "switch-case",
+          "",
+          "Conditional Operator",
+          "",
+          "ATM Machine",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 6: Loops",
+        "sortOrder": 6,
+        "topics": [
+          "",
+          "for Loop",
+          "",
+          "while Loop",
+          "",
+          "do-while Loop",
+          "",
+          "Nested Loops",
+          "",
+          "break",
+          "",
+          "continue",
+          "",
+          "goto",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 7: Functions",
+        "sortOrder": 7,
+        "topics": [
+          "",
+          "Function Declaration",
+          "",
+          "Function Definition",
+          "",
+          "Function Overloading",
+          "",
+          "Inline Functions",
+          "",
+          "Default Arguments",
+          "",
+          "Recursion",
+          "",
+          "Call by Value",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 8: Arrays & Strings",
+        "sortOrder": 8,
+        "topics": [
+          "",
+          "One-Dimensional Arrays",
+          "",
+          "Two-Dimensional Arrays",
+          "",
+          "Multi-dimensional Arrays",
+          "",
+          "Character Arrays",
+          "",
+          "C++ String Class",
+          "",
+          "String Functions",
+          "",
+          "Matrix Operations",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 9: Pointers & Dynamic Memory",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "Pointer Basics",
+          "",
+          "Pointer Arithmetic",
+          "",
+          "Pointer to Pointer",
+          "",
+          "Dynamic Memory Allocation",
+          "",
+          "new Operator",
+          "",
+          "delete Operator",
+          "",
+          "Smart Introduction",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 10: Object-Oriented Programming",
+        "sortOrder": 10,
+        "topics": [
+          "",
+          "Classes",
+          "",
+          "Objects",
+          "",
+          "Constructors",
+          "",
+          "Destructor",
+          "",
+          "Copy Constructor",
+          "",
+          "Friend Function",
+          "",
+          "Friend Class",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 11: Inheritance",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "Single Inheritance",
+          "",
+          "Multiple Inheritance",
+          "",
+          "Multilevel Inheritance",
+          "",
+          "Hierarchical Inheritance",
+          "",
+          "Hybrid Inheritance",
+          "",
+          "Access Specifiers",
+          "",
+          "Virtual Base Class",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 12: Polymorphism",
+        "sortOrder": 12,
+        "topics": [
+          "",
+          "Function Overloading",
+          "",
+          "Operator Overloading",
+          "",
+          "Function Overriding",
+          "",
+          "Virtual Functions",
+          "",
+          "Pure Virtual Functions",
+          "",
+          "Abstract Classes",
+          "",
+          "Runtime Polymorphism",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 13: Exception Handling",
+        "sortOrder": 13,
+        "topics": [
+          "",
+          "try",
+          "",
+          "catch",
+          "",
+          "throw",
+          "",
+          "Multiple Exceptions",
+          "",
+          "Standard Exceptions",
+          "",
+          "Custom Exceptions",
+          "",
+          "ATM Error Handling",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 14: File Handling",
+        "sortOrder": 14,
+        "topics": [
+          "",
+          "File Streams",
+          "",
+          "ifstream",
+          "",
+          "ofstream",
+          "",
+          "fstream",
+          "",
+          "Read & Write Files",
+          "",
+          "Binary Files",
+          "",
+          "Random File Access",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 15: Templates & STL",
+        "sortOrder": 15,
+        "topics": [
+          "Templates",
+          "",
+          "Function Templates",
+          "",
+          "Class Templates",
+          "",
+          "Template Specialization",
+          "Standard Template Library (STL)",
+          "",
+          "Vector",
+          "",
+          "List",
+          "",
+          "Queue",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 16: Advanced Concepts",
+        "sortOrder": 16,
+        "topics": [
+          "",
+          "Namespaces",
+          "",
+          "Preprocessor Directives",
+          "",
+          "Header Files",
+          "",
+          "Macros",
+          "",
+          "Lambda Expressions (Introduction)",
+          "",
+          "Command Line Arguments",
+          "",
+          "Const Correctness",
+          ""
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "certificate-in-advance-networking",
+    "title": "Certificate in Advanced Networking Program (Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Advanced (Master Level)",
+    "flyer": "/courses/technical-support-brochure.jpg",
+    "startPage": 12,
+    "endPage": 23,
+    "category": "Networking & Systems",
+    "overview": "The Softlab Global Certificate in Advanced Networking Program is a complete 3-month master-level networking course",
+    "objectives": [
+      "Master core and advanced concepts in Certificate in Advanced Networking Program (Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Networking Fundamentals &",
+        "sortOrder": 1,
+        "topics": [
+          "Infrastructure (Week 1",
+          "–",
+          "2)",
+          "Computer Networking Basics",
+          "",
+          "Introduction to Networking",
+          "",
+          "Types of Networks",
+          "o",
+          "LAN",
+          "o",
+          "WAN",
+          "o",
+          "MAN",
+          "o"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 2: IP Addressing & Subnetting",
+        "sortOrder": 2,
+        "topics": [
+          "(Week 3)",
+          "IP Addressing",
+          "",
+          "IPv4 Addressing",
+          "",
+          "IPv6 Introduction",
+          "",
+          "Public IP",
+          "",
+          "Private IP",
+          "",
+          "Static IP",
+          "",
+          "Dynamic IP",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 3: Switching & Routing (Week 4",
+        "sortOrder": 3,
+        "topics": [
+          "–",
+          "5)",
+          "Switching Concepts",
+          "",
+          "Switch Working",
+          "",
+          "MAC Address Table",
+          "",
+          "Broadcast Domain",
+          "",
+          "Collision Domain",
+          "",
+          "VLAN",
+          "VLAN Configuration",
+          ""
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 4: Network Services & Server",
+        "sortOrder": 4,
+        "topics": [
+          "Administration (Week 6)",
+          "DHCP",
+          "",
+          "DHCP Working",
+          "",
+          "DHCP Scope",
+          "",
+          "DHCP Reservation",
+          "",
+          "Troubleshooting",
+          "DNS",
+          "",
+          "DNS Records",
+          "",
+          "Forward Lookup Zone"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "Module 5: Network Security & Firewall",
+        "sortOrder": 5,
+        "topics": [
+          "(Week 7",
+          "–",
+          "8)",
+          "Network Security Fundamentals",
+          "",
+          "Security Concepts",
+          "",
+          "CIA Triad",
+          "",
+          "Authentication",
+          "",
+          "Authorization",
+          "",
+          "Encryption",
+          "Firewall"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 6: Linux Networking (Week 9)",
+        "sortOrder": 6,
+        "topics": [
+          "Linux Administration",
+          "",
+          "Linux Installation",
+          "",
+          "File System",
+          "",
+          "Commands",
+          "",
+          "User Management",
+          "",
+          "Permissions",
+          "Linux Networking",
+          "",
+          "IP Configuration",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 7: Cloud Networking Basics (Week",
+        "sortOrder": 7,
+        "topics": [
+          "10)",
+          "Cloud Networking Introduction",
+          "",
+          "Cloud Computing Basics",
+          "",
+          "Virtual Networks",
+          "AWS Networking",
+          "",
+          "VPC",
+          "",
+          "Subnets",
+          "",
+          "Security Groups",
+          "",
+          "Route Tables"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 8: Network Monitoring &",
+        "sortOrder": 8,
+        "topics": [
+          "Troubleshooting (Week 11)",
+          "Network Troubleshooting",
+          "",
+          "Ping",
+          "",
+          "Traceroute",
+          "",
+          "IPConfig",
+          "",
+          "Netstat",
+          "",
+          "Nslookup",
+          "Troubleshooting Methodology",
+          "",
+          "Identify Problem"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: Automation & Advanced",
+        "sortOrder": 9,
+        "topics": [
+          "Networking (Week 12)",
+          "Network Automation Basics",
+          "",
+          "Python Introduction for Networking",
+          "",
+          "Automation Concepts",
+          "",
+          "API Basics",
+          "Network Documentation",
+          "",
+          "Network Diagram",
+          "",
+          "IP Management",
+          "",
+          "Asset Management"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "certificate-in-cloud-computing-and-cyber-security-with-ai",
+    "title": "Certificate in Cloud Computing & Cyber Security with AI (Expert Master Level)",
+    "durationWeeks": 52,
+    "baseFee": 9000000,
+    "level": "Beginner to Expert Master Level",
+    "flyer": "/courses/cyber-security-brochure.jpg",
+    "startPage": 24,
+    "endPage": 38,
+    "category": "Cloud & Cybersecurity",
+    "overview": "The Softlab Global Certificate in Cloud Computing & Cyber Security with AI is an advanced 12-month expert-level program",
+    "objectives": [
+      "Master core and advanced concepts in Certificate in Cloud Computing & Cyber Security with AI (Expert Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Phase 1: IT Fundamentals & Networking",
+        "sortOrder": 1,
+        "topics": [
+          "Foundation (Month 1)",
+          "Computer Fundamentals",
+          "",
+          "Computer Architecture",
+          "",
+          "Hardware Components",
+          "",
+          "Operating Systems",
+          "",
+          "Windows Administration",
+          "",
+          "Linux Introduction",
+          "",
+          "File Systems",
+          ""
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Phase 2: Linux System Administration",
+        "sortOrder": 2,
+        "topics": [
+          "(Month 2)",
+          "Linux Fundamentals",
+          "",
+          "Linux Installation",
+          "",
+          "Linux File System",
+          "",
+          "Commands",
+          "",
+          "Shell Basics",
+          "",
+          "Directory Management",
+          "User Administration",
+          "",
+          "Users & Groups"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 3: Cloud Computing Fundamentals",
+        "sortOrder": 3,
+        "topics": [
+          "(Month 3)",
+          "Cloud Computing Concepts",
+          "",
+          "Introduction to Cloud Computing",
+          "",
+          "Cloud Service Models",
+          "Services",
+          "",
+          "IaaS",
+          "",
+          "PaaS",
+          "",
+          "SaaS",
+          "Deployment Models",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 4: AWS Cloud Master Level (Month 4",
+        "sortOrder": 4,
+        "topics": [
+          "–",
+          "5)",
+          "AWS Core Services",
+          "Compute",
+          "",
+          "EC2",
+          "",
+          "Auto Scaling",
+          "",
+          "Load Balancer",
+          "",
+          "Lambda",
+          "Storage",
+          "",
+          "S3"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 5: Microsoft Azure Cloud (Month 6)",
+        "sortOrder": 5,
+        "topics": [
+          "Azure Fundamentals",
+          "",
+          "Azure Architecture",
+          "",
+          "Azure Portal",
+          "",
+          "Resource Groups",
+          "Azure Services",
+          "",
+          "Virtual Machines",
+          "",
+          "Storage Accounts",
+          "",
+          "Azure SQL Database",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 6: Cyber Security Fundamentals",
+        "sortOrder": 6,
+        "topics": [
+          "(Month 7)",
+          "Cyber Security Concepts",
+          "",
+          "Introduction to Cyber Security",
+          "",
+          "Threat Landscape",
+          "",
+          "Cyber Attacks",
+          "",
+          "Security Policies",
+          "Security Fundamentals",
+          "",
+          "CIA Triad",
+          "",
+          "Authentication"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 7: Ethical Hacking & Penetration",
+        "sortOrder": 7,
+        "topics": [
+          "Testing (Month 8",
+          "–",
+          "9)",
+          "Ethical Hacking",
+          "",
+          "Introduction",
+          "",
+          "Security Testing Methodology",
+          "",
+          "Vulnerability Assessment",
+          "Information Gathering",
+          "",
+          "Footprinting",
+          "",
+          "Scanning"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 8: SOC Analyst & Security Operations",
+        "sortOrder": 8,
+        "topics": [
+          "(Month 10)",
+          "SOC Fundamentals",
+          "",
+          "Security Operations Center",
+          "",
+          "Incident Response",
+          "",
+          "Threat Monitoring",
+          "SIEM Tools",
+          "",
+          "Splunk",
+          "",
+          "ELK Stack",
+          "Log Analysis",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 9: AI in Cyber Security (Month 11)",
+        "sortOrder": 9,
+        "topics": [
+          "Artificial Intelligence for Security",
+          "",
+          "AI & Cyber Security Overview",
+          "",
+          "Machine Learning in Security",
+          "",
+          "Automated Threat Detection",
+          "AI Applications",
+          "",
+          "Malware Detection",
+          "",
+          "Phishing Detection",
+          "",
+          "Fraud Detection",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 10: DevSecOps & Master Capstone",
+        "sortOrder": 10,
+        "topics": [
+          "Project (Month 12)",
+          "DevSecOps Fundamentals",
+          "",
+          "Security in Software Development",
+          "",
+          "CI/CD Security",
+          "",
+          "Docker Security",
+          "",
+          "Container Security",
+          "Tools",
+          "",
+          "Git",
+          "",
+          "GitHub"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "certificate-in-office-365-admin",
+    "title": "Certificate in Microsoft Office 365 Administration Program (Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 2500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/technical-support-brochure.jpg",
+    "startPage": 39,
+    "endPage": 51,
+    "category": "Cloud & IT Administration",
+    "overview": "The Softlab Global Certificate in Microsoft Office 365 Administration Program is an advanced 3-month master-level course",
+    "objectives": [
+      "Master core and advanced concepts in Certificate in Microsoft Office 365 Administration Program (Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Microsoft 365 Fundamentals &",
+        "sortOrder": 1,
+        "topics": [
+          "Cloud Concepts (Week 1)",
+          "Introduction to Microsoft 365",
+          "",
+          "What is Microsoft 365?",
+          "",
+          "Evolution of Office 365",
+          "",
+          "Microsoft Cloud Ecosystem",
+          "",
+          "Microsoft 365 Architecture",
+          "",
+          "Cloud Computing Basics",
+          "Microsoft 365 Services Overview",
+          "",
+          "Exchange Online"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 2: Microsoft Entra ID (Azure Active",
+        "sortOrder": 2,
+        "topics": [
+          "Directory) Administration (Week 2",
+          "–",
+          "3)",
+          "Identity Management",
+          "",
+          "Introduction to Microsoft Entra ID",
+          "",
+          "Users & Groups",
+          "",
+          "Authentication Concepts",
+          "",
+          "Authorization Concepts",
+          "User Administration",
+          "",
+          "Create Users"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 3: Exchange Online Administration",
+        "sortOrder": 3,
+        "topics": [
+          "(Week 4",
+          "–",
+          "5)",
+          "Exchange Online Fundamentals",
+          "",
+          "Email Architecture",
+          "",
+          "Mail Flow",
+          "",
+          "Exchange Online Features",
+          "Mailbox Management",
+          "",
+          "User Mailboxes",
+          "",
+          "Shared Mailboxes"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 4: Microsoft Teams Administration",
+        "sortOrder": 4,
+        "topics": [
+          "(Week 6)",
+          "Teams Administration",
+          "",
+          "Microsoft Teams Architecture",
+          "",
+          "Teams Admin Center",
+          "Team Management",
+          "",
+          "Create Teams",
+          "",
+          "Manage Channels",
+          "",
+          "Manage Members",
+          "",
+          "Permissions"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 5: SharePoint Online Administration",
+        "sortOrder": 5,
+        "topics": [
+          "(Week 7)",
+          "SharePoint Fundamentals",
+          "",
+          "SharePoint Architecture",
+          "",
+          "Sites & Site Collections",
+          "Site Administration",
+          "",
+          "Create Sites",
+          "",
+          "Manage Permissions",
+          "",
+          "Site Storage Management",
+          "Document Management",
+          ""
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 6: OneDrive Administration (Week",
+        "sortOrder": 6,
+        "topics": [
+          "8)",
+          "OneDrive Management",
+          "",
+          "OneDrive Architecture",
+          "",
+          "User Storage Management",
+          "",
+          "Sync Configuration",
+          "Administration",
+          "",
+          "Storage Limits",
+          "",
+          "Sharing Settings",
+          "",
+          "Access Control"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 7: Microsoft 365 Security &",
+        "sortOrder": 7,
+        "topics": [
+          "Compliance (Week 9",
+          "–",
+          "10)",
+          "Microsoft Defender",
+          "",
+          "Defender Overview",
+          "",
+          "Threat Protection",
+          "",
+          "Security Dashboard",
+          "Security Management",
+          "",
+          "Threat Policies",
+          "",
+          "Alerts"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "Module 8: Microsoft 365 PowerShell",
+        "sortOrder": 8,
+        "topics": [
+          "Administration (Week 11)",
+          "PowerShell Fundamentals",
+          "",
+          "Introduction to PowerShell",
+          "",
+          "Commands",
+          "",
+          "Modules",
+          "",
+          "Scripts",
+          "Microsoft 365 PowerShell",
+          "",
+          "Connect to Microsoft 365",
+          "",
+          "User Management Automation"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 9: Microsoft 365 Backup, Migration",
+        "sortOrder": 9,
+        "topics": [
+          "& Troubleshooting (Week 12)",
+          "Backup & Recovery",
+          "",
+          "Microsoft 365 Backup Concepts",
+          "",
+          "Data Recovery",
+          "",
+          "Mailbox Recovery",
+          "Migration",
+          "",
+          "Email Migration Basics",
+          "",
+          "Tenant Migration Concepts",
+          "",
+          "Data Migration"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "cyber-security-complete-course",
+    "title": "Cyber Security Complete Course (Master Level)",
+    "durationWeeks": 24,
+    "baseFee": 11500000,
+    "level": "Beginner to Advanced / Master Level",
+    "flyer": "/courses/cyber-security-brochure.jpg",
+    "startPage": 52,
+    "endPage": 63,
+    "category": "Cybersecurity & Ethical Hacking",
+    "overview": "The Softlab Global Cyber Security Master Level Course is designed to provide complete knowledge of cybersecurity, ethical hacking, network security, system security, cloud security, and modern cyber defense techniques.",
+    "objectives": [
+      "After completing this course, students will be able to:",
+      "Understand cybersecurity fundamentals",
+      "Analyze security threats and vulnerabilities",
+      "Perform ethical hacking and penetration testing"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Introduction to Cyber Security",
+        "sortOrder": 1,
+        "topics": [
+          "",
+          "Introduction to Cyber Security",
+          "",
+          "Importance of Cyber Security",
+          "",
+          "Cyber Threat Landscape",
+          "",
+          "Types of Cyber Attacks",
+          "",
+          "Cyber Criminal Techniques",
+          "",
+          "Security Principles",
+          "",
+          "CIA Triad:",
+          "o"
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 2: Networking Fundamentals for",
+        "sortOrder": 2,
+        "topics": [
+          "Cyber Security",
+          "",
+          "Network Basics",
+          "",
+          "OSI Model",
+          "",
+          "TCP/IP Model",
+          "",
+          "IP Addressing",
+          "",
+          "Subnetting",
+          "",
+          "MAC Address",
+          "",
+          "Ports & Protocols"
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 3: Linux for Cyber Security",
+        "sortOrder": 3,
+        "topics": [
+          "",
+          "Linux Introduction",
+          "",
+          "Linux File System",
+          "",
+          "Linux Commands",
+          "",
+          "User Management",
+          "",
+          "Permission Management",
+          "",
+          "Process Management",
+          "",
+          "Networking Commands",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 4: Ethical Hacking Fundamentals",
+        "sortOrder": 4,
+        "topics": [
+          "",
+          "Introduction to Ethical Hacking",
+          "",
+          "Hacker Types:",
+          "o",
+          "White Hat",
+          "o",
+          "Black Hat",
+          "o",
+          "Grey Hat",
+          "",
+          "Hacking Methodology",
+          "",
+          "Information Gathering",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 5: Vulnerability Assessment",
+        "sortOrder": 5,
+        "topics": [
+          "",
+          "Vulnerability Concepts",
+          "",
+          "Threat Identification",
+          "",
+          "Risk Assessment",
+          "",
+          "Vulnerability Scanning",
+          "",
+          "Security Auditing",
+          "",
+          "CVE & CVSS",
+          "",
+          "Patch Management",
+          "Tools:"
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 6: Network Security & Attacks",
+        "sortOrder": 6,
+        "topics": [
+          "",
+          "Network Security Concepts",
+          "",
+          "Sniffing Attacks",
+          "",
+          "Spoofing Attacks",
+          "",
+          "MITM Attacks",
+          "",
+          "DoS & DDoS Attacks",
+          "",
+          "Session Hijacking",
+          "",
+          "Wireless Attacks",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 7: Web Application Security",
+        "sortOrder": 7,
+        "topics": [
+          "",
+          "Web Architecture",
+          "",
+          "HTTP Requests & Responses",
+          "",
+          "Web Vulnerabilities",
+          "",
+          "OWASP Top 10",
+          "Topics:",
+          "",
+          "SQL Injection",
+          "",
+          "Cross Site Scripting (XSS)",
+          "",
+          "CSRF"
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 8: System Hacking",
+        "sortOrder": 8,
+        "topics": [
+          "",
+          "Windows Security",
+          "",
+          "Linux Security",
+          "",
+          "Password Cracking",
+          "",
+          "Privilege Escalation",
+          "",
+          "Malware Basics",
+          "",
+          "Rootkits",
+          "",
+          "Backdoors",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: Malware & Digital Threats",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "Malware Types:",
+          "o",
+          "Virus",
+          "o",
+          "Worm",
+          "o",
+          "Trojan",
+          "o",
+          "Ransomware",
+          "o",
+          "Spyware",
+          "",
+          "Malware Analysis Basics",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 10: Security Operations Center",
+        "sortOrder": 10,
+        "topics": [
+          "(SOC)",
+          "",
+          "SOC Introduction",
+          "",
+          "Security Monitoring",
+          "",
+          "Incident Detection",
+          "",
+          "Incident Response Process",
+          "",
+          "Log Analysis",
+          "",
+          "Threat Hunting",
+          "",
+          "Security Alerts"
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 11: Digital Forensics",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "Digital Forensics Basics",
+          "",
+          "Evidence Collection",
+          "",
+          "Disk Forensics",
+          "",
+          "File Analysis",
+          "",
+          "Network Forensics",
+          "",
+          "Investigation Process",
+          "Tools:",
+          "",
+          "Autopsy"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 12: Identity & Access Management",
+        "sortOrder": 12,
+        "topics": [
+          "",
+          "Authentication",
+          "",
+          "Authorization",
+          "",
+          "Access Control",
+          "",
+          "Password Policies",
+          "",
+          "Multi-Factor Authentication",
+          "",
+          "Active Directory Security",
+          "",
+          "Privilege Management",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 13: Cloud Security",
+        "sortOrder": 13,
+        "topics": [
+          "",
+          "Introduction to Cloud Computing",
+          "",
+          "Cloud Service Models:",
+          "o",
+          "IaaS",
+          "o",
+          "PaaS",
+          "o",
+          "SaaS",
+          "",
+          "Cloud Security Challenges",
+          "",
+          "AWS Security Basics",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 14: Application Security",
+        "sortOrder": 14,
+        "topics": [
+          "",
+          "Secure Software Development",
+          "",
+          "Secure Coding Practices",
+          "",
+          "API Security",
+          "",
+          "Database Security",
+          "",
+          "Encryption Concepts",
+          "",
+          "Data Protection"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 15: Cryptography",
+        "sortOrder": 15,
+        "topics": [
+          "",
+          "Introduction to Cryptography",
+          "",
+          "Encryption & Decryption",
+          "",
+          "Symmetric Encryption",
+          "",
+          "Asymmetric Encryption",
+          "",
+          "Hashing Algorithms",
+          "",
+          "Digital Signatures",
+          "",
+          "Certificates",
+          ""
+        ],
+        "labs": [
+          "Practical:"
+        ]
+      },
+      {
+        "title": "Module 16: Penetration Testing Methodology",
+        "sortOrder": 16,
+        "topics": [
+          "",
+          "Planning",
+          "",
+          "Information Gathering",
+          "",
+          "Scanning",
+          "",
+          "Exploitation",
+          "",
+          "Reporting",
+          "",
+          "Security Recommendations"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 17: Advanced Security Concepts",
+        "sortOrder": 17,
+        "topics": [
+          "",
+          "Zero Day Attacks",
+          "",
+          "Advanced Persistent Threats (APT)",
+          "",
+          "Threat Intelligence",
+          "",
+          "Security Automation",
+          "",
+          "AI in Cyber Security",
+          "",
+          "Cloud Threat Protection",
+          "",
+          "Security Compliance",
+          "Major Industry Projects"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "data-science-master-level",
+    "title": "Data Science (Master Level) Complete Course",
+    "durationWeeks": 24,
+    "baseFee": 7500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/data-science-brochure.jpg",
+    "startPage": 64,
+    "endPage": 77,
+    "category": "Data Science & Analytics",
+    "overview": "Comprehensive master-level curriculum for Data Science (Master Level) Complete Course designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in Data Science (Master Level) Complete Course",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "MODULE 1: Introduction to Data Science",
+        "sortOrder": 1,
+        "topics": [
+          "Data Science Fundamentals",
+          "",
+          "What is Data Science?",
+          "",
+          "Data Science Lifecycle",
+          "",
+          "Role of Data Scientist",
+          "",
+          "Data Analyst vs Data Scientist vs ML Engineer",
+          "",
+          "Industry Applications of Data Science",
+          "",
+          "Real-Time Data Science Workflow",
+          "Data Science Process",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 2: Python Programming for Data",
+        "sortOrder": 2,
+        "topics": [
+          "Science (Master Level)",
+          "Python Fundamentals",
+          "",
+          "Python Installation & Environment Setup",
+          "",
+          "Variables & Data Types",
+          "",
+          "Operators",
+          "",
+          "Input & Output",
+          "",
+          "Conditional Statements",
+          "",
+          "Loops",
+          ""
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 3: Statistics & Mathematics for",
+        "sortOrder": 3,
+        "topics": [
+          "Data Science",
+          "Statistics Fundamentals",
+          "",
+          "Data Types",
+          "",
+          "Population & Sample",
+          "",
+          "Mean",
+          "",
+          "Median",
+          "",
+          "Mode",
+          "",
+          "Variance",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 4: Data Analytics & Data",
+        "sortOrder": 4,
+        "topics": [
+          "Visualization",
+          "Data Analysis Using Pandas",
+          "",
+          "Data Loading",
+          "",
+          "Data Cleaning",
+          "",
+          "Missing Value Handling",
+          "",
+          "Data Transformation",
+          "",
+          "Data Filtering",
+          "",
+          "Data Aggregation",
+          "Data Visualization"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 5: SQL for Data Science (Master",
+        "sortOrder": 5,
+        "topics": [
+          "Level)",
+          "Database Fundamentals",
+          "",
+          "Database Concepts",
+          "",
+          "Relational Database",
+          "",
+          "SQL Architecture",
+          "SQL Queries",
+          "",
+          "SELECT Statements",
+          "",
+          "WHERE Conditions",
+          "",
+          "ORDER BY"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "MODULE 6: Machine Learning (Master",
+        "sortOrder": 6,
+        "topics": [
+          "Level)",
+          "Introduction to Machine Learning",
+          "",
+          "AI vs ML vs Deep Learning",
+          "",
+          "Machine Learning Workflow",
+          "",
+          "Types of Machine Learning",
+          "Supervised Learning",
+          "Regression Algorithms",
+          "",
+          "Linear Regression",
+          "",
+          "Multiple Regression",
+          ""
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 7: Deep Learning & Neural",
+        "sortOrder": 7,
+        "topics": [
+          "Networks",
+          "Deep Learning Fundamentals",
+          "",
+          "Introduction to Neural Networks",
+          "",
+          "Biological Neural Network",
+          "",
+          "Artificial Neural Network",
+          "Neural Network Concepts",
+          "",
+          "Layers",
+          "",
+          "Activation Functions",
+          "",
+          "Loss Functions"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 8: Natural Language Processing",
+        "sortOrder": 8,
+        "topics": [
+          "(NLP)",
+          "NLP Fundamentals",
+          "",
+          "Text Processing",
+          "",
+          "Tokenization",
+          "",
+          "Stop Words Removal",
+          "",
+          "Stemming",
+          "",
+          "Lemmatization",
+          "NLP Techniques",
+          "",
+          "Bag of Words"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 9: Computer Vision",
+        "sortOrder": 9,
+        "topics": [
+          "Image Processing Basics",
+          "",
+          "Digital Images",
+          "",
+          "Image Features",
+          "",
+          "Image Transformation",
+          "Computer Vision Techniques",
+          "",
+          "Image Classification",
+          "",
+          "Object Detection",
+          "",
+          "Face Detection",
+          "Tools"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 10: Data Engineering Basics",
+        "sortOrder": 10,
+        "topics": [
+          "Data Handling",
+          "",
+          "Data Collection Methods",
+          "",
+          "Data Storage",
+          "",
+          "Data Pipeline Concepts",
+          "Big Data Introduction",
+          "",
+          "Hadoop Overview",
+          "",
+          "Spark Basics",
+          "Cloud Data Platforms",
+          "",
+          "AWS Data Services Overview"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 11: Generative AI & AI Tools",
+        "sortOrder": 11,
+        "topics": [
+          "Generative AI Fundamentals",
+          "",
+          "AI Evolution",
+          "",
+          "Machine Learning to Generative AI",
+          "",
+          "LLM Concepts",
+          "Tools Covered",
+          "",
+          "ChatGPT",
+          "",
+          "Google Gemini",
+          "",
+          "Microsoft Copilot",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 12: Data Science Deployment",
+        "sortOrder": 12,
+        "topics": [
+          "Model Deployment",
+          "",
+          "Machine Learning Pipeline",
+          "",
+          "Model Saving",
+          "",
+          "API Development",
+          "Deployment Tools",
+          "",
+          "Flask Basics",
+          "",
+          "FastAPI Basics",
+          "",
+          "Streamlit Applications",
+          "Cloud Deployment"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 13: Live Industry Projects",
+        "sortOrder": 13,
+        "topics": [
+          "Project 1:",
+          "Sales Data Analysis & Business Dashboard",
+          "Project 2:",
+          "Customer Segmentation Using Machine Learning",
+          "Project 3:",
+          "House Price Prediction Model",
+          "Project 4:",
+          "Customer Churn Prediction",
+          "Project 5:",
+          "Sentiment Analysis Using NLP",
+          "Project 6:",
+          "AI-Based Prediction Application"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 14: Career Preparation",
+        "sortOrder": 14,
+        "topics": [
+          "Resume Building",
+          "",
+          "Data Science Resume",
+          "",
+          "Project Documentation",
+          "",
+          "GitHub Portfolio",
+          "Interview Preparation",
+          "",
+          "Python Interview Questions",
+          "",
+          "SQL Interview Questions",
+          "",
+          "Machine Learning Questions",
+          ""
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "digital-marketing-master-class",
+    "title": "Digital Marketing (Master Level) Complete Course",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/digital-marketing-brochure.jpg",
+    "startPage": 78,
+    "endPage": 88,
+    "category": "Digital Marketing & Growth",
+    "overview": "Comprehensive master-level curriculum for Digital Marketing (Master Level) Complete Course designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in Digital Marketing (Master Level) Complete Course",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "MODULE 1: Digital Marketing",
+        "sortOrder": 1,
+        "topics": [
+          "Fundamentals",
+          "Introduction to Digital Marketing",
+          "",
+          "What is Digital Marketing?",
+          "",
+          "Traditional Marketing vs Digital Marketing",
+          "",
+          "Digital Marketing Channels",
+          "",
+          "Customer Journey & Marketing Funnel",
+          "",
+          "Digital Marketing Strategy Planning",
+          "",
+          "Understanding Target Audience",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 2: Website Development &",
+        "sortOrder": 2,
+        "topics": [
+          "Landing Page Creation",
+          "Website Basics",
+          "",
+          "Domain & Hosting",
+          "",
+          "Website Structure",
+          "",
+          "Website Planning",
+          "",
+          "User Experience Basics",
+          "WordPress Master Level",
+          "",
+          "WordPress Installation",
+          "",
+          "Dashboard Management"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 3: Search Engine Optimization",
+        "sortOrder": 3,
+        "topics": [
+          "(SEO) Master Level",
+          "SEO Fundamentals",
+          "",
+          "What is SEO?",
+          "",
+          "Search Engine Working Process",
+          "",
+          "Google Algorithm Basics",
+          "",
+          "SEO Ranking Factors",
+          "On-Page SEO",
+          "",
+          "Keyword Research",
+          "",
+          "Keyword Planning"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "MODULE 4: Social Media Marketing",
+        "sortOrder": 4,
+        "topics": [
+          "(SMM)",
+          "Social Media Strategy",
+          "",
+          "Social Media Platforms Overview",
+          "",
+          "Audience Research",
+          "",
+          "Content Planning",
+          "",
+          "Content Calendar Creation",
+          "",
+          "Brand Building Strategy",
+          "Platforms Covered",
+          "Facebook Marketing",
+          ""
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 5: Google Ads & Performance",
+        "sortOrder": 5,
+        "topics": [
+          "Marketing",
+          "Google Ads Fundamentals",
+          "",
+          "PPC Advertising",
+          "",
+          "Google Ads Account Setup",
+          "",
+          "Campaign Structure",
+          "",
+          "Budget Planning",
+          "Search Ads",
+          "",
+          "Keyword Selection",
+          "",
+          "Match Types"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 6: Meta Ads (Facebook &",
+        "sortOrder": 6,
+        "topics": [
+          "Instagram Ads)",
+          "Meta Business Suite",
+          "",
+          "Business Manager Setup",
+          "",
+          "Ad Account Creation",
+          "",
+          "Pixel Setup",
+          "",
+          "Events Tracking",
+          "Campaign Types",
+          "",
+          "Awareness Campaign",
+          "",
+          "Traffic Campaign"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "MODULE 7: Content Marketing",
+        "sortOrder": 7,
+        "topics": [
+          "Content Strategy",
+          "",
+          "Content Planning",
+          "",
+          "Content Research",
+          "",
+          "Storytelling Techniques",
+          "",
+          "Brand Voice Development",
+          "Content Creation",
+          "",
+          "Blog Writing",
+          "",
+          "Copywriting",
+          ""
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 8: Email Marketing &",
+        "sortOrder": 8,
+        "topics": [
+          "Automation",
+          "Email Marketing Basics",
+          "",
+          "Email Marketing Strategy",
+          "",
+          "Email Campaign Creation",
+          "",
+          "Newsletter Design",
+          "",
+          "Email Templates",
+          "Tools",
+          "",
+          "Mailchimp",
+          "",
+          "Brevo"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "MODULE 9: Google Analytics & Reporting",
+        "sortOrder": 9,
+        "topics": [
+          "Analytics Fundamentals",
+          "",
+          "Google Analytics 4 (GA4)",
+          "",
+          "Website Tracking",
+          "",
+          "User Behaviour Analysis",
+          "",
+          "Traffic Sources",
+          "Reporting",
+          "",
+          "Marketing Reports",
+          "",
+          "Campaign Analysis",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 10: E",
+        "sortOrder": 10,
+        "topics": [
+          "-",
+          "Commerce Marketing",
+          "E-Commerce Basics",
+          "",
+          "Online Store Setup",
+          "",
+          "Product Marketing",
+          "",
+          "Customer Acquisition",
+          "Marketing Strategies",
+          "",
+          "Product Ads",
+          "",
+          "Marketplace Marketing",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 11: AI Tools for Digital Marketing",
+        "sortOrder": 11,
+        "topics": [
+          "AI Marketing Skills",
+          "",
+          "AI Content Creation",
+          "",
+          "AI Image Generation",
+          "",
+          "AI Video Creation",
+          "",
+          "AI SEO Assistance",
+          "",
+          "AI Campaign Optimization",
+          "Tools Covered",
+          "",
+          "ChatGPT",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 12: Freelancing & Career",
+        "sortOrder": 12,
+        "topics": [
+          "Preparation",
+          "Freelancing Skills",
+          "",
+          "Client Handling",
+          "",
+          "Project Planning",
+          "",
+          "Marketing Proposal Creation",
+          "",
+          "Pricing Strategy",
+          "",
+          "Client Communication",
+          "Portfolio Development",
+          "",
+          "Digital Marketing Portfolio"
+        ],
+        "labs": [
+          "Practical Assignments"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "full-web-development",
+    "title": "Master Full Web Development Program (Beginner to Advanced Level)",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Advanced",
+    "flyer": "/courses/web-development-brochure.jpg",
+    "startPage": 89,
+    "endPage": 96,
+    "category": "Web Development",
+    "overview": "The Softlab Global Master Full Web Development Program is a 3-month intensive job- oriented course",
+    "objectives": [
+      "Master core and advanced concepts in Master Full Web Development Program (Beginner to Advanced Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Web Development Fundamentals",
+        "sortOrder": 1,
+        "topics": [
+          "",
+          "Introduction to Web Development",
+          "",
+          "Internet & Browser Working",
+          "",
+          "Domain & Hosting Basics",
+          "",
+          "VS Code Setup",
+          "",
+          "Git & GitHub Introduction",
+          "HTML5",
+          "",
+          "HTML Structure",
+          "",
+          "Headings"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 2: JavaScript",
+        "sortOrder": 2,
+        "topics": [
+          "",
+          "Variables",
+          "",
+          "Data Types",
+          "",
+          "Operators",
+          "",
+          "Functions",
+          "",
+          "Arrays",
+          "",
+          "Objects",
+          "",
+          "Loops",
+          ""
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "graphics-designing-master-level",
+    "title": "Graphics Designing (Master Level) Complete Course",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/graphics-designing-brochure.jpg",
+    "startPage": 97,
+    "endPage": 104,
+    "category": "Creative Design & Multimedia",
+    "overview": "Comprehensive master-level curriculum for Graphics Designing (Master Level) Complete Course designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in Graphics Designing (Master Level) Complete Course",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "MODULE 1: Graphic Design Fundamentals",
+        "sortOrder": 1,
+        "topics": [
+          "Introduction to Graphic Designing",
+          "",
+          "What is Graphic Design?",
+          "",
+          "Role of a Graphic Designer",
+          "",
+          "Design Principles",
+          "",
+          "Design Process",
+          "",
+          "Creative Thinking & Concept Development",
+          "Design Basics",
+          "",
+          "Elements of Design",
+          "o"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 2: Adobe Photoshop (Master",
+        "sortOrder": 2,
+        "topics": [
+          "Level)",
+          "Photoshop Fundamentals",
+          "",
+          "Photoshop Interface",
+          "",
+          "Tools & Panels",
+          "",
+          "Layers Management",
+          "",
+          "Smart Objects",
+          "",
+          "Artboards",
+          "",
+          "Workspace Customization",
+          "Image Editing"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 3: Adobe Illustrator (Master",
+        "sortOrder": 3,
+        "topics": [
+          "Level)",
+          "Vector Graphics",
+          "",
+          "Introduction to Vector Designing",
+          "",
+          "Difference Between Raster & Vector",
+          "",
+          "Illustrator Workspace",
+          "Tools & Techniques",
+          "",
+          "Pen Tool Mastery",
+          "",
+          "Shape Builder Tool",
+          "",
+          "Pathfinder"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "MODULE 4: Adobe InDesign",
+        "sortOrder": 4,
+        "topics": [
+          "Layout Designing",
+          "",
+          "InDesign Interface",
+          "",
+          "Page Setup",
+          "",
+          "Master Pages",
+          "",
+          "Grids & Guides",
+          "",
+          "Paragraph Styles",
+          "",
+          "Character Styles",
+          "Professional Designing",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 5: UI/UX Design Basics",
+        "sortOrder": 5,
+        "topics": [
+          "UI Design Fundamentals",
+          "",
+          "Introduction to UI Design",
+          "",
+          "User Interface Principles",
+          "",
+          "Wireframing",
+          "",
+          "Layout Design",
+          "",
+          "User Experience Basics",
+          "Figma",
+          "",
+          "Figma Interface",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 6: Motion Graphics & Video",
+        "sortOrder": 6,
+        "topics": [
+          "Design Basics",
+          "Adobe After Effects",
+          "",
+          "Motion Graphics Introduction",
+          "",
+          "Animation Principles",
+          "",
+          "Text Animation",
+          "",
+          "Logo Animation",
+          "",
+          "Transition Effects",
+          "",
+          "Visual Effects Basics",
+          "Adobe Premiere Pro"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 7: AI Tools for Graphic Designers",
+        "sortOrder": 7,
+        "topics": [
+          "AI Design Tools",
+          "",
+          "AI Image Generation Basics",
+          "",
+          "Prompt Writing for Designers",
+          "",
+          "AI Background Creation",
+          "",
+          "AI Image Enhancement",
+          "",
+          "AI Design Assistance",
+          "Tools Covered",
+          "",
+          "Adobe Firefly",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 8: Branding & Marketing Design",
+        "sortOrder": 8,
+        "topics": [
+          "Brand Identity",
+          "",
+          "Brand Research",
+          "",
+          "Brand Guidelines",
+          "",
+          "Logo System",
+          "",
+          "Color Palette Creation",
+          "",
+          "Brand Presentation",
+          "Marketing Designs",
+          "",
+          "Social Media Posts",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 9: Freelancing & Career",
+        "sortOrder": 9,
+        "topics": [
+          "Preparation",
+          "Portfolio Development",
+          "",
+          "Professional Portfolio Creation",
+          "",
+          "Behance Profile",
+          "",
+          "LinkedIn Profile",
+          "",
+          "Client Presentation",
+          "Freelancing Skills",
+          "",
+          "Client Communication",
+          "",
+          "Project Pricing"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "java-full-stack-developer",
+    "title": "Master Java Full Stack Developer Program (Beginner to Advanced Expert Level)",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Industry Expert",
+    "flyer": "/courses/java-full-stack-brochure.jpg",
+    "startPage": 105,
+    "endPage": 118,
+    "category": "Full Stack Development",
+    "overview": "The Softlab Global Master Java Full Stack Developer Program is designed to make students industry-ready by covering frontend, backend, database, cloud deployment, DevOps basics, APIs, security, microservices, AI tools, and real-world enterprise projects.",
+    "objectives": [
+      "Master core and advanced concepts in Master Java Full Stack Developer Program (Beginner to Advanced Expert Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Programming Fundamentals (2",
+        "sortOrder": 1,
+        "topics": [
+          "Weeks)",
+          "Introduction to Programming",
+          "",
+          "What is Programming?",
+          "",
+          "Software Development Life Cycle (SDLC)",
+          "",
+          "Agile Methodology",
+          "",
+          "IDE Installation",
+          "",
+          "JDK Installation",
+          "",
+          "IntelliJ IDEA",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 2: Core Java (3 Weeks)",
+        "sortOrder": 2,
+        "topics": [
+          "Object Oriented Programming",
+          "",
+          "Classes",
+          "",
+          "Objects",
+          "",
+          "Constructors",
+          "",
+          "Inheritance",
+          "",
+          "Encapsulation",
+          "",
+          "Abstraction",
+          "",
+          "Polymorphism"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 3: Database (SQL + MySQL) (2",
+        "sortOrder": 3,
+        "topics": [
+          "Weeks)",
+          "SQL",
+          "",
+          "Database Concepts",
+          "",
+          "ER Diagram",
+          "",
+          "Normalization",
+          "",
+          "Constraints",
+          "",
+          "Keys",
+          "MySQL",
+          "",
+          "CRUD"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 4: Frontend Development (4 Weeks)",
+        "sortOrder": 4,
+        "topics": [
+          "HTML5",
+          "",
+          "Forms",
+          "",
+          "Tables",
+          "",
+          "Semantic Tags",
+          "",
+          "Media",
+          "",
+          "SEO Basics",
+          "CSS3",
+          "",
+          "Flexbox",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 5: Backend Development using",
+        "sortOrder": 5,
+        "topics": [
+          "Spring Boot (5 Weeks)",
+          "Spring Core",
+          "",
+          "IOC",
+          "",
+          "Dependency Injection",
+          "",
+          "Beans",
+          "Spring Boot",
+          "",
+          "REST APIs",
+          "",
+          "CRUD APIs",
+          "",
+          "Validation"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 6: Advanced Backend (2 Weeks)",
+        "sortOrder": 6,
+        "topics": [
+          "Microservices",
+          "",
+          "Architecture",
+          "",
+          "API Gateway",
+          "",
+          "Eureka Server",
+          "",
+          "Feign Client",
+          "Redis",
+          "",
+          "Caching",
+          "RabbitMQ",
+          "",
+          "Messaging"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 7: Git, GitHub & DevOps Basics (1",
+        "sortOrder": 7,
+        "topics": [
+          "Week)",
+          "Git",
+          "",
+          "Repository",
+          "",
+          "Branching",
+          "",
+          "Merge",
+          "",
+          "Pull Request",
+          "GitHub",
+          "",
+          "Collaboration",
+          "",
+          "Portfolio"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 8: Cloud Deployment (1 Week)",
+        "sortOrder": 8,
+        "topics": [
+          "AWS",
+          "",
+          "EC2",
+          "",
+          "S3",
+          "",
+          "RDS",
+          "",
+          "IAM",
+          "Deployment",
+          "",
+          "Spring Boot Deployment",
+          "",
+          "React Deployment",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: AI Tools for Developers (1 Week)",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "ChatGPT for Coding",
+          "",
+          "GitHub Copilot",
+          "",
+          "AI Debugging",
+          "",
+          "AI Code Review",
+          "",
+          "Prompt Engineering",
+          "",
+          "Productivity Automation",
+          "",
+          "AI-assisted Documentation"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 10: Data Structures & Algorithms (2",
+        "sortOrder": 10,
+        "topics": [
+          "Weeks)",
+          "DSA",
+          "",
+          "Arrays",
+          "",
+          "Linked List",
+          "",
+          "Stack",
+          "",
+          "Queue",
+          "",
+          "Trees",
+          "",
+          "Graphs",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 11: Testing (1 Week)",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "JUnit",
+          "",
+          "Mockito",
+          "",
+          "Unit Testing",
+          "",
+          "Integration Testing",
+          "",
+          "API Testing using Postman"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 12: System Design & Interview",
+        "sortOrder": 12,
+        "topics": [
+          "Preparation (1 Week)",
+          "Resume Building",
+          "LinkedIn Optimization",
+          "HR Interview",
+          "Java Interview",
+          "Spring Boot Interview",
+          "SQL Interview",
+          "Coding Interview",
+          "Mock Interviews",
+          "Aptitude",
+          "Communication Skills",
+          "Live Projects (12+)",
+          "Beginner",
+          "",
+          "Student Management System"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "master-in-cloud-administration",
+    "title": "Master Cloud Administration Program (Expert Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/softlab-global-poster.jpg",
+    "startPage": 119,
+    "endPage": 132,
+    "category": "Cloud & Infrastructure",
+    "overview": "The Softlab Global Master Cloud Administration Program is a 3-month advanced-level cloud administration course",
+    "objectives": [
+      "Master core and advanced concepts in Master Cloud Administration Program (Expert Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Cloud Computing Fundamentals",
+        "sortOrder": 1,
+        "topics": [
+          "(Week 1)",
+          "Introduction to Cloud Computing",
+          "",
+          "What is Cloud Computing?",
+          "",
+          "Evolution of Cloud Technology",
+          "",
+          "Benefits of Cloud Computing",
+          "",
+          "Cloud Architecture",
+          "",
+          "Cloud Service Models",
+          "Cloud Models",
+          "",
+          "IaaS (Infrastructure as a Service)"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 2: Linux & Server Administration",
+        "sortOrder": 2,
+        "topics": [
+          "for Cloud (Week 2)",
+          "Linux Administration",
+          "",
+          "Linux Installation",
+          "",
+          "Linux File System",
+          "",
+          "Basic Commands",
+          "",
+          "Directory Management",
+          "",
+          "Package Management",
+          "User Administration",
+          "",
+          "Users & Groups"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 3: AWS Cloud Administration (Week",
+        "sortOrder": 3,
+        "topics": [
+          "3",
+          "–",
+          "6)",
+          "AWS Fundamentals",
+          "",
+          "AWS Global Infrastructure",
+          "",
+          "Regions",
+          "",
+          "Availability Zones",
+          "",
+          "AWS Management Console",
+          "Compute Services",
+          "Amazon EC2",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 4: Microsoft Azure Administration",
+        "sortOrder": 4,
+        "topics": [
+          "(Week 7",
+          "–",
+          "8)",
+          "Azure Fundamentals",
+          "",
+          "Azure Architecture",
+          "",
+          "Azure Portal",
+          "",
+          "Resource Groups",
+          "",
+          "Subscriptions",
+          "Compute Services",
+          "",
+          "Azure Virtual Machines"
+        ],
+        "labs": [
+          "Practical Projects"
+        ]
+      },
+      {
+        "title": "Module 5: Cloud Security Administration",
+        "sortOrder": 5,
+        "topics": [
+          "(Week 9)",
+          "Cloud Security Fundamentals",
+          "",
+          "Shared Responsibility Model",
+          "",
+          "Identity Security",
+          "",
+          "Data Protection",
+          "Access Management",
+          "",
+          "Authentication",
+          "",
+          "Authorization",
+          "",
+          "MFA"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 6: Cloud Monitoring &",
+        "sortOrder": 6,
+        "topics": [
+          "Troubleshooting (Week 10)",
+          "Monitoring",
+          "",
+          "CloudWatch",
+          "",
+          "Azure Monitor",
+          "Performance Monitoring",
+          "",
+          "CPU Monitoring",
+          "",
+          "Memory Monitoring",
+          "",
+          "Network Monitoring",
+          "",
+          "Storage Monitoring"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 7: DevOps & Cloud Automation",
+        "sortOrder": 7,
+        "topics": [
+          "Basics (Week 11)",
+          "Version Control",
+          "",
+          "Git Basics",
+          "",
+          "GitHub",
+          "Containers",
+          "",
+          "Docker Introduction",
+          "",
+          "Docker Images",
+          "",
+          "Docker Containers",
+          "CI/CD Basics",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 8: Cloud Deployment & Master",
+        "sortOrder": 8,
+        "topics": [
+          "Project (Week 12)",
+          "Application Deployment",
+          "",
+          "Web Application Deployment",
+          "",
+          "Database Integration",
+          "",
+          "Domain Configuration",
+          "",
+          "SSL Certificate Setup",
+          "Cloud Migration Basics",
+          "",
+          "Migration Strategies",
+          "",
+          "Backup Planning"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "master-in-artificial-intelligence-and-machine-learning",
+    "title": "Master Artificial Intelligence & Machine Learning Program (Master Level)",
+    "durationWeeks": 52,
+    "baseFee": 12500000,
+    "level": "Beginner to Expert Master Level",
+    "flyer": "/courses/ai-ml-brochure.jpg",
+    "startPage": 133,
+    "endPage": 146,
+    "category": "Artificial Intelligence & Machine Learning",
+    "overview": "The Softlab Global Master Artificial Intelligence & Machine Learning Program is a comprehensive 12-month advanced-level program",
+    "objectives": [
+      "Master core and advanced concepts in Master Artificial Intelligence & Machine Learning Program (Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Phase 1: Python Programming for AI (Month",
+        "sortOrder": 1,
+        "topics": [
+          "1)",
+          "Python Fundamentals",
+          "",
+          "Introduction to Python",
+          "",
+          "Python Installation & Environment Setup",
+          "",
+          "Variables & Data Types",
+          "",
+          "Operators",
+          "",
+          "Conditional Statements",
+          "",
+          "Loops",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 2: Mathematics & Statistics for AI",
+        "sortOrder": 2,
+        "topics": [
+          "(Month 2)",
+          "Linear Algebra",
+          "",
+          "Vectors",
+          "",
+          "Matrices",
+          "",
+          "Matrix Operations",
+          "",
+          "Eigenvalues & Eigenvectors",
+          "",
+          "Linear Transformations",
+          "Calculus",
+          "",
+          "Functions"
+        ],
+        "labs": [
+          "Practical Implementation Using Python"
+        ]
+      },
+      {
+        "title": "Phase 3: Data Science & Data Analytics",
+        "sortOrder": 3,
+        "topics": [
+          "(Month 3)",
+          "Data Handling",
+          "",
+          "Data Collection",
+          "",
+          "Data Cleaning",
+          "",
+          "Data Preprocessing",
+          "",
+          "Missing Values Handling",
+          "",
+          "Data Transformation",
+          "Exploratory Data Analysis (EDA)",
+          "",
+          "Data Visualization"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 4: Machine Learning Master Level",
+        "sortOrder": 4,
+        "topics": [
+          "(Month 4",
+          "–",
+          "5)",
+          "Introduction to Machine Learning",
+          "",
+          "AI vs ML vs Deep Learning",
+          "",
+          "ML Workflow",
+          "",
+          "Supervised Learning",
+          "",
+          "Unsupervised Learning",
+          "",
+          "Reinforcement Learning",
+          "Supervised Learning"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 5: Deep Learning & Neural Networks",
+        "sortOrder": 5,
+        "topics": [
+          "(Month 6",
+          "–",
+          "7)",
+          "Neural Network Fundamentals",
+          "",
+          "Artificial Neural Networks",
+          "",
+          "Perceptron",
+          "",
+          "Activation Functions",
+          "",
+          "Forward Propagation",
+          "",
+          "Back Propagation",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 6: Natural Language Processing (NLP)",
+        "sortOrder": 6,
+        "topics": [
+          "(Month 8)",
+          "NLP Fundamentals",
+          "",
+          "Text Processing",
+          "",
+          "Tokenization",
+          "",
+          "Stemming",
+          "",
+          "Lemmatization",
+          "",
+          "Stop Words",
+          "",
+          "Text Cleaning",
+          "NLP Algorithms"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 7: Generative AI & Large Language",
+        "sortOrder": 7,
+        "topics": [
+          "Models (Month 9)",
+          "Generative AI Fundamentals",
+          "",
+          "Introduction to Generative AI",
+          "",
+          "AI Content Generation",
+          "",
+          "Prompt Engineering",
+          "Large Language Models (LLMs)",
+          "",
+          "GPT Architecture",
+          "",
+          "Transformer Architecture",
+          "",
+          "Attention Mechanism"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 8: Computer Vision & Advanced AI",
+        "sortOrder": 8,
+        "topics": [
+          "(Month 10)",
+          "Advanced Computer Vision",
+          "",
+          "CNN Architecture",
+          "",
+          "Transfer Learning",
+          "",
+          "YOLO Object Detection",
+          "",
+          "Image Segmentation",
+          "AI Applications",
+          "",
+          "OCR Systems",
+          "",
+          "Recommendation Systems"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 9: MLOps & AI Deployment (Month",
+        "sortOrder": 9,
+        "topics": [
+          "11)",
+          "Model Deployment",
+          "",
+          "Machine Learning API Development",
+          "",
+          "Flask",
+          "",
+          "FastAPI",
+          "Cloud AI Deployment",
+          "",
+          "AWS Machine Learning Basics",
+          "",
+          "Google Cloud AI Basics",
+          "",
+          "Azure AI Basics"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Phase 10: Master AI Capstone & Career",
+        "sortOrder": 10,
+        "topics": [
+          "Preparation (Month 12)",
+          "Industry Capstone Projects",
+          "Students will develop complete AI solutions:",
+          "Project 1:",
+          "AI-Powered Chatbot System",
+          "Technologies:",
+          "",
+          "Python",
+          "",
+          "NLP",
+          "",
+          "LLM",
+          "",
+          "API Integration",
+          "Project 2:"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "master-in-linux-administration",
+    "title": "Master Linux Administration Program (Expert Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Expert Master Level",
+    "flyer": "/courses/technical-support-brochure.jpg",
+    "startPage": 147,
+    "endPage": 162,
+    "category": "Linux & Operating Systems",
+    "overview": "The Softlab Global Master Linux Administration Program is an advanced 3-month expert- level course",
+    "objectives": [
+      "Master core and advanced concepts in Master Linux Administration Program (Expert Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Linux Fundamentals &",
+        "sortOrder": 1,
+        "topics": [
+          "Installation (Week 1)",
+          "Introduction to Linux",
+          "",
+          "What is Linux?",
+          "",
+          "Linux History & Architecture",
+          "",
+          "Linux Distributions",
+          "Popular Linux Distributions",
+          "",
+          "Ubuntu",
+          "",
+          "CentOS / Rocky Linux",
+          "",
+          "Red Hat Enterprise Linux (RHEL)"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 2: Linux Command Line Mastery",
+        "sortOrder": 2,
+        "topics": [
+          "(Week 2)",
+          "File & Directory Management",
+          "",
+          "pwd",
+          "",
+          "ls",
+          "",
+          "cd",
+          "",
+          "mkdir",
+          "",
+          "touch",
+          "",
+          "cp",
+          ""
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 3: User & Permission Management",
+        "sortOrder": 3,
+        "topics": [
+          "(Week 3)",
+          "User Administration",
+          "",
+          "Creating Users",
+          "",
+          "Deleting Users",
+          "",
+          "User Modification",
+          "",
+          "Password Management",
+          "Commands:",
+          "",
+          "useradd",
+          "",
+          "usermod"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 4: Linux Storage Administration",
+        "sortOrder": 4,
+        "topics": [
+          "(Week 4)",
+          "Storage Management",
+          "",
+          "Disk Management",
+          "",
+          "Partitions",
+          "",
+          "Mounting",
+          "Commands:",
+          "",
+          "fdisk",
+          "",
+          "lsblk",
+          "",
+          "df"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 5: Linux Networking Administration",
+        "sortOrder": 5,
+        "topics": [
+          "(Week 5)",
+          "Networking Fundamentals",
+          "",
+          "TCP/IP",
+          "",
+          "IPv4",
+          "",
+          "IPv6",
+          "",
+          "Subnetting",
+          "",
+          "Gateway",
+          "",
+          "DNS",
+          "Network Configuration"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 6: Linux Server Administration",
+        "sortOrder": 6,
+        "topics": [
+          "(Week 6",
+          "–",
+          "7)",
+          "Web Server Administration",
+          "Apache",
+          "",
+          "Installation",
+          "",
+          "Configuration",
+          "",
+          "Virtual Hosts",
+          "Nginx",
+          "",
+          "Installation",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 7: Linux Security Administration",
+        "sortOrder": 7,
+        "topics": [
+          "(Week 8)",
+          "Linux Security Fundamentals",
+          "",
+          "Security Policies",
+          "",
+          "System Hardening",
+          "",
+          "Secure Configuration",
+          "Firewall Management",
+          "",
+          "FirewallD",
+          "",
+          "iptables",
+          "SELinux",
+          ""
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 8: Shell Scripting & Automation",
+        "sortOrder": 8,
+        "topics": [
+          "(Week 9)",
+          "Bash Scripting",
+          "",
+          "Script Creation",
+          "",
+          "Variables",
+          "",
+          "Operators",
+          "",
+          "Conditions",
+          "",
+          "Loops",
+          "",
+          "Functions",
+          "Automation Tasks"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: Virtualization & Cloud Linux",
+        "sortOrder": 9,
+        "topics": [
+          "Administration (Week 10)",
+          "Virtualization",
+          "",
+          "Virtual Machines",
+          "",
+          "Hypervisors",
+          "",
+          "VMware Basics",
+          "",
+          "VirtualBox",
+          "Cloud Linux Administration",
+          "AWS Linux Server",
+          "",
+          "EC2 Linux Instance",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 10: DevOps Tools & Linux",
+        "sortOrder": 10,
+        "topics": [
+          "Automation (Week 11)",
+          "Version Control",
+          "",
+          "Git Basics",
+          "",
+          "GitHub",
+          "Containers",
+          "",
+          "Docker Introduction",
+          "",
+          "Docker Installation",
+          "",
+          "Docker Images",
+          "",
+          "Docker Containers"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 11: Monitoring & Troubleshooting",
+        "sortOrder": 11,
+        "topics": [
+          "(Week 12)",
+          "System Monitoring",
+          "Commands:",
+          "",
+          "top",
+          "",
+          "htop",
+          "",
+          "ps",
+          "",
+          "uptime",
+          "",
+          "free",
+          "",
+          "vmstat"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "master-in-server-administration",
+    "title": "Master Server Administration Program (Expert Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 4500000,
+    "level": "Beginner to Expert Master Level",
+    "flyer": "/courses/technical-support-brochure.jpg",
+    "startPage": 163,
+    "endPage": 176,
+    "category": "Server Administration",
+    "overview": "The Softlab Global Master Server Administration Program is a complete 3-month expert- level infrastructure course",
+    "objectives": [
+      "Master core and advanced concepts in Master Server Administration Program (Expert Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Server Administration",
+        "sortOrder": 1,
+        "topics": [
+          "Fundamentals (Week 1)",
+          "Introduction to Servers",
+          "",
+          "What is a Server?",
+          "",
+          "Types of Servers",
+          "o",
+          "File Server",
+          "o",
+          "Application Server",
+          "o",
+          "Database Server",
+          "o",
+          "Web Server",
+          "o"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 2: Windows Server Administration",
+        "sortOrder": 2,
+        "topics": [
+          "(Week 2",
+          "–",
+          "4)",
+          "Windows Server Installation",
+          "",
+          "Windows Server Versions",
+          "",
+          "Installation Process",
+          "",
+          "Server Roles & Features",
+          "",
+          "Server Manager",
+          "Active Directory Domain Services (AD DS)",
+          "",
+          "Active Directory Concepts"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 3: Windows Server Network Services",
+        "sortOrder": 3,
+        "topics": [
+          "(Week 5)",
+          "DNS Server Administration",
+          "",
+          "DNS Concepts",
+          "",
+          "DNS Records",
+          "o",
+          "A Record",
+          "o",
+          "CNAME",
+          "o",
+          "MX",
+          "o",
+          "PTR",
+          ""
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 4: Linux Server Administration",
+        "sortOrder": 4,
+        "topics": [
+          "(Week 6)",
+          "Linux Server Installation",
+          "",
+          "Ubuntu Server",
+          "",
+          "Rocky Linux",
+          "",
+          "Red Hat Basics",
+          "Linux Administration",
+          "",
+          "File System",
+          "",
+          "Commands",
+          "",
+          "Users & Groups"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 5: Virtualization & Server",
+        "sortOrder": 5,
+        "topics": [
+          "Deployment (Week 7)",
+          "Virtualization Concepts",
+          "",
+          "Physical vs Virtual Servers",
+          "",
+          "Hypervisor Technology",
+          "",
+          "Virtual Machines",
+          "VMware Administration",
+          "",
+          "VMware Workstation",
+          "",
+          "ESXi Introduction",
+          "",
+          "Virtual Machine Creation"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 6: Server Storage & Backup",
+        "sortOrder": 6,
+        "topics": [
+          "Administration (Week 8)",
+          "Storage Management",
+          "",
+          "Disk Management",
+          "",
+          "Partitioning",
+          "",
+          "File Systems",
+          "RAID Configuration",
+          "",
+          "RAID 0",
+          "",
+          "RAID 1",
+          "",
+          "RAID 5"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 7: Server Security Administration",
+        "sortOrder": 7,
+        "topics": [
+          "(Week 9)",
+          "Server Security Fundamentals",
+          "",
+          "Security Policies",
+          "",
+          "Authentication",
+          "",
+          "Authorization",
+          "Windows Security",
+          "",
+          "Windows Firewall",
+          "",
+          "Security Policies",
+          "",
+          "User Access Control"
+        ],
+        "labs": [
+          "Practical Lab"
+        ]
+      },
+      {
+        "title": "Module 8: Server Monitoring &",
+        "sortOrder": 8,
+        "topics": [
+          "Troubleshooting (Week 10)",
+          "Monitoring Concepts",
+          "",
+          "Server Performance Monitoring",
+          "",
+          "Resource Management",
+          "Monitoring Parameters",
+          "",
+          "CPU Usage",
+          "",
+          "RAM Usage",
+          "",
+          "Disk Usage",
+          "",
+          "Network Traffic"
+        ],
+        "labs": [
+          "Practical Labs"
+        ]
+      },
+      {
+        "title": "Module 9: Cloud Server Administration",
+        "sortOrder": 9,
+        "topics": [
+          "(Week 11)",
+          "Cloud Server Concepts",
+          "",
+          "Cloud Infrastructure",
+          "",
+          "Virtual Servers",
+          "",
+          "Cloud Storage",
+          "AWS Server Administration",
+          "",
+          "EC2 Instance",
+          "",
+          "Security Groups",
+          "",
+          "EBS Storage"
+        ],
+        "labs": [
+          "Practical Project"
+        ]
+      },
+      {
+        "title": "Module 10: Automation & DevOps Basics",
+        "sortOrder": 10,
+        "topics": [
+          "(Week 12)",
+          "Server Automation",
+          "",
+          "PowerShell Basics",
+          "",
+          "Bash Scripting Basics",
+          "Task Automation",
+          "",
+          "User Creation Automation",
+          "",
+          "Backup Automation",
+          "",
+          "Monitoring Scripts",
+          "DevOps Introduction",
+          ""
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "certificate-in-c-language",
+    "title": "Master-Level Certificate in C Language",
+    "durationWeeks": 12,
+    "baseFee": 2500000,
+    "level": "Beginner to Advanced",
+    "flyer": "/courses/c-programming-brochure.jpg",
+    "startPage": 177,
+    "endPage": 180,
+    "category": "Programming Foundations",
+    "overview": "Comprehensive master-level curriculum for Master-Level Certificate in C Language designed for real-world enterprise engineering.",
+    "objectives": [
+      "This 3-month master-level program is designed to develop strong programming fundamentals",
+      "and advanced C programming skills. Students will progress from core syntax to pointers,",
+      "memory management, data structures, file handling, debugging, and real-world project",
+      "development.",
+      "3-Month Course Curriculum",
+      "Month 1"
+    ],
+    "modules": [
+      {
+        "title": "Month 1 — Core Fundamentals",
+        "sortOrder": 1,
+        "topics": [
+          "Syntax, Data Types, Control Structures, Functions"
+        ],
+        "labs": [
+          "40+ Programming Exercises"
+        ]
+      },
+      {
+        "title": "Month 2 — Advanced Implementation",
+        "sortOrder": 2,
+        "topics": [
+          "Pointers, Memory Allocation, Structures, File I/O"
+        ],
+        "labs": [
+          "Advanced Coding Challenges"
+        ]
+      },
+      {
+        "title": "Month 3 — Projects & System Integration",
+        "sortOrder": 3,
+        "topics": [
+          "Data Structures, Linked Lists, Stacks, Optimization"
+        ],
+        "labs": [
+          "Mini & Major Capstone Projects"
+        ]
+      }
+    ]
+  },
+  {
+    "slug": "mern-full-stack-developer",
+    "title": "Master MERN Full Stack Developer Program (Beginner to Advanced Expert Level)",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Industry Expert",
+    "flyer": "/courses/mern-full-stack-brochure.jpg",
+    "startPage": 181,
+    "endPage": 195,
+    "category": "Full Stack Development",
+    "overview": "The Softlab Global Master MERN Full Stack Developer Program is designed to prepare students for careers as professional Full Stack Developers using the MERN Stack (MongoDB,",
+    "objectives": [
+      "Master core and advanced concepts in Master MERN Full Stack Developer Program (Beginner to Advanced Expert Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Programming Fundamentals (2",
+        "sortOrder": 1,
+        "topics": [
+          "Weeks)",
+          "Introduction to Programming",
+          "",
+          "Software Development Life Cycle (SDLC)",
+          "",
+          "Agile & Scrum Methodology",
+          "",
+          "Web Development Overview",
+          "",
+          "VS Code Installation",
+          "",
+          "Node.js & NPM Installation",
+          "",
+          "Project Structure",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 2: Advanced JavaScript (3 Weeks)",
+        "sortOrder": 2,
+        "topics": [
+          "ES6+ Features",
+          "",
+          "let & const",
+          "",
+          "Destructuring",
+          "",
+          "Spread & Rest Operators",
+          "",
+          "Modules",
+          "",
+          "Promises",
+          "",
+          "Async/Await",
+          "Object-Oriented JavaScript",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 3: Database (MongoDB & SQL",
+        "sortOrder": 3,
+        "topics": [
+          "Basics) (2 Weeks)",
+          "Database Fundamentals",
+          "",
+          "Database Design",
+          "",
+          "ER Diagram",
+          "",
+          "Normalization",
+          "",
+          "NoSQL vs SQL",
+          "MongoDB",
+          "",
+          "Installation",
+          "",
+          "Collections"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 4: Frontend Development (React.js)",
+        "sortOrder": 4,
+        "topics": [
+          "(4 Weeks)",
+          "HTML5",
+          "",
+          "Semantic Elements",
+          "",
+          "Forms",
+          "",
+          "Tables",
+          "",
+          "SEO Basics",
+          "CSS3",
+          "",
+          "Flexbox",
+          "",
+          "CSS Grid"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 5: Backend Development with",
+        "sortOrder": 5,
+        "topics": [
+          "Node.js & Express.js (5 Weeks)",
+          "Node.js",
+          "",
+          "Architecture",
+          "",
+          "Event Loop",
+          "",
+          "Modules",
+          "",
+          "File System",
+          "",
+          "Streams",
+          "",
+          "Buffers",
+          "Express.js"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 6: Advanced Backend (2 Weeks)",
+        "sortOrder": 6,
+        "topics": [
+          "Socket.IO",
+          "",
+          "Real-Time Chat Applications",
+          "Redis",
+          "",
+          "Caching",
+          "",
+          "Session Management",
+          "RabbitMQ",
+          "",
+          "Message Queues",
+          "GraphQL",
+          "",
+          "GraphQL Basics",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 7: Git, GitHub & DevOps Basics (1",
+        "sortOrder": 7,
+        "topics": [
+          "Week)",
+          "Git",
+          "",
+          "Repository",
+          "",
+          "Commit",
+          "",
+          "Branching",
+          "",
+          "Merge",
+          "",
+          "Pull Requests",
+          "GitHub",
+          "",
+          "Version Control"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 8: Cloud Deployment (1 Week)",
+        "sortOrder": 8,
+        "topics": [
+          "Linux",
+          "",
+          "File System",
+          "",
+          "Users & Permissions",
+          "",
+          "SSH",
+          "",
+          "Basic Commands",
+          "AWS",
+          "",
+          "EC2",
+          "",
+          "S3",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: AI Tools for Developers (1 Week)",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "ChatGPT for Coding",
+          "",
+          "GitHub Copilot",
+          "",
+          "Cursor AI",
+          "",
+          "AI Debugging",
+          "",
+          "Prompt Engineering",
+          "",
+          "AI Code Review",
+          "",
+          "Documentation Generation"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 10: Data Structures & Algorithms (2",
+        "sortOrder": 10,
+        "topics": [
+          "Weeks)",
+          "DSA",
+          "",
+          "Arrays",
+          "",
+          "Strings",
+          "",
+          "Linked Lists",
+          "",
+          "Stacks",
+          "",
+          "Queues",
+          "",
+          "Trees",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 11: Testing (1 Week)",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "Jest",
+          "",
+          "React Testing Library",
+          "",
+          "Mocha",
+          "",
+          "Chai",
+          "",
+          "Supertest",
+          "",
+          "API Testing with Postman"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 12: System Design & Interview",
+        "sortOrder": 12,
+        "topics": [
+          "Preparation (1 Week)",
+          "Resume Building",
+          "GitHub Portfolio",
+          "LinkedIn Optimization",
+          "JavaScript Interview Questions",
+          "React Interview Questions",
+          "Node.js Interview Questions",
+          "MongoDB Interview Questions",
+          "REST API Interview Questions",
+          "HR Interview Preparation",
+          "Mock Interviews",
+          "Aptitude Training",
+          "Communication Skills",
+          "Live Projects (12+)",
+          "Beginner Projects"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "mysql-advanced-course",
+    "title": "MySQL Advanced Course (Beginner To Expert)",
+    "durationWeeks": 24,
+    "baseFee": 6500000,
+    "level": "Beginner to Expert",
+    "flyer": "/courses/mysql-brochure.jpg",
+    "startPage": 196,
+    "endPage": 206,
+    "category": "Databases & SQL",
+    "overview": "Comprehensive master-level curriculum for MySQL Advanced Course (Beginner To Expert) designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in MySQL Advanced Course (Beginner To Expert)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Database Fundamentals (Week 1)",
+        "sortOrder": 1,
+        "topics": [
+          "Introduction to Databases",
+          "",
+          "What is Database?",
+          "",
+          "DBMS vs RDBMS",
+          "",
+          "Database Architecture",
+          "",
+          "Types of Databases",
+          "",
+          "SQL Overview",
+          "",
+          "MySQL Features",
+          "",
+          "Installing MySQL"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 2: SQL Basics (Week 2)",
+        "sortOrder": 2,
+        "topics": [
+          "DDL Commands",
+          "",
+          "CREATE",
+          "",
+          "ALTER",
+          "",
+          "DROP",
+          "",
+          "TRUNCATE",
+          "",
+          "RENAME",
+          "DML Commands",
+          "",
+          "INSERT",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 3: Operators & Functions (Week 3)",
+        "sortOrder": 3,
+        "topics": [
+          "Operators",
+          "",
+          "Arithmetic",
+          "",
+          "Comparison",
+          "",
+          "Logical",
+          "",
+          "BETWEEN",
+          "",
+          "IN",
+          "",
+          "LIKE",
+          "",
+          "IS NULL"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 4: Advanced Querying (Week 4)",
+        "sortOrder": 4,
+        "topics": [
+          "",
+          "GROUP BY",
+          "",
+          "HAVING",
+          "",
+          "ORDER BY",
+          "",
+          "LIMIT",
+          "",
+          "OFFSET",
+          "",
+          "CASE Statement",
+          "",
+          "UNION",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 5: Joins (Week 5)",
+        "sortOrder": 5,
+        "topics": [
+          "",
+          "INNER JOIN",
+          "",
+          "LEFT JOIN",
+          "",
+          "RIGHT JOIN",
+          "",
+          "FULL JOIN (Concept)",
+          "",
+          "SELF JOIN",
+          "",
+          "CROSS JOIN",
+          "",
+          "College Database"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 6: Subqueries (Week 6)",
+        "sortOrder": 6,
+        "topics": [
+          "",
+          "Nested Queries",
+          "",
+          "Correlated Queries",
+          "",
+          "Scalar Subqueries",
+          "",
+          "Multi-row Queries",
+          "",
+          "EXISTS",
+          "",
+          "NOT EXISTS",
+          "",
+          "HR Database"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 7: Views & Indexes (Week 7)",
+        "sortOrder": 7,
+        "topics": [
+          "",
+          "Views",
+          "",
+          "Updatable Views",
+          "",
+          "Materialized View Concept",
+          "",
+          "Indexes",
+          "",
+          "Clustered vs Non-Clustered",
+          "",
+          "Composite Index",
+          "",
+          "Unique Index",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 8: Stored Programs (Week 8",
+        "sortOrder": 8,
+        "topics": [
+          "-",
+          "9)",
+          "Stored Procedures",
+          "Functions",
+          "Triggers",
+          "Events",
+          "Variables",
+          "Loops",
+          "",
+          "WHILE",
+          "",
+          "REPEAT",
+          "",
+          "LOOP",
+          "Cursor"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 9: Transactions (Week 10)",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "ACID Properties",
+          "",
+          "Isolation Levels",
+          "",
+          "Locks",
+          "",
+          "Deadlocks",
+          "",
+          "Concurrency Control",
+          "",
+          "Rollback",
+          "",
+          "Commit",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 10: Database Design (Week 11)",
+        "sortOrder": 10,
+        "topics": [
+          "",
+          "ER Diagram",
+          "",
+          "Data Modeling",
+          "",
+          "Keys",
+          "",
+          "Relationships",
+          "",
+          "Normalization",
+          "",
+          "Denormalization",
+          "",
+          "Referential Integrity",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 11: MySQL Administration (Week",
+        "sortOrder": 11,
+        "topics": [
+          "12)",
+          "",
+          "Users",
+          "",
+          "Roles",
+          "",
+          "Privileges",
+          "",
+          "Authentication",
+          "",
+          "Password Policies",
+          "",
+          "Security Best Practices",
+          "",
+          "User Management"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 12: Backup & Recovery (Week 13)",
+        "sortOrder": 12,
+        "topics": [
+          "",
+          "mysqldump",
+          "",
+          "Export",
+          "",
+          "Import",
+          "",
+          "Restore",
+          "",
+          "Backup Strategies",
+          "",
+          "Incremental Backup",
+          "",
+          "Binary Logs",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 13: Performance Optimization",
+        "sortOrder": 13,
+        "topics": [
+          "(Week 14",
+          "-",
+          "15)",
+          "",
+          "Query Optimization",
+          "",
+          "EXPLAIN",
+          "",
+          "Query Execution Plan",
+          "",
+          "Index Optimization",
+          "",
+          "Slow Query Log",
+          "",
+          "Performance Schema"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 14: Advanced MySQL (Week 16)",
+        "sortOrder": 14,
+        "topics": [
+          "",
+          "CTE (WITH)",
+          "",
+          "Recursive CTE",
+          "",
+          "Window Functions",
+          "",
+          "Ranking Functions",
+          "",
+          "Common Table Expressions",
+          "",
+          "JSON Data",
+          "",
+          "Generated Columns",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 15: Replication (Week 17)",
+        "sortOrder": 15,
+        "topics": [
+          "",
+          "Master-Slave Replication",
+          "",
+          "Master-Master Replication",
+          "",
+          "GTID",
+          "",
+          "Binary Log",
+          "",
+          "Read Replica",
+          "",
+          "Replication Monitoring",
+          "",
+          "Configure Replication"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 16: Partitioning (Week 18)",
+        "sortOrder": 16,
+        "topics": [
+          "",
+          "Range Partition",
+          "",
+          "List Partition",
+          "",
+          "Hash Partition",
+          "",
+          "Key Partition",
+          "",
+          "Partition Pruning",
+          "",
+          "Large Dataset"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 17: High Availability (Week 19)",
+        "sortOrder": 17,
+        "topics": [
+          "",
+          "MySQL Cluster",
+          "",
+          "InnoDB Cluster",
+          "",
+          "Load Balancing",
+          "",
+          "Failover",
+          "",
+          "ProxySQL",
+          "",
+          "MySQL Router"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 18: NoSQL & JSON (Week 20)",
+        "sortOrder": 18,
+        "topics": [
+          "",
+          "JSON Functions",
+          "",
+          "JSON Tables",
+          "",
+          "Document Store",
+          "",
+          "Hybrid Database Design"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 19: Integration (Week 21)",
+        "sortOrder": 19,
+        "topics": [
+          "",
+          "MySQL with PHP",
+          "",
+          "MySQL with Python",
+          "",
+          "MySQL with Java",
+          "",
+          "JDBC",
+          "",
+          "ODBC",
+          "",
+          "REST API Integration",
+          "Mini Project",
+          "",
+          "Employee Management System"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 20: Cloud Database (Week 22)",
+        "sortOrder": 20,
+        "topics": [
+          "",
+          "MySQL on AWS RDS",
+          "",
+          "Azure MySQL",
+          "",
+          "Google Cloud SQL",
+          "",
+          "Database Migration",
+          "",
+          "Cloud Backup",
+          "",
+          "Monitoring"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 21: Real",
+        "sortOrder": 21,
+        "topics": [
+          "-",
+          "Time Projects (Week 23)",
+          "Build Complete Databases for:",
+          "",
+          "Hospital Management System",
+          "",
+          "School Management System",
+          "",
+          "Banking System",
+          "",
+          "Inventory Management System",
+          "",
+          "E-Commerce Database",
+          "",
+          "Hotel Management System"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 22: Interview Preparation (Week 24)",
+        "sortOrder": 22,
+        "topics": [
+          "SQL Interview Questions (200+)",
+          "Scenario-Based Questions",
+          "Query Writing Challenges",
+          "Database Design Interviews",
+          "Mock Technical Interviews",
+          "Resume Preparation",
+          "GitHub Portfolio",
+          "Placement Preparation",
+          "Tools Covered",
+          "",
+          "MySQL Community Server",
+          "",
+          "MySQL Workbench",
+          "",
+          "MySQL Shell"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "oracle-database-administration-dba",
+    "title": "Oracle Database Administration (DBA) with Oracle Cloud Integration",
+    "durationWeeks": 24,
+    "baseFee": 7500000,
+    "level": "Beginner to Advanced",
+    "flyer": "/courses/oracle-dba-brochure.jpg",
+    "startPage": 207,
+    "endPage": 219,
+    "category": "Enterprise Databases",
+    "overview": "The Softlab Global Oracle Database Administration (DBA) with Oracle Cloud Integration Course is designed to prepare students for enterprise-level database administration and cloud database management. The course covers Oracle Database fundamentals, SQL, PL/SQL, Oracle",
+    "objectives": [
+      "After completing this course, students will be able to:",
+      "Understand relational database concepts",
+      "Install and configure Oracle Database",
+      "Master SQL and PL/SQL programming"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Introduction to Databases",
+        "sortOrder": 1,
+        "topics": [
+          "",
+          "What is a Database?",
+          "",
+          "DBMS vs RDBMS",
+          "",
+          "Oracle Database Architecture",
+          "",
+          "Oracle Editions",
+          "",
+          "Oracle 19c & 23ai Overview",
+          "",
+          "Oracle Installation",
+          "",
+          "Database Components",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 2: SQL Fundamentals",
+        "sortOrder": 2,
+        "topics": [
+          "",
+          "Data Types",
+          "",
+          "DDL Commands",
+          "",
+          "DML Commands",
+          "",
+          "DCL Commands",
+          "",
+          "TCL Commands",
+          "",
+          "Constraints",
+          "",
+          "Primary Key",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 3: Advanced SQL",
+        "sortOrder": 3,
+        "topics": [
+          "",
+          "Joins",
+          "",
+          "Inner Join",
+          "",
+          "Left Join",
+          "",
+          "Right Join",
+          "",
+          "Full Join",
+          "",
+          "Self Join",
+          "",
+          "Cross Join",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 4: PL/SQL Programming",
+        "sortOrder": 4,
+        "topics": [
+          "",
+          "PL/SQL Blocks",
+          "",
+          "Variables",
+          "",
+          "Control Statements",
+          "",
+          "Loops",
+          "",
+          "Exception Handling",
+          "",
+          "Procedures",
+          "",
+          "Functions",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 5: Oracle Architecture",
+        "sortOrder": 5,
+        "topics": [
+          "",
+          "Instance",
+          "",
+          "Database",
+          "",
+          "Memory Structures",
+          "",
+          "SGA",
+          "",
+          "PGA",
+          "",
+          "Background Processes",
+          "",
+          "Datafiles",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 6: Installation & Configuration",
+        "sortOrder": 6,
+        "topics": [
+          "",
+          "Oracle Installation",
+          "",
+          "Silent Installation",
+          "",
+          "Listener Configuration",
+          "",
+          "Network Configuration",
+          "",
+          "Oracle Net Services",
+          "",
+          "TNS Configuration",
+          "",
+          "Environment Variables",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 7: User Administration",
+        "sortOrder": 7,
+        "topics": [
+          "",
+          "User Management",
+          "",
+          "Roles",
+          "",
+          "Privileges",
+          "",
+          "Profiles",
+          "",
+          "Password Policies",
+          "",
+          "Resource Limits",
+          "",
+          "Auditing",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 8: Tablespace Management",
+        "sortOrder": 8,
+        "topics": [
+          "",
+          "Tablespaces",
+          "",
+          "Datafiles",
+          "",
+          "Storage Management",
+          "",
+          "Segment Management",
+          "",
+          "Extents",
+          "",
+          "Blocks",
+          "",
+          "Bigfile Tablespaces",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 9: Backup & Recovery",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "RMAN",
+          "",
+          "Cold Backup",
+          "",
+          "Hot Backup",
+          "",
+          "Incremental Backup",
+          "",
+          "Full Backup",
+          "",
+          "Archive Log Mode",
+          "",
+          "Flashback Database",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 10: Oracle Security",
+        "sortOrder": 10,
+        "topics": [
+          "",
+          "Authentication",
+          "",
+          "Authorization",
+          "",
+          "Encryption",
+          "",
+          "Transparent Data Encryption (TDE)",
+          "",
+          "Oracle Wallet",
+          "",
+          "Auditing",
+          "",
+          "Fine-Grained Auditing",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 11: Performance Tuning",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "Explain Plan",
+          "",
+          "SQL Tuning",
+          "",
+          "Index Optimization",
+          "",
+          "AWR Reports",
+          "",
+          "ASH Reports",
+          "",
+          "Statspack",
+          "",
+          "Optimizer",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 12: Oracle RAC",
+        "sortOrder": 12,
+        "topics": [
+          "",
+          "RAC Architecture",
+          "",
+          "Cluster Installation",
+          "",
+          "Shared Storage",
+          "",
+          "Clusterware",
+          "",
+          "RAC Administration",
+          "",
+          "RAC Monitoring",
+          "",
+          "RAC Lab Setup",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 13: Oracle Data Guard",
+        "sortOrder": 13,
+        "topics": [
+          "",
+          "Physical Standby",
+          "",
+          "Logical Standby",
+          "",
+          "Switchover",
+          "",
+          "Failover",
+          "",
+          "Broker Configuration",
+          "",
+          "Data Guard Setup",
+          "",
+          "Disaster Recovery"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 14: Oracle Enterprise Manager",
+        "sortOrder": 14,
+        "topics": [
+          "",
+          "OEM Installation",
+          "",
+          "Monitoring",
+          "",
+          "Alerts",
+          "",
+          "Performance Monitoring",
+          "",
+          "Database Administration",
+          "",
+          "OEM Configuration",
+          "",
+          "Performance Dashboard",
+          "MONTH 5"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 15: Oracle Cloud Fundamentals",
+        "sortOrder": 15,
+        "topics": [
+          "",
+          "Introduction to Cloud Computing",
+          "",
+          "IaaS, PaaS, SaaS",
+          "",
+          "Oracle Cloud Infrastructure (OCI)",
+          "",
+          "OCI Architecture",
+          "",
+          "Regions",
+          "",
+          "Availability Domains",
+          "",
+          "Compartments",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 16: Oracle Cloud Database Services",
+        "sortOrder": 16,
+        "topics": [
+          "",
+          "Autonomous Database",
+          "",
+          "Exadata Cloud Service",
+          "",
+          "Base Database Service",
+          "",
+          "Database Migration",
+          "",
+          "Oracle Cloud Backup",
+          "",
+          "Cloud Monitoring",
+          "",
+          "Cloud Security",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 17: OCI Networking",
+        "sortOrder": 17,
+        "topics": [
+          "",
+          "VCN",
+          "",
+          "Subnets",
+          "",
+          "Security Lists",
+          "",
+          "Route Tables",
+          "",
+          "Internet Gateway",
+          "",
+          "NAT Gateway",
+          "",
+          "Service Gateway",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 18: Automation & Scripting",
+        "sortOrder": 18,
+        "topics": [
+          "",
+          "Shell Scripting for Oracle",
+          "",
+          "SQL*Loader",
+          "",
+          "Data Pump (EXPDP/IMPDP)",
+          "",
+          "Cron Jobs",
+          "",
+          "Automation Scripts"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 19: Migration & Replication",
+        "sortOrder": 19,
+        "topics": [
+          "",
+          "Database Migration",
+          "",
+          "Export & Import",
+          "",
+          "Cross-Platform Migration",
+          "",
+          "GoldenGate (Introduction)",
+          "",
+          "Replication Concepts"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 20: Enterprise Monitoring & Troubleshooting",
+        "sortOrder": 20,
+        "topics": [
+          "",
+          "Log Analysis",
+          "",
+          "Alert Logs",
+          "",
+          "Trace Files",
+          "",
+          "OEM Monitoring",
+          "",
+          "Performance Troubleshooting",
+          "",
+          "Database Health Checks",
+          "",
+          "Capacity Planning"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 21: Oracle Certification Preparation",
+        "sortOrder": 21,
+        "topics": [
+          "",
+          "Oracle DBA Certification Topics",
+          "",
+          "Oracle Cloud Certification Overview",
+          "",
+          "Practice Tests",
+          "",
+          "Scenario-Based Questions",
+          "",
+          "Mock Interviews",
+          "Major Projects",
+          "",
+          "Enterprise HR Management Database",
+          "",
+          "Banking Management System"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "python-full-stack-developer",
+    "title": "Master Python Full Stack Developer Program (Beginner to Advanced Expert Level)",
+    "durationWeeks": 24,
+    "baseFee": 8500000,
+    "level": "Beginner to Industry Expert",
+    "flyer": "/courses/python-full-stack-brochure.jpg",
+    "startPage": 220,
+    "endPage": 234,
+    "category": "Full Stack Development",
+    "overview": "The Softlab Global Master Python Full Stack Developer Program is designed to transform beginners into industry-ready Python Full Stack Developers. Students will learn frontend development, backend development with Python, databases, REST APIs, cloud deployment,",
+    "objectives": [
+      "Master core and advanced concepts in Master Python Full Stack Developer Program (Beginner to Advanced Expert Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Programming Fundamentals (2",
+        "sortOrder": 1,
+        "topics": [
+          "Weeks)",
+          "Introduction to Programming",
+          "",
+          "Introduction to Software Development",
+          "",
+          "SDLC (Software Development Life Cycle)",
+          "",
+          "Agile & Scrum Basics",
+          "",
+          "Python Installation",
+          "",
+          "VS Code Setup",
+          "",
+          "PyCharm Installation",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 2: Core Python Programming (3",
+        "sortOrder": 2,
+        "topics": [
+          "Weeks)",
+          "Object-Oriented Programming (OOP)",
+          "",
+          "Classes",
+          "",
+          "Objects",
+          "",
+          "Constructors",
+          "",
+          "Inheritance",
+          "",
+          "Encapsulation",
+          "",
+          "Abstraction",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 3: Database (SQL + MySQL) (2",
+        "sortOrder": 3,
+        "topics": [
+          "Weeks)",
+          "Database Fundamentals",
+          "",
+          "ER Diagram",
+          "",
+          "Normalization",
+          "",
+          "Constraints",
+          "",
+          "Primary & Foreign Keys",
+          "SQL",
+          "",
+          "CRUD Operations",
+          "",
+          "Joins"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 4: Frontend Development (4 Weeks)",
+        "sortOrder": 4,
+        "topics": [
+          "HTML5",
+          "",
+          "Semantic HTML",
+          "",
+          "Forms",
+          "",
+          "Tables",
+          "",
+          "Audio & Video",
+          "",
+          "SEO Basics",
+          "CSS3",
+          "",
+          "Selectors",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 5: Backend Development with",
+        "sortOrder": 5,
+        "topics": [
+          "Django (5 Weeks)",
+          "Django Basics",
+          "",
+          "Django Architecture",
+          "",
+          "Project Structure",
+          "",
+          "Apps",
+          "",
+          "URL Routing",
+          "",
+          "Views",
+          "",
+          "Templates",
+          "Django ORM"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 6: Advanced Backend (2 Weeks)",
+        "sortOrder": 6,
+        "topics": [
+          "FastAPI",
+          "",
+          "Introduction",
+          "",
+          "High-Performance APIs",
+          "",
+          "Async APIs",
+          "",
+          "OpenAPI Documentation",
+          "Celery",
+          "",
+          "Background Tasks",
+          "Redis",
+          "",
+          "Caching"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 7: Git, GitHub & DevOps Basics (1",
+        "sortOrder": 7,
+        "topics": [
+          "Week)",
+          "Git",
+          "",
+          "Repository",
+          "",
+          "Commit",
+          "",
+          "Branch",
+          "",
+          "Merge",
+          "",
+          "Pull Requests",
+          "GitHub",
+          "",
+          "Collaboration"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 8: Cloud Deployment (1 Week)",
+        "sortOrder": 8,
+        "topics": [
+          "Linux Basics",
+          "",
+          "File System",
+          "",
+          "Users & Permissions",
+          "",
+          "SSH",
+          "",
+          "Basic Commands",
+          "AWS Cloud",
+          "",
+          "EC2",
+          "",
+          "S3",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 9: AI Tools for Developers (1 Week)",
+        "sortOrder": 9,
+        "topics": [
+          "",
+          "ChatGPT for Development",
+          "",
+          "GitHub Copilot",
+          "",
+          "Cursor AI",
+          "",
+          "AI Code Generation",
+          "",
+          "AI Debugging",
+          "",
+          "Prompt Engineering",
+          "",
+          "AI Documentation"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 10: Data Structures & Algorithms (2",
+        "sortOrder": 10,
+        "topics": [
+          "Weeks)",
+          "DSA Concepts",
+          "",
+          "Arrays",
+          "",
+          "Strings",
+          "",
+          "Linked Lists",
+          "",
+          "Stacks",
+          "",
+          "Queues",
+          "",
+          "Trees",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 11: Testing (1 Week)",
+        "sortOrder": 11,
+        "topics": [
+          "",
+          "Unit Testing (unittest)",
+          "",
+          "PyTest",
+          "",
+          "Mock Testing",
+          "",
+          "API Testing with Postman",
+          "",
+          "Integration Testing"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 12: System Design & Interview",
+        "sortOrder": 12,
+        "topics": [
+          "Preparation (1 Week)",
+          "Resume Building",
+          "GitHub Portfolio Development",
+          "LinkedIn Profile Optimization",
+          "HR Interview Preparation",
+          "Python Interview Questions",
+          "Django Interview Questions",
+          "SQL Interview Questions",
+          "REST API Interview Questions",
+          "React Interview Questions",
+          "Mock Interviews",
+          "Aptitude Preparation",
+          "Communication Skills",
+          "Live Projects (12+)",
+          "Beginner Projects"
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "certificate-in-cloud-computing-with-devops",
+    "title": "Master DevOps Engineer (Master Level)",
+    "durationWeeks": 24,
+    "baseFee": 7000000,
+    "level": "Beginner to Advanced",
+    "flyer": "/courses/softlab-global-poster.jpg",
+    "startPage": 235,
+    "endPage": 243,
+    "category": "DevOps & Cloud",
+    "overview": "Comprehensive master-level curriculum for Master DevOps Engineer (Master Level) designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in Master DevOps Engineer (Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "Module 1: Computer Fundamentals &",
+        "sortOrder": 1,
+        "topics": [
+          "Networking (Week 1",
+          "-",
+          "2)",
+          "Computer Basics",
+          "",
+          "Hardware & Software",
+          "",
+          "Operating System Concepts",
+          "",
+          "Client-Server Architecture",
+          "",
+          "Virtualization Basics",
+          "Networking",
+          "",
+          "OSI Model"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 2: Linux Administration (Week 3",
+        "sortOrder": 2,
+        "topics": [
+          "-",
+          "5)",
+          "Linux Installation",
+          "",
+          "Ubuntu",
+          "",
+          "CentOS",
+          "",
+          "Rocky Linux",
+          "Linux Commands",
+          "",
+          "File Management",
+          "",
+          "Users & Groups",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 3: Git & GitHub (Week 6)",
+        "sortOrder": 3,
+        "topics": [
+          "Version Control",
+          "",
+          "Git Installation",
+          "",
+          "Repository",
+          "",
+          "Clone",
+          "",
+          "Commit",
+          "",
+          "Push",
+          "",
+          "Pull",
+          "",
+          "Branch"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 4: Python for DevOps (Week 7)",
+        "sortOrder": 4,
+        "topics": [
+          "Python Basics",
+          "",
+          "Variables",
+          "",
+          "Loops",
+          "",
+          "Functions",
+          "",
+          "OOP",
+          "",
+          "File Handling",
+          "",
+          "API Basics",
+          "Automation",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 5: Jenkins CI/CD (Week 8",
+        "sortOrder": 5,
+        "topics": [
+          "-",
+          "9)",
+          "Jenkins",
+          "",
+          "Installation",
+          "",
+          "Architecture",
+          "",
+          "Master & Agent",
+          "",
+          "Pipelines",
+          "",
+          "Declarative Pipeline",
+          "",
+          "Scripted Pipeline"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 6: Docker (Week 10",
+        "sortOrder": 6,
+        "topics": [
+          "-",
+          "11)",
+          "Docker",
+          "",
+          "Docker Installation",
+          "",
+          "Images",
+          "",
+          "Containers",
+          "",
+          "Dockerfile",
+          "",
+          "Docker Compose",
+          "",
+          "Docker Registry"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 7: Kubernetes (Week 12",
+        "sortOrder": 7,
+        "topics": [
+          "-",
+          "14)",
+          "Kubernetes",
+          "",
+          "Cluster",
+          "",
+          "Node",
+          "",
+          "Pod",
+          "",
+          "ReplicaSet",
+          "",
+          "Deployment",
+          "",
+          "Services"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 8: AWS Cloud (Week 15",
+        "sortOrder": 8,
+        "topics": [
+          "-",
+          "17)",
+          "AWS",
+          "",
+          "IAM",
+          "",
+          "EC2",
+          "",
+          "VPC",
+          "",
+          "S3",
+          "",
+          "RDS",
+          "",
+          "Route53"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 9: Infrastructure as Code (Week 18)",
+        "sortOrder": 9,
+        "topics": [
+          "Terraform",
+          "",
+          "Installation",
+          "",
+          "Providers",
+          "",
+          "Variables",
+          "",
+          "Resources",
+          "",
+          "Modules",
+          "",
+          "State File",
+          "",
+          "Remote Backend"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 10: Configuration Management",
+        "sortOrder": 10,
+        "topics": [
+          "(Week 19)",
+          "Ansible",
+          "",
+          "Installation",
+          "",
+          "Inventory",
+          "",
+          "Playbooks",
+          "",
+          "Roles",
+          "",
+          "Variables",
+          "",
+          "Vault",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 11: Monitoring & Logging (Week 20",
+        "sortOrder": 11,
+        "topics": [
+          "-",
+          "21)",
+          "Monitoring",
+          "",
+          "Prometheus",
+          "",
+          "Grafana",
+          "Logging",
+          "",
+          "ELK Stack",
+          "",
+          "Kibana",
+          "",
+          "Filebeat",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "Module 12: DevSecOps (Week 22)",
+        "sortOrder": 12,
+        "topics": [
+          "Security",
+          "",
+          "DevSecOps Introduction",
+          "",
+          "SonarQube",
+          "",
+          "Trivy",
+          "",
+          "OWASP Basics",
+          "",
+          "Secrets Management",
+          "",
+          "Vulnerability Scanning"
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 13: Kubernetes + AWS Production",
+        "sortOrder": 13,
+        "topics": [
+          "Project (Week 23)",
+          "Real-Time Project",
+          "",
+          "GitHub Repository",
+          "",
+          "Jenkins Pipeline",
+          "",
+          "Docker Image",
+          "",
+          "Kubernetes Deployment",
+          "",
+          "AWS Deployment",
+          "",
+          "Monitoring Dashboard",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "Module 14: Interview Preparation (Week 24)",
+        "sortOrder": 14,
+        "topics": [
+          "Resume Building",
+          "",
+          "ATS Resume",
+          "",
+          "LinkedIn Profile",
+          "",
+          "GitHub Portfolio",
+          "Mock Interviews",
+          "",
+          "HR Round",
+          "",
+          "Technical Round",
+          "",
+          "Scenario-Based Questions",
+          ""
+        ],
+        "labs": []
+      }
+    ]
+  },
+  {
+    "slug": "technical-support-engineer",
+    "title": "Technical Support Engineer (Master Level)",
+    "durationWeeks": 12,
+    "baseFee": 3500000,
+    "level": "Beginner to Master Level",
+    "flyer": "/courses/technical-support-brochure.jpg",
+    "startPage": 244,
+    "endPage": 253,
+    "category": "IT Support & Operations",
+    "overview": "Comprehensive master-level curriculum for Technical Support Engineer (Master Level) designed for real-world enterprise engineering.",
+    "objectives": [
+      "Master core and advanced concepts in Technical Support Engineer (Master Level)",
+      "Develop production-grade projects",
+      "Prepare for enterprise technical interviews"
+    ],
+    "modules": [
+      {
+        "title": "MODULE 1: Computer Hardware (Master",
+        "sortOrder": 1,
+        "topics": [
+          "Level)",
+          "Fundamentals",
+          "",
+          "Introduction to Computer Architecture",
+          "",
+          "Types of Computers",
+          "",
+          "Motherboard Components",
+          "",
+          "Processor (Intel & AMD)",
+          "",
+          "RAM",
+          "",
+          "ROM",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 2: Operating System (Windows)",
+        "sortOrder": 2,
+        "topics": [
+          "Windows Installation",
+          "",
+          "Windows 10",
+          "",
+          "Windows 11",
+          "",
+          "Bootable USB Creation",
+          "",
+          "BIOS Boot Configuration",
+          "",
+          "GPT vs MBR",
+          "",
+          "Disk Partitioning",
+          "",
+          "Formatting"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 3: Networking",
+        "sortOrder": 3,
+        "topics": [
+          "Networking Basics",
+          "",
+          "Network Types",
+          "",
+          "LAN",
+          "",
+          "WAN",
+          "",
+          "MAN",
+          "",
+          "PAN",
+          "Network Devices",
+          "",
+          "Router",
+          ""
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 4: Microsoft Office 365",
+        "sortOrder": 4,
+        "topics": [
+          "Administration",
+          "Microsoft 365 Fundamentals",
+          "",
+          "Microsoft 365 Overview",
+          "",
+          "Microsoft Licensing",
+          "",
+          "Subscription Plans",
+          "",
+          "Microsoft Entra ID (Azure AD Basics)",
+          "Admin Center",
+          "",
+          "Microsoft 365 Admin Center",
+          "",
+          "User Management"
+        ],
+        "labs": [
+          "Practical"
+        ]
+      },
+      {
+        "title": "MODULE 5: Technical Support Engineer",
+        "sortOrder": 5,
+        "topics": [
+          "Skills",
+          "",
+          "Helpdesk Process",
+          "",
+          "Incident Management",
+          "",
+          "Ticketing System",
+          "",
+          "SLA",
+          "",
+          "Escalation Matrix",
+          "",
+          "Remote Support",
+          "",
+          "Email Support"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 6: Real",
+        "sortOrder": 6,
+        "topics": [
+          "-",
+          "Time Projects",
+          "",
+          "Complete Office Network Setup",
+          "",
+          "Microsoft 365 User Deployment",
+          "",
+          "Windows Deployment",
+          "",
+          "Printer Server Setup",
+          "",
+          "Network Troubleshooting Lab",
+          "",
+          "Outlook Configuration",
+          ""
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 7: Interview Preparation",
+        "sortOrder": 7,
+        "topics": [
+          "Technical Interview Questions",
+          "",
+          "300+ Questions",
+          "",
+          "Scenario-Based Questions",
+          "",
+          "Troubleshooting Scenarios",
+          "",
+          "HR Questions",
+          "",
+          "Live Mock Interviews"
+        ],
+        "labs": []
+      },
+      {
+        "title": "MODULE 8: Professional Development",
+        "sortOrder": 8,
+        "topics": [
+          "",
+          "Resume Building",
+          "",
+          "LinkedIn Profile Optimization",
+          "",
+          "Communication Skills",
+          "",
+          "Email Writing",
+          "",
+          "Interview Etiquette",
+          "",
+          "Corporate Behavior",
+          "Tools Covered",
+          "",
+          "Microsoft 365 Admin Center"
+        ],
+        "labs": []
+      }
+    ]
+  }
+]
