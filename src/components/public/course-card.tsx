@@ -232,54 +232,92 @@ function getCourseMetadata(slug: string, title: string): CourseMetadata {
 
 function getCourseBrochureImage(slug: string, title: string): string | null {
   const lower = (slug + " " + title).toLowerCase();
-  if (lower.includes("ai") || lower.includes("artificial intelligence") || lower.includes("machine learning")) {
-    return "/courses/ai-ml-brochure.jpg";
+
+  // 1. Networking
+  if (lower.includes("networking") || slug === "certificate-in-advance-networking") {
+    return "/courses/networking-brochure.jpg";
   }
-  if (lower.includes("data science")) {
-    return "/courses/data-science-brochure.jpg";
+  // 2. Linux Administration
+  if (lower.includes("linux")) {
+    return "/courses/linux-admin-brochure.jpg";
   }
-  if (lower.includes("cyber") || lower.includes("security") || lower.includes("ethical hacking")) {
-    return "/courses/cyber-security-brochure.jpg";
+  // 3. Server Administration
+  if (lower.includes("server") && !lower.includes("sql")) {
+    return "/courses/server-admin-brochure.jpg";
   }
+  // 4. Office 365
+  if (lower.includes("office 365") || lower.includes("365")) {
+    return "/courses/office-365-brochure.jpg";
+  }
+  // 5. Cloud Computing & Cyber Security with AI
+  if (lower.includes("cloud computing & cyber") || lower.includes("cloud-computing-and-cyber")) {
+    return "/courses/cloud-cyber-ai-brochure.jpg";
+  }
+  // 6. DevOps & Cloud
+  if (lower.includes("devops")) {
+    return "/courses/devops-brochure.jpg";
+  }
+  // 7. Cloud Administration
+  if (lower.includes("cloud-administration") || lower.includes("cloud administration")) {
+    return "/courses/cloud-admin-brochure.jpg";
+  }
+  // 8. C++ Programming
   if (lower.includes("c++") || lower.includes("cpp")) {
     return "/courses/cpp-programming-brochure.jpg";
   }
+  // 9. C Language
   if (lower.includes("c language") || lower.includes("c programming") || slug === "certificate-in-c-language") {
     return "/courses/c-programming-brochure.jpg";
   }
+  // 10. Java Full Stack
   if (lower.includes("java")) {
     return "/courses/java-full-stack-brochure.jpg";
   }
+  // 11. Python Full Stack
   if (lower.includes("python")) {
     return "/courses/python-full-stack-brochure.jpg";
   }
+  // 12. MERN Full Stack
   if (lower.includes("mern")) {
     return "/courses/mern-full-stack-brochure.jpg";
   }
+  // 13. MySQL
   if (lower.includes("mysql")) {
     return "/courses/mysql-brochure.jpg";
   }
+  // 14. Oracle DBA
   if (lower.includes("oracle")) {
     return "/courses/oracle-dba-brochure.jpg";
   }
-  if (lower.includes("graphics") || lower.includes("designing")) {
+  // 15. Graphics Designing
+  if (lower.includes("graphics")) {
     return "/courses/graphics-designing-brochure.jpg";
   }
-  if (lower.includes("marketing") || lower.includes("seo")) {
-    return "/courses/digital-marketing-brochure.jpg";
-  }
-  if (lower.includes("technical support")) {
-    return "/courses/technical-support-brochure.jpg";
-  }
+  // 16. Web Development / Website Designing
   if (lower.includes("web development") || lower.includes("website")) {
     return "/courses/web-development-brochure.jpg";
   }
-  if (lower.includes("networking")) {
+  // 17. Digital Marketing
+  if (lower.includes("marketing") || lower.includes("seo")) {
+    return "/courses/digital-marketing-brochure.jpg";
+  }
+  // 18. Technical Support Engineer
+  if (lower.includes("technical support")) {
     return "/courses/technical-support-brochure.jpg";
   }
-  if (lower.includes("server") || lower.includes("linux") || lower.includes("office 365") || lower.includes("cloud")) {
-    return "/courses/technical-support-brochure.jpg";
+  // 19. Cyber Security
+  if (lower.includes("cyber") || lower.includes("security")) {
+    return "/courses/cyber-security-brochure.jpg";
   }
+  // 20. Data Science
+  if (lower.includes("data science")) {
+    return "/courses/data-science-brochure.jpg";
+  }
+  // 21. AI & Machine Learning
+  if (lower.includes("ai") || lower.includes("artificial intelligence") || lower.includes("machine learning")) {
+    return "/courses/ai-ml-brochure.jpg";
+  }
+
   return "/courses/softlab-global-poster.jpg";
 }
 
