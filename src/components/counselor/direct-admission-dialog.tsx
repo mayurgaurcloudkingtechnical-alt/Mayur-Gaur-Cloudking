@@ -43,14 +43,35 @@ interface DirectAdmissionDialogProps {
   onOpenChange: (open: boolean) => void;
   initialLeadId?: string | null;
   initialLead?: {
-    id: string;
-    fullName: string;
-    email: string;
-    phone: string;
+    id?: string;
+    fullName?: string;
+    applicantName?: string;
+    email?: string;
+    phone?: string;
     city?: string | null;
+    state?: string | null;
+    pincode?: string | null;
+    address?: string | null;
+    fatherName?: string | null;
+    motherName?: string | null;
+    dateOfBirth?: string | Date | null;
+    gender?: string | null;
+    whatsappNumber?: string | null;
+    alternatePhone?: string | null;
+    schoolOrCollege?: string | null;
+    passingYear?: string | null;
+    percentageOrCgpa?: string | null;
     qualification?: string | null;
+    highestQualification?: string | null;
     interestedCourseId?: string | null;
+    courseId?: string | null;
     source?: LeadSource;
+    customTotalFee?: number | null;
+    discountValue?: number | null;
+    paymentPlan?: "LUMPSUM" | "EMI";
+    paidAmount?: number | null;
+    photoUrl?: string | null;
+    notes?: string | null;
   } | null;
   onSuccess?: (applicationId: string) => void;
 }
@@ -192,19 +213,44 @@ export function DirectAdmissionDialog({
   // Pre-fill lead data if provided
   React.useEffect(() => {
     if (initialLead) {
-      setSelectedLeadId(initialLead.id);
-      setApplicantName(initialLead.fullName || "");
+      if (initialLead.id) setSelectedLeadId(initialLead.id);
+      setApplicantName(initialLead.applicantName || initialLead.fullName || "");
       setApplicantEmail(initialLead.email || "");
       setApplicantPhone(initialLead.phone || "");
-      setWhatsappNumber(initialLead.phone || "");
+      setWhatsappNumber(initialLead.whatsappNumber || initialLead.phone || "");
+      if (initialLead.fatherName) setFatherName(initialLead.fatherName);
+      if (initialLead.motherName) setMotherName(initialLead.motherName);
+      if (initialLead.dateOfBirth) {
+        const d = new Date(initialLead.dateOfBirth);
+        if (!isNaN(d.getTime())) setDateOfBirth(d.toISOString().split("T")[0]);
+      }
+      if (initialLead.gender) setGender(initialLead.gender);
+      if (initialLead.alternatePhone) setAlternatePhone(initialLead.alternatePhone);
+      if (initialLead.address) setAddress(initialLead.address);
       if (initialLead.city) setCity(initialLead.city);
-      if (initialLead.qualification) setHighestQualification(initialLead.qualification);
-      if (initialLead.interestedCourseId) {
-        setCourseId(initialLead.interestedCourseId);
-        const target = courses.find((c: any) => c.id === initialLead.interestedCourseId);
+      if (initialLead.state) setState(initialLead.state);
+      if (initialLead.pincode) setPincode(initialLead.pincode);
+      if (initialLead.highestQualification || initialLead.qualification) {
+        setHighestQualification(initialLead.highestQualification || initialLead.qualification || "");
+      }
+      if (initialLead.schoolOrCollege) setSchoolOrCollege(initialLead.schoolOrCollege);
+      if (initialLead.passingYear) setPassingYear(initialLead.passingYear);
+      if (initialLead.percentageOrCgpa) setPercentageOrCgpa(initialLead.percentageOrCgpa);
+      if (initialLead.photoUrl) setPhotoUrl(initialLead.photoUrl);
+      if (typeof initialLead.customTotalFee === "number") setCustomTotalFee(initialLead.customTotalFee);
+      if (typeof initialLead.discountValue === "number") setDiscountValue(initialLead.discountValue);
+      if (initialLead.paymentPlan) setPaymentPlan(initialLead.paymentPlan);
+      if (typeof initialLead.paidAmount === "number") setPaidAmount(initialLead.paidAmount);
+
+      const targetCourseId = initialLead.interestedCourseId || initialLead.courseId;
+      if (targetCourseId) {
+        setCourseId(targetCourseId);
+        const target = courses.find((c: any) => c.id === targetCourseId);
         if (target) {
           setProviderMode(target.providerType === "UNIVERSITY" ? "UNIVERSITY" : "SOFTLAB");
-          if (target.baseFee) setCustomTotalFee(target.baseFee / 100);
+          if (target.baseFee && typeof initialLead.customTotalFee !== "number") {
+            setCustomTotalFee(target.baseFee / 100);
+          }
         }
       }
       if (initialLead.source) setSource(initialLead.source);

@@ -110,7 +110,17 @@ export class PaymentService {
       (input.paymentDate ? new Date(input.paymentDate).getFullYear() < new Date().getFullYear() : false);
 
     return await db.$transaction(async (tx) => {
-      // 1. Create transaction record
+      // 1. Resolve linked Admission Application ID if student was converted from admission
+      let admissionId: string | null = null;
+      if (fee.studentId) {
+        const app = await tx.admissionApplication.findFirst({
+          where: { convertedStudentProfileId: fee.studentId },
+          select: { id: true },
+        });
+        if (app) admissionId = app.id;
+      }
+
+      // 2. Create transaction record
       const payment = await tx.paymentTransaction.create({
         data: {
           transactionReference: ref,
@@ -118,6 +128,7 @@ export class PaymentService {
           installmentId: input.installmentId || null,
           studentId: fee.studentId,
           enrollmentId: fee.enrollmentId,
+          admissionId,
           amount: payAmount,
           paymentDate: payDate,
           paidAt: payDate,

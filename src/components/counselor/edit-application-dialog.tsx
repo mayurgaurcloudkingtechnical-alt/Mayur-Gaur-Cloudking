@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/trpc/react";
 import {
   Dialog,
@@ -14,24 +14,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ApplicationStage } from "@prisma/client";
-import { Loader2, Edit3, User, Mail, Phone, MapPin, GraduationCap } from "lucide-react";
+import {
+  Loader2,
+  Edit3,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  GraduationCap,
+  Camera,
+  X,
+  Calendar,
+  School,
+  Building,
+  CheckCircle2,
+} from "lucide-react";
 
 interface EditApplicationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  application: {
-    id: string;
-    applicationNumber: string;
-    applicantName: string;
-    applicantEmail: string;
-    applicantPhone: string;
-    city?: string | null;
-    state?: string | null;
-    highestQualification?: string | null;
-    courseId: string;
-    batchId?: string | null;
-    stage: ApplicationStage;
-  } | null;
+  application: any | null;
   onSuccess?: () => void;
 }
 
@@ -41,15 +43,41 @@ export function EditApplicationDialog({
   application,
   onSuccess,
 }: EditApplicationDialogProps) {
+  // Personal Details
   const [applicantName, setApplicantName] = useState("");
+  const [fatherName, setFatherName] = useState("");
+  const [motherName, setMotherName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [gender, setGender] = useState("MALE");
+
+  // Contact Details
   const [applicantEmail, setApplicantEmail] = useState("");
   const [applicantPhone, setApplicantPhone] = useState("");
+  const [alternatePhone, setAlternatePhone] = useState("");
+  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [center, setCenter] = useState("");
+
+  // Academic Details
   const [highestQualification, setHighestQualification] = useState("");
+  const [schoolOrCollege, setSchoolOrCollege] = useState("");
+  const [passingYear, setPassingYear] = useState("");
+  const [percentageOrCgpa, setPercentageOrCgpa] = useState("");
+
+  // Photo
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Status & Batch
   const [batchId, setBatchId] = useState<string>("");
   const [stage, setStage] = useState<ApplicationStage>(ApplicationStage.UNDER_REVIEW);
+  const [remarks, setRemarks] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"personal" | "contact" | "academic" | "admission">("personal");
 
   const utils = api.useUtils();
 
@@ -62,16 +90,92 @@ export function EditApplicationDialog({
   useEffect(() => {
     if (application) {
       setApplicantName(application.applicantName || "");
+      setFatherName(application.fatherName || "");
+      setMotherName(application.motherName || "");
+      if (application.dateOfBirth) {
+        const d = new Date(application.dateOfBirth);
+        if (!isNaN(d.getTime())) {
+          setDateOfBirth(d.toISOString().split("T")[0]);
+        } else {
+          setDateOfBirth("");
+        }
+      } else {
+        setDateOfBirth("");
+      }
+      setGender(application.gender || "MALE");
+
       setApplicantEmail(application.applicantEmail || "");
       setApplicantPhone(application.applicantPhone || "");
+      setAlternatePhone(application.alternatePhone || "");
+      setWhatsappNumber(application.whatsappNumber || "");
+      setAddress(application.address || "");
       setCity(application.city || "");
       setState(application.state || "");
+      setPincode(application.pincode || "");
+      setCenter(application.center || "");
+
       setHighestQualification(application.highestQualification || "");
+      setSchoolOrCollege(application.schoolOrCollege || "");
+      setPassingYear(application.passingYear || "");
+      setPercentageOrCgpa(application.percentageOrCgpa || "");
+
+      // Initial photo from application or converted profile/user
+      const initialPhoto =
+        application.photoUrl ||
+        application.convertedStudentProfile?.photoUrl ||
+        application.convertedStudentProfile?.user?.avatarUrl ||
+        null;
+      setPhotoUrl(initialPhoto);
+
       setBatchId(application.batchId || "");
-      setStage(application.stage);
+      setStage(application.stage || ApplicationStage.UNDER_REVIEW);
+      setRemarks(application.remarks || "");
       setErrorMsg(null);
+      setActiveTab("personal");
     }
   }, [application]);
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Please upload a valid image file (JPEG, PNG, WEBP).");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg("Image size exceeds the 5MB limit.");
+      return;
+    }
+
+    setIsUploadingPhoto(true);
+    setErrorMsg(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload/photo", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!data.success) {
+        throw new Error(data.error || "Upload failed");
+      }
+
+      setPhotoUrl(data.url);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to upload photo.");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const updateMutation = api.crm.updateApplication.useMutation({
     onSuccess: () => {
@@ -101,11 +205,25 @@ export function EditApplicationDialog({
       applicantName: applicantName.trim(),
       applicantEmail: applicantEmail.trim(),
       applicantPhone: cleanPhone,
+      fatherName: fatherName.trim() || undefined,
+      motherName: motherName.trim() || undefined,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : undefined,
+      gender: gender || undefined,
+      alternatePhone: alternatePhone.trim() || undefined,
+      whatsappNumber: whatsappNumber.trim() || undefined,
+      address: address.trim() || undefined,
       city: city.trim() || undefined,
       state: state.trim() || undefined,
+      pincode: pincode.trim() || undefined,
+      center: center.trim() || undefined,
       highestQualification: highestQualification.trim() || undefined,
+      schoolOrCollege: schoolOrCollege.trim() || undefined,
+      passingYear: passingYear.trim() || undefined,
+      percentageOrCgpa: percentageOrCgpa.trim() || undefined,
+      photoUrl: photoUrl || undefined,
       batchId: batchId || null,
       stage,
+      remarks: remarks.trim() || undefined,
     });
   };
 
@@ -113,153 +231,472 @@ export function EditApplicationDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <div className="space-y-3">
+      <div className="space-y-4 max-h-[90vh] overflow-y-auto p-1">
         <DialogHeader>
-          <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Edit3 className="h-5 w-5 text-emerald-600" />
-            <span>Edit Application: {application.applicationNumber}</span>
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Edit3 className="h-5 w-5 text-emerald-600" />
+              <span>Edit Student Admission: {application.applicationNumber}</span>
+            </DialogTitle>
+            {application.convertedStudentProfile && (
+              <span className="text-[11px] font-semibold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
+                Admitted ({application.convertedStudentProfile.studentId || "Student"})
+              </span>
+            )}
+          </div>
           <DialogDescription className="text-xs text-slate-500">
-            Update candidate contact coordinates, qualification, or allocated cohort.
+            Edit full candidate credentials, passport photo (updates ID card live), academic, and contact details.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
-          {errorMsg && (
-            <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700 border border-red-200">
-              {errorMsg}
+        {errorMsg && (
+          <div className="rounded-lg bg-red-50 p-2.5 text-xs text-red-700 border border-red-200">
+            {errorMsg}
+          </div>
+        )}
+
+        {/* Tab Buttons */}
+        <div className="flex border-b border-slate-200 text-xs font-medium space-x-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("personal")}
+            className={`pb-2 px-3 border-b-2 transition-colors ${
+              activeTab === "personal"
+                ? "border-emerald-600 text-emerald-700 font-semibold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            1. Personal & Photo
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("contact")}
+            className={`pb-2 px-3 border-b-2 transition-colors ${
+              activeTab === "contact"
+                ? "border-emerald-600 text-emerald-700 font-semibold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            2. Contact & Address
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("academic")}
+            className={`pb-2 px-3 border-b-2 transition-colors ${
+              activeTab === "academic"
+                ? "border-emerald-600 text-emerald-700 font-semibold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            3. Academic Profile
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("admission")}
+            className={`pb-2 px-3 border-b-2 transition-colors ${
+              activeTab === "admission"
+                ? "border-emerald-600 text-emerald-700 font-semibold"
+                : "border-transparent text-slate-500 hover:text-slate-800"
+            }`}
+          >
+            4. Cohort & Stage
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4 pt-1">
+          {/* TAB 1: Personal Details & Student Photo */}
+          {activeTab === "personal" && (
+            <div className="space-y-4">
+              {/* Photo Upload Section */}
+              <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                <Label className="text-xs font-semibold text-slate-700 block mb-2">
+                  Student Passport Photograph (Real-time Student ID Card Photo)
+                </Label>
+                <div className="flex items-center gap-4">
+                  <div className="relative w-20 h-24 border-2 border-dashed border-slate-300 rounded-md bg-white flex items-center justify-center overflow-hidden shadow-sm">
+                    {photoUrl ? (
+                      <img
+                        src={photoUrl}
+                        alt="Student Photo"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center p-1">
+                        <User className="w-8 h-8 text-slate-300 mx-auto" />
+                        <span className="text-[9px] text-slate-400">No Photo</span>
+                      </div>
+                    )}
+                    {isUploadingPhoto && (
+                      <div className="absolute inset-0 bg-white/80 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 animate-spin text-emerald-600" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5 flex-1">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      className="hidden"
+                      onChange={handlePhotoUpload}
+                    />
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isUploadingPhoto}
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs flex items-center gap-1.5 h-8 bg-white border-slate-300 hover:border-emerald-500 hover:text-emerald-700"
+                      >
+                        <Camera className="w-3.5 h-3.5 text-slate-500" />
+                        <span>{photoUrl ? "Change Photo" : "Upload Photo"}</span>
+                      </Button>
+                      {photoUrl && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPhotoUrl(null)}
+                          className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 h-8 px-2"
+                        >
+                          <X className="w-3.5 h-3.5 mr-1" />
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      This photo is instantly printed on the student's ID Card and profile across LMS. Max 5MB (JPG, PNG).
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Personal Details Fields */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <User className="h-3 w-3 text-slate-400" />
+                    <span>Candidate Full Name *</span>
+                  </Label>
+                  <Input
+                    value={applicantName}
+                    onChange={(e) => setApplicantName(e.target.value)}
+                    required
+                    placeholder="Candidate full name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Gender</Label>
+                  <select
+                    value={gender}
+                    onChange={(e) => setGender(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                  >
+                    <option value="MALE">Male</option>
+                    <option value="FEMALE">Female</option>
+                    <option value="OTHER">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Father's Name</Label>
+                  <Input
+                    value={fatherName}
+                    onChange={(e) => setFatherName(e.target.value)}
+                    placeholder="Father's full name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Mother's Name</Label>
+                  <Input
+                    value={motherName}
+                    onChange={(e) => setMotherName(e.target.value)}
+                    placeholder="Mother's full name"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <Calendar className="h-3 w-3 text-slate-400" />
+                    <span>Date of Birth</span>
+                  </Label>
+                  <Input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Admission Center / Branch</Label>
+                  <Input
+                    value={center}
+                    onChange={(e) => setCenter(e.target.value)}
+                    placeholder="e.g. Civil Lines, Prayagraj"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
             </div>
           )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                <User className="h-3 w-3 text-slate-400" />
-                <span>Applicant Name</span>
-              </Label>
-              <Input
-                value={applicantName}
-                onChange={(e) => setApplicantName(e.target.value)}
-                required
-                className="h-8 text-xs"
-              />
-            </div>
+          {/* TAB 2: Contact & Address Coordinates */}
+          {activeTab === "contact" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <Phone className="h-3 w-3 text-slate-400" />
+                    <span>Primary Mobile Number *</span>
+                  </Label>
+                  <Input
+                    type="tel"
+                    value={applicantPhone}
+                    onChange={(e) => setApplicantPhone(e.target.value)}
+                    required
+                    placeholder="10-digit mobile"
+                    className="h-8 text-xs"
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                <Mail className="h-3 w-3 text-slate-400" />
-                <span>Email Address</span>
-              </Label>
-              <Input
-                type="email"
-                value={applicantEmail}
-                onChange={(e) => setApplicantEmail(e.target.value)}
-                required
-                className="h-8 text-xs"
-              />
-            </div>
-          </div>
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <Mail className="h-3 w-3 text-slate-400" />
+                    <span>Email Address *</span>
+                  </Label>
+                  <Input
+                    type="email"
+                    value={applicantEmail}
+                    onChange={(e) => setApplicantEmail(e.target.value)}
+                    required
+                    placeholder="student@example.com"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                <Phone className="h-3 w-3 text-slate-400" />
-                <span>Phone Number</span>
-              </Label>
-              <Input
-                type="tel"
-                value={applicantPhone}
-                onChange={(e) => setApplicantPhone(e.target.value)}
-                required
-                className="h-8 text-xs"
-              />
-            </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">WhatsApp Number</Label>
+                  <Input
+                    type="tel"
+                    value={whatsappNumber}
+                    onChange={(e) => setWhatsappNumber(e.target.value)}
+                    placeholder="WhatsApp contact"
+                    className="h-8 text-xs"
+                  />
+                </div>
 
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                <GraduationCap className="h-3 w-3 text-slate-400" />
-                <span>Assigned Cohort / Batch</span>
-              </Label>
-              <select
-                value={batchId}
-                onChange={(e) => setBatchId(e.target.value)}
-                className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Alternate Phone</Label>
+                  <Input
+                    type="tel"
+                    value={alternatePhone}
+                    onChange={(e) => setAlternatePhone(e.target.value)}
+                    placeholder="Parent / Guardian contact"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                  <MapPin className="h-3 w-3 text-slate-400" />
+                  <span>Permanent / Current Residential Address</span>
+                </Label>
+                <Input
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="House/Flat No, Street, Landmark"
+                  className="h-8 text-xs"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">City</Label>
+                  <Input
+                    value={city}
+                    onChange={(e) => setCity(e.target.value)}
+                    placeholder="e.g. Prayagraj"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">State</Label>
+                  <Input
+                    value={state}
+                    onChange={(e) => setState(e.target.value)}
+                    placeholder="e.g. Uttar Pradesh"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Pincode</Label>
+                  <Input
+                    value={pincode}
+                    onChange={(e) => setPincode(e.target.value)}
+                    placeholder="e.g. 211001"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Academic Profile */}
+          {activeTab === "academic" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <GraduationCap className="h-3 w-3 text-slate-400" />
+                    <span>Highest Qualification</span>
+                  </Label>
+                  <Input
+                    value={highestQualification}
+                    onChange={(e) => setHighestQualification(e.target.value)}
+                    placeholder="e.g. B.Tech CS / BCA / MCA"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <School className="h-3 w-3 text-slate-400" />
+                    <span>School / College / University</span>
+                  </Label>
+                  <Input
+                    value={schoolOrCollege}
+                    onChange={(e) => setSchoolOrCollege(e.target.value)}
+                    placeholder="e.g. University of Allahabad / AKTU"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Passing Year</Label>
+                  <Input
+                    value={passingYear}
+                    onChange={(e) => setPassingYear(e.target.value)}
+                    placeholder="e.g. 2024 / 2025"
+                    className="h-8 text-xs"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Percentage / CGPA</Label>
+                  <Input
+                    value={percentageOrCgpa}
+                    onChange={(e) => setPercentageOrCgpa(e.target.value)}
+                    placeholder="e.g. 78.5% or 8.2 CGPA"
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: Cohort & Admission Stage */}
+          {activeTab === "admission" && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                    <Building className="h-3 w-3 text-slate-400" />
+                    <span>Assigned Cohort / Batch</span>
+                  </Label>
+                  <select
+                    value={batchId}
+                    onChange={(e) => setBatchId(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                  >
+                    <option value="">-- None / Unassigned --</option>
+                    {batches.map((b: any) => (
+                      <option key={b.id} value={b.id}>
+                        {b.code} ({b.name})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <Label className="text-xs font-semibold text-slate-700">Admission Stage</Label>
+                  <select
+                    value={stage}
+                    onChange={(e) => setStage(e.target.value as ApplicationStage)}
+                    className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                  >
+                    {Object.values(ApplicationStage).map((st) => (
+                      <option key={st} value={st}>
+                        {st}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold text-slate-700">Counselor / Official Remarks</Label>
+                <textarea
+                  value={remarks}
+                  onChange={(e) => setRemarks(e.target.value)}
+                  rows={3}
+                  placeholder="Add any internal admission or verification remarks..."
+                  className="w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="pt-3 border-t border-slate-100 flex items-center justify-between sm:justify-between">
+            <div className="flex items-center gap-1 text-[11px] text-slate-400">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+              <span>Real-time sync to Student ID card and Profile</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenChange(false)}
+                disabled={updateMutation.isPending || isUploadingPhoto}
+                className="text-xs"
               >
-                <option value="">-- None / Unassigned --</option>
-                {batches.map((b: any) => (
-                  <option key={b.id} value={b.id}>
-                    {b.code} ({b.name})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">Qualification</Label>
-              <Input
-                value={highestQualification}
-                onChange={(e) => setHighestQualification(e.target.value)}
-                placeholder="e.g. B.Tech CS"
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700 flex items-center gap-1">
-                <MapPin className="h-3 w-3 text-slate-400" />
-                <span>City</span>
-              </Label>
-              <Input
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="h-8 text-xs"
-              />
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">Admission Stage</Label>
-              <select
-                value={stage}
-                onChange={(e) => setStage(e.target.value as ApplicationStage)}
-                className="flex h-8 w-full rounded-md border border-slate-300 bg-white px-2 py-1 text-xs text-slate-900"
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                size="sm"
+                disabled={updateMutation.isPending || isUploadingPhoto}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
               >
-                {Object.values(ApplicationStage).map((st) => (
-                  <option key={st} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
+                {updateMutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                    Saving Changes...
+                  </>
+                ) : (
+                  "Save & Sync All"
+                )}
+              </Button>
             </div>
-          </div>
-
-          <DialogFooter className="pt-3">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onOpenChange(false)}
-              disabled={updateMutation.isPending}
-              className="text-xs"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={updateMutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold"
-            >
-              {updateMutation.isPending ? (
-                <>
-                  <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                  Saving Changes...
-                </>
-              ) : (
-                "Save Application"
-              )}
-            </Button>
           </DialogFooter>
         </form>
       </div>

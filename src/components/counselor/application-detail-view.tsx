@@ -21,8 +21,13 @@ import {
   Calendar,
   Loader2,
   ArrowLeft,
+  Edit,
+  User,
+  Building,
+  School,
 } from "lucide-react";
 import { RazorpayCheckoutButton } from "@/components/payment/razorpay-checkout-button";
+import { EditApplicationDialog } from "./edit-application-dialog";
 
 interface ApplicationDetailViewProps {
   applicationId: string;
@@ -36,6 +41,7 @@ export function ApplicationDetailView({
   const [selectedStage, setSelectedStage] = useState<ApplicationStage>(ApplicationStage.UNDER_REVIEW);
   const [decisionReason, setDecisionReason] = useState("");
   const [stageError, setStageError] = useState<string | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const utils = api.useUtils();
   const { data: app, isLoading, error } = api.crm.getApplicationDetails.useQuery({ applicationId });
@@ -72,6 +78,12 @@ export function ApplicationDetailView({
     );
   }
 
+  const studentPhoto =
+    app.photoUrl ||
+    app.convertedStudentProfile?.photoUrl ||
+    app.convertedStudentProfile?.user?.avatarUrl ||
+    null;
+
   const handleStageSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setStageError(null);
@@ -94,12 +106,22 @@ export function ApplicationDetailView({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between">
         <Button asChild variant="ghost" size="sm" className="text-xs text-slate-600">
           <Link href={backHref} className="flex items-center gap-1">
             <ArrowLeft className="h-3.5 w-3.5" />
             <span>Back to Applications</span>
           </Link>
+        </Button>
+
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => setEditOpen(true)}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 h-8 shadow-xs"
+        >
+          <Edit className="h-3.5 w-3.5" />
+          <span>Edit Full Details & Photo</span>
         </Button>
       </div>
 
@@ -108,60 +130,146 @@ export function ApplicationDetailView({
         <Card className="lg:col-span-2 border-slate-200 bg-white">
           <CardHeader className="pb-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                  {app.applicationNumber}
-                </span>
-                <CardTitle className="text-xl font-bold text-slate-900 mt-2">{app.applicantName}</CardTitle>
-                <CardDescription className="text-xs text-slate-500 mt-0.5">
-                  Applied for <strong className="text-slate-700">{app.course.title}</strong>
-                  {app.batch && <span> ({app.batch.code})</span>}
-                </CardDescription>
+              <div className="flex items-start gap-4">
+                {/* Student Photo */}
+                <div className="w-16 h-20 rounded-md border border-slate-200 bg-slate-50 overflow-hidden shrink-0 flex items-center justify-center shadow-xs">
+                  {studentPhoto ? (
+                    <img
+                      src={studentPhoto}
+                      alt={app.applicantName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-8 h-8 text-slate-300" />
+                  )}
+                </div>
+
+                <div>
+                  <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    {app.applicationNumber}
+                  </span>
+                  <CardTitle className="text-xl font-bold text-slate-900 mt-1">{app.applicantName}</CardTitle>
+                  <CardDescription className="text-xs text-slate-500 mt-0.5">
+                    Applied for <strong className="text-slate-700">{app.course.title}</strong>
+                    {app.batch && <span> ({app.batch.code})</span>}
+                  </CardDescription>
+                </div>
               </div>
-              <Badge
-                variant="secondary"
-                className={
-                  app.stage === ApplicationStage.APPROVED
-                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-2.5 py-1"
-                    : app.stage === ApplicationStage.CONVERTED
-                    ? "bg-blue-50 text-blue-700 border-blue-200 text-xs px-2.5 py-1"
-                    : app.stage === ApplicationStage.REJECTED
-                    ? "bg-red-50 text-red-700 border-red-200 text-xs px-2.5 py-1"
-                    : "bg-amber-50 text-amber-700 border-amber-200 text-xs px-2.5 py-1"
-                }
-              >
-                {app.stage}
-              </Badge>
+
+              <div className="flex items-center gap-2">
+                <Badge
+                  variant="secondary"
+                  className={
+                    app.stage === ApplicationStage.APPROVED
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-xs px-2.5 py-1"
+                      : app.stage === ApplicationStage.CONVERTED
+                      ? "bg-blue-50 text-blue-700 border-blue-200 text-xs px-2.5 py-1"
+                      : app.stage === ApplicationStage.REJECTED
+                      ? "bg-red-50 text-red-700 border-red-200 text-xs px-2.5 py-1"
+                      : "bg-amber-50 text-amber-700 border-amber-200 text-xs px-2.5 py-1"
+                  }
+                >
+                  {app.stage}
+                </Badge>
+              </div>
             </div>
           </CardHeader>
+
           <CardContent className="space-y-4 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3 rounded-lg border border-slate-100">
-              <div className="flex items-center gap-2 text-slate-700">
-                <Mail className="h-4 w-4 text-slate-400 shrink-0" />
-                <span>
-                  Email: <strong>{app.applicantEmail}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <Phone className="h-4 w-4 text-slate-400 shrink-0" />
-                <span>
-                  Phone: <strong>{app.applicantPhone}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <GraduationCap className="h-4 w-4 text-slate-400 shrink-0" />
-                <span>
-                  Qualification: <strong>{app.highestQualification || "Not specified"}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-slate-700">
-                <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
-                <span>
-                  Location:{" "}
+            {/* Personal & Family Details */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-[11px] text-slate-500">
+                Personal & Family Coordinates
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Father's Name:</span>
+                  <strong>{app.fatherName || "Not specified"}</strong>
+                </div>
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Mother's Name:</span>
+                  <strong>{app.motherName || "Not specified"}</strong>
+                </div>
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Date of Birth:</span>
                   <strong>
-                    {app.city ? `${app.city}, ${app.state || "UP"}` : "Not specified"}
+                    {app.dateOfBirth
+                      ? new Date(app.dateOfBirth).toLocaleDateString("en-IN")
+                      : "Not specified"}
                   </strong>
-                </span>
+                </div>
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Gender:</span>
+                  <strong>{app.gender || "MALE"}</strong>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Details */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-[11px] text-slate-500">
+                Contact & Residential Details
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Mail className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    Email: <strong>{app.applicantEmail}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    Primary Mobile: <strong>{app.applicantPhone}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Phone className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    Alternate Mobile: <strong>{app.alternatePhone || "None"}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <Phone className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span>
+                    WhatsApp: <strong>{app.whatsappNumber || app.applicantPhone}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700 sm:col-span-2">
+                  <MapPin className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    Address: <strong>{app.address ? `${app.address}, ` : ""}{app.city ? `${app.city}, ` : ""}{app.state || "Uttar Pradesh"}{app.pincode ? ` - ${app.pincode}` : ""}</strong>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Academic Details */}
+            <div className="space-y-2">
+              <h4 className="font-bold text-slate-900 text-xs uppercase tracking-wider text-[11px] text-slate-500">
+                Academic Background
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50/70 p-3 rounded-lg border border-slate-100">
+                <div className="flex items-center gap-2 text-slate-700">
+                  <GraduationCap className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    Qualification: <strong>{app.highestQualification || "Not specified"}</strong>
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-700">
+                  <School className="h-4 w-4 text-slate-400 shrink-0" />
+                  <span>
+                    School / College: <strong>{app.schoolOrCollege || "Not specified"}</strong>
+                  </span>
+                </div>
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Passing Year:</span>
+                  <strong>{app.passingYear || "Not specified"}</strong>
+                </div>
+                <div className="text-slate-700">
+                  <span className="text-slate-400 block text-[11px]">Score / CGPA:</span>
+                  <strong>{app.percentageOrCgpa || "Not specified"}</strong>
+                </div>
               </div>
             </div>
 
@@ -303,6 +411,14 @@ export function ApplicationDetailView({
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Full Application & Photo Dialog */}
+      <EditApplicationDialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        application={app}
+        onSuccess={() => utils.crm.getApplicationDetails.invalidate({ applicationId })}
+      />
     </div>
   );
 }

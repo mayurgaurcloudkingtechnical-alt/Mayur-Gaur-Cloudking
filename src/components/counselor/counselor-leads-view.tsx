@@ -28,10 +28,12 @@ import {
   Radio,
   ExternalLink,
   GraduationCap,
+  FileText,
 } from "lucide-react";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
+import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
 
 interface CounselorLeadsViewProps {
   basePath?: string;
@@ -44,6 +46,7 @@ export function CounselorLeadsView({
 }: CounselorLeadsViewProps) {
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
   const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
@@ -56,6 +59,45 @@ export function CounselorLeadsView({
   const [testLeadFeedback, setTestLeadFeedback] = useState<string | null>(null);
 
   const utils = api.useUtils();
+  const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
+
+  const handleProceedFromEnquiry = (enquiryData: StudentEnquiryData, createdLeadId?: string) => {
+    const matchedCourse = courses.find((c: any) =>
+      c.title.toLowerCase() === enquiryData.recommendedCourse.toLowerCase() ||
+      enquiryData.selectedCourses.some((sc) => c.title.toLowerCase().includes(sc.toLowerCase()))
+    );
+
+    setSelectedLeadForAdmission({
+      id: createdLeadId,
+      fullName: enquiryData.fullName,
+      applicantName: enquiryData.fullName,
+      email: enquiryData.emailId,
+      phone: enquiryData.mobileNumber,
+      whatsappNumber: enquiryData.mobileNumber,
+      alternatePhone: enquiryData.alternateMobileNumber,
+      fatherName: enquiryData.fatherName,
+      motherName: enquiryData.motherName,
+      dateOfBirth: enquiryData.dateOfBirth,
+      gender: enquiryData.gender.toUpperCase(),
+      address: enquiryData.currentAddress,
+      city: enquiryData.city,
+      state: enquiryData.state,
+      pincode: enquiryData.pinCode,
+      qualification: enquiryData.qualifications.graduation.degree || enquiryData.qualifications.twelfth.board || "Graduate",
+      highestQualification: enquiryData.qualifications.graduation.degree || enquiryData.qualifications.twelfth.board || "Graduate",
+      schoolOrCollege: enquiryData.qualifications.graduation.board || enquiryData.qualifications.twelfth.board || "",
+      passingYear: enquiryData.qualifications.graduation.year || enquiryData.qualifications.twelfth.year || "",
+      percentageOrCgpa: enquiryData.qualifications.graduation.score || enquiryData.qualifications.twelfth.score || "",
+      interestedCourseId: matchedCourse?.id,
+      courseId: matchedCourse?.id,
+      customTotalFee: enquiryData.courseFees ? Number(enquiryData.courseFees) : undefined,
+      discountValue: enquiryData.discountOffered ? Number(enquiryData.discountOffered) : undefined,
+      paymentPlan: enquiryData.emiOption === "Yes" ? "EMI" : "LUMPSUM",
+      paidAmount: enquiryData.registrationAmount ? Number(enquiryData.registrationAmount) : undefined,
+      source: enquiryData.leadSource ? (enquiryData.leadSource.toUpperCase().replace(/\s+/g, "_") as any) : LeadSource.WALK_IN,
+    });
+    setDirectAdmissionOpen(true);
+  };
 
   const { data, isLoading, error, refetch, isFetching } = api.crm.listLeads.useQuery(
     {
@@ -306,6 +348,17 @@ export function CounselorLeadsView({
                   <span>Pipeline</span>
                 </button>
               </div>
+
+              {/* Student Enquiry Form Action Button */}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setEnquiryOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 h-9 shadow-xs"
+              >
+                <FileText className="h-4 w-4" />
+                <span>Student Enquiry Form</span>
+              </Button>
 
               {/* Add Lead Action Button */}
               <Button
@@ -604,6 +657,17 @@ export function CounselorLeadsView({
           </CardContent>
         </Card>
       )}
+
+      {/* Student Enquiry Form Modal (Matching Official 6-Page Form) */}
+      <StudentEnquiryDialog
+        open={enquiryOpen}
+        onOpenChange={setEnquiryOpen}
+        onProceedToAdmission={handleProceedFromEnquiry}
+        onSuccess={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
+      />
 
       {/* Create Lead Modal */}
       <CreateLeadDialog

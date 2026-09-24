@@ -556,6 +556,17 @@ export const crmRouter = router({
         applicantName: z.string().min(2).optional(),
         applicantEmail: z.string().email().optional(),
         applicantPhone: z.string().min(10).optional(),
+        fatherName: z.string().optional(),
+        motherName: z.string().optional(),
+        dateOfBirth: z.union([z.date(), z.string()]).optional(),
+        gender: z.string().optional(),
+        whatsappNumber: z.string().optional(),
+        alternatePhone: z.string().optional(),
+        schoolOrCollege: z.string().optional(),
+        passingYear: z.string().optional(),
+        percentageOrCgpa: z.string().optional(),
+        photoUrl: z.string().optional(),
+        center: z.string().optional(),
         courseId: z.string().optional(),
         batchId: z.string().nullable().optional(),
         counselorId: z.string().nullable().optional(),
@@ -875,7 +886,14 @@ export const crmRouter = router({
     .input(z.object({ applicationId: z.string() }))
     .query(async ({ input }) => {
       const payment = await db.paymentTransaction.findFirst({
-        where: { admissionId: input.applicationId, status: "SUCCESS" },
+        where: {
+          OR: [
+            { admissionId: input.applicationId },
+            { student: { convertedApplication: { id: input.applicationId } } },
+            { feeStructure: { student: { convertedApplication: { id: input.applicationId } } } },
+          ],
+          status: "SUCCESS",
+        },
         orderBy: { createdAt: "desc" },
       });
       if (!payment) {

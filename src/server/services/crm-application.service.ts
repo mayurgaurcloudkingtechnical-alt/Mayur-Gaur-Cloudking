@@ -98,6 +98,17 @@ export interface UpdateApplicationInput {
   applicantName?: string;
   applicantEmail?: string;
   applicantPhone?: string;
+  fatherName?: string;
+  motherName?: string;
+  dateOfBirth?: Date | string;
+  gender?: string;
+  whatsappNumber?: string;
+  alternatePhone?: string;
+  schoolOrCollege?: string;
+  passingYear?: string;
+  percentageOrCgpa?: string;
+  photoUrl?: string;
+  center?: string;
   courseId?: string;
   batchId?: string | null;
   counselorId?: string | null;
@@ -888,6 +899,12 @@ export class CrmApplicationService {
             select: {
               id: true,
               studentId: true,
+              photoUrl: true,
+              user: {
+                select: {
+                  avatarUrl: true,
+                },
+              },
             },
           },
         },
@@ -926,6 +943,12 @@ export class CrmApplicationService {
             id: true,
             studentId: true,
             userId: true,
+            photoUrl: true,
+            user: {
+              select: {
+                avatarUrl: true,
+              },
+            },
             createdAt: true,
           },
         },
@@ -1025,7 +1048,9 @@ export class CrmApplicationService {
       hasPermission(user.permissions, "admissions:approve_discount") ||
       user.roleCode === "SUPER_ADMIN" ||
       user.roleCode === "DIRECTOR" ||
-      user.roleCode === "ADMIN";
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "COUNSELOR" ||
+      user.roleCode === "MANAGER";
 
     if (!canManage) {
       throw new TRPCError({
@@ -1072,6 +1097,17 @@ export class CrmApplicationService {
         ...(input.applicantName ? { applicantName: input.applicantName.trim() } : {}),
         ...(input.applicantEmail ? { applicantEmail: normalizeEmail(input.applicantEmail) } : {}),
         ...(input.applicantPhone ? { applicantPhone: normalizePhone(input.applicantPhone) } : {}),
+        ...(input.fatherName !== undefined ? { fatherName: input.fatherName?.trim() || null } : {}),
+        ...(input.motherName !== undefined ? { motherName: input.motherName?.trim() || null } : {}),
+        ...(input.dateOfBirth ? { dateOfBirth: new Date(input.dateOfBirth) } : {}),
+        ...(input.gender !== undefined ? { gender: input.gender?.trim() || null } : {}),
+        ...(input.whatsappNumber !== undefined ? { whatsappNumber: input.whatsappNumber?.trim() || null } : {}),
+        ...(input.alternatePhone !== undefined ? { alternatePhone: input.alternatePhone?.trim() || null } : {}),
+        ...(input.schoolOrCollege !== undefined ? { schoolOrCollege: input.schoolOrCollege?.trim() || null } : {}),
+        ...(input.passingYear !== undefined ? { passingYear: input.passingYear?.trim() || null } : {}),
+        ...(input.percentageOrCgpa !== undefined ? { percentageOrCgpa: input.percentageOrCgpa?.trim() || null } : {}),
+        ...(input.photoUrl ? { photoUrl: input.photoUrl.trim() } : {}),
+        ...(input.center !== undefined ? { center: input.center?.trim() || null } : {}),
         ...(input.courseId ? { courseId: input.courseId } : {}),
         ...(input.batchId !== undefined ? { batchId: input.batchId } : {}),
         ...(input.counselorId !== undefined ? { counselorId: input.counselorId } : {}),
@@ -1088,6 +1124,49 @@ export class CrmApplicationService {
         batch: { select: { id: true, name: true, code: true } },
       },
     });
+
+    // Synchronize updates directly to StudentProfile & User when student is already admitted
+    if (app.convertedStudentProfileId) {
+      await db.studentProfile.update({
+        where: { id: app.convertedStudentProfileId },
+        data: {
+          ...(input.photoUrl ? { photoUrl: input.photoUrl.trim() } : {}),
+          ...(input.fatherName !== undefined ? { fatherName: input.fatherName?.trim() || null } : {}),
+          ...(input.motherName !== undefined ? { motherName: input.motherName?.trim() || null } : {}),
+          ...(input.dateOfBirth ? { dateOfBirth: new Date(input.dateOfBirth) } : {}),
+          ...(input.gender !== undefined ? { gender: input.gender?.trim() || null } : {}),
+          ...(input.whatsappNumber !== undefined ? { whatsappNumber: input.whatsappNumber?.trim() || null } : {}),
+          ...(input.alternatePhone !== undefined ? { alternatePhone: input.alternatePhone?.trim() || null } : {}),
+          ...(input.schoolOrCollege !== undefined ? { schoolOrCollege: input.schoolOrCollege?.trim() || null } : {}),
+          ...(input.passingYear !== undefined ? { passingYear: input.passingYear?.trim() || null } : {}),
+          ...(input.percentageOrCgpa !== undefined ? { percentageOrCgpa: input.percentageOrCgpa?.trim() || null } : {}),
+          ...(input.highestQualification !== undefined ? { highestDegree: input.highestQualification?.trim() || null } : {}),
+          ...(input.address !== undefined ? { address: input.address?.trim() || null } : {}),
+          ...(input.city !== undefined ? { city: input.city?.trim() || null } : {}),
+          ...(input.state !== undefined ? { state: input.state?.trim() || null } : {}),
+          ...(input.pincode !== undefined ? { pincode: input.pincode?.trim() || null } : {}),
+          ...(input.center !== undefined ? { center: input.center?.trim() || null } : {}),
+        },
+      });
+
+      const studentProfile = await db.studentProfile.findUnique({
+        where: { id: app.convertedStudentProfileId },
+        select: { userId: true },
+      });
+
+      if (studentProfile?.userId) {
+        const nameParts = input.applicantName ? input.applicantName.trim().split(" ") : null;
+        await db.user.update({
+          where: { id: studentProfile.userId },
+          data: {
+            ...(nameParts ? { firstName: nameParts[0], lastName: nameParts.slice(1).join(" ") || "" } : {}),
+            ...(input.applicantEmail ? { email: normalizeEmail(input.applicantEmail) } : {}),
+            ...(input.applicantPhone ? { phone: normalizePhone(input.applicantPhone) } : {}),
+            ...(input.photoUrl ? { avatarUrl: input.photoUrl.trim() } : {}),
+          },
+        });
+      }
+    }
 
     await AuditService.log({
       actorId: user.id,

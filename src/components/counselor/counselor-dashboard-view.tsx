@@ -6,10 +6,11 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle, PlusCircle, GraduationCap, Share2, IndianRupee } from "lucide-react";
+import { Users, PhoneCall, UserPlus, Percent, ArrowRight, Clock, AlertTriangle, PlusCircle, GraduationCap, Share2, IndianRupee, FileText } from "lucide-react";
 import { LeadStatus } from "@prisma/client";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
+import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
 
 interface CounselorDashboardViewProps {
   maxDiscount: number;
@@ -18,9 +19,12 @@ interface CounselorDashboardViewProps {
 
 export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashboardViewProps) {
   const [createLeadOpen, setCreateLeadOpen] = React.useState(false);
+  const [enquiryOpen, setEnquiryOpen] = React.useState(false);
   const [admissionOpen, setAdmissionOpen] = React.useState(false);
+  const [admissionLeadData, setAdmissionLeadData] = React.useState<any>(null);
 
   const { data: stats, isLoading: isLoadingStats } = api.crm.getStats.useQuery();
+  const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
   const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery(
     {
       limit: 6,
@@ -31,6 +35,43 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
       refetchOnWindowFocus: true,
     }
   );
+
+  const handleProceedFromEnquiry = (enquiryData: StudentEnquiryData, createdLeadId?: string) => {
+    const matchedCourse = courses.find((c: any) =>
+      c.title.toLowerCase() === enquiryData.recommendedCourse.toLowerCase() ||
+      enquiryData.selectedCourses.some(sc => c.title.toLowerCase().includes(sc.toLowerCase()))
+    );
+
+    setAdmissionLeadData({
+      id: createdLeadId,
+      fullName: enquiryData.fullName,
+      applicantName: enquiryData.fullName,
+      email: enquiryData.emailId,
+      phone: enquiryData.mobileNumber,
+      whatsappNumber: enquiryData.mobileNumber,
+      alternatePhone: enquiryData.alternateMobileNumber,
+      fatherName: enquiryData.fatherName,
+      motherName: enquiryData.motherName,
+      dateOfBirth: enquiryData.dateOfBirth,
+      gender: enquiryData.gender.toUpperCase(),
+      address: enquiryData.currentAddress,
+      city: enquiryData.city,
+      state: enquiryData.state,
+      pincode: enquiryData.pinCode,
+      qualification: enquiryData.qualifications.graduation.degree || enquiryData.qualifications.twelfth.board || "Graduate",
+      highestQualification: enquiryData.qualifications.graduation.degree || enquiryData.qualifications.twelfth.board || "Graduate",
+      schoolOrCollege: enquiryData.qualifications.graduation.board || enquiryData.qualifications.twelfth.board || "",
+      passingYear: enquiryData.qualifications.graduation.year || enquiryData.qualifications.twelfth.year || "",
+      percentageOrCgpa: enquiryData.qualifications.graduation.score || enquiryData.qualifications.twelfth.score || "",
+      interestedCourseId: matchedCourse?.id,
+      courseId: matchedCourse?.id,
+      customTotalFee: enquiryData.courseFees ? Number(enquiryData.courseFees) : undefined,
+      discountValue: enquiryData.discountOffered ? Number(enquiryData.discountOffered) : undefined,
+      paymentPlan: enquiryData.emiOption === "Yes" ? "EMI" : "LUMPSUM",
+      paidAmount: enquiryData.registrationAmount ? Number(enquiryData.registrationAmount) : undefined,
+    });
+    setAdmissionOpen(true);
+  };
 
   const dueCount = stats?.dueToday ?? 0;
 
@@ -46,6 +87,16 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
           <Button
             type="button"
             size="sm"
+            onClick={() => setEnquiryOpen(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Student Enquiry Form</span>
+          </Button>
+
+          <Button
+            type="button"
+            size="sm"
             onClick={() => setCreateLeadOpen(true)}
             className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
           >
@@ -56,7 +107,10 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
           <Button
             type="button"
             size="sm"
-            onClick={() => setAdmissionOpen(true)}
+            onClick={() => {
+              setAdmissionLeadData(null);
+              setAdmissionOpen(true);
+            }}
             className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
           >
             <GraduationCap className="h-4 w-4" />
@@ -265,6 +319,13 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
         </CardContent>
       </Card>
 
+      {/* Student Enquiry Form Modal (Matching Official 6-Page Form) */}
+      <StudentEnquiryDialog
+        open={enquiryOpen}
+        onOpenChange={setEnquiryOpen}
+        onProceedToAdmission={handleProceedFromEnquiry}
+      />
+
       {/* Add Lead Modal */}
       <CreateLeadDialog
         open={createLeadOpen}
@@ -274,7 +335,12 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
       {/* Direct Admission Modal */}
       <DirectAdmissionDialog
         open={admissionOpen}
-        onOpenChange={setAdmissionOpen}
+        onOpenChange={(open) => {
+          setAdmissionOpen(open);
+          if (!open) setAdmissionLeadData(null);
+        }}
+        initialLeadId={admissionLeadData?.id}
+        initialLead={admissionLeadData}
       />
     </div>
   );
