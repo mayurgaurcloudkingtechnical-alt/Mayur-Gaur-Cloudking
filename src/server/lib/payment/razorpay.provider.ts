@@ -113,7 +113,8 @@ export class RazorpayProvider implements PaymentGateway {
 
         if (!response.ok) {
           const errText = await response.text();
-          throw new Error(`Razorpay order API failed (${response.status}): ${errText}`);
+          console.error(`[RazorpayProvider] Razorpay order API failed (${response.status}):`, errText);
+          throw new Error("Online payment service is temporarily unavailable. Please try again.");
         }
 
         const data = (await response.json()) as { id: string; amount: number; currency: string };

@@ -148,7 +148,17 @@ export function UniversalPaymentDialog({
       }
     } catch (err: any) {
       console.error("Payment initiation error:", err);
-      setErrorMessage(err.message || "Failed to initiate online payment.");
+      let safeMsg = err.message || "Failed to initiate online payment.";
+      if (
+        safeMsg.includes("Authentication failed") ||
+        safeMsg.includes("401") ||
+        safeMsg.includes("BAD_REQUEST_ERROR") ||
+        safeMsg.includes("failed (")
+      ) {
+        safeMsg =
+          "Online payment service is temporarily unavailable. Please try again or contact the accounts desk.";
+      }
+      setErrorMessage(safeMsg);
     } finally {
       setIsProcessing(false);
     }
