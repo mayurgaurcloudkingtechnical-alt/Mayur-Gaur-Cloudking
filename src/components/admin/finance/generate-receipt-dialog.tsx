@@ -185,7 +185,7 @@ export function GenerateReceiptDialog({
             )}
           </div>
         ) : (
-          <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+          <div className="fixed inset-0 z-50 bg-white flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
             <div className="w-full max-w-[210mm] py-2 px-2 flex justify-start print:hidden">
               <Button
                 size="sm"

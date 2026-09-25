@@ -39,14 +39,16 @@ export function StudentReceiptModal({
         paymentMode: receipt.payment.gateway || "Online",
         transactionReference: receipt.payment.transactionReference,
         status: "Completed",
-        centerName: receipt.company?.name || "SOFTLAB GLOBAL",
-        centerAddress: receipt.company?.address || "H-15, Sector-63, Noida, Uttar Pradesh 201301",
-        gstNo: receipt.company?.gstin || "09AABCS1429B1Z",
+        centerName: receipt.company?.name || "SOFTLAB GLOBAL PRAYAGRAJ CENTRE",
+        centerAddress:
+          receipt.company?.address ||
+          "Address: Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001",
+        gstNo: receipt.company?.gstin || "09AFYFS5388G1ZX",
       }
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+    <div className="fixed inset-0 z-50 bg-white flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
       {isLoading || !dualData ? (
         <div className="flex items-center justify-center min-h-[60vh] text-sm text-slate-600 gap-2 font-semibold">
           <Loader2 className="w-5 h-5 animate-spin text-[#0088cc]" />

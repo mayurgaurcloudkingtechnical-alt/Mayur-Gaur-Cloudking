@@ -48,9 +48,34 @@ interface DualFeeReceiptProps {
 }
 
 export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) {
-  // Normalize paise to rupees if >= 100000 or based on netPayable vs totalFee
-  // If totalFee > 500000, it's definitely in Paise
-  const toRupees = (val: number) => (val > 100000 ? Math.floor(val / 100) : Math.floor(val));
+  // Robust detection of Paise vs Rupees:
+  // In the SoftLab LMS database, all payment & fee amounts are stored in Paise (integers: e.g. 1500000 = ₹15,000, 4500000 = ₹45,000).
+  // All course fees are <= ₹2,10,000 (21000000 paise).
+  // If totalFee >= 500000 or amountPaid >= 500000 or netPayable >= 500000, the data is in Paise.
+  const isPaise = Boolean(
+    (data.totalFee && data.totalFee >= 500000) ||
+    (data.amountPaid && data.amountPaid >= 500000) ||
+    (data.netPayable && data.netPayable >= 500000)
+  );
+
+  const toRupees = (val: number | undefined | null) => {
+    if (val === undefined || val === null || isNaN(val)) return 0;
+    return isPaise ? Math.floor(val / 100) : Math.floor(val);
+  };
+
+  const defaultAddress =
+    "Address: Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001";
+  const defaultGst = "09AFYFS5388G1ZX";
+
+  const sanitizedAddress =
+    data.centerAddress && !data.centerAddress.toLowerCase().includes("noida")
+      ? data.centerAddress
+      : defaultAddress;
+
+  const sanitizedGst =
+    data.gstNo && !data.gstNo.includes("1429B1Z")
+      ? data.gstNo
+      : defaultGst;
 
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -60,8 +85,17 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   const [receiptNumber, setReceiptNumber] = useState(data.receiptNumber || "SLG-2026-306281");
   const [receiptDate, setReceiptDate] = useState(() => {
     try {
+      if (!data.receiptDate) return "15-06-2026";
       const d = new Date(data.receiptDate);
-      return isNaN(d.getTime()) ? "15-06-2026" : d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, "-");
+      return isNaN(d.getTime())
+        ? "15-06-2026"
+        : d
+            .toLocaleDateString("en-GB", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })
+            .replace(/\//g, "-");
     } catch {
       return "15-06-2026";
     }
@@ -71,23 +105,32 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   const [studentId, setStudentId] = useState(data.studentId || data.admissionNumber || "SG-2026-00005");
   const [courseTitle, setCourseTitle] = useState(data.courseTitle || "Technical Support Engineer");
   const [centerName, setCenterName] = useState(data.centerName || "SOFTLAB GLOBAL PRAYAGRAJ CENTRE");
-  const [centerAddress, setCenterAddress] = useState(
-    data.centerAddress ||
-      "Address: Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001"
-  );
-  const [gstNo, setGstNo] = useState(data.gstNo || "09AFYFS5388G1ZX");
+  const [centerAddress, setCenterAddress] = useState(sanitizedAddress);
+  const [gstNo, setGstNo] = useState(sanitizedGst);
 
   const [particulars, setParticulars] = useState(data.particulars || "Registration/Enrollment Payment");
-  const [registrationPayment, setRegistrationPayment] = useState<number>(data.registrationPayment ? toRupees(data.registrationPayment) : 0);
+  const [registrationPayment, setRegistrationPayment] = useState<number>(
+    data.registrationPayment ? toRupees(data.registrationPayment) : 0
+  );
 
   const [totalFees, setTotalFees] = useState<number>(toRupees(data.totalFee || 45000));
   const [totalDiscount, setTotalDiscount] = useState<number>(toRupees(data.discountAmount || 0));
   const [totalPaid, setTotalPaid] = useState<number>(toRupees(data.amountPaid || 10000));
   const [totalOutstanding, setTotalOutstanding] = useState<number>(
-    toRupees(data.pendingAmount || Math.max(0, toRupees(data.totalFee || 45000) - toRupees(data.discountAmount || 0) - toRupees(data.amountPaid || 10000)))
+    toRupees(
+      data.pendingAmount ||
+        Math.max(
+          0,
+          toRupees(data.totalFee || 45000) -
+            toRupees(data.discountAmount || 0) -
+            toRupees(data.amountPaid || 10000)
+        )
+    )
   );
 
-  const [paymentMode, setPaymentMode] = useState(data.paymentMode ? `${data.paymentMode} ${data.transactionReference || ""}`.trim() : "Cash");
+  const [paymentMode, setPaymentMode] = useState(
+    data.paymentMode ? `${data.paymentMode} ${data.transactionReference || ""}`.trim() : "Cash"
+  );
   const [status, setStatus] = useState(data.status || "Completed");
   const [customWords, setCustomWords] = useState<string>("");
 
@@ -160,10 +203,8 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
 
   const renderSingleReceipt = (copyTitle: "Student Copy" | "Center Copy") => (
     <div
-      className="receipt-box border-2 border-black bg-white text-black p-3 flex flex-col justify-between box-border text-[11px] leading-tight select-text shrink-0"
+      className="single-receipt-copy border-2 border-black bg-white text-black p-2.5 sm:p-3 flex flex-col justify-between box-border text-[10.5px] leading-tight select-text shrink-0 print:p-2.5"
       style={{
-        height: "136.5mm",
-        maxHeight: "136.5mm",
         boxSizing: "border-box",
       }}
     >
@@ -556,26 +597,28 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   );
 
   return (
-    <div className="w-full min-h-screen bg-slate-100 py-6 px-2 flex flex-col items-center justify-start print:bg-white print:p-0 print:m-0 print:min-h-0 print:w-full">
+    <div className="w-full min-h-screen bg-white py-4 px-2 flex flex-col items-center justify-start print:bg-white print:p-0 print:m-0 print:min-h-0 print:w-full">
       {/* Global Print & Page Styling */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @page {
               size: A4 portrait;
-              margin: 0mm;
+              margin: 5mm 6mm;
             }
             @media print {
+              *, *::before, *::after {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+              }
               html, body {
                 margin: 0 !important;
                 padding: 0 !important;
                 background: #ffffff !important;
                 background-color: #ffffff !important;
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-                width: 210mm !important;
-                height: 297mm !important;
-                overflow: hidden !important;
+                width: 100% !important;
+                height: auto !important;
+                overflow: visible !important;
               }
               body * {
                 visibility: hidden;
@@ -584,21 +627,30 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
                 visibility: visible;
               }
               .a4-receipt-page {
-                position: fixed !important;
+                position: absolute !important;
                 left: 0 !important;
                 top: 0 !important;
-                width: 210mm !important;
-                height: 297mm !important;
-                min-height: 297mm !important;
-                max-height: 297mm !important;
-                padding: 5mm 6mm !important;
+                width: 100% !important;
+                max-width: 100% !important;
+                height: auto !important;
+                min-height: 0 !important;
+                max-height: none !important;
+                padding: 0 !important;
                 margin: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
                 background: #ffffff !important;
                 box-sizing: border-box !important;
-                page-break-after: avoid !important;
+              }
+              .single-receipt-copy {
                 page-break-inside: avoid !important;
+                break-inside: avoid !important;
+              }
+              .cut-section-divider {
+                page-break-before: avoid !important;
+                break-before: avoid !important;
+                page-break-after: avoid !important;
+                break-after: avoid !important;
               }
               .print-hidden-toolbar {
                 display: none !important;
@@ -684,12 +736,8 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
 
       {/* A4 Container: Student Copy (Top) + Scissor Perforation + Center Copy (Bottom) */}
       <div
-        className="a4-receipt-page bg-white p-[6mm] mx-auto flex flex-col justify-between border border-slate-300 shadow-2xl print:p-[4mm] print:border-none print:shadow-none print:m-0"
+        className="a4-receipt-page bg-white p-3 sm:p-5 mx-auto flex flex-col justify-between border border-slate-300 shadow-md print:p-0 print:border-none print:shadow-none print:m-0 w-full max-w-[210mm]"
         style={{
-          width: "210mm",
-          height: "297mm",
-          minHeight: "297mm",
-          maxHeight: "297mm",
           boxSizing: "border-box",
         }}
       >
@@ -697,7 +745,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         {renderSingleReceipt("Student Copy")}
 
         {/* Scissor Perforation Line matching the uploaded PDF reference */}
-        <div className="relative h-[8mm] flex items-center justify-center select-none shrink-0 print:py-0">
+        <div className="cut-section-divider relative my-2 sm:my-3 h-[8mm] flex items-center justify-center select-none shrink-0 print:my-1.5">
           <div className="w-full border-t-2 border-dashed border-black"></div>
           <span className="absolute bg-white px-3 text-xs text-black flex items-center gap-1 font-bold">
             ✂ ----------------- CUT HERE ----------------- ✂

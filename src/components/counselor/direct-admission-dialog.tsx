@@ -495,7 +495,7 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
         {/* VIEW 1: DUAL FEE RECEIPT MODAL */}
         {/* =================================================================== */}
         {viewingReceipt && (
-          <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+          <div className="fixed inset-0 z-50 bg-white flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
             <DualFeeReceipt
               data={viewingReceipt}
               onClose={() => setViewingReceipt(null)}

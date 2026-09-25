@@ -119,7 +119,7 @@ export function ReceiptPageView() {
   }, [paymentId, studentId, receiptNo, utils]);
 
   return (
-    <div className="min-h-screen bg-slate-100 py-6 px-2 flex flex-col items-center print:bg-white print:p-0 print:m-0">
+    <div className="min-h-screen bg-white py-4 px-2 flex flex-col items-center print:bg-white print:p-0 print:m-0">
       {/* Top back navigation */}
       <div className="w-full max-w-[210mm] flex items-center justify-between print:hidden mb-3">
         <Button asChild variant="outline" size="sm" className="gap-1.5 text-xs text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 font-semibold">

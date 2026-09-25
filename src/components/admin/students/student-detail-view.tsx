@@ -2568,7 +2568,7 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
       {/* DUAL A4 FEE RECEIPT MODAL (PHASE 11: STUDENT COPY + CENTRE COPY) */}
       {selectedReceiptData && (
-        <div className="fixed inset-0 z-50 bg-slate-100 flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
+        <div className="fixed inset-0 z-50 bg-white flex flex-col items-center overflow-y-auto print:bg-white print:p-0 print:m-0 print:overflow-visible">
           <DualFeeReceipt
             data={selectedReceiptData}
             onClose={() => setSelectedReceiptData(null)}
