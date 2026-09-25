@@ -86,7 +86,7 @@ export class BulkCallingParserService {
         Phone: "9876543210",
         "Alternate Phone": "",
         Email: "rahul.sharma@example.com",
-        City: "Noida",
+        City: "Prayagraj",
         State: "Uttar Pradesh",
         Course: "Artificial Intelligence & Machine Learning",
         Source: "Website Bulk",

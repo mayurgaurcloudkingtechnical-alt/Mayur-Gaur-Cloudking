@@ -3,6 +3,7 @@ import { ExtractedCallResult } from "../ai-calling-agent.service";
 export interface OutboundCallRequest {
   queueItemId: string;
   batchId: string;
+  callerId?: string;
   leadName?: string;
   phone: string;
   courseTitle?: string;

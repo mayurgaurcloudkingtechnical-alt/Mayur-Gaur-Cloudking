@@ -7,6 +7,7 @@ import {
 import { VoiceProviderFactory } from "./voice-providers/voice-provider.factory";
 import { BulkCallingCrmIntegrationService } from "./bulk-calling-crm-integration.service";
 import { normalizePhone } from "./crm-lead.service";
+import { CallerIdentityService } from "./caller-identity.service";
 
 export class BulkCallingQueueService {
   // In-memory registry of actively executing batch loops to prevent duplicate execution
@@ -269,6 +270,21 @@ export class BulkCallingQueueService {
       return;
     }
 
+    // Resolve dynamic caller identity from assigned counselor/telecaller profile
+    const callerUserId = batch.assignedToId || batch.uploadedById;
+    const identityResult = await CallerIdentityService.resolveCallerIdentity(callerUserId, batch.voiceProvider);
+
+    if (!identityResult.success) {
+      await db.callingQueueItem.update({
+        where: { id: item.id },
+        data: {
+          status: CallingQueueStatus.SKIPPED,
+          skipReason: `${identityResult.code}: ${identityResult.message}`,
+        },
+      });
+      return;
+    }
+
     // Mark as CALLING
     await db.callingQueueItem.update({
       where: { id: item.id },
@@ -284,6 +300,7 @@ export class BulkCallingQueueService {
     const response = await provider.makeCall({
       queueItemId: item.id,
       batchId: batch.id,
+      callerId: identityResult.officialNumber,
       leadName: item.name || undefined,
       phone: item.phone,
       courseTitle: item.course || undefined,

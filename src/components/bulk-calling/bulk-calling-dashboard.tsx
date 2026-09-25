@@ -72,6 +72,10 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
     { page: 1, limit: 50 },
     { enabled: isSuperAdminOrAdmin }
   );
+  const { data: identitiesData, refetch: refetchIdentities } = api.bulkCalling.listIdentities.useQuery(
+    undefined,
+    { enabled: isSuperAdminOrAdmin }
+  );
 
   // Mutations
   const validateMutation = api.bulkCalling.validateUpload.useMutation();
@@ -82,9 +86,17 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
   const stopBatchMutation = api.bulkCalling.stopBatch.useMutation();
   const deleteBatchMutation = api.bulkCalling.deleteBatch.useMutation();
   const updateConfigMutation = api.bulkCalling.updateGlobalConfig.useMutation();
+  const upsertIdentityMutation = api.bulkCalling.upsertIdentity.useMutation();
   const addDncMutation = api.bulkCalling.addDnc.useMutation();
   const removeDncMutation = api.bulkCalling.removeDnc.useMutation();
   const simulateCallMutation = api.bulkCalling.simulateCallTurn.useMutation();
+
+  // Settings & Identity Edit State
+  const [configSaveStatus, setConfigSaveStatus] = useState<string | null>(null);
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [editOfficialNumber, setEditOfficialNumber] = useState<string>("");
+  const [editStatus, setEditStatus] = useState<"VERIFIED" | "PENDING_VERIFICATION" | "UNVERIFIED">("VERIFIED");
+  const [identitySaveStatus, setIdentitySaveStatus] = useState<string | null>(null);
 
   // Import State
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -1243,162 +1255,445 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
         {/* TAB 5: SETTINGS & COMPLIANCE (Super Admin & Admin Only) */}
         {/* =================================================================== */}
         {isSuperAdminOrAdmin && (
-          <TabsContent value="settings" className="space-y-4 pt-2">
+          <TabsContent value="settings" className="space-y-6 pt-2">
+            {/* SECTION 1: GLOBAL CALLING & KNOWLEDGE CONFIG */}
             <Card className="border shadow-sm">
               <CardHeader className="p-5 border-b">
-                <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-slate-700" />
-                  <span>Global AI Calling Configuration & Compliance Rules</span>
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Settings className="w-5 h-5 text-slate-700" />
+                    <span>Global AI Calling Configuration & Business Identity</span>
+                  </div>
+                  {configSaveStatus && (
+                    <Badge className="bg-emerald-600 text-white text-xs">{configSaveStatus}</Badge>
+                  )}
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500">
-                  Global parameters managed by Super Admin and Admin. Enforces permitted calling windows, sequential concurrency, telephony adapters, and Do-Not-Call (DNC) list.
+                  Configure calling windows, concurrency, telephony engine, and verified SoftLab Global Civil Lines Prayagraj claims.
                 </CardDescription>
               </CardHeader>
 
-              <CardContent className="p-5 space-y-6">
+              <CardContent className="p-5 space-y-5">
                 {globalConfig && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Default Calling Hours (Start - End)
-                      </label>
-                      <div className="flex items-center gap-2">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const form = e.currentTarget;
+                      const getVal = (name: string) => (form.elements.namedItem(name) as HTMLInputElement)?.value;
+
+                      await updateConfigMutation.mutateAsync({
+                        callingHoursStart: getVal("callingHoursStart") || "10:00",
+                        callingHoursEnd: getVal("callingHoursEnd") || "19:00",
+                        defaultConcurrency: parseInt(getVal("defaultConcurrency") || "1", 10),
+                        maxRetries: parseInt(getVal("maxRetries") || "3", 10),
+                        retryDelayMinutes: parseInt(getVal("retryDelayMinutes") || "30", 10),
+                        autoStartDefault: false,
+                        defaultProvider: getVal("defaultProvider") || "SIMULATOR",
+                        defaultLanguage: "hi-IN",
+                        campusLocation: getVal("campusLocation") || "Civil Lines, Prayagraj, Uttar Pradesh",
+                        corporateRecruitingPartnersCount: getVal("corporateRecruitingPartnersCount") || "1200+",
+                        placementClaim: getVal("placementClaim") || "100% Placement Support & Dedicated Placement Cell",
+                        practicalProjectClaim: getVal("practicalProjectClaim") || "Live Industry Projects & Git/GitHub Repositories",
+                        websiteUrl: getVal("websiteUrl") || "https://softlabglobal.com",
+                      });
+
+                      setConfigSaveStatus("Configuration saved successfully!");
+                      setTimeout(() => setConfigSaveStatus(null), 3500);
+                      refetchConfig();
+                    }}
+                    className="space-y-4 text-xs"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Default Calling Hours (Start - End)
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="time"
+                            name="callingHoursStart"
+                            defaultValue={globalConfig.callingHoursStart}
+                            className="h-8 text-xs font-mono"
+                          />
+                          <span>to</span>
+                          <Input
+                            type="time"
+                            name="callingHoursEnd"
+                            defaultValue={globalConfig.callingHoursEnd}
+                            className="h-8 text-xs font-mono"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Active Call Concurrency (Per Queue)
+                        </label>
                         <Input
-                          type="time"
-                          defaultValue={globalConfig.callingHoursStart}
-                          id="cfg-start-hours"
+                          type="number"
+                          name="defaultConcurrency"
+                          defaultValue={globalConfig.defaultConcurrency}
+                          min={1}
+                          max={10}
                           className="h-8 text-xs font-mono"
                         />
-                        <span>to</span>
+                        <span className="text-[10px] text-slate-400 block mt-0.5">
+                          Default is 1 (Strict sequential calling).
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block font-semibold text-slate-700 mb-1">
+                          Max Retry Attempts
+                        </label>
                         <Input
-                          type="time"
-                          defaultValue={globalConfig.callingHoursEnd}
-                          id="cfg-end-hours"
+                          type="number"
+                          name="maxRetries"
+                          defaultValue={globalConfig.maxRetries}
+                          min={1}
+                          max={5}
                           className="h-8 text-xs font-mono"
                         />
                       </div>
                     </div>
 
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Active Call Concurrency (Per Queue)
-                      </label>
-                      <Input
-                        type="number"
-                        defaultValue={globalConfig.defaultConcurrency}
-                        min={1}
-                        max={10}
-                        id="cfg-concurrency"
-                        className="h-8 text-xs font-mono"
-                      />
-                      <span className="text-[10px] text-slate-400 block mt-0.5">
-                        Default is 1 (Strict sequential calling).
-                      </span>
-                    </div>
-
-                    <div>
-                      <label className="block font-semibold text-slate-700 mb-1">
-                        Max Retry Attempts (For Busy / No Answer)
-                      </label>
-                      <Input
-                        type="number"
-                        defaultValue={globalConfig.maxRetries}
-                        min={1}
-                        max={5}
-                        id="cfg-retries"
-                        className="h-8 text-xs font-mono"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* DNC Management Sub-section */}
-                <div className="border-t pt-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                        <ShieldCheck className="w-4 h-4 text-rose-600" />
-                        <span>Do-Not-Call (DNC) Compliance Registry</span>
+                    {/* Claims and Business Identity Sub-Grid */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                      <h4 className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+                        <Sparkles className="w-4 h-4 text-[#0088cc]" />
+                        <span>Verified SoftLab Global Business Claims & Pitch Identity</span>
                       </h4>
-                      <p className="text-xs text-slate-500">
-                        Numbers in this list will automatically be skipped from outbound calling with zero attempt.
-                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Campus Location
+                          </label>
+                          <Input
+                            name="campusLocation"
+                            defaultValue={globalConfig.campusLocation || "Civil Lines, Prayagraj, Uttar Pradesh"}
+                            className="h-8 text-xs"
+                          />
+                          <span className="text-[10px] text-slate-500">
+                            Strict location: Civil Lines, Prayagraj (Zero Noida references permitted)
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Corporate Recruiting Partners Count
+                          </label>
+                          <Input
+                            name="corporateRecruitingPartnersCount"
+                            defaultValue={globalConfig.corporateRecruitingPartnersCount || "1200+"}
+                            className="h-8 text-xs font-mono font-bold"
+                          />
+                          <span className="text-[10px] text-slate-500">
+                            Verified website count (e.g. 1200+). Dynamically spoken in AI pitch.
+                          </span>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Placement Support Claim
+                          </label>
+                          <Input
+                            name="placementClaim"
+                            defaultValue={globalConfig.placementClaim || "100% Placement Support & Dedicated Placement Cell"}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Practical Training Claim
+                          </label>
+                          <Input
+                            name="practicalProjectClaim"
+                            defaultValue={globalConfig.practicalProjectClaim || "Live Industry Projects & Git/GitHub Repositories"}
+                            className="h-8 text-xs"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Voice Telephony Engine
+                          </label>
+                          <select
+                            name="defaultProvider"
+                            defaultValue={globalConfig.defaultProvider || "SIMULATOR"}
+                            className="w-full h-8 text-xs border rounded-md px-2 bg-white font-mono"
+                          >
+                            <option value="SIMULATOR">SIMULATOR (High-Fidelity Dialogue Test Engine)</option>
+                            <option value="TWILIO">TWILIO (Production Telephony)</option>
+                            <option value="EXOTEL">EXOTEL (Indian Telephony)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block font-semibold text-slate-700 mb-1">
+                            Website Link
+                          </label>
+                          <Input
+                            name="websiteUrl"
+                            defaultValue={globalConfig.websiteUrl || "https://softlabglobal.com"}
+                            className="h-8 text-xs font-mono"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <Badge variant="outline" className="text-xs font-mono font-bold">
-                      {dncData?.total || 0} Registered Numbers
-                    </Badge>
-                  </div>
 
-                  <div className="flex items-center gap-2 max-w-md">
-                    <Input
-                      placeholder="Add 10-digit phone to DNC..."
-                      value={newDncPhone}
-                      onChange={(e) => setNewDncPhone(e.target.value)}
-                      className="h-8 text-xs font-mono"
-                    />
-                    <Input
-                      placeholder="Reason (e.g. Opt-out request)..."
-                      value={newDncReason}
-                      onChange={(e) => setNewDncReason(e.target.value)}
-                      className="h-8 text-xs"
-                    />
-                    <Button
-                      size="sm"
-                      onClick={async () => {
-                        if (!newDncPhone.trim()) return;
-                        await addDncMutation.mutateAsync({
-                          phone: newDncPhone,
-                          reason: newDncReason.trim() || undefined,
-                        });
-                        setNewDncPhone("");
-                        setNewDncReason("");
-                        refetchDnc();
-                      }}
-                      className="h-8 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0"
-                    >
-                      Add to DNC
-                    </Button>
-                  </div>
+                    <div className="flex justify-end pt-2">
+                      <Button
+                        type="submit"
+                        size="sm"
+                        className="bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-xs"
+                      >
+                        Save Global Configuration
+                      </Button>
+                    </div>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
 
-                  {dncData?.items && dncData.items.length > 0 && (
-                    <div className="border rounded-xl max-h-48 overflow-y-auto">
-                      <table className="w-full text-xs text-left">
-                        <thead className="bg-slate-100 border-b text-slate-600 font-semibold">
-                          <tr>
-                            <th className="p-2">Phone</th>
-                            <th className="p-2">Reason</th>
-                            <th className="p-2">Added On</th>
-                            <th className="p-2 text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y">
-                          {dncData.items.map((dnc) => (
-                            <tr key={dnc.id}>
-                              <td className="p-2 font-mono font-bold text-slate-800">{dnc.phone}</td>
-                              <td className="p-2 text-slate-600">{dnc.reason || "Manual opt-out"}</td>
-                              <td className="p-2 text-slate-400 font-mono">
-                                {new Date(dnc.createdAt).toLocaleDateString("en-IN")}
+            {/* SECTION 2: AI CALLING IDENTITIES & ROLE PROFILES */}
+            <Card className="border shadow-sm">
+              <CardHeader className="p-5 border-b">
+                <CardTitle className="text-base font-bold text-slate-900 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-5 h-5 text-indigo-600" />
+                    <span>Counselor & Telecaller AI Calling Identities</span>
+                  </div>
+                  {identitySaveStatus && (
+                    <Badge className="bg-emerald-600 text-white text-xs">{identitySaveStatus}</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500">
+                  Role-based dynamic caller ID. When AI calls on behalf of a counselor or telecaller, their official phone number is dynamically presented as Caller ID. Missing numbers skip with <code>CALLER_NUMBER_NOT_CONFIGURED</code>.
+                </CardDescription>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-4">
+                <div className="border rounded-xl overflow-hidden">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-100 border-b text-slate-700 font-bold">
+                      <tr>
+                        <th className="p-3">User & Email</th>
+                        <th className="p-3">LMS Role</th>
+                        <th className="p-3">Profile Phone</th>
+                        <th className="p-3">Official AI Caller Number</th>
+                        <th className="p-3">Verification Status</th>
+                        <th className="p-3 text-right">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {identitiesData && identitiesData.length > 0 ? (
+                        identitiesData.map((u) => {
+                          const isEditing = editingUserId === u.userId;
+                          const hasNumber = Boolean(u.officialNumber);
+
+                          return (
+                            <tr key={u.userId} className="hover:bg-slate-50 transition-colors">
+                              <td className="p-3 font-semibold text-slate-900">
+                                <div>{u.name}</div>
+                                <div className="text-[11px] text-slate-400 font-normal">{u.email}</div>
                               </td>
-                              <td className="p-2 text-right">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={async () => {
-                                    await removeDncMutation.mutateAsync({ phone: dnc.phone });
-                                    refetchDnc();
-                                  }}
-                                  className="h-6 text-[10px] text-rose-600 hover:bg-rose-50"
-                                >
-                                  Remove
-                                </Button>
+                              <td className="p-3">
+                                <Badge variant="outline" className="font-mono text-[10px] font-bold">
+                                  {u.roleCode}
+                                </Badge>
+                              </td>
+                              <td className="p-3 font-mono text-slate-600">
+                                {u.profilePhone || u.profileCallingNumber || "—"}
+                              </td>
+                              <td className="p-3">
+                                {isEditing ? (
+                                  <Input
+                                    value={editOfficialNumber}
+                                    onChange={(e) => setEditOfficialNumber(e.target.value)}
+                                    placeholder="+91..."
+                                    className="h-7 text-xs font-mono w-36"
+                                  />
+                                ) : (
+                                  <span className={`font-mono font-bold ${hasNumber ? "text-slate-800" : "text-rose-500 italic"}`}>
+                                    {u.officialNumber || "Not Configured"}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="p-3">
+                                {isEditing ? (
+                                  <select
+                                    value={editStatus}
+                                    onChange={(e) => setEditStatus(e.target.value as any)}
+                                    className="h-7 text-xs border rounded px-1.5 bg-white font-semibold"
+                                  >
+                                    <option value="VERIFIED">VERIFIED</option>
+                                    <option value="PENDING_VERIFICATION">PENDING</option>
+                                    <option value="UNVERIFIED">UNVERIFIED</option>
+                                  </select>
+                                ) : (
+                                  <Badge
+                                    className={`text-[10px] font-bold ${
+                                      u.verificationStatus === "VERIFIED"
+                                        ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                        : u.verificationStatus === "PENDING_VERIFICATION"
+                                        ? "bg-amber-100 text-amber-800 border-amber-300"
+                                        : "bg-rose-100 text-rose-800 border-rose-300"
+                                    }`}
+                                  >
+                                    {u.verificationStatus}
+                                  </Badge>
+                                )}
+                              </td>
+                              <td className="p-3 text-right">
+                                {isEditing ? (
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <Button
+                                      size="sm"
+                                      onClick={async () => {
+                                        await upsertIdentityMutation.mutateAsync({
+                                          userId: u.userId,
+                                          officialNumber: editOfficialNumber,
+                                          verificationStatus: editStatus,
+                                        });
+                                        setEditingUserId(null);
+                                        setIdentitySaveStatus(`Identity updated for ${u.name}`);
+                                        setTimeout(() => setIdentitySaveStatus(null), 3000);
+                                        refetchIdentities();
+                                      }}
+                                      className="h-6 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white"
+                                    >
+                                      Save
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingUserId(null)}
+                                      className="h-6 text-[10px] text-slate-500"
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setEditingUserId(u.userId);
+                                      setEditOfficialNumber(u.officialNumber || u.profilePhone || "");
+                                      setEditStatus(u.verificationStatus as any || "VERIFIED");
+                                    }}
+                                    className="h-6 text-[10px] font-semibold"
+                                  >
+                                    Edit Number
+                                  </Button>
+                                )}
                               </td>
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="p-4 text-center text-slate-400">
+                            Loading caller identities...
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* SECTION 3: DNC COMPLIANCE REGISTRY */}
+            <Card className="border shadow-sm">
+              <CardHeader className="p-5 border-b">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4 text-rose-600" />
+                      <span>Do-Not-Call (DNC) Compliance Registry</span>
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-500 mt-0.5">
+                      Numbers in this registry are automatically skipped from outbound calling with zero attempt.
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline" className="text-xs font-mono font-bold">
+                    {dncData?.total || 0} Registered Numbers
+                  </Badge>
+                </div>
+              </CardHeader>
+
+              <CardContent className="p-5 space-y-4">
+                <div className="flex items-center gap-2 max-w-md">
+                  <Input
+                    placeholder="Add 10-digit phone to DNC..."
+                    value={newDncPhone}
+                    onChange={(e) => setNewDncPhone(e.target.value)}
+                    className="h-8 text-xs font-mono"
+                  />
+                  <Input
+                    placeholder="Reason (e.g. Opt-out request)..."
+                    value={newDncReason}
+                    onChange={(e) => setNewDncReason(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    onClick={async () => {
+                      if (!newDncPhone.trim()) return;
+                      await addDncMutation.mutateAsync({
+                        phone: newDncPhone,
+                        reason: newDncReason.trim() || undefined,
+                      });
+                      setNewDncPhone("");
+                      setNewDncReason("");
+                      refetchDnc();
+                    }}
+                    className="h-8 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shrink-0"
+                  >
+                    Add to DNC
+                  </Button>
+                </div>
+
+                {dncData?.items && dncData.items.length > 0 && (
+                  <div className="border rounded-xl max-h-48 overflow-y-auto">
+                    <table className="w-full text-xs text-left">
+                      <thead className="bg-slate-100 border-b text-slate-600 font-semibold">
+                        <tr>
+                          <th className="p-2">Phone</th>
+                          <th className="p-2">Reason</th>
+                          <th className="p-2">Added On</th>
+                          <th className="p-2 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y">
+                        {dncData.items.map((dnc) => (
+                          <tr key={dnc.id}>
+                            <td className="p-2 font-mono font-bold text-slate-800">{dnc.phone}</td>
+                            <td className="p-2 text-slate-600">{dnc.reason || "Manual opt-out"}</td>
+                            <td className="p-2 text-slate-400 font-mono">
+                              {new Date(dnc.createdAt).toLocaleDateString("en-IN")}
+                            </td>
+                            <td className="p-2 text-right">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={async () => {
+                                  await removeDncMutation.mutateAsync({ phone: dnc.phone });
+                                  refetchDnc();
+                                }}
+                                className="h-6 text-[10px] text-rose-600 hover:bg-rose-50"
+                              >
+                                Remove
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

@@ -72,6 +72,7 @@ export const bulkCallingRouter = router({
         batchName: z.string().min(2, "Batch name is required"),
         description: z.string().optional(),
         fileName: z.string().default("imported_leads.xlsx"),
+        assignedToId: z.string().optional(),
         autoStart: z.boolean().default(false),
         callingHoursStart: z.string().default("10:00"),
         callingHoursEnd: z.string().default("19:00"),
@@ -119,6 +120,7 @@ export const bulkCallingRouter = router({
           description: input.description,
           fileName: input.fileName,
           uploadedById: user.id,
+          assignedToId: input.assignedToId || user.id,
           status: CallingBatchStatus.READY,
           totalRows,
           validRows,
@@ -437,6 +439,9 @@ export const bulkCallingRouter = router({
       where: { id: "global-config" },
     });
 
+    const defaultOpening =
+      "Namaste {name}, main SoftLab Global, Civil Lines Prayagraj ki AI assistant bol rahi hoon. Aapne {course} ke regarding enquiry ki thi...";
+
     if (!config) {
       config = await db.aiCallingGlobalConfig.create({
         data: {
@@ -449,8 +454,21 @@ export const bulkCallingRouter = router({
           autoStartDefault: false,
           defaultProvider: "SIMULATOR",
           defaultLanguage: "hi-IN",
-          defaultOpeningScript:
-            "Namaste {name}, main SoftLab Global, Noida ki AI assistant bol rahi hoon. Aapne {course} ke regarding interest express kiya tha...",
+          defaultOpeningScript: defaultOpening,
+          campusLocation: "Civil Lines, Prayagraj, Uttar Pradesh",
+          corporateRecruitingPartnersCount: "1200+",
+          placementClaim: "100% Placement Support & Dedicated Placement Cell",
+          practicalProjectClaim: "Live Industry Projects & Git/GitHub Repositories",
+          liveProjectClaim: "Real-world projects with dedicated mentorship",
+          websiteUrl: "https://softlabglobal.com",
+        },
+      });
+    } else if (config.defaultOpeningScript && config.defaultOpeningScript.includes("Noida")) {
+      config = await db.aiCallingGlobalConfig.update({
+        where: { id: "global-config" },
+        data: {
+          defaultOpeningScript: defaultOpening,
+          campusLocation: "Civil Lines, Prayagraj, Uttar Pradesh",
         },
       });
     }
@@ -458,6 +476,12 @@ export const bulkCallingRouter = router({
     const dncCount = await db.doNotCallNumber.count();
     return {
       ...config,
+      corporateRecruitingPartnersCount: config.corporateRecruitingPartnersCount || "1200+",
+      placementClaim: config.placementClaim || "100% Placement Support & Dedicated Placement Cell",
+      practicalProjectClaim: config.practicalProjectClaim || "Live Industry Projects & Git/GitHub Repositories",
+      liveProjectClaim: config.liveProjectClaim || "Real-world projects with dedicated mentorship",
+      campusLocation: config.campusLocation || "Civil Lines, Prayagraj, Uttar Pradesh",
+      websiteUrl: config.websiteUrl || "https://softlabglobal.com",
       dncCount,
     };
   }),
@@ -478,6 +502,12 @@ export const bulkCallingRouter = router({
         providerApiKey: z.string().optional(),
         providerApiSecret: z.string().optional(),
         providerPhone: z.string().optional(),
+        corporateRecruitingPartnersCount: z.string().optional(),
+        placementClaim: z.string().optional(),
+        practicalProjectClaim: z.string().optional(),
+        liveProjectClaim: z.string().optional(),
+        campusLocation: z.string().optional(),
+        websiteUrl: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -498,7 +528,91 @@ export const bulkCallingRouter = router({
     }),
 
   /**
-   * 10. Do-Not-Call (DNC) Management
+   * 10. AI Calling Identities Management (Super Admin / Admin / Counselors)
+   */
+  listIdentities: requireRoleProcedure(BULK_CALLING_ROLES).query(async () => {
+    const users = await db.user.findMany({
+      where: {
+        roleCode: {
+          in: BULK_CALLING_ROLES,
+        },
+      },
+      include: {
+        callingIdentity: true,
+      },
+      orderBy: { firstName: "asc" },
+    });
+
+    return users.map((u) => {
+      const officialNum = u.callingIdentity?.officialNumber || u.callingNumber || u.phone || null;
+      return {
+        userId: u.id,
+        name: `${u.firstName} ${u.lastName}`.trim(),
+        email: u.email,
+        roleCode: u.roleCode,
+        profilePhone: u.phone,
+        profileCallingNumber: u.callingNumber,
+        officialNumber: officialNum,
+        providerNumber: u.callingIdentity?.providerNumber || officialNum,
+        verificationStatus: u.callingIdentity?.verificationStatus || (officialNum ? "PENDING_VERIFICATION" : "UNVERIFIED"),
+        voiceProfile: u.callingIdentity?.voiceProfile || "alloy",
+        language: u.callingIdentity?.language || "hi-IN",
+        isActive: u.callingIdentity?.isActive ?? true,
+        callingPermission: u.callingIdentity?.callingPermission ?? true,
+        updatedAt: u.callingIdentity?.updatedAt || u.updatedAt,
+      };
+    });
+  }),
+
+  upsertIdentity: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+    .input(
+      z.object({
+        userId: z.string(),
+        officialNumber: z.string(),
+        providerNumber: z.string().optional(),
+        verificationStatus: z.enum(["VERIFIED", "PENDING_VERIFICATION", "UNVERIFIED"]).default("VERIFIED"),
+        voiceProfile: z.string().default("alloy"),
+        language: z.string().default("hi-IN"),
+        isActive: z.boolean().default(true),
+        callingPermission: z.boolean().default(true),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const cleanNumber = input.officialNumber.trim();
+      // Sync to User record
+      await db.user.update({
+        where: { id: input.userId },
+        data: { callingNumber: cleanNumber },
+      });
+
+      const identity = await db.aiCallingUserIdentity.upsert({
+        where: { userId: input.userId },
+        update: {
+          officialNumber: cleanNumber,
+          providerNumber: (input.providerNumber || cleanNumber).trim(),
+          verificationStatus: input.verificationStatus,
+          voiceProfile: input.voiceProfile,
+          language: input.language,
+          isActive: input.isActive,
+          callingPermission: input.callingPermission,
+        },
+        create: {
+          userId: input.userId,
+          officialNumber: cleanNumber,
+          providerNumber: (input.providerNumber || cleanNumber).trim(),
+          verificationStatus: input.verificationStatus,
+          voiceProfile: input.voiceProfile,
+          language: input.language,
+          isActive: input.isActive,
+          callingPermission: input.callingPermission,
+        },
+      });
+
+      return { success: true, identity };
+    }),
+
+  /**
+   * 11. Do-Not-Call (DNC) Management
    */
   listDnc: requireRoleProcedure(BULK_CALLING_ROLES)
     .input(z.object({ page: z.number().default(1), limit: z.number().default(20) }))
@@ -534,7 +648,7 @@ export const bulkCallingRouter = router({
     }),
 
   /**
-   * 11. Interactive AI Call Simulator (For Testing and Acceptance Verification)
+   * 12. Interactive AI Call Simulator (For Testing and Acceptance Verification)
    */
   simulateCallTurn: requireRoleProcedure(BULK_CALLING_ROLES)
     .input(
@@ -551,6 +665,10 @@ export const bulkCallingRouter = router({
             "HUMAN_HANDOFF",
             "NOT_INTERESTED",
             "PRICE_QUERY",
+            "BEGINNER_NON_TECH",
+            "LOCATION_QUERY",
+            "PRACTICAL_TRAINING_QUERY",
+            "PLACEMENT_QUERY",
           ])
           .default("INTERESTED_STUDENT"),
       })

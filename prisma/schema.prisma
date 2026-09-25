@@ -292,6 +292,7 @@ model User {
   uploadedCallingBatches BulkCallingBatch[]  @relation("BatchUploader")
   assignedCallingBatches BulkCallingBatch[]  @relation("BatchAssignee")
   callingAuditLogs       CallingAuditLog[]   @relation("CallingAuditUser")
+  callingIdentity        AiCallingUserIdentity? @relation("UserCallingIdentity")
 
   @@index([email])
   @@index([phone])
@@ -2363,10 +2364,40 @@ model AiCallingGlobalConfig {
   providerApiSecret    String?
   providerPhone        String?
   webhookSecret        String?
+
+  // Configurable Institutional Claims & Public Facts (Section 9)
+  corporateRecruitingPartnersCount String   @default("1200+")
+  placementClaim                   String   @default("100% Placement Support & Dedicated Placement Cell")
+  practicalProjectClaim            String   @default("Live Industry Projects & Git/GitHub Repositories")
+  liveProjectClaim                 String   @default("Production-Oriented Capstone Projects")
+  campusLocation                   String   @default("Civil Lines, Prayagraj, Uttar Pradesh")
+  websiteUrl                       String   @default("https://www.softlabglobal.com")
+
   updatedAt            DateTime @updatedAt
   updatedById          String?
 
   @@map("ai_calling_global_configs")
+}
+
+model AiCallingUserIdentity {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  user               User     @relation("UserCallingIdentity", fields: [userId], references: [id], onDelete: Cascade)
+  officialNumber     String   // e.g. "+91 91965 96979"
+  providerNumber     String?  // Caller ID registered with voice provider
+  verificationStatus String   @default("PENDING_VERIFICATION") // "VERIFIED", "PENDING_VERIFICATION", "UNVERIFIED"
+  voiceProfile       String   @default("alloy")
+  language           String   @default("hi-IN")
+  isActive           Boolean  @default(true)
+  callingPermission  Boolean  @default(true)
+  callingHoursStart  String?  @default("10:00")
+  callingHoursEnd    String?  @default("19:00")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([officialNumber])
+  @@index([verificationStatus])
+  @@map("ai_calling_user_identities")
 }
 
 model DoNotCallNumber {
@@ -2379,6 +2410,7 @@ model DoNotCallNumber {
   @@index([phone])
   @@map("do_not_call_numbers")
 }
+
 
 
 
