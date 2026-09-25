@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { api } from "@/lib/trpc/react";
 import {
   Dialog,
@@ -90,6 +90,21 @@ export function EditApplicationDialog({
   const [installmentsSchedule, setInstallmentsSchedule] = useState<
     Array<{ installmentNumber: number; amount: number; dueDate: string; notes?: string }>
   >([]);
+  const [lumpsumRemainingDueDate, setLumpsumRemainingDueDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  });
+
+  const todayDateStr = useMemo(() => {
+    return new Date().toISOString().split("T")[0];
+  }, []);
+
+  const maxLumpsumDueDateStr = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 45);
+    return d.toISOString().split("T")[0];
+  }, []);
 
   const utils = api.useUtils();
 
@@ -109,36 +124,95 @@ export function EditApplicationDialog({
   const finalFeeInr = Math.max(0, totalCourseFeeInr - discountAmountInr);
   const pendingAmountInr = Math.max(0, finalFeeInr - paidAmountInr);
 
-  const generateInstallments = (count: number, netPayable: number, alreadyPaid: number) => {
-    const slots = [];
+  const generateInstallments = (count: number, netPayable: number, downPayment: number) => {
+    const validCount = Math.max(1, Math.min(10, count));
+    const validDownPayment = Math.max(0, Math.min(netPayable, downPayment));
+    const remaining = Math.max(0, netPayable - validDownPayment);
+    const slots: Array<{ installmentNumber: number; amount: number; dueDate: string; notes: string }> = [];
     const today = new Date();
-    const firstAmt = alreadyPaid > 0 ? alreadyPaid : Math.round(netPayable / count);
+
+    // Slot 1: Down Payment (Admission Handover)
+    slots.push({
+      installmentNumber: 1,
+      amount: validDownPayment,
+      dueDate: today.toISOString().split("T")[0],
+      notes: "Slot 1 (Admission Down-Payment)",
+    });
+
+    if (remaining > 0) {
+      const perMonth = Math.floor(remaining / validCount);
+      let allocated = 0;
+
+      for (let i = 1; i <= validCount; i++) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + (i * 30));
+        const isLast = i === validCount;
+        const amt = isLast ? (remaining - allocated) : perMonth;
+        allocated += perMonth;
+        slots.push({
+          installmentNumber: i + 1,
+          amount: Math.max(0, amt),
+          dueDate: d.toISOString().split("T")[0],
+          notes: `EMI Slot ${i} of ${validCount} (Due in ${i * 30} days)`,
+        });
+      }
+    }
+    setInstallmentsSchedule(slots);
+  };
+
+  const generateLumpsumSchedule = (netPayable: number, downPayment: number, dueDateStr?: string) => {
+    const validDownPayment = Math.max(0, Math.min(netPayable, downPayment));
+    const remaining = Math.max(0, netPayable - validDownPayment);
+    const slots: Array<{ installmentNumber: number; amount: number; dueDate: string; notes: string }> = [];
+    const today = new Date();
 
     slots.push({
       installmentNumber: 1,
-      amount: firstAmt,
+      amount: validDownPayment,
       dueDate: today.toISOString().split("T")[0],
-      notes: "Slot 1 (Admission / Down-payment)",
+      notes: remaining === 0 ? "Full Lumpsum Admission Fee" : "Slot 1 (Admission Down-Payment)",
     });
 
-    const remaining = Math.max(0, netPayable - firstAmt);
-    const remMonths = Math.max(1, count - 1);
-    const perMonth = Math.floor(remaining / remMonths);
-    let allocated = 0;
-
-    for (let i = 2; i <= count; i++) {
-      const d = new Date(today);
-      d.setMonth(d.getMonth() + (i - 1));
-      const amt = i === count ? remaining - allocated : perMonth;
-      allocated += amt;
+    if (remaining > 0) {
       slots.push({
-        installmentNumber: i,
-        amount: Math.max(0, amt),
-        dueDate: d.toISOString().split("T")[0],
-        notes: `Month ${i} EMI Installment`,
+        installmentNumber: 2,
+        amount: remaining,
+        dueDate: dueDateStr || todayDateStr,
+        notes: "Remaining Lumpsum Balance (Due within 45 days)",
       });
     }
     setInstallmentsSchedule(slots);
+  };
+
+  const handleDownPaymentChange = (val: number) => {
+    const safeVal = Math.max(0, val);
+    setPaidAmountInr(safeVal);
+    if (paymentPlan === "EMI") {
+      generateInstallments(installmentCount, finalFeeInr, safeVal);
+    } else {
+      generateLumpsumSchedule(finalFeeInr, safeVal, lumpsumRemainingDueDate);
+    }
+  };
+
+  const handleSelectPaymentPlan = (plan: "LUMPSUM" | "EMI") => {
+    setPaymentPlan(plan);
+    if (plan === "EMI") {
+      const dp = (paidAmountInr >= finalFeeInr || paidAmountInr === 0) ? 0 : paidAmountInr;
+      setPaidAmountInr(dp);
+      generateInstallments(installmentCount, finalFeeInr, dp);
+    } else {
+      const dp = paidAmountInr === 0 ? finalFeeInr : paidAmountInr;
+      setPaidAmountInr(dp);
+      generateLumpsumSchedule(finalFeeInr, dp, lumpsumRemainingDueDate);
+    }
+  };
+
+  const handleTenureChange = (count: number) => {
+    const safeCount = Math.max(1, Math.min(10, count));
+    setInstallmentCount(safeCount);
+    if (paymentPlan === "EMI") {
+      generateInstallments(safeCount, finalFeeInr, paidAmountInr);
+    }
   };
 
   useEffect(() => {
@@ -291,6 +365,42 @@ export function EditApplicationDialog({
       return;
     }
 
+    // Down Payment validation
+    if (paidAmountInr > finalFeeInr) {
+      setErrorMsg(`Down payment (₹${paidAmountInr.toLocaleString("en-IN")}) cannot exceed the total payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+      return;
+    }
+
+    // EMI Tenure validation (1 to 10 months)
+    if (paymentPlan === "EMI" && (installmentCount < 1 || installmentCount > 10)) {
+      setErrorMsg("EMI duration must be between 1 and 10 months.");
+      return;
+    }
+
+    // Lumpsum 45-day validation
+    if (paymentPlan === "LUMPSUM" && paidAmountInr < finalFeeInr) {
+      const todayMs = new Date().setHours(0, 0, 0, 0);
+      const dueMs = new Date(lumpsumRemainingDueDate).setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+      if (diffDays > 45) {
+        setErrorMsg("Lumpsum remaining balance due date cannot exceed 45 days from admission date.");
+        return;
+      }
+      if (diffDays < 0) {
+        setErrorMsg("Lumpsum remaining balance due date cannot be in the past.");
+        return;
+      }
+    }
+
+    // Total Installments Sum validation
+    if (finalFeeInr > 0 && installmentsSchedule.length > 0) {
+      const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+      if (totalScheduled !== finalFeeInr) {
+        setErrorMsg(`Total of all installment slots (₹${totalScheduled.toLocaleString("en-IN")}) must equal the final payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+        return;
+      }
+    }
+
     updateMutation.mutate({
       applicationId: application.id,
       applicantName: applicantName.trim(),
@@ -322,10 +432,10 @@ export function EditApplicationDialog({
       paymentPlan,
       installmentCount: paymentPlan === "EMI" ? installmentCount : undefined,
       installments:
-        paymentPlan === "EMI"
+        installmentsSchedule.length > 0
           ? installmentsSchedule.map((s) => ({
               installmentNumber: s.installmentNumber,
-              amount: s.amount * 100,
+              amount: Math.round(s.amount * 100),
               dueDate: new Date(s.dueDate),
               notes: s.notes,
             }))
@@ -824,8 +934,8 @@ export function EditApplicationDialog({
                 </div>
               </div>
 
-              {/* Editable Fee & Discount Selectors */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-white p-3 rounded-lg border border-slate-200">
+              {/* Editable Fee, Discount & Down Payment Selectors */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-white p-3 rounded-lg border border-slate-200">
                 <div className="space-y-1">
                   <Label className="text-[11px] font-bold text-slate-800">
                     Editable Total Course Fee (₹) *
@@ -914,6 +1024,27 @@ export function EditApplicationDialog({
                     />
                   </div>
                 </div>
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] font-bold text-emerald-700">
+                    Down Payment / Paid Today (₹)
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={finalFeeInr}
+                    value={paidAmountInr}
+                    onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
+                    className="h-8 text-xs font-mono font-bold text-emerald-700 bg-emerald-50/50 border-emerald-300"
+                  />
+                  <span className="text-[10px] text-slate-400 block">
+                    {paymentPlan === "EMI"
+                      ? "Actual down payment; remainder splits into EMIs"
+                      : paidAmountInr < finalFeeInr
+                      ? "Balance must be cleared within 45 days"
+                      : "Full fee paid"}
+                  </span>
+                </div>
               </div>
 
               {/* Payment Plan: Lumpsum vs EMI Slot */}
@@ -930,7 +1061,7 @@ export function EditApplicationDialog({
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setPaymentPlan("LUMPSUM")}
+                    onClick={() => handleSelectPaymentPlan("LUMPSUM")}
                     className={`py-1.5 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                       paymentPlan === "LUMPSUM"
                         ? "bg-slate-900 text-white border-slate-900 shadow-xs"
@@ -942,10 +1073,7 @@ export function EditApplicationDialog({
 
                   <button
                     type="button"
-                    onClick={() => {
-                      setPaymentPlan("EMI");
-                      generateInstallments(installmentCount, finalFeeInr, paidAmountInr);
-                    }}
+                    onClick={() => handleSelectPaymentPlan("EMI")}
                     className={`py-1.5 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                       paymentPlan === "EMI"
                         ? "bg-blue-600 text-white border-blue-700 shadow-xs"
@@ -956,22 +1084,59 @@ export function EditApplicationDialog({
                   </button>
                 </div>
 
+                {/* Lumpsum Remaining Balance (Due within 45 Days) */}
+                {paymentPlan === "LUMPSUM" && paidAmountInr < finalFeeInr && (
+                  <div className="pt-2 border-t border-slate-200 space-y-2">
+                    <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-amber-700" />
+                          <span>Lumpsum Remaining Balance (Due within 45 Days)</span>
+                        </span>
+                        <span className="font-mono font-bold text-amber-800 text-sm">
+                          ₹{(finalFeeInr - paidAmountInr).toLocaleString("en-IN")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-amber-800">
+                        Under Lumpsum policy, remaining balance after down payment must be cleared within maximum 45 days.
+                      </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <Label className="text-[11px] font-semibold text-amber-900 shrink-0">
+                          Balance Due Date:
+                        </Label>
+                        <input
+                          type="date"
+                          min={todayDateStr}
+                          max={maxLumpsumDueDateStr}
+                          value={lumpsumRemainingDueDate}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setLumpsumRemainingDueDate(val);
+                            generateLumpsumSchedule(finalFeeInr, paidAmountInr, val);
+                          }}
+                          className="h-7 px-2 border border-amber-300 rounded text-xs bg-white text-slate-800 font-medium"
+                        />
+                        <span className="text-[10px] text-amber-600">
+                          (Max allowed: {maxLumpsumDueDateStr})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* EMI Slot Configuration Box */}
                 {paymentPlan === "EMI" && (
                   <div className="pt-2 border-t border-slate-200 space-y-2.5">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                       <span className="text-[11px] font-bold text-slate-700">
-                        Select EMI Duration (2 to 10 Months):
+                        Select EMI Duration (1 to 10 Months):
                       </span>
                       <div className="flex flex-wrap gap-1">
-                        {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
                           <button
                             key={count}
                             type="button"
-                            onClick={() => {
-                              setInstallmentCount(count);
-                              generateInstallments(count, finalFeeInr, paidAmountInr);
-                            }}
+                            onClick={() => handleTenureChange(count)}
                             className={`px-2 py-1 text-xs rounded font-bold border transition ${
                               installmentCount === count
                                 ? "bg-blue-600 text-white border-blue-700 shadow-xs"
@@ -1001,7 +1166,7 @@ export function EditApplicationDialog({
                               <td className="py-2 px-3 font-bold text-slate-800">
                                 {index === 0 ? (
                                   <span className="inline-flex items-center gap-1 text-emerald-800 font-sans text-[11px] font-bold">
-                                    Slot 1 (Admission)
+                                    Slot 1 (Admission Down-Payment)
                                   </span>
                                 ) : (
                                   <span className="text-slate-600 font-sans text-[11px]">
@@ -1027,9 +1192,14 @@ export function EditApplicationDialog({
                                   min={0}
                                   value={slot.amount}
                                   onChange={(e) => {
-                                    const updated = [...installmentsSchedule];
-                                    updated[index].amount = Number(e.target.value) || 0;
-                                    setInstallmentsSchedule(updated);
+                                    const val = Number(e.target.value) || 0;
+                                    if (index === 0) {
+                                      handleDownPaymentChange(val);
+                                    } else {
+                                      const updated = [...installmentsSchedule];
+                                      updated[index].amount = val;
+                                      setInstallmentsSchedule(updated);
+                                    }
                                   }}
                                   className="h-7 w-24 text-right rounded border border-slate-300 px-2 py-0.5 text-xs font-mono font-bold"
                                 />

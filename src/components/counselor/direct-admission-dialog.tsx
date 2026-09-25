@@ -139,6 +139,11 @@ export function DirectAdmissionDialog({
     dueDate: string;
     notes?: string;
   }>>([]);
+  const [lumpsumRemainingDueDate, setLumpsumRemainingDueDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    return d.toISOString().split("T")[0];
+  });
 
   const [remarks, setRemarks] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -263,36 +268,144 @@ export function DirectAdmissionDialog({
     }
   }, [initialLeadId, leads]);
 
-  // Recalculate EMI Slots whenever paymentPlan, finalFeeInr, or installmentCount changes
-  React.useEffect(() => {
-    if (paymentPlan === "EMI" && finalFeeInr > 0) {
-      const count = Math.max(2, Math.min(10, installmentCount));
-      const baseInstAmount = Math.floor(finalFeeInr / count);
-      const remainder = finalFeeInr - (baseInstAmount * count);
-      const newSchedule = [];
-      const today = new Date();
+  const todayDateStr = React.useMemo(() => {
+    return new Date().toISOString().split("T")[0];
+  }, []);
 
-      for (let i = 0; i < count; i++) {
+  const maxLumpsumDueDateStr = React.useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 45);
+    return d.toISOString().split("T")[0];
+  }, []);
+
+  // Helper to generate EMI schedule based on Down Payment and Tenure (1 to 10 months)
+  const generateEmiSchedule = React.useCallback((totalFee: number, downPayment: number, tenure: number) => {
+    const validTenure = Math.max(1, Math.min(10, tenure));
+    const validDownPayment = Math.max(0, Math.min(totalFee, downPayment));
+    const remaining = Math.max(0, totalFee - validDownPayment);
+    const schedule: Array<{
+      installmentNumber: number;
+      amount: number;
+      dueDate: string;
+      notes: string;
+    }> = [];
+    const today = new Date();
+
+    // Slot 1: Down Payment (Admission Handover)
+    schedule.push({
+      installmentNumber: 1,
+      amount: validDownPayment,
+      dueDate: today.toISOString().split("T")[0],
+      notes: "Slot 1 (Admission Down-Payment)",
+    });
+
+    if (remaining > 0) {
+      const perMonth = Math.floor(remaining / validTenure);
+      let allocated = 0;
+
+      for (let i = 1; i <= validTenure; i++) {
         const dueDate = new Date(today);
         dueDate.setDate(today.getDate() + (i * 30));
-        const amount = i === 0 ? (baseInstAmount + remainder) : baseInstAmount;
-        newSchedule.push({
+        const isLast = i === validTenure;
+        const amount = isLast ? (remaining - allocated) : perMonth;
+        allocated += perMonth;
+
+        schedule.push({
           installmentNumber: i + 1,
-          amount,
+          amount: Math.max(0, amount),
           dueDate: dueDate.toISOString().split("T")[0],
-          notes: i === 0 ? "1st EMI / Admission Down-Payment" : `EMI Slot ${i + 1} (Due in ${i * 30} days)`,
+          notes: `EMI Slot ${i} of ${validTenure} (Due in ${i * 30} days)`,
         });
       }
-      setInstallmentsSchedule(newSchedule);
-      if (paidAmount === 0 || paidAmount === finalFeeInr) {
-        setPaidAmount(newSchedule[0].amount);
+    }
+    return schedule;
+  }, []);
+
+  // Helper to generate Lumpsum schedule (supports full payment or partial down-payment with remaining balance within 45 days)
+  const generateLumpsumSchedule = React.useCallback((totalFee: number, downPayment: number, dueDateStr?: string) => {
+    const validDownPayment = Math.max(0, Math.min(totalFee, downPayment));
+    const remaining = Math.max(0, totalFee - validDownPayment);
+    const schedule: Array<{
+      installmentNumber: number;
+      amount: number;
+      dueDate: string;
+      notes: string;
+    }> = [];
+    const today = new Date();
+
+    // Slot 1: Down payment / amount paid today
+    schedule.push({
+      installmentNumber: 1,
+      amount: validDownPayment,
+      dueDate: today.toISOString().split("T")[0],
+      notes: remaining === 0 ? "Full Lumpsum Admission Fee" : "Slot 1 (Admission Down-Payment)",
+    });
+
+    if (remaining > 0) {
+      let targetDueDate = dueDateStr;
+      if (!targetDueDate) {
+        const d = new Date(today);
+        d.setDate(today.getDate() + 30);
+        targetDueDate = d.toISOString().split("T")[0];
       }
+      schedule.push({
+        installmentNumber: 2,
+        amount: remaining,
+        dueDate: targetDueDate,
+        notes: "Remaining Lumpsum Balance (Due within 45 days)",
+      });
+    }
+    return schedule;
+  }, []);
+
+  // Dynamic Down Payment change handler: immediately updates paidAmount and recalculates remaining slots
+  const handleDownPaymentChange = React.useCallback((val: number) => {
+    const safeVal = Math.max(0, val);
+    setPaidAmount(safeVal);
+    if (paymentPlan === "EMI") {
+      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, safeVal, installmentCount));
     } else if (paymentPlan === "LUMPSUM") {
-      if (paidAmount === 0 || (installmentsSchedule.length > 0 && paidAmount === installmentsSchedule[0]?.amount)) {
-        setPaidAmount(finalFeeInr);
+      setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, safeVal, lumpsumRemainingDueDate));
+    }
+  }, [finalFeeInr, paymentPlan, installmentCount, lumpsumRemainingDueDate, generateEmiSchedule, generateLumpsumSchedule]);
+
+  const handleSelectPaymentPlan = (plan: "LUMPSUM" | "EMI") => {
+    setPaymentPlan(plan);
+    if (plan === "EMI") {
+      const dp = (paidAmount >= finalFeeInr || paidAmount === 0) ? 0 : paidAmount;
+      setPaidAmount(dp);
+      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, dp, installmentCount));
+    } else {
+      const dp = paidAmount === 0 ? finalFeeInr : paidAmount;
+      setPaidAmount(dp);
+      setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, dp, lumpsumRemainingDueDate));
+    }
+  };
+
+  const handleTenureChange = (count: number) => {
+    const safeCount = Math.max(1, Math.min(10, count));
+    setInstallmentCount(safeCount);
+    if (paymentPlan === "EMI") {
+      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, paidAmount, safeCount));
+    }
+  };
+
+  // Recalculate EMI Slots whenever finalFeeInr changes
+  React.useEffect(() => {
+    if (finalFeeInr > 0) {
+      if (paymentPlan === "EMI") {
+        const safeDp = Math.min(paidAmount, finalFeeInr);
+        setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, safeDp, installmentCount));
+      } else if (paymentPlan === "LUMPSUM") {
+        if (paidAmount === 0 || paidAmount > finalFeeInr) {
+          setPaidAmount(finalFeeInr);
+          setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, finalFeeInr, lumpsumRemainingDueDate));
+        } else {
+          setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, paidAmount, lumpsumRemainingDueDate));
+        }
       }
     }
-  }, [paymentPlan, finalFeeInr, installmentCount]);
+  }, [finalFeeInr]);
 
   // Photo Upload Handler
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -378,6 +491,42 @@ export function DirectAdmissionDialog({
       return;
     }
 
+    // Down Payment validation
+    if (paidAmount > finalFeeInr) {
+      setErrorMsg(`Down payment (₹${paidAmount.toLocaleString("en-IN")}) cannot exceed the total payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+      return;
+    }
+
+    // EMI Tenure validation (1 to 10 months)
+    if (paymentPlan === "EMI" && (installmentCount < 1 || installmentCount > 10)) {
+      setErrorMsg("EMI duration must be between 1 and 10 months.");
+      return;
+    }
+
+    // Lumpsum 45-day validation
+    if (paymentPlan === "LUMPSUM" && paidAmount < finalFeeInr) {
+      const todayMs = new Date().setHours(0, 0, 0, 0);
+      const dueMs = new Date(lumpsumRemainingDueDate).setHours(0, 0, 0, 0);
+      const diffDays = Math.ceil((dueMs - todayMs) / (1000 * 60 * 60 * 24));
+      if (diffDays > 45) {
+        setErrorMsg("Lumpsum remaining balance due date cannot exceed 45 days from admission date.");
+        return;
+      }
+      if (diffDays < 0) {
+        setErrorMsg("Lumpsum remaining balance due date cannot be in the past.");
+        return;
+      }
+    }
+
+    // Total Installments Sum validation
+    if (finalFeeInr > 0 && installmentsSchedule.length > 0) {
+      const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+      if (totalScheduled !== finalFeeInr) {
+        setErrorMsg(`Total of all installment slots (₹${totalScheduled.toLocaleString("en-IN")}) must equal the final payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+        return;
+      }
+    }
+
     createMutation.mutate({
       courseId,
       batchId: batchId || undefined,
@@ -410,9 +559,9 @@ export function DirectAdmissionDialog({
       paidAmount: paidAmount > 0 ? paidAmount * 100 : undefined,
       paymentPlan,
       installmentCount: paymentPlan === "EMI" ? installmentCount : undefined,
-      installments: paymentPlan === "EMI" ? installmentsSchedule.map((s) => ({
+      installments: installmentsSchedule.length > 0 ? installmentsSchedule.map((s) => ({
         installmentNumber: s.installmentNumber,
-        amount: s.amount * 100,
+        amount: Math.round(s.amount * 100),
         dueDate: new Date(s.dueDate),
         notes: s.notes,
       })) : undefined,
@@ -483,6 +632,9 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
     setPaymentType("OFFLINE");
     setPaymentReference("");
     setInstallmentsSchedule([]);
+    const d = new Date();
+    d.setDate(d.getDate() + 30);
+    setLumpsumRemainingDueDate(d.toISOString().split("T")[0]);
     setRemarks("");
     setSelectedSpecialization("");
     onOpenChange(false);
@@ -1271,7 +1423,7 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       type="button"
-                      onClick={() => setPaymentPlan("LUMPSUM")}
+                      onClick={() => handleSelectPaymentPlan("LUMPSUM")}
                       className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                         paymentPlan === "LUMPSUM"
                           ? "bg-slate-900 text-white border-slate-900 shadow-xs"
@@ -1283,7 +1435,7 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
 
                     <button
                       type="button"
-                      onClick={() => setPaymentPlan("EMI")}
+                      onClick={() => handleSelectPaymentPlan("EMI")}
                       className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
                         paymentPlan === "EMI"
                           ? "bg-blue-600 text-white border-blue-700 shadow-xs"
@@ -1295,19 +1447,59 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                     </button>
                   </div>
 
+                  {/* Lumpsum Remaining Balance (Due within 45 Days) */}
+                  {paymentPlan === "LUMPSUM" && paidAmount < finalFeeInr && (
+                    <div className="pt-2 border-t border-slate-200 space-y-2">
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-amber-900 flex items-center gap-1.5">
+                            <CalendarIcon className="h-3.5 w-3.5 text-amber-700" />
+                            <span>Lumpsum Remaining Balance (Due within 45 Days)</span>
+                          </span>
+                          <span className="font-mono font-bold text-amber-800 text-sm">
+                            ₹{(finalFeeInr - paidAmount).toLocaleString("en-IN")}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-amber-800">
+                          Under Lumpsum policy, remaining balance after down payment must be cleared within maximum 45 days.
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <Label className="text-[11px] font-semibold text-amber-900 shrink-0">
+                            Balance Due Date:
+                          </Label>
+                          <input
+                            type="date"
+                            min={todayDateStr}
+                            max={maxLumpsumDueDateStr}
+                            value={lumpsumRemainingDueDate}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setLumpsumRemainingDueDate(val);
+                              setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, paidAmount, val));
+                            }}
+                            className="h-7 px-2 border border-amber-300 rounded text-xs bg-white text-slate-800 font-medium"
+                          />
+                          <span className="text-[10px] text-amber-600">
+                            (Max allowed: {maxLumpsumDueDateStr})
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* EMI Slot Configuration Box */}
                   {paymentPlan === "EMI" && (
                     <div className="pt-2 border-t border-slate-200 space-y-2.5">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                         <span className="text-[11px] font-bold text-slate-700">
-                          Select EMI Installments (2 to 10 Months):
+                          Select EMI Duration (1 to 10 Months):
                         </span>
                         <div className="flex flex-wrap gap-1">
-                          {[2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
+                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
                             <button
                               key={count}
                               type="button"
-                              onClick={() => setInstallmentCount(count)}
+                              onClick={() => handleTenureChange(count)}
                               className={`px-2 py-1 text-xs rounded font-bold border transition ${
                                 installmentCount === count
                                   ? "bg-blue-600 text-white border-blue-700 shadow-xs"
@@ -1337,7 +1529,7 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                                 <td className="py-2 px-3 font-bold text-slate-800">
                                   {index === 0 ? (
                                     <span className="inline-flex items-center gap-1 text-emerald-800 font-sans text-[11px] font-bold">
-                                      Slot 1 (Admission)
+                                      Slot 1 (Admission Down-Payment)
                                     </span>
                                   ) : (
                                     <span className="text-slate-600 font-sans text-[11px]">
@@ -1363,11 +1555,14 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                                     min={0}
                                     value={slot.amount}
                                     onChange={(e) => {
-                                      const val = Number(e.target.value);
-                                      const updated = [...installmentsSchedule];
-                                      updated[index].amount = val;
-                                      setInstallmentsSchedule(updated);
-                                      if (index === 0) setPaidAmount(val);
+                                      const val = Number(e.target.value) || 0;
+                                      if (index === 0) {
+                                        handleDownPaymentChange(val);
+                                      } else {
+                                        const updated = [...installmentsSchedule];
+                                        updated[index].amount = val;
+                                        setInstallmentsSchedule(updated);
+                                      }
                                     }}
                                     className="h-7 w-24 px-2 border rounded text-xs text-right font-bold text-slate-900 bg-white"
                                   />
@@ -1422,13 +1617,15 @@ Campus: Patrika Chauraha, Civil Lines, Prayagraj`;
                         min={0}
                         max={finalFeeInr}
                         value={paidAmount}
-                        onChange={(e) => setPaidAmount(Number(e.target.value))}
+                        onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
                         className="h-8 text-xs font-mono font-bold text-emerald-700 bg-emerald-50/50 border-emerald-300"
                       />
                       <span className="text-[10px] text-slate-400 block">
                         {paymentPlan === "EMI"
-                          ? "Defaults to Slot 1 admission fee"
-                          : "Enter amount collected today"}
+                          ? "Actual down payment (Slot 1); balance splits across EMI months"
+                          : paidAmount < finalFeeInr
+                          ? "Down payment today; balance must be paid within 45 days"
+                          : "Full one-time fee payment"}
                       </span>
                     </div>
 

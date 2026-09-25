@@ -584,7 +584,7 @@ export const crmRouter = router({
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
         paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
-        installmentCount: z.number().min(1).max(12).optional(),
+        installmentCount: z.number().min(1).max(10).optional(),
         installments: z
           .array(
             z.object({
@@ -861,7 +861,7 @@ export const crmRouter = router({
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
         paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
-        installmentCount: z.number().min(1).max(12).optional(),
+        installmentCount: z.number().min(1).max(10).optional(),
         installments: z
           .array(
             z.object({

@@ -645,9 +645,9 @@ export class CrmApplicationService {
         });
       }
 
-      // 5b. Fee Installments (EMI Slot Management)
+      // 5b. Fee Installments (EMI Slot Management & Lumpsum Partial Milestone)
       const createdInstallments: any[] = [];
-      if (input.paymentPlan === "EMI" && input.installments && input.installments.length > 0) {
+      if ((input.paymentPlan === "EMI" || input.paymentPlan === "LUMPSUM") && input.installments && input.installments.length > 0) {
         let remainingPaidAllocation = paidPaise;
 
         // Clean up any existing installments for this feeStructure if recreating
@@ -1254,8 +1254,8 @@ export class CrmApplicationService {
             },
           });
 
-          // Recreate or update EMI installment milestones if EMI plan is active
-          if (input.paymentPlan === "EMI" && input.installments && input.installments.length > 0) {
+          // Recreate or update installment milestones if EMI or LUMPSUM with installments is active
+          if ((input.paymentPlan === "EMI" || input.paymentPlan === "LUMPSUM") && input.installments && input.installments.length > 0) {
             await db.feeInstallment.deleteMany({
               where: { feeStructureId: existingFee.id },
             });
