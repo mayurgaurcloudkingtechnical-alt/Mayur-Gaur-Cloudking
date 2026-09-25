@@ -255,7 +255,8 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
     /* ── CUT LINE ── */
     .cut-section-divider {
       position: relative !important;
-      margin: 6px 0 !important;
+      margin: 12px 0 !important;
+      padding: 10px 0 !important;
       text-align: center !important;
       page-break-before: avoid !important;
       break-before: avoid !important;
@@ -263,22 +264,29 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       break-after: avoid !important;
       display: block !important;
     }
+    .cut-section-divider .w-full {
+      border-top: 2px dashed #000 !important;
+      width: 100% !important;
+      display: block !important;
+    }
     .cut-section-divider span {
       position: absolute !important;
-      top: -9px !important;
+      top: 5px !important;
       left: 50% !important;
       transform: translateX(-50%) !important;
       background: #fff !important;
-      padding: 0 8px !important;
+      padding: 0 12px !important;
       font-size: 12px !important;
       font-weight: bold !important;
       white-space: nowrap !important;
     }
 
-    /* ── TABLE ── */
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 3px 5px; font-size: 12px; }
-    thead tr { border-bottom: 2px solid #000; }
+    /* ── TABLE: full borders on every cell like original ── */
+    table { width: 100% !important; border-collapse: collapse !important; border: 2px solid #000 !important; }
+    th, td { padding: 3px 5px !important; font-size: 12px !important; border: 1px solid #000 !important; }
+    thead tr th { border-bottom: 2px solid #000 !important; border: 1px solid #000 !important; font-weight: bold !important; }
+    tbody tr td { border: 1px solid #000 !important; }
+    tbody tr:last-child td { border-bottom: 1px solid #000 !important; }
 
     /* ── IMAGES ── */
     img { max-height: 48px; object-fit: contain; }
@@ -951,9 +959,9 @@ ${innerHtml}
         {renderSingleReceipt("Student Copy")}
 
         {/* CUT HERE Perforation */}
-        <div className="cut-section-divider relative my-3 flex items-center justify-center select-none">
+        <div className="cut-section-divider relative flex flex-col items-center justify-center select-none" style={{ margin: "12px 0", padding: "8px 0" }}>
           <div className="w-full border-t-2 border-dashed border-black"></div>
-          <span className="absolute bg-white px-3 text-xs text-black flex items-center gap-1 font-bold whitespace-nowrap">
+          <span className="bg-white px-3 text-xs text-black font-bold whitespace-nowrap" style={{ marginTop: "-10px", position: "relative", zIndex: 1 }}>
             ✂ ─────────── CUT HERE ─────────── ✂
           </span>
         </div>
