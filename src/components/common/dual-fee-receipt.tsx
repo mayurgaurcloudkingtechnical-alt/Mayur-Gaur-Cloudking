@@ -217,117 +217,175 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   <meta charset="utf-8"/>
   <title>Fee Receipt – ${receiptNumber}</title>
   <style>
-    @page { size: A4 portrait; margin: 6mm 8mm; }
+    @page { size: A4 portrait; margin: 5mm 6mm; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
-    body { margin: 0; padding: 0; background: #fff; font-family: Arial, sans-serif; }
-    .single-receipt-copy {
-      border: 2px solid #000;
-      background: #fff;
-      color: #000;
-      padding: 10px;
-      font-size: 10.5px;
-      line-height: 1.3;
-      page-break-inside: avoid;
-      break-inside: avoid;
-    }
-    .cut-section-divider {
-      position: relative;
-      margin: 8px 0;
-      text-align: center;
-      page-break-before: avoid;
-      break-before: avoid;
-      page-break-after: avoid;
-      break-after: avoid;
-    }
-    .cut-section-divider .cut-line {
-      border-top: 2px dashed #000;
+    html, body {
+      margin: 0; padding: 0; background: #fff;
+      font-family: Arial, sans-serif;
+      font-size: 13px;
       width: 100%;
     }
-    .cut-section-divider span {
-      position: absolute;
-      top: -9px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #fff;
-      padding: 0 8px;
-      font-size: 11px;
-      font-weight: bold;
-      white-space: nowrap;
+
+    /* ── WRAPPER: fills full page width ── */
+    .a4-receipt-wrapper {
+      width: 100% !important;
+      max-width: 100% !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      border: none !important;
+      box-shadow: none !important;
+      background: #fff !important;
+      display: block !important;
     }
+
+    /* ── EACH COPY: half the A4 height ── */
+    .single-receipt-copy {
+      border: 2px solid #000 !important;
+      background: #fff !important;
+      color: #000 !important;
+      padding: 8px 10px !important;
+      font-size: 13px !important;
+      line-height: 1.35 !important;
+      display: block !important;
+      width: 100% !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+
+    /* ── CUT LINE ── */
+    .cut-section-divider {
+      position: relative !important;
+      margin: 6px 0 !important;
+      text-align: center !important;
+      page-break-before: avoid !important;
+      break-before: avoid !important;
+      page-break-after: avoid !important;
+      break-after: avoid !important;
+      display: block !important;
+    }
+    .cut-section-divider span {
+      position: absolute !important;
+      top: -9px !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+      background: #fff !important;
+      padding: 0 8px !important;
+      font-size: 12px !important;
+      font-weight: bold !important;
+      white-space: nowrap !important;
+    }
+
+    /* ── TABLE ── */
     table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 2px 4px; font-size: 10px; }
-    img { max-height: 40px; object-fit: contain; }
-    /* Restore flex/grid layouts inside receipt */
-    .grid { display: grid; }
-    .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
-    .col-span-3 { grid-column: span 3 / span 3; }
-    .col-span-6 { grid-column: span 6 / span 6; }
-    .flex { display: flex; }
-    .flex-col { flex-direction: column; }
-    .flex-1 { flex: 1 1 0%; }
-    .items-center { align-items: center; }
-    .justify-center { justify-content: center; }
-    .justify-between { justify-content: space-between; }
-    .text-center { text-align: center; }
-    .text-right { text-align: right; }
-    .text-left { text-align: left; }
-    .font-bold { font-weight: bold; }
-    .font-extrabold { font-weight: 800; }
-    .font-semibold { font-weight: 600; }
-    .font-mono { font-family: monospace; }
-    .uppercase { text-transform: uppercase; }
-    .tracking-tight { letter-spacing: -0.025em; }
-    .tracking-widest { letter-spacing: 0.1em; }
-    .tracking-wide { letter-spacing: 0.025em; }
-    .border-2 { border-width: 2px; }
-    .border { border-width: 1px; }
-    .border-black { border-color: #000; }
-    .border-collapse { border-collapse: collapse; }
-    .border-r { border-right-width: 1px; border-right-color: #000; }
-    .border-r-2 { border-right-width: 2px; border-right-color: #000; }
-    .border-b { border-bottom-width: 1px; border-bottom-color: #000; }
-    .border-b-2 { border-bottom-width: 2px; border-bottom-color: #000; }
-    .border-t-2 { border-top-width: 2px; border-top-color: #000; }
-    .p-1 { padding: 4px; }
-    .p-2 { padding: 8px; }
-    .p-0\\.5 { padding: 2px; }
-    .p-1\\.5 { padding: 6px; }
-    .px-2 { padding-left: 8px; padding-right: 8px; }
-    .pr-2 { padding-right: 8px; }
-    .mb-1 { margin-bottom: 4px; }
-    .mb-1\\.5 { margin-bottom: 6px; }
-    .mt-0\\.5 { margin-top: 2px; }
-    .mt-1 { margin-top: 4px; }
-    .gap-1 { gap: 4px; }
-    .gap-2 { gap: 8px; }
-    .leading-none { line-height: 1; }
-    .leading-snug { line-height: 1.375; }
-    .leading-tight { line-height: 1.25; }
-    .shrink-0 { flex-shrink: 0; }
-    .space-y-0\\.5 > * + * { margin-top: 2px; }
-    .w-full { width: 100%; }
-    .w-48 { width: 192px; }
-    .h-10 { height: 40px; }
-    .h-5 { height: 20px; }
-    .h-6 { height: 24px; }
-    .text-\\[7\\.5px\\] { font-size: 7.5px; }
-    .text-\\[8\\.5px\\] { font-size: 8.5px; }
-    .text-\\[9px\\] { font-size: 9px; }
-    .text-\\[9\\.5px\\] { font-size: 9.5px; }
-    .text-\\[10px\\] { font-size: 10px; }
-    .text-\\[10\\.5px\\] { font-size: 10.5px; }
-    .text-\\[11px\\] { font-size: 11px; }
-    .text-\\[12\\.5px\\] { font-size: 12.5px; }
-    .text-\\[13px\\] { font-size: 13px; }
-    .text-rose-700 { color: #b91c1c; }
-    .text-emerald-800 { color: #065f46; }
-    .text-slate-500 { color: #64748b; }
-    .text-slate-700 { color: #334155; }
-    .text-slate-800 { color: #1e293b; }
-    .text-slate-900 { color: #0f172a; }
-    .text-\\[\\#0088cc\\] { color: #0088cc; }
-    .bg-white { background-color: #ffffff; }
-    .box-border { box-sizing: border-box; }
+    th, td { padding: 3px 5px; font-size: 12px; }
+    thead tr { border-bottom: 2px solid #000; }
+
+    /* ── IMAGES ── */
+    img { max-height: 48px; object-fit: contain; }
+
+    /* ── LAYOUT UTILITIES ── */
+    .grid { display: grid !important; }
+    .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)) !important; }
+    .col-span-3 { grid-column: span 3 / span 3 !important; }
+    .col-span-6 { grid-column: span 6 / span 6 !important; }
+    .flex { display: flex !important; }
+    .flex-col { flex-direction: column !important; }
+    .flex-1 { flex: 1 1 0% !important; }
+    .flex-wrap { flex-wrap: wrap !important; }
+    .items-center { align-items: center !important; }
+    .items-start { align-items: flex-start !important; }
+    .justify-center { justify-content: center !important; }
+    .justify-between { justify-content: space-between !important; }
+    .justify-end { justify-content: flex-end !important; }
+    .text-center { text-align: center !important; }
+    .text-right { text-align: right !important; }
+    .text-left { text-align: left !important; }
+    .font-bold { font-weight: bold !important; }
+    .font-extrabold { font-weight: 800 !important; }
+    .font-semibold { font-weight: 600 !important; }
+    .font-medium { font-weight: 500 !important; }
+    .font-mono { font-family: monospace !important; }
+    .font-black { font-weight: 900 !important; }
+    .italic { font-style: italic !important; }
+    .uppercase { text-transform: uppercase !important; }
+    .tracking-tight { letter-spacing: -0.025em !important; }
+    .tracking-widest { letter-spacing: 0.1em !important; }
+    .tracking-wide { letter-spacing: 0.025em !important; }
+
+    /* ── BORDERS ── */
+    .border-2 { border: 2px solid #000 !important; }
+    .border { border: 1px solid #000 !important; }
+    .border-black { border-color: #000 !important; }
+    .border-collapse { border-collapse: collapse !important; }
+    .border-r { border-right: 1px solid #000 !important; }
+    .border-r-2 { border-right: 2px solid #000 !important; }
+    .border-b { border-bottom: 1px solid #000 !important; }
+    .border-b-2 { border-bottom: 2px solid #000 !important; }
+    .border-t-2 { border-top: 2px solid #000 !important; }
+    .border-dashed { border-style: dashed !important; }
+
+    /* ── SPACING ── */
+    .p-1 { padding: 4px !important; }
+    .p-2 { padding: 8px !important; }
+    .p-3 { padding: 12px !important; }
+    .p-0\\.5 { padding: 2px !important; }
+    .p-0\\.5 { padding: 2px !important; }
+    .p-1\\.5 { padding: 6px !important; }
+    .px-2 { padding-left: 8px !important; padding-right: 8px !important; }
+    .px-3 { padding-left: 12px !important; padding-right: 12px !important; }
+    .pr-2 { padding-right: 8px !important; }
+    .pl-0 { padding-left: 0 !important; }
+    .mb-1 { margin-bottom: 4px !important; }
+    .mb-1\\.5 { margin-bottom: 6px !important; }
+    .mb-1 { margin-bottom: 4px !important; }
+    .mt-0\\.5 { margin-top: 2px !important; }
+    .mt-1 { margin-top: 4px !important; }
+    .gap-1 { gap: 4px !important; }
+    .gap-2 { gap: 8px !important; }
+
+    /* ── LINE HEIGHT ── */
+    .leading-none { line-height: 1 !important; }
+    .leading-snug { line-height: 1.375 !important; }
+    .leading-tight { line-height: 1.25 !important; }
+    .shrink-0 { flex-shrink: 0 !important; }
+    .space-y-0\\.5 > * + * { margin-top: 2px !important; }
+
+    /* ── SIZING ── */
+    .w-full { width: 100% !important; }
+    .w-48 { width: 192px !important; }
+    .h-10 { height: 40px !important; }
+    .h-5 { height: 20px !important; }
+    .h-6 { height: 24px !important; }
+
+    /* ── FONT SIZE OVERRIDES: bump ALL sizes up by ~25% ── */
+    .text-\\[7\\.5px\\], [class*="text-[7"] { font-size: 9px !important; }
+    .text-\\[8\\.5px\\], [class*="text-[8"] { font-size: 10px !important; }
+    .text-\\[9px\\]   { font-size: 11px !important; }
+    .text-\\[9\\.5px\\]{ font-size: 11.5px !important; }
+    .text-\\[10px\\]  { font-size: 12px !important; }
+    .text-\\[10\\.5px\\]{ font-size: 13px !important; }
+    .text-\\[11px\\]  { font-size: 13.5px !important; }
+    .text-\\[12\\.5px\\]{ font-size: 15px !important; }
+    .text-\\[13px\\]  { font-size: 16px !important; }
+    .text-xs  { font-size: 11px !important; }
+    .text-sm  { font-size: 13px !important; }
+
+    /* ── COLORS ── */
+    .text-rose-700 { color: #b91c1c !important; }
+    .text-emerald-800 { color: #065f46 !important; }
+    .text-slate-500 { color: #64748b !important; }
+    .text-slate-700 { color: #334155 !important; }
+    .text-slate-800 { color: #1e293b !important; }
+    .text-slate-900 { color: #0f172a !important; }
+    .text-black { color: #000 !important; }
+    .text-\\[\\#0088cc\\] { color: #0088cc !important; }
+    .bg-white { background-color: #ffffff !important; }
+    .select-text { user-select: text !important; }
+    .box-border { box-sizing: border-box !important; }
+    .relative { position: relative !important; }
+    .absolute { position: absolute !important; }
+    .underline { text-decoration: underline !important; }
+    .colSpan-3 { colspan: 3; }
   </style>
 </head>
 <body>
@@ -340,8 +398,9 @@ ${innerHtml}
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 600);
+    }, 700);
   };
+
 
   const renderSingleReceipt = (copyTitle: "Student Copy" | "Center Copy") => (
     <div
