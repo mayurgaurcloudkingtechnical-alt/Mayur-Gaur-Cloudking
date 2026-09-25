@@ -37,7 +37,7 @@ export function UniversalPaymentDialog({
   amountPaise,
   onSuccess,
 }: UniversalPaymentDialogProps) {
-  const [selectedProvider, setSelectedProvider] = useState<"STRIPE" | "RAZORPAY">("STRIPE");
+  const [selectedProvider, setSelectedProvider] = useState<"STRIPE" | "RAZORPAY">("RAZORPAY");
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [receiptNumber, setReceiptNumber] = useState<string | null>(null);
@@ -57,10 +57,10 @@ export function UniversalPaymentDialog({
       setReceiptNumber(null);
       setErrorMessage(null);
       setIsProcessing(false);
-      if (gatewayStatus.data?.activeProvider === "RAZORPAY") {
-        setSelectedProvider("RAZORPAY");
-      } else {
+      if (gatewayStatus.data?.activeProvider === "STRIPE") {
         setSelectedProvider("STRIPE");
+      } else {
+        setSelectedProvider("RAZORPAY");
       }
     }
   }, [open, gatewayStatus.data]);
@@ -105,8 +105,14 @@ export function UniversalPaymentDialog({
             name: "SOFTLAB GLOBAL",
             description: order.description,
             order_id: order.orderId,
+            modal: {
+              ondismiss: () => {
+                setIsProcessing(false);
+              },
+            },
             handler: async (resp: any) => {
               try {
+                setIsProcessing(true);
                 const verifyRes = await verifyFeePaymentMutation.mutateAsync({
                   gatewayOrderId: resp.razorpay_order_id,
                   gatewayPaymentId: resp.razorpay_payment_id,
@@ -117,8 +123,14 @@ export function UniversalPaymentDialog({
                 onSuccess();
               } catch (err: any) {
                 setErrorMessage(err.message || "Payment verification failed.");
+              } finally {
+                setIsProcessing(false);
               }
             },
+          });
+          rzp.on("payment.failed", (resp: any) => {
+            setIsProcessing(false);
+            setErrorMessage(resp.error?.description || "Payment failed.");
           });
           rzp.open();
         } else {

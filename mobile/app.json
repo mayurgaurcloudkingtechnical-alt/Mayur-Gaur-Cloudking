@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "SOFTLAB GLOBAL LMS",
+    "slug": "softlab-global-lms",
+    "scheme": "softlablms",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#10B981"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.softlabglobal.lms"
+    },
+    "android": {
+      "package": "com.softlabglobal.lms",
+      "adaptiveIcon": {
+        "backgroundColor": "#10B981",
+        "foregroundImage": "./assets/android-icon-foreground.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    }
+  }
+}

@@ -36,6 +36,8 @@ export default function RootLayout({
             `,
           }}
         />
+        {/* Razorpay Standard Web Checkout */}
+        <script async src="https://checkout.razorpay.com/v1/checkout.js" />
       </head>
       <body className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900">
         <TRPCReactProvider>{children}</TRPCReactProvider>

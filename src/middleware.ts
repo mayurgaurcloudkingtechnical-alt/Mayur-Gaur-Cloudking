@@ -7,8 +7,8 @@ export async function middleware(req: NextRequest) {
   const isLmsSubdomain = host.startsWith("lms.") || req.nextUrl.searchParams.get("portal") === "lms";
   const isApiSubdomain = host.startsWith("api.");
 
-  // Handle API Subdomain CORS
-  if (isApiSubdomain) {
+  // Handle API Subdomain & Native API v1 CORS
+  if (isApiSubdomain || pathname.startsWith("/api/v1/")) {
     if (req.method === "OPTIONS") {
       return new NextResponse(null, {
         status: 204,
@@ -179,7 +179,7 @@ export async function middleware(req: NextRequest) {
   }
 
   const res = NextResponse.next();
-  if (isApiSubdomain) {
+  if (isApiSubdomain || pathname.startsWith("/api/v1/")) {
     res.headers.set("Access-Control-Allow-Origin", "*");
     res.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
     res.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization, x-trpc-source");

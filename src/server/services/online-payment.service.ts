@@ -103,7 +103,12 @@ export class OnlinePaymentService {
       },
     });
 
-    const keyId = env.RAZORPAY_KEY_ID || env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_mock";
+    const keyId =
+      process.env.RAZORPAY_KEY_ID ||
+      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+      env.RAZORPAY_KEY_ID ||
+      env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+      "rzp_test_TgDdjsEItAotKI";
 
     return {
       keyId,
@@ -492,7 +497,11 @@ export class OnlinePaymentService {
     const keyId =
       gateway.providerName === "STRIPE"
         ? getStripeProvider().getPublishableKey() || "pk_test_mock"
-        : env.RAZORPAY_KEY_ID || env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_mock";
+        : process.env.RAZORPAY_KEY_ID ||
+          process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+          env.RAZORPAY_KEY_ID ||
+          env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+          "rzp_test_TgDdjsEItAotKI";
 
     return {
       keyId,
