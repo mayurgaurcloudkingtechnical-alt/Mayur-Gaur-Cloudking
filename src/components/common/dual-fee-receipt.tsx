@@ -217,12 +217,12 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   <meta charset="utf-8"/>
   <title>Fee Receipt – ${receiptNumber}</title>
   <style>
-    @page { size: A4 portrait; margin: 5mm 6mm; }
+    @page { size: A4 portrait; margin: 4mm 5mm; }
     * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
     html, body {
       margin: 0; padding: 0; background: #fff;
       font-family: Arial, sans-serif;
-      font-size: 13px;
+      font-size: 10px;
       width: 100%;
     }
 
@@ -238,25 +238,25 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       display: block !important;
     }
 
-    /* ── EACH COPY: half the A4 height ── */
+    /* ── EACH COPY: compact to fit half page ── */
     .single-receipt-copy {
       border: 2px solid #000 !important;
       background: #fff !important;
       color: #000 !important;
-      padding: 8px 10px !important;
-      font-size: 13px !important;
-      line-height: 1.35 !important;
+      padding: 5px 7px !important;
+      font-size: 10px !important;
+      line-height: 1.25 !important;
       display: block !important;
       width: 100% !important;
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
 
-    /* ── CUT LINE ── */
+    /* ── CUT LINE: tight gap ── */
     .cut-section-divider {
       position: relative !important;
-      margin: 12px 0 !important;
-      padding: 10px 0 !important;
+      margin: 5px 0 !important;
+      padding: 6px 0 !important;
       text-align: center !important;
       page-break-before: avoid !important;
       break-before: avoid !important;
@@ -281,15 +281,14 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
       white-space: nowrap !important;
     }
 
-    /* ── TABLE: full borders on every cell like original ── */
+    /* ── TABLE: full borders on every cell ── */
     table { width: 100% !important; border-collapse: collapse !important; border: 2px solid #000 !important; }
-    th, td { padding: 3px 5px !important; font-size: 12px !important; border: 1px solid #000 !important; }
+    th, td { padding: 2px 4px !important; font-size: 10px !important; border: 1px solid #000 !important; }
     thead tr th { border-bottom: 2px solid #000 !important; border: 1px solid #000 !important; font-weight: bold !important; }
     tbody tr td { border: 1px solid #000 !important; }
-    tbody tr:last-child td { border-bottom: 1px solid #000 !important; }
 
     /* ── IMAGES ── */
-    img { max-height: 48px; object-fit: contain; }
+    img { max-height: 36px !important; object-fit: contain; }
 
     /* ── LAYOUT UTILITIES ── */
     .grid { display: grid !important; }
@@ -333,67 +332,60 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
     .border-dashed { border-style: dashed !important; }
 
     /* ── SPACING ── */
-    .p-1 { padding: 4px !important; }
-    .p-2 { padding: 8px !important; }
-    .p-3 { padding: 12px !important; }
-    .p-0\\.5 { padding: 2px !important; }
-    .p-0\\.5 { padding: 2px !important; }
-    .p-1\\.5 { padding: 6px !important; }
-    .px-2 { padding-left: 8px !important; padding-right: 8px !important; }
-    .px-3 { padding-left: 12px !important; padding-right: 12px !important; }
-    .pr-2 { padding-right: 8px !important; }
-    .pl-0 { padding-left: 0 !important; }
-    .mb-1 { margin-bottom: 4px !important; }
-    .mb-1\\.5 { margin-bottom: 6px !important; }
-    .mb-1 { margin-bottom: 4px !important; }
-    .mt-0\\.5 { margin-top: 2px !important; }
-    .mt-1 { margin-top: 4px !important; }
-    .gap-1 { gap: 4px !important; }
-    .gap-2 { gap: 8px !important; }
+    .p-0\\.5 { padding: 1px !important; }
+    .p-1    { padding: 2px !important; }
+    .p-1\\.5{ padding: 3px !important; }
+    .p-2    { padding: 5px !important; }
+    .p-3    { padding: 7px !important; }
+    .px-2 { padding-left: 5px !important; padding-right: 5px !important; }
+    .px-3 { padding-left: 7px !important; padding-right: 7px !important; }
+    .pr-2 { padding-right: 5px !important; }
+    .mb-1    { margin-bottom: 2px !important; }
+    .mb-1\\.5{ margin-bottom: 3px !important; }
+    .mt-0\\.5{ margin-top: 1px !important; }
+    .mt-1   { margin-top: 2px !important; }
+    .gap-1  { gap: 2px !important; }
+    .gap-2  { gap: 4px !important; }
 
     /* ── LINE HEIGHT ── */
-    .leading-none { line-height: 1 !important; }
-    .leading-snug { line-height: 1.375 !important; }
-    .leading-tight { line-height: 1.25 !important; }
+    .leading-none  { line-height: 1 !important; }
+    .leading-snug  { line-height: 1.3 !important; }
+    .leading-tight { line-height: 1.2 !important; }
     .shrink-0 { flex-shrink: 0 !important; }
-    .space-y-0\\.5 > * + * { margin-top: 2px !important; }
+    .space-y-0\\.5 > * + * { margin-top: 1px !important; }
 
     /* ── SIZING ── */
     .w-full { width: 100% !important; }
-    .w-48 { width: 192px !important; }
-    .h-10 { height: 40px !important; }
-    .h-5 { height: 20px !important; }
-    .h-6 { height: 24px !important; }
+    .w-48   { width: 150px !important; }
+    .h-10   { height: 32px !important; }
+    .h-5    { height: 16px !important; }
+    .h-6    { height: 18px !important; }
 
-    /* ── FONT SIZE OVERRIDES: bump ALL sizes up by ~25% ── */
-    .text-\\[7\\.5px\\], [class*="text-[7"] { font-size: 9px !important; }
-    .text-\\[8\\.5px\\], [class*="text-[8"] { font-size: 10px !important; }
-    .text-\\[9px\\]   { font-size: 11px !important; }
-    .text-\\[9\\.5px\\]{ font-size: 11.5px !important; }
-    .text-\\[10px\\]  { font-size: 12px !important; }
-    .text-\\[10\\.5px\\]{ font-size: 13px !important; }
-    .text-\\[11px\\]  { font-size: 13.5px !important; }
-    .text-\\[12\\.5px\\]{ font-size: 15px !important; }
-    .text-\\[13px\\]  { font-size: 16px !important; }
-    .text-xs  { font-size: 11px !important; }
-    .text-sm  { font-size: 13px !important; }
+    /* ── FONT SIZE OVERRIDES: proportional to 10px base ── */
+    [class*='text-[7']  { font-size: 7px !important; }
+    [class*='text-[8']  { font-size: 8px !important; }
+    [class*='text-[9']  { font-size: 9px !important; }
+    [class*='text-[10'] { font-size: 10px !important; }
+    [class*='text-[11'] { font-size: 10.5px !important; }
+    [class*='text-[12'] { font-size: 11px !important; }
+    [class*='text-[13'] { font-size: 11.5px !important; }
+    .text-xs { font-size: 9px !important; }
+    .text-sm { font-size: 10px !important; }
 
     /* ── COLORS ── */
-    .text-rose-700 { color: #b91c1c !important; }
+    .text-rose-700    { color: #b91c1c !important; }
     .text-emerald-800 { color: #065f46 !important; }
-    .text-slate-500 { color: #64748b !important; }
-    .text-slate-700 { color: #334155 !important; }
-    .text-slate-800 { color: #1e293b !important; }
-    .text-slate-900 { color: #0f172a !important; }
-    .text-black { color: #000 !important; }
-    .text-\\[\\#0088cc\\] { color: #0088cc !important; }
-    .bg-white { background-color: #ffffff !important; }
-    .select-text { user-select: text !important; }
-    .box-border { box-sizing: border-box !important; }
-    .relative { position: relative !important; }
-    .absolute { position: absolute !important; }
-    .underline { text-decoration: underline !important; }
-    .colSpan-3 { colspan: 3; }
+    .text-slate-500   { color: #64748b !important; }
+    .text-slate-700   { color: #334155 !important; }
+    .text-slate-800   { color: #1e293b !important; }
+    .text-slate-900   { color: #0f172a !important; }
+    .text-black       { color: #000 !important; }
+    .bg-white         { background-color: #fff !important; }
+    .select-text      { user-select: text !important; }
+    .box-border       { box-sizing: border-box !important; }
+    .relative         { position: relative !important; }
+    .absolute         { position: absolute !important; }
+    .underline        { text-decoration: underline !important; }
   </style>
 </head>
 <body>
