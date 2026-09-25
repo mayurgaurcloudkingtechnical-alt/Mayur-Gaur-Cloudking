@@ -10,6 +10,7 @@ interface PageProps {
 export default async function AdminAdmissionDetailPage({ params }: PageProps) {
   const user = await requireRole([
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.MANAGER,
     UserRoleCode.SUPER_ADMIN,
   ]);

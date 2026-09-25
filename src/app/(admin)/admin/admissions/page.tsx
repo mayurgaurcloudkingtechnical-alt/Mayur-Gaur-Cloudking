@@ -7,6 +7,7 @@ import { ApplicationsListView } from "@/components/counselor/applications-list-v
 export default async function AdminAdmissionsPage() {
   const user = await requireRole([
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.MANAGER,
     UserRoleCode.SUPER_ADMIN,
   ]);
