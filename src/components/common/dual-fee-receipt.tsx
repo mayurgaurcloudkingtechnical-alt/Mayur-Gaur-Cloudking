@@ -195,10 +195,152 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
     }
   };
 
+  const printRef = React.useRef<HTMLDivElement>(null);
+
   const handlePrint = () => {
-    if (typeof window !== "undefined") {
-      window.print();
+    if (typeof window === "undefined") return;
+    const el = printRef.current;
+    if (!el) return;
+
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      alert("Please allow popups for this site to print receipts.");
+      return;
     }
+
+    const innerHtml = el.innerHTML;
+    printWindow.document.open();
+    printWindow.document.write(`
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Fee Receipt – ${receiptNumber}</title>
+  <style>
+    @page { size: A4 portrait; margin: 6mm 8mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+    body { margin: 0; padding: 0; background: #fff; font-family: Arial, sans-serif; }
+    .single-receipt-copy {
+      border: 2px solid #000;
+      background: #fff;
+      color: #000;
+      padding: 10px;
+      font-size: 10.5px;
+      line-height: 1.3;
+      page-break-inside: avoid;
+      break-inside: avoid;
+    }
+    .cut-section-divider {
+      position: relative;
+      margin: 8px 0;
+      text-align: center;
+      page-break-before: avoid;
+      break-before: avoid;
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+    .cut-section-divider .cut-line {
+      border-top: 2px dashed #000;
+      width: 100%;
+    }
+    .cut-section-divider span {
+      position: absolute;
+      top: -9px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #fff;
+      padding: 0 8px;
+      font-size: 11px;
+      font-weight: bold;
+      white-space: nowrap;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 2px 4px; font-size: 10px; }
+    img { max-height: 40px; object-fit: contain; }
+    /* Restore flex/grid layouts inside receipt */
+    .grid { display: grid; }
+    .grid-cols-12 { grid-template-columns: repeat(12, minmax(0, 1fr)); }
+    .col-span-3 { grid-column: span 3 / span 3; }
+    .col-span-6 { grid-column: span 6 / span 6; }
+    .flex { display: flex; }
+    .flex-col { flex-direction: column; }
+    .flex-1 { flex: 1 1 0%; }
+    .items-center { align-items: center; }
+    .justify-center { justify-content: center; }
+    .justify-between { justify-content: space-between; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .text-left { text-align: left; }
+    .font-bold { font-weight: bold; }
+    .font-extrabold { font-weight: 800; }
+    .font-semibold { font-weight: 600; }
+    .font-mono { font-family: monospace; }
+    .uppercase { text-transform: uppercase; }
+    .tracking-tight { letter-spacing: -0.025em; }
+    .tracking-widest { letter-spacing: 0.1em; }
+    .tracking-wide { letter-spacing: 0.025em; }
+    .border-2 { border-width: 2px; }
+    .border { border-width: 1px; }
+    .border-black { border-color: #000; }
+    .border-collapse { border-collapse: collapse; }
+    .border-r { border-right-width: 1px; border-right-color: #000; }
+    .border-r-2 { border-right-width: 2px; border-right-color: #000; }
+    .border-b { border-bottom-width: 1px; border-bottom-color: #000; }
+    .border-b-2 { border-bottom-width: 2px; border-bottom-color: #000; }
+    .border-t-2 { border-top-width: 2px; border-top-color: #000; }
+    .p-1 { padding: 4px; }
+    .p-2 { padding: 8px; }
+    .p-0\\.5 { padding: 2px; }
+    .p-1\\.5 { padding: 6px; }
+    .px-2 { padding-left: 8px; padding-right: 8px; }
+    .pr-2 { padding-right: 8px; }
+    .mb-1 { margin-bottom: 4px; }
+    .mb-1\\.5 { margin-bottom: 6px; }
+    .mt-0\\.5 { margin-top: 2px; }
+    .mt-1 { margin-top: 4px; }
+    .gap-1 { gap: 4px; }
+    .gap-2 { gap: 8px; }
+    .leading-none { line-height: 1; }
+    .leading-snug { line-height: 1.375; }
+    .leading-tight { line-height: 1.25; }
+    .shrink-0 { flex-shrink: 0; }
+    .space-y-0\\.5 > * + * { margin-top: 2px; }
+    .w-full { width: 100%; }
+    .w-48 { width: 192px; }
+    .h-10 { height: 40px; }
+    .h-5 { height: 20px; }
+    .h-6 { height: 24px; }
+    .text-\\[7\\.5px\\] { font-size: 7.5px; }
+    .text-\\[8\\.5px\\] { font-size: 8.5px; }
+    .text-\\[9px\\] { font-size: 9px; }
+    .text-\\[9\\.5px\\] { font-size: 9.5px; }
+    .text-\\[10px\\] { font-size: 10px; }
+    .text-\\[10\\.5px\\] { font-size: 10.5px; }
+    .text-\\[11px\\] { font-size: 11px; }
+    .text-\\[12\\.5px\\] { font-size: 12.5px; }
+    .text-\\[13px\\] { font-size: 13px; }
+    .text-rose-700 { color: #b91c1c; }
+    .text-emerald-800 { color: #065f46; }
+    .text-slate-500 { color: #64748b; }
+    .text-slate-700 { color: #334155; }
+    .text-slate-800 { color: #1e293b; }
+    .text-slate-900 { color: #0f172a; }
+    .text-\\[\\#0088cc\\] { color: #0088cc; }
+    .bg-white { background-color: #ffffff; }
+    .box-border { box-sizing: border-box; }
+  </style>
+</head>
+<body>
+${innerHtml}
+</body>
+</html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 600);
   };
 
   const renderSingleReceipt = (copyTitle: "Student Copy" | "Center Copy") => (
@@ -597,71 +739,77 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   );
 
   return (
-    <div className="w-full min-h-screen bg-white py-4 px-2 flex flex-col items-center justify-start print:bg-white print:p-0 print:m-0 print:min-h-0 print:w-full">
+    <div id="dual-receipt-root" className="w-full bg-white flex flex-col items-center justify-start">
       {/* Global Print & Page Styling */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
             @page {
               size: A4 portrait;
-              margin: 5mm 6mm;
+              margin: 6mm 7mm;
             }
             @media print {
-              *, *::before, *::after {
+              * {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
               }
               html, body {
+                background: #ffffff !important;
                 margin: 0 !important;
                 padding: 0 !important;
-                background: #ffffff !important;
-                background-color: #ffffff !important;
                 width: 100% !important;
                 height: auto !important;
-                overflow: visible !important;
               }
-              body * {
-                visibility: hidden;
+              /* Hide everything on the page first */
+              body > * {
+                display: none !important;
               }
-              .a4-receipt-page, .a4-receipt-page * {
-                visibility: visible;
+              /* Un-hide: walk up the ancestor chain to show the receipt */
+              body > * #dual-receipt-root,
+              #dual-receipt-root {
+                display: block !important;
               }
-              .a4-receipt-page {
-                position: absolute !important;
-                left: 0 !important;
-                top: 0 !important;
+              /* Make all ancestors of dual-receipt-root visible */
+              #dual-receipt-root,
+              #dual-receipt-root > * {
+                display: block !important;
+              }
+              .print-hidden-toolbar {
+                display: none !important;
+              }
+              .a4-receipt-wrapper {
+                display: block !important;
                 width: 100% !important;
-                max-width: 100% !important;
-                height: auto !important;
-                min-height: 0 !important;
-                max-height: none !important;
                 padding: 0 !important;
                 margin: 0 !important;
                 border: none !important;
                 box-shadow: none !important;
                 background: #ffffff !important;
-                box-sizing: border-box !important;
               }
               .single-receipt-copy {
+                display: block !important;
+                width: 100% !important;
+                background: #ffffff !important;
                 page-break-inside: avoid !important;
                 break-inside: avoid !important;
+                box-sizing: border-box !important;
               }
               .cut-section-divider {
+                display: block !important;
+                margin: 3px 0 !important;
                 page-break-before: avoid !important;
                 break-before: avoid !important;
                 page-break-after: avoid !important;
                 break-after: avoid !important;
               }
-              .print-hidden-toolbar {
-                display: none !important;
-              }
+              table { width: 100% !important; }
             }
           `,
         }}
       />
 
       {/* Top Controls Bar (hidden during print) */}
-      <div className="print-hidden-toolbar print:hidden w-full max-w-[210mm] flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-300 text-slate-800 p-3 rounded-xl shadow-md mb-4">
+      <div className="print-hidden-toolbar w-full max-w-[210mm] flex flex-wrap items-center justify-between gap-3 bg-white border border-slate-300 text-slate-800 p-3 rounded-xl shadow-md mb-4 mt-4">
         <div className="flex items-center gap-2">
           <span className="font-extrabold text-sm tracking-tight text-emerald-700">
             Official A4 Payment Receipt
@@ -734,25 +882,24 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
         </div>
       </div>
 
-      {/* A4 Container: Student Copy (Top) + Scissor Perforation + Center Copy (Bottom) */}
+      {/* A4 Container: Student Copy + CUT + Center Copy */}
       <div
-        className="a4-receipt-page bg-white p-3 sm:p-5 mx-auto flex flex-col justify-between border border-slate-300 shadow-md print:p-0 print:border-none print:shadow-none print:m-0 w-full max-w-[210mm]"
-        style={{
-          boxSizing: "border-box",
-        }}
+        ref={printRef}
+        className="a4-receipt-wrapper bg-white mx-auto w-full max-w-[210mm] p-3 sm:p-5 border border-slate-200 shadow-sm"
+        style={{ boxSizing: "border-box" }}
       >
-        {/* Top Half: STUDENT COPY */}
+        {/* STUDENT COPY */}
         {renderSingleReceipt("Student Copy")}
 
-        {/* Scissor Perforation Line matching the uploaded PDF reference */}
-        <div className="cut-section-divider relative my-2 sm:my-3 h-[8mm] flex items-center justify-center select-none shrink-0 print:my-1.5">
+        {/* CUT HERE Perforation */}
+        <div className="cut-section-divider relative my-3 flex items-center justify-center select-none">
           <div className="w-full border-t-2 border-dashed border-black"></div>
-          <span className="absolute bg-white px-3 text-xs text-black flex items-center gap-1 font-bold">
-            ✂ ----------------- CUT HERE ----------------- ✂
+          <span className="absolute bg-white px-3 text-xs text-black flex items-center gap-1 font-bold whitespace-nowrap">
+            ✂ ─────────── CUT HERE ─────────── ✂
           </span>
         </div>
 
-        {/* Bottom Half: CENTER COPY */}
+        {/* CENTER COPY */}
         {renderSingleReceipt("Center Copy")}
       </div>
     </div>
