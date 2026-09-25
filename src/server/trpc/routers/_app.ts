@@ -19,6 +19,7 @@ import { staffErpRouter } from "./staff-erp";
 import { analyticsRouter } from "./analytics";
 import { notificationRouter } from "./notification";
 import { systemRouter } from "./system";
+import { bulkCallingRouter } from "./bulk-calling";
 
 export const appRouter = router({
   auth: authRouter,
@@ -41,6 +42,7 @@ export const appRouter = router({
   analytics: analyticsRouter,
   notifications: notificationRouter,
   system: systemRouter,
+  bulkCalling: bulkCallingRouter,
 });
 
 

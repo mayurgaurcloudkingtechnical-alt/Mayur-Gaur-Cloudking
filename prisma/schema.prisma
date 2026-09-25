@@ -133,6 +133,8 @@ enum LeadSource {
   LINKEDIN_ADS
   FRANCHISE
   FRANCHISE_WEBSITE
+  BULK_UPLOAD
+  AI_CALLING
   OTHER
 }
 
@@ -285,6 +287,11 @@ model User {
 
   // Universal In-App Notifications
   notifications         Notification[]
+
+  // AI Bulk Data Import & Outbound Calling Automation
+  uploadedCallingBatches BulkCallingBatch[]  @relation("BatchUploader")
+  assignedCallingBatches BulkCallingBatch[]  @relation("BatchAssignee")
+  callingAuditLogs       CallingAuditLog[]   @relation("CallingAuditUser")
 
   @@index([email])
   @@index([phone])
@@ -759,6 +766,7 @@ model Lead {
   activities          LeadActivity[]
   applications        AdmissionApplication[]
   convertedFranchise  Franchise?             @relation("LeadFranchise")
+  callingQueueItems   CallingQueueItem[]
 
   @@index([email])
   @@index([phone])
@@ -2154,5 +2162,223 @@ model FranchiseSale {
   @@index([paymentStatus])
   @@map("franchise_sales")
 }
+
+// ==============================================================================
+// 15. ISOLATED MODULE: BULK DATA IMPORT & AI CALLING AUTOMATION
+// ==============================================================================
+
+enum CallingBatchStatus {
+  DRAFT
+  VALIDATING
+  READY
+  RUNNING
+  PAUSED
+  COMPLETED
+  STOPPED
+  FAILED
+}
+
+enum CallingQueueStatus {
+  QUEUED
+  CALLING
+  COMPLETED
+  RETRYING
+  FAILED
+  SKIPPED
+  PAUSED
+  DO_NOT_CALL
+}
+
+enum CallingOutcome {
+  INTERESTED
+  HIGH_INTENT
+  COURSE_ENQUIRY
+  ADMISSION_INTEREST
+  CALLBACK_REQUESTED
+  DEMO_REQUESTED
+  PRICE_QUERY
+  FOLLOW_UP_REQUIRED
+  HUMAN_HANDOFF
+  NOT_INTERESTED
+  INVALID_NUMBER
+  NO_ANSWER
+  BUSY
+  WRONG_NUMBER
+  CONVERTED
+  FAILED
+}
+
+model BulkCallingBatch {
+  id                 String             @id @default(cuid())
+  batchName          String
+  description        String?
+  fileName           String
+  uploadedById       String
+  uploadedBy         User               @relation("BatchUploader", fields: [uploadedById], references: [id])
+  assignedToId       String?
+  assignedTo         User?              @relation("BatchAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  status             CallingBatchStatus @default(DRAFT)
+  
+  // Counts & Validation Summary
+  totalRows          Int                @default(0)
+  validRows          Int                @default(0)
+  invalidRows        Int                @default(0)
+  duplicateRows      Int                @default(0)
+  skippedRows        Int                @default(0)
+  callableRows       Int                @default(0)
+  
+  // Real-time Calling Progress
+  completedCalls     Int                @default(0)
+  interestedCount    Int                @default(0)
+  followUpCount      Int                @default(0)
+  humanHandoffCount  Int                @default(0)
+  notInterestedCount Int                @default(0)
+  noAnswerCount      Int                @default(0)
+  busyCount          Int                @default(0)
+  failedCount        Int                @default(0)
+
+  // Calling Execution Controls
+  autoStart          Boolean            @default(false)
+  concurrency        Int                @default(1)
+  callingHoursStart  String             @default("10:00") // 24-hr format "HH:MM"
+  callingHoursEnd    String             @default("19:00") // 24-hr format "HH:MM"
+  maxRetries         Int                @default(3)
+  retryDelayMinutes  Int                @default(30)
+  
+  // AI Identity & Configuration
+  voiceProvider      String             @default("SIMULATOR") // "SIMULATOR" | "TWILIO" | "EXOTEL" | "VAPI" | "RETELL" | "BLAND" | "WEBHOOK"
+  language           String             @default("hi-IN")
+  openingScript      String?            @db.Text
+  systemPrompt       String?            @db.Text
+  
+  startedAt          DateTime?
+  completedAt        DateTime?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  records            CallingQueueItem[]
+  auditLogs          CallingAuditLog[]
+
+  @@index([uploadedById])
+  @@index([status])
+  @@index([createdAt])
+  @@map("bulk_calling_batches")
+}
+
+model CallingQueueItem {
+  id                   String             @id @default(cuid())
+  batchId              String
+  batch                BulkCallingBatch   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  queuePosition        Int
+  
+  // Imported Lead Fields
+  name                 String?
+  phone                String
+  alternatePhone       String?
+  email                String?
+  city                 String?
+  state                String?
+  course               String?
+  source               String?
+  campaign             String?
+  language             String?
+  remarks              String?
+  consentGiven         Boolean            @default(true)
+  customFields         Json?
+
+  // Queue & Call State
+  status               CallingQueueStatus @default(QUEUED)
+  skipReason           String?
+  attemptCount         Int                @default(0)
+  lastAttemptAt        DateTime?
+  nextRetryAt          DateTime?
+  callDurationSeconds  Int?
+  providerCallId       String?
+  
+  // AI Conversation Results
+  callOutcome          CallingOutcome?
+  interestLevel        String?            // "HOT", "WARM", "COLD", "NONE"
+  education            String?
+  experience           String?
+  careerGoal           String?
+  budget               String?
+  learningMode         String?
+  preferredBatch       String?
+  callbackTime         DateTime?
+  callbackTimeText     String?
+  humanHandoffRequired Boolean            @default(false)
+  handoffReason        String?
+  conversationSummary  String?            @db.Text
+  transcript           Json?              // [{ role: "agent" | "lead", text: string, timestamp: string }]
+  extractedData        Json?
+
+  // LMS Integration Link
+  leadId               String?
+  lead                 Lead?              @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  isExistingLead       Boolean            @default(false)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@index([batchId])
+  @@index([phone])
+  @@index([status])
+  @@index([queuePosition])
+  @@index([leadId])
+  @@map("calling_queue_items")
+}
+
+model CallingAuditLog {
+  id          String            @id @default(cuid())
+  batchId     String?
+  batch       BulkCallingBatch? @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  queueItemId String?
+  userId      String?
+  user        User?             @relation("CallingAuditUser", fields: [userId], references: [id], onDelete: SetNull)
+  action      String
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime          @default(now())
+
+  @@index([batchId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("calling_audit_logs")
+}
+
+model AiCallingGlobalConfig {
+  id                   String   @id @default("global-config")
+  callingHoursStart    String   @default("10:00")
+  callingHoursEnd      String   @default("19:00")
+  defaultConcurrency   Int      @default(1)
+  maxRetries           Int      @default(3)
+  retryDelayMinutes    Int      @default(30)
+  autoStartDefault     Boolean  @default(false)
+  defaultProvider      String   @default("SIMULATOR")
+  defaultLanguage      String   @default("hi-IN")
+  defaultOpeningScript String?  @db.Text
+  defaultSystemPrompt  String?  @db.Text
+  providerApiKey       String?
+  providerApiSecret    String?
+  providerPhone        String?
+  webhookSecret        String?
+  updatedAt            DateTime @updatedAt
+  updatedById          String?
+
+  @@map("ai_calling_global_configs")
+}
+
+model DoNotCallNumber {
+  id        String   @id @default(cuid())
+  phone     String   @unique
+  reason    String?
+  addedById String?
+  createdAt DateTime @default(now())
+
+  @@index([phone])
+  @@map("do_not_call_numbers")
+}
+
 
 
