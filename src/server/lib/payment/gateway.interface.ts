@@ -25,6 +25,7 @@ export interface GatewayOrderResult {
   provider: string;
   checkoutUrl?: string;
   clientSecret?: string;
+  keyId?: string;
 }
 
 export interface VerifyPaymentParams {

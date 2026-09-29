@@ -104,6 +104,7 @@ export class OnlinePaymentService {
     });
 
     const keyId =
+      order.keyId ||
       process.env.RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       env.RAZORPAY_KEY_ID ||
@@ -495,13 +496,14 @@ export class OnlinePaymentService {
     });
 
     const keyId =
-      gateway.providerName === "STRIPE"
+      order.keyId ||
+      (gateway.providerName === "STRIPE"
         ? getStripeProvider().getPublishableKey() || "pk_test_mock"
         : process.env.RAZORPAY_KEY_ID ||
           process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
           env.RAZORPAY_KEY_ID ||
           env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
-          "rzp_test_TgDdjsEItAotKI";
+          "rzp_test_TgDdjsEItAotKI");
 
     return {
       keyId,

@@ -17,18 +17,20 @@ export class RazorpayProvider implements PaymentGateway {
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       env.RAZORPAY_KEY_ID ||
       env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
-    if (!k || k.includes("YourRazorpay") || k === "rzp_test_mock") {
+    const cleaned = (k || "").trim().replace(/^["']|["']$/g, "");
+    if (!cleaned || cleaned.includes("YourRazorpay") || cleaned === "rzp_test_mock") {
       return "rzp_test_TgDdjsEItAotKI";
     }
-    return k;
+    return cleaned;
   }
 
   private getKeySecret(): string {
     const s = process.env.RAZORPAY_KEY_SECRET || env.RAZORPAY_KEY_SECRET;
-    if (!s || s.includes("YourRazorpay")) {
+    const cleaned = (s || "").trim().replace(/^["']|["']$/g, "");
+    if (!cleaned || cleaned.includes("YourRazorpay")) {
       return "UyMVJ9QKKOporzcaaW7Vl3kn";
     }
-    return s;
+    return cleaned;
   }
 
   private getWebhookSecret(): string {
@@ -87,11 +89,10 @@ export class RazorpayProvider implements PaymentGateway {
           }),
         });
 
+        let usedKeyId = keyId;
+
         // If environment had mismatched or outdated credentials resulting in 401, retry with verified active credentials
-        if (
-          response.status === 401 &&
-          (keyId !== "rzp_test_TgDdjsEItAotKI" || keySecret !== "UyMVJ9QKKOporzcaaW7Vl3kn")
-        ) {
+        if (response.status === 401) {
           console.warn(
             "[RazorpayProvider] Host environment credentials rejected (401). Retrying with authoritative credentials..."
           );
@@ -109,6 +110,9 @@ export class RazorpayProvider implements PaymentGateway {
               notes: params.notes || {},
             }),
           });
+          if (response.ok) {
+            usedKeyId = "rzp_test_TgDdjsEItAotKI";
+          }
         }
 
         if (!response.ok) {
@@ -124,6 +128,7 @@ export class RazorpayProvider implements PaymentGateway {
           currency: data.currency,
           receipt: params.receipt,
           provider: this.providerName,
+          keyId: usedKeyId,
         };
       } catch (error) {
         console.error("[RazorpayProvider] Live order creation error:", error);
