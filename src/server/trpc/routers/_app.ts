@@ -20,6 +20,7 @@ import { analyticsRouter } from "./analytics";
 import { notificationRouter } from "./notification";
 import { systemRouter } from "./system";
 import { bulkCallingRouter } from "./bulk-calling";
+import { servicesRouter } from "./services";
 
 export const appRouter = router({
   auth: authRouter,
@@ -43,6 +44,7 @@ export const appRouter = router({
   notifications: notificationRouter,
   system: systemRouter,
   bulkCalling: bulkCallingRouter,
+  services: servicesRouter,
 });
 
 

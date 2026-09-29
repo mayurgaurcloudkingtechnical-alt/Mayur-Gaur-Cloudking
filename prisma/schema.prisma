@@ -297,6 +297,9 @@ model User {
   // Native Mobile & Desktop Device Sessions
   deviceSessions        UserDeviceSession[]
 
+  // Corporate Services Management
+  serviceEnquiries      ServiceEnquiry[]   @relation("ServiceEnquiryCounselor")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -2435,6 +2438,115 @@ model DoNotCallNumber {
   @@index([phone])
   @@map("do_not_call_numbers")
 }
+
+// ==============================================================================
+// 19. CORPORATE SERVICES MODULE (Isolated)
+// ==============================================================================
+
+enum ServiceEnquiryStatus {
+  NEW
+  CONTACTED
+  REQUIREMENT_DISCUSSED
+  QUOTE_REQUESTED
+  QUOTATION_SENT
+  FOLLOW_UP
+  CONVERTED
+  CLOSED
+  LOST
+}
+
+model ServiceCategory {
+  id          String           @id @default(cuid())
+  code        String           @unique // "WEB_DEV", "SOFTWARE_DEV", "APP_DEV", "DIGITAL_MARKETING", "GRAPHICS_DESIGN", "AMC_SUPPORT", "CORPORATE_COMBO"
+  name        String
+  description String?          @db.Text
+  icon        String?
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  packages    ServicePackage[]
+  enquiries   ServiceEnquiry[]
+
+  @@map("service_categories")
+}
+
+model ServicePackage {
+  id             String          @id @default(cuid())
+  categoryId     String
+  category       ServiceCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  name           String
+  code           String          @unique
+  description    String?         @db.Text
+  price          Int             // in integer Rupees
+  priceDisplay   String?         // e.g. "₹35,000/month", "Starting ₹15,000"
+  billingType    String          @default("ONE_TIME") // "ONE_TIME", "MONTHLY", "ANNUAL", "CUSTOM"
+  features       String[]        @default([])
+  deliveryPeriod String?         // e.g. "7 - 14 Days"
+  supportPeriod  String?         // e.g. "3 Months Free AMC"
+  isPopular      Boolean         @default(false)
+  isActive       Boolean         @default(true)
+  sortOrder      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  enquiries      ServiceEnquiry[]
+
+  @@map("service_packages")
+}
+
+model ServiceEnquiry {
+  id                  String               @id @default(cuid())
+  enquiryNumber       String               @unique // SRV-2026-XXXX
+  fullName            String
+  companyName         String?
+  phone               String
+  email               String
+  city                String?
+  serviceCategoryCode String?
+  categoryId          String?
+  category            ServiceCategory?     @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  packageId           String?
+  package             ServicePackage?      @relation(fields: [packageId], references: [id], onDelete: SetNull)
+  packageName         String?
+  requirement         String?              @db.Text
+  preferredContact    String?              @default("PHONE") // "PHONE", "WHATSAPP", "EMAIL"
+  message             String?              @db.Text
+  source              String               @default("Website — Services")
+  status              ServiceEnquiryStatus @default(NEW)
+  estimatedBudget     Int?
+  notes               String?              @db.Text
+  nextFollowUp        DateTime?
+
+  assignedCounselorId String?
+  assignedCounselor   User?                @relation("ServiceEnquiryCounselor", fields: [assignedCounselorId], references: [id], onDelete: SetNull)
+
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+
+  activities          ServiceEnquiryActivity[]
+
+  @@index([status])
+  @@index([phone])
+  @@index([email])
+  @@index([assignedCounselorId])
+  @@map("service_enquiries")
+}
+
+model ServiceEnquiryActivity {
+  id        String         @id @default(cuid())
+  enquiryId String
+  enquiry   ServiceEnquiry @relation(fields: [enquiryId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actorName String?
+  action    String         // "STATUS_CHANGE", "NOTE_ADDED", "FOLLOW_UP_SCHEDULED", "ASSIGNED"
+  details   String?        @db.Text
+  createdAt DateTime       @default(now())
+
+  @@map("service_enquiry_activities")
+}
+
 
 
 

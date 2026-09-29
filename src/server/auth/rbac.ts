@@ -54,6 +54,11 @@ const LEGACY_MAP: Record<string, string[]> = {
   "placements.manage": ["placements:manage", "placement:manage", "jobs:manage", "drives:manage"],
   "settings.view": ["system:read"],
   "settings.edit": ["system:manage"],
+  "services.view": ["services:read", "services:view"],
+  "services.manage": ["services:manage", "services:admin"],
+  "services.enquiries": ["services:enquiries", "services:leads", "services:read"],
+  "services.packages": ["services:packages", "services:read"],
+  "services.pricing": ["services:pricing", "services:manage"],
 };
 
 /**

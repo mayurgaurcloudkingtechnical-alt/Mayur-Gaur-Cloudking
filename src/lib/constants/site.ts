@@ -34,6 +34,7 @@ export const SITE_CONFIG = {
     { label: "Dr. Preeti Global University", href: "/dr-preeti-global-university" },
     { label: "Faculty", href: "/trainers" },
     { label: "Career Support", href: "/career" },
+    { label: "Services", href: "/services" },
     { label: "About Us", href: "/about" },
     { label: "Franchise", href: "/franchise" },
     { label: "Contact", href: "/contact" },
