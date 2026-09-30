@@ -301,8 +301,37 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               </div>
             </div>
 
-            {/* Quick Enrollment Card */}
-            <Card className="w-full lg:w-80 border-slate-800 bg-slate-900/95 shadow-2xl shrink-0 text-white rounded-3xl backdrop-blur-md">
+            {/* Right Column: Course Visual Graphic Banner & Quick Enrollment Card */}
+            <div className="w-full lg:w-80 shrink-0 space-y-4">
+              {/* Official Course Visual Graphic */}
+              <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-2xl bg-slate-900 group">
+                <Image
+                  src={brochureUrl}
+                  alt={course.title}
+                  fill
+                  priority
+                  sizes="(max-width: 1024px) 100vw, 320px"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-black/20" />
+                <div className="absolute top-2.5 left-2.5 z-10">
+                  <span className="bg-emerald-600 text-white font-bold text-[10px] px-2.5 py-0.5 rounded-full shadow-md flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3" />
+                    <span>Certified Track</span>
+                  </span>
+                </div>
+                <div className="absolute bottom-2 left-2.5 right-2.5 flex items-center justify-between text-[10px] text-white z-10">
+                  <span className="font-bold text-emerald-300 bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm border border-slate-800">
+                    SOFTLAB GLOBAL
+                  </span>
+                  <span className="text-slate-300 bg-slate-950/80 px-2 py-0.5 rounded backdrop-blur-sm">
+                    {course.durationWeeks} Weeks
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick Enrollment Card */}
+              <Card className="w-full border-slate-800 bg-slate-900/95 shadow-2xl text-white rounded-3xl backdrop-blur-md">
               <CardContent className="p-6 space-y-4">
                 <div>
                   <span className="text-xs uppercase font-bold text-slate-400 block tracking-wider">
@@ -368,7 +397,8 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
             </Card>
           </div>
         </div>
-      </section>
+      </div>
+    </section>
 
       {/* Main Content Details */}
       <section className="py-16 bg-slate-950 text-slate-100 border-b border-slate-850 relative overflow-hidden">
