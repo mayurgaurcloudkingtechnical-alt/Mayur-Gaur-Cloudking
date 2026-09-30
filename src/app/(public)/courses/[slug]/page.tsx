@@ -32,6 +32,9 @@ import { PublicEnquiryForm } from "@/components/public/public-enquiry-form";
 import { CourseBrochureModal } from "@/components/public/course-brochure-modal";
 import { CourseBuySidebarCard, CourseBuyButton } from "@/components/public/course-buy-sidebar-card";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 interface CourseDetailPageProps {
   params: {
     slug: string;

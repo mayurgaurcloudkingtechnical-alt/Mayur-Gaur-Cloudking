@@ -5,6 +5,11 @@ import { ContentStatus } from "@prisma/client";
 import { CourseCatalogClient } from "@/components/public/course-catalog-client";
 import { BookOpen } from "lucide-react";
 
+import { Hero3DTechVisual } from "@/components/public/hero-3d-tech-visual";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: "Course Catalog — SOFTLAB GLOBAL",
   description:
@@ -39,7 +44,7 @@ export default async function CoursesPage() {
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
       {/* 1. Deep Cyber Emerald & Slate Hero Header Section */}
-      <section className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#030914] via-[#071626] to-[#040914] py-14 sm:py-20">
+      <section className="relative overflow-hidden border-b border-slate-800/80 bg-gradient-to-b from-[#030914] via-[#071626] to-[#040914] py-12 sm:py-18">
         {/* Ambient Glowing Orbs & Tech Circuit Grid */}
         <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] opacity-15 pointer-events-none" />
         <div className="absolute top-0 left-1/3 -translate-x-1/2 w-[650px] h-[350px] bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -47,35 +52,43 @@ export default async function CoursesPage() {
         <div className="absolute bottom-0 left-10 w-[350px] h-[300px] bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10">
-          <div className="max-w-3xl space-y-4">
-            {/* Top Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-xs">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>SoftLab Global Tech Academy • 21 Flagship Cohorts</span>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
+            {/* Left Column: Value Proposition & Information */}
+            <div className="lg:col-span-7 space-y-4">
+              {/* Top Pill Badge */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-xs">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span>SoftLab Global Tech Academy • 21 Flagship Cohorts</span>
+              </div>
+
+              <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
+                Explore Our{" "}
+                <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                  Engineering Programs
+                </span>
+              </h1>
+
+              <p className="text-base sm:text-lg text-slate-300 font-medium leading-relaxed">
+                Every course is engineered with extensive hands-on labs, architectural rigor, and live project deliverables designed for modern tech careers.
+              </p>
+
+              {/* Quick Value Metrics */}
+              <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-semibold">
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-emerald-400 shadow-sm backdrop-blur-md">
+                  100% Practical Labs & Placement Support
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-teal-300 shadow-sm backdrop-blur-md">
+                  ISO 9001:2015 Certified Curriculum
+                </span>
+                <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-cyan-300 shadow-sm backdrop-blur-md">
+                  Live Cloud, DevOps & AI Deployments
+                </span>
+              </div>
             </div>
 
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">
-              Explore Our{" "}
-              <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
-                Engineering Programs
-              </span>
-            </h1>
-
-            <p className="text-base sm:text-lg text-slate-300 font-medium leading-relaxed">
-              Every course is engineered with extensive hands-on labs, architectural rigor, and live project deliverables designed for modern tech careers.
-            </p>
-
-            {/* Quick Value Metrics */}
-            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs font-semibold">
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-emerald-400 shadow-sm backdrop-blur-md">
-                100% Practical Labs & Placement Support
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-teal-300 shadow-sm backdrop-blur-md">
-                ISO 9001:2015 Certified Curriculum
-              </span>
-              <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-cyan-300 shadow-sm backdrop-blur-md">
-                Live Cloud, DevOps & AI Deployments
-              </span>
+            {/* Right Column: Interactive 3D WebGL Tech Graphics Visual */}
+            <div className="lg:col-span-5 relative w-full">
+              <Hero3DTechVisual />
             </div>
           </div>
         </div>
