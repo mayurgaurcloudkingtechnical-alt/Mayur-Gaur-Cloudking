@@ -325,9 +325,6 @@ function getCourseBrochureImage(slug: string, title: string): string | null {
 
 export function CourseCard({ course }: CourseCardProps) {
   const formattedFee = formatPaiseToRupees(course.baseFee);
-  // Calculate indicative standard MRP (approx 20% higher to demonstrate authentic institutional fee structure)
-  const originalFeePaise = Math.round((course.baseFee * 1.25) / 100000) * 100000;
-  const formattedOriginalFee = formatPaiseToRupees(originalFeePaise);
 
   const meta = getCourseMetadata(course.slug, course.title);
   const IconComponent = meta.icon;
@@ -451,14 +448,11 @@ export function CourseCard({ course }: CourseCardProps) {
               <span className="text-base sm:text-lg font-black text-white">
                 {formattedFee}
               </span>
-              <span className="text-xs text-slate-500 line-through">
-                {formattedOriginalFee}
-              </span>
             </div>
           </div>
 
-          <span className="text-[10px] font-bold text-emerald-300 bg-emerald-950/80 border border-emerald-800/70 px-2 py-0.5 rounded-md">
-            Save 20% Direct
+          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 border border-emerald-800/70 px-2 py-0.5 rounded-md">
+            All-Inclusive
           </span>
         </div>
 

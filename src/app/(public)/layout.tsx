@@ -8,6 +8,7 @@ import { TopAnnouncementBar } from "@/components/public/top-announcement-bar";
 import { FloatingWhatsApp } from "@/components/public/floating-whatsapp";
 import { CareerCounselingModal } from "@/components/public/career-counseling-modal";
 import { CourseBuyModal } from "@/components/public/course-buy-modal";
+import { ServiceDetailModal } from "@/components/public/service-detail-modal";
 
 export default async function PublicLayout({
   children,
@@ -48,6 +49,7 @@ export default async function PublicLayout({
       <FloatingWhatsApp />
       <CareerCounselingModal />
       <CourseBuyModal />
+      <ServiceDetailModal />
     </div>
   );
 }

@@ -55,6 +55,21 @@ export function ServiceEnquiryForm({
   const [submittedEnquiryNumber, setSubmittedEnquiryNumber] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    const handlePrefill = (e: CustomEvent<{ categoryCode?: string; packageName?: string }>) => {
+      if (e.detail?.categoryCode) {
+        setServiceCategory(e.detail.categoryCode);
+      }
+      if (e.detail?.packageName) {
+        setPackageName(e.detail.packageName);
+      }
+    };
+    window.addEventListener("prefill-service-enquiry" as any, handlePrefill as any);
+    return () => {
+      window.removeEventListener("prefill-service-enquiry" as any, handlePrefill as any);
+    };
+  }, []);
+
   const submitMutation = api.services.submitPublicEnquiry.useMutation({
     onSuccess: (data) => {
       setIsSuccess(true);

@@ -86,9 +86,7 @@ export function CourseBuyModal() {
   // Pricing calculations
   // baseFee is stored in Paise (e.g. 2500000 = ₹25,000)
   const originalFeePaise = course.baseFee && course.baseFee > 0 ? course.baseFee : 2500000;
-  // 20% direct website discount on full upfront payment
-  const fullDiscountPaise = Math.round(originalFeePaise * 0.2);
-  const fullPayablePaise = originalFeePaise - fullDiscountPaise;
+  const fullPayablePaise = originalFeePaise;
 
   // Token seat reservation amount: ₹5,000 (500000 paise)
   const tokenAmountPaise = Math.min(500000, fullPayablePaise);
@@ -109,12 +107,12 @@ export function CourseBuyModal() {
       studentId: "SG-ONLINE",
       courseTitle: course.title,
       totalFee: originalFeePaise,
-      discountAmount: paymentPlan === "FULL" ? fullDiscountPaise : 0,
-      netPayable: originalFeePaise - (paymentPlan === "FULL" ? fullDiscountPaise : 0),
+      discountAmount: 0,
+      netPayable: originalFeePaise,
       amountPaid: successResult.amountPaidPaise,
       pendingAmount: Math.max(
         0,
-        (originalFeePaise - (paymentPlan === "FULL" ? fullDiscountPaise : 0)) - successResult.amountPaidPaise
+        originalFeePaise - successResult.amountPaidPaise
       ),
       paymentMode: "RAZORPAY",
       transactionReference: successResult.transactionReference || successResult.paymentId,
@@ -245,16 +243,13 @@ export function CourseBuyModal() {
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-bold text-white">Full Program Fee</span>
-                        <span className="text-[10px] font-bold text-emerald-300 bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-700/60">
-                          Save 20% Direct
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-700/60">
+                          One-Time Settlement
                         </span>
                       </div>
                       <div className="flex items-baseline gap-2">
                         <span className="text-lg font-black text-emerald-400">
                           {formatPaiseToRupees(fullPayablePaise)}
-                        </span>
-                        <span className="text-xs text-slate-500 line-through">
-                          {formatPaiseToRupees(originalFeePaise)}
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-400 mt-1">

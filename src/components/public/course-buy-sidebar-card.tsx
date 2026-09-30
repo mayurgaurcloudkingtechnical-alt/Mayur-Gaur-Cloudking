@@ -19,8 +19,7 @@ interface CourseBuySidebarCardProps {
 
 export function CourseBuySidebarCard({ course }: CourseBuySidebarCardProps) {
   const originalFeePaise = course.baseFee && course.baseFee > 0 ? course.baseFee : 2500000;
-  const discountedFeePaise = Math.round(originalFeePaise * 0.8);
-  const tokenFeePaise = Math.min(500000, discountedFeePaise);
+  const tokenFeePaise = Math.min(500000, originalFeePaise);
 
   return (
     <div className="bg-gradient-to-br from-emerald-950/80 via-slate-900 to-slate-950 p-6 rounded-3xl border-2 border-emerald-500/50 shadow-2xl shadow-emerald-950/40 space-y-4">
@@ -37,17 +36,14 @@ export function CourseBuySidebarCard({ course }: CourseBuySidebarCardProps) {
 
       <div>
         <span className="text-xs text-slate-400 uppercase tracking-wider font-semibold block mb-1">
-          Special Direct Tuition Fee
+          Institutional Tuition Fee
         </span>
         <div className="flex items-baseline gap-2.5">
           <span className="text-3xl font-black text-white tracking-tight">
-            {formatPaiseToRupees(discountedFeePaise)}
-          </span>
-          <span className="text-sm text-slate-500 line-through">
             {formatPaiseToRupees(originalFeePaise)}
           </span>
-          <span className="text-xs font-bold text-emerald-300 bg-emerald-900/80 border border-emerald-700/60 px-2 py-0.5 rounded-md">
-            Save 20%
+          <span className="text-xs font-bold text-emerald-400 bg-emerald-900/80 border border-emerald-700/60 px-2 py-0.5 rounded-md">
+            All-Inclusive
           </span>
         </div>
         <p className="text-[11px] text-slate-400 mt-1">
