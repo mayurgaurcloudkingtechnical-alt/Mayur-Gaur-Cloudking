@@ -61,12 +61,109 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Persist to database if course/customer details are supplied
+    let receiptNumber: string | null = null;
+    let transactionReference: string | null = null;
+    const amountPaise = typeof body.amount === "number" ? Math.round(body.amount) : null;
+    const courseTitle = body.courseTitle || body.itemName;
+    const customerName = body.customerName || body.name;
+    const customerEmail = body.customerEmail || body.email;
+    const customerPhone = body.customerPhone || body.phone;
+    const learningMode = body.learningMode || body.mode;
+    const courseId = body.courseId;
+
+    try {
+      const { db } = await import("@/server/db/client");
+      const { ReceiptService } = await import("@/server/services/receipt.service");
+      const { PaymentMethod, PaymentTransactionStatus, LeadSource } = await import("@prisma/client");
+
+      // Idempotency check: see if already recorded
+      const existing = await db.paymentTransaction.findFirst({
+        where: {
+          OR: [
+            { gatewayPaymentId: paymentId },
+            { gatewayOrderId: orderId },
+          ],
+        },
+      });
+
+      if (existing) {
+        receiptNumber = existing.receiptNumber;
+        transactionReference = existing.transactionReference;
+      } else if (amountPaise && amountPaise > 0) {
+        receiptNumber = await ReceiptService.generateReceiptNumber();
+        const year = new Date().getFullYear();
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        transactionReference = `PAY-${year}-${rand}`;
+
+        // Create or update Lead in CRM so counselors can contact learner
+        if (customerPhone || customerEmail) {
+          try {
+            const existingLead = await db.lead.findFirst({
+              where: {
+                OR: [
+                  customerPhone ? { phone: customerPhone.trim() } : undefined,
+                  customerEmail ? { email: customerEmail.trim() } : undefined,
+                ].filter(Boolean) as any,
+              },
+            });
+
+            if (!existingLead) {
+              await db.lead.create({
+                data: {
+                  fullName: customerName?.trim() || "Website Learner",
+                  email: customerEmail?.trim() || `online_${Date.now()}@softlabglobal.com`,
+                  phone: customerPhone?.trim() || "0000000000",
+                  source: LeadSource.COURSE_PAGE,
+                  interestedCourseId: courseId || null,
+                  notes: `Purchased online via Razorpay (Order: ${orderId}, Payment: ${paymentId}) | Course: ${courseTitle || "Professional Course"} | Mode: ${learningMode || "Online/Offline"}`,
+                },
+              });
+            }
+          } catch (leadErr) {
+            console.warn("[VerifyPaymentAPI] Non-fatal lead creation error:", leadErr);
+          }
+        }
+
+        // Create Payment Transaction
+        await db.paymentTransaction.create({
+          data: {
+            transactionReference,
+            amount: amountPaise,
+            paymentMethod: PaymentMethod.RAZORPAY,
+            status: PaymentTransactionStatus.SUCCESS,
+            gateway: "RAZORPAY",
+            gatewayOrderId: orderId,
+            gatewayPaymentId: paymentId,
+            gatewaySignature: signature,
+            receiptNumber,
+            currency: "INR",
+            paidAt: new Date(),
+            paymentDate: new Date(),
+            remarks: `Website Course Purchase: ${courseTitle || "Course"} (${learningMode || "Standard"}). Learner: ${customerName || "Online Buyer"}`,
+            metadata: {
+              courseId: courseId || null,
+              courseTitle: courseTitle || null,
+              customerName: customerName || null,
+              customerEmail: customerEmail || null,
+              customerPhone: customerPhone || null,
+              learningMode: learningMode || null,
+            },
+          },
+        });
+      }
+    } catch (dbErr) {
+      console.error("[VerifyPaymentAPI] Error recording payment transaction in DB:", dbErr);
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: "Payment verified successfully.",
+        message: "Payment verified and recorded successfully.",
         order_id: orderId,
         payment_id: paymentId,
+        receiptNumber,
+        transactionReference,
       },
       { status: 200 }
     );

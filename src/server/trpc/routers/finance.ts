@@ -208,6 +208,22 @@ export const financeRouter = router({
       return PaymentService.updatePayment(asAuthUser(ctx.user), input);
     }),
 
+  deletePayment: protectedProcedure
+    .input(
+      z.object({
+        paymentId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.user.roleCode !== "SUPER_ADMIN") {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only Super Admin is authorized to delete payment transactions and receipts.",
+        });
+      }
+      return PaymentService.deletePayment(asAuthUser(ctx.user), input.paymentId);
+    }),
+
   // ==========================================
   // STUDENT SELF-SERVICE
   // ==========================================

@@ -17,12 +17,17 @@ import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorBanner } from '../components/common/ErrorBanner';
 import { ProgressBar } from '../components/learning/ProgressBar';
+import { Bell } from 'lucide-react-native';
+import { notificationApi } from '../api/notification';
 
 interface StudentDashboardScreenProps {
   onNavigateToCourses: () => void;
   onNavigateToCourseDetails: (enrollmentId: string) => void;
   onNavigateToLesson: (enrollmentId: string, lessonId?: string) => void;
   onNavigateToProfile: () => void;
+  onNavigateToCertificates?: () => void;
+  onNavigateToHistory?: () => void;
+  onNavigateToNotifications?: () => void;
 }
 
 export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
@@ -30,9 +35,13 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
   onNavigateToCourseDetails,
   onNavigateToLesson,
   onNavigateToProfile,
+  onNavigateToCertificates,
+  onNavigateToHistory,
+  onNavigateToNotifications,
 }) => {
   const { user } = useAuth();
   const [data, setData] = useState<DashboardOverviewResponse | null>(null);
+  const [unreadNotificationsCount, setUnreadNotificationsCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,8 +49,20 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
   const fetchDashboard = useCallback(async () => {
     try {
       setError(null);
-      const res = await learningService.getDashboardOverview();
-      setData(res);
+      const [res, notifRes] = await Promise.allSettled([
+        learningService.getDashboardOverview(),
+        notificationApi.getMyNotifications({ limit: 1 }),
+      ]);
+
+      if (res.status === 'fulfilled') {
+        setData(res.value);
+      } else {
+        throw res.reason;
+      }
+
+      if (notifRes.status === 'fulfilled') {
+        setUnreadNotificationsCount(notifRes.value.unreadCount || 0);
+      }
     } catch (err: any) {
       setError(err?.message || 'Unable to load your student dashboard. Please try again.');
     } finally {
@@ -65,7 +86,18 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
 
   const stats = data?.stats;
   const enrollments = data?.enrollments || [];
-  const primaryCourse: EnrolledCourseSummary | undefined = enrollments[0];
+  
+  // Calculate active and completed courses
+  const completedCourses = enrollments.filter(
+    (e) => e.status === 'COMPLETED' || e.progressPercent === 100
+  );
+  const activeCourses = enrollments.filter(
+    (e) => e.status !== 'COMPLETED' && e.progressPercent < 100
+  );
+
+  // Spotlight prioritized in-progress course, or first course
+  const primaryCourse: EnrolledCourseSummary | undefined =
+    activeCourses[0] || enrollments[0];
 
   return (
     <ScrollView
@@ -76,14 +108,37 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
       {/* Header Greeting */}
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.greeting}>Welcome, {user?.firstName || 'Student'}!</Text>
+          <Text style={styles.greeting}>
+            Welcome, {user?.firstName ? `${user.firstName} ${user?.lastName || ''}`.trim() : 'Student'}!
+          </Text>
           <Text style={styles.subGreeting}>SoftLab Global Student Portal</Text>
         </View>
-        <TouchableOpacity onPress={onNavigateToProfile} style={styles.profileBadge} activeOpacity={0.8}>
-          <Text style={styles.profileBadgeText}>
-            {(user?.firstName?.[0] || 'S') + (user?.lastName?.[0] || '')}
-          </Text>
-        </TouchableOpacity>
+
+        <View style={styles.headerActions}>
+          {onNavigateToNotifications && (
+            <TouchableOpacity
+              onPress={onNavigateToNotifications}
+              style={styles.bellButton}
+              activeOpacity={0.7}
+              accessibilityLabel="Notifications"
+            >
+              <Bell size={22} color={theme.colors.text} />
+              {unreadNotificationsCount > 0 && (
+                <View style={styles.unreadBadge}>
+                  <Text style={styles.unreadBadgeText}>
+                    {unreadNotificationsCount > 99 ? '99+' : unreadNotificationsCount}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
+
+          <TouchableOpacity onPress={onNavigateToProfile} style={styles.profileBadge} activeOpacity={0.8}>
+            <Text style={styles.profileBadgeText}>
+              {(user?.firstName?.[0] || 'S') + (user?.lastName?.[0] || '')}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {error && (
@@ -97,14 +152,11 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
       {stats && (
         <View style={styles.statsGrid}>
           <Card style={styles.statCard}>
-            <Text style={styles.statValue}>{stats.enrolledCoursesCount}</Text>
-            <Text style={styles.statLabel}>Enrolled Courses</Text>
+            <Text style={styles.statValue}>{activeCourses.length}</Text>
+            <Text style={styles.statLabel}>Active Courses</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Text style={styles.statValue}>
-              {stats.completedLessonsCount}
-              <Text style={styles.statSubValue}>/{stats.totalLessonsCount}</Text>
-            </Text>
+            <Text style={[styles.statValue, { color: '#16A34A' }]}>{completedCourses.length}</Text>
             <Text style={styles.statLabel}>Completed</Text>
           </Card>
           <Card style={styles.statCard}>
@@ -114,18 +166,58 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
             <Text style={styles.statLabel}>Overall Progress</Text>
           </Card>
           <Card style={styles.statCard}>
-            <Text style={styles.statValue}>{data?.upcomingClasses?.length || 0}</Text>
-            <Text style={styles.statLabel}>Upcoming</Text>
+            <Text style={styles.statValue}>
+              {stats.completedLessonsCount}
+              <Text style={styles.statSubValue}>/{stats.totalLessonsCount}</Text>
+            </Text>
+            <Text style={styles.statLabel}>Lessons Done</Text>
           </Card>
         </View>
       )}
+
+      {/* Quick Navigation Shortcuts */}
+      <View style={styles.shortcutsRow}>
+        <TouchableOpacity
+          style={styles.shortcutBtn}
+          onPress={onNavigateToCourses}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.shortcutIcon}>📖</Text>
+          <Text style={styles.shortcutLabel}>My Learning</Text>
+        </TouchableOpacity>
+
+        {onNavigateToCertificates && (
+          <TouchableOpacity
+            style={styles.shortcutBtn}
+            onPress={onNavigateToCertificates}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.shortcutIcon}>🏆</Text>
+            <Text style={styles.shortcutLabel}>Certificates</Text>
+          </TouchableOpacity>
+        )}
+
+        {onNavigateToHistory && (
+          <TouchableOpacity
+            style={styles.shortcutBtn}
+            onPress={onNavigateToHistory}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.shortcutIcon}>⏱</Text>
+            <Text style={styles.shortcutLabel}>History</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       {/* Continue Learning Spotlight */}
       {primaryCourse ? (
         <View style={styles.section}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionTitle}>Continue Learning</Text>
-            <Badge label={primaryCourse.status} variant="success" />
+            <Badge
+              label={primaryCourse.progressPercent === 100 ? 'Completed' : 'In Progress'}
+              variant={primaryCourse.progressPercent === 100 ? 'success' : 'primary'}
+            />
           </View>
           <Card style={styles.continueCard}>
             <Text style={styles.courseTitle}>{primaryCourse.courseTitle}</Text>
@@ -144,7 +236,11 @@ export const StudentDashboardScreen: React.FC<StudentDashboardScreenProps> = ({
               </View>
             )}
             <Button
-              title="Resume Lesson"
+              title={
+                primaryCourse.progressPercent === 100
+                  ? 'Review Course'
+                  : 'Continue Learning →'
+              }
               onPress={() =>
                 onNavigateToLesson(
                   primaryCourse.id,
@@ -234,6 +330,41 @@ const styles = StyleSheet.create({
     color: theme.colors.textMuted,
     marginTop: 2,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  bellButton: {
+    position: 'relative',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  unreadBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: '#ffffff',
+  },
+  unreadBadgeText: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: '700',
+  },
   profileBadge: {
     width: 42,
     height: 42,
@@ -241,7 +372,6 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primary,
     justifyContent: 'center',
     alignItems: 'center',
-    marginLeft: theme.spacing.md,
   },
   profileBadgeText: {
     color: '#FFFFFF',
@@ -274,6 +404,36 @@ const styles = StyleSheet.create({
     fontSize: theme.typography.fontSize.xs,
     color: theme.colors.textMuted,
     marginTop: 4,
+  },
+  shortcutsRow: {
+    flexDirection: 'row',
+    gap: theme.spacing.sm,
+    marginBottom: theme.spacing.lg,
+  },
+  shortcutBtn: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: theme.borderRadius.md,
+    paddingVertical: theme.spacing.sm,
+    paddingHorizontal: theme.spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  shortcutIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  shortcutLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: theme.colors.text,
   },
   section: {
     marginBottom: theme.spacing.lg,

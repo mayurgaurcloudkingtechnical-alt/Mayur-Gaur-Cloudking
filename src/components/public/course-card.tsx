@@ -7,12 +7,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Button } from "@/components/ui/button";
 import { formatPaiseToRupees } from "@/lib/utils";
 import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
+import { openCourseBuyModal } from "@/components/public/course-buy-modal";
 import {
   Clock,
   ArrowRight,
   ShieldCheck,
   Award,
   Sparkles,
+  CreditCard,
   Brain,
   Shield,
   Cloud,
@@ -460,41 +462,51 @@ export function CourseCard({ course }: CourseCardProps) {
           </span>
         </div>
 
-        {/* 3 Visible Action Buttons */}
-        <div className="grid grid-cols-3 gap-1.5 w-full pt-1">
-          {/* CTA 1: Enquire Now (Opens Global Career Popup) */}
+        {/* Action Buttons: Instant Razorpay Buy + Details & Enquiry */}
+        <div className="space-y-1.5 w-full pt-1">
+          {/* Primary CTA: Buy Now & Enroll Online via Razorpay */}
           <Button
             type="button"
-            onClick={() => openCareerCounselingModal(course.title)}
+            onClick={() =>
+              openCourseBuyModal({
+                id: course.id,
+                title: course.title,
+                slug: course.slug,
+                baseFee: course.baseFee,
+                durationWeeks: course.durationWeeks,
+                level: course.level,
+              })
+            }
             size="sm"
-            variant="outline"
-            className="border-emerald-500/70 text-emerald-300 hover:bg-emerald-950/60 hover:text-emerald-200 hover:border-emerald-400 text-[11px] font-bold h-8 px-1"
+            className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-8.5 shadow-md shadow-emerald-950/60 flex items-center justify-center gap-1.5 border border-emerald-400/40 transition-all hover:scale-[1.01]"
           >
-            Enquire Now
+            <CreditCard className="w-3.5 h-3.5 text-emerald-200" />
+            <span>⚡ Enroll & Buy Online (Razorpay)</span>
           </Button>
 
-          {/* CTA 2: View Course Details */}
-          <Button
-            asChild
-            size="sm"
-            variant="outline"
-            className="border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-600 text-[11px] font-semibold h-8 px-1"
-          >
-            <Link href={`/courses/${course.slug}`}>
-              View Course
-            </Link>
-          </Button>
+          {/* Secondary CTAs: Enquire Now & View Course */}
+          <div className="grid grid-cols-2 gap-1.5 w-full">
+            <Button
+              type="button"
+              onClick={() => openCareerCounselingModal(course.title)}
+              size="sm"
+              variant="outline"
+              className="border-emerald-500/50 text-emerald-300 hover:bg-emerald-950/60 hover:text-emerald-200 hover:border-emerald-400 text-[11px] font-semibold h-7.5 px-1"
+            >
+              Enquire Now
+            </Button>
 
-          {/* CTA 3: Apply Now */}
-          <Button
-            asChild
-            size="sm"
-            className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] h-8 px-1 shadow-md shadow-emerald-950/50"
-          >
-            <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`}>
-              Apply Now
-            </Link>
-          </Button>
+            <Button
+              asChild
+              size="sm"
+              variant="outline"
+              className="border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white hover:border-slate-600 text-[11px] font-semibold h-7.5 px-1"
+            >
+              <Link href={`/courses/${course.slug}`}>
+                View Details
+              </Link>
+            </Button>
+          </div>
         </div>
       </CardFooter>
     </Card>

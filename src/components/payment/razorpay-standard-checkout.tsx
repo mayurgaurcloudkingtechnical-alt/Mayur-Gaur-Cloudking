@@ -20,10 +20,13 @@ interface RazorpayStandardCheckoutProps {
   customerPhone?: string;
   buttonText?: string;
   className?: string;
+  extraVerificationData?: Record<string, any>;
   onSuccess?: (data: {
     orderId: string;
     paymentId: string;
     signature: string;
+    receiptNumber?: string | null;
+    transactionReference?: string | null;
   }) => void;
   onError?: (error: string) => void;
 }
@@ -37,6 +40,7 @@ export function RazorpayStandardCheckout({
   customerPhone,
   buttonText,
   className,
+  extraVerificationData,
   onSuccess,
   onError,
 }: RazorpayStandardCheckoutProps) {
@@ -124,6 +128,12 @@ export function RazorpayStandardCheckout({
                 order_id: response.razorpay_order_id,
                 payment_id: response.razorpay_payment_id,
                 signature: response.razorpay_signature,
+                amount: amountPaise,
+                itemName,
+                customerName,
+                customerEmail,
+                customerPhone,
+                ...(extraVerificationData || {}),
               }),
             });
 
@@ -144,6 +154,8 @@ export function RazorpayStandardCheckout({
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
               signature: response.razorpay_signature,
+              receiptNumber: verifyData.receiptNumber || null,
+              transactionReference: verifyData.transactionReference || null,
             });
           } catch (verErr: any) {
             console.error("[RazorpayCheckout] Verification Error:", verErr);

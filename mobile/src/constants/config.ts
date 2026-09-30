@@ -42,5 +42,6 @@ export const APP_CONFIG = {
     ACCESS_TOKEN: "slg_access_token",
     REFRESH_TOKEN: "slg_refresh_token",
     SESSION_USER: "slg_session_user",
+    PUSH_TOKEN: "slg_push_token",
   },
 };

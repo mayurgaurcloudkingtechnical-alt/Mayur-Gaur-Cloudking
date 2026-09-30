@@ -463,5 +463,135 @@ export class PaymentService {
       return updated;
     });
   }
+
+  /**
+   * Deletes a payment transaction / receipt record atomically.
+   * STRICT ACCESS: Restricted to SUPER_ADMIN only.
+   * Automatically recalculates the associated fee structure and sequential installments if applicable.
+   */
+  static async deletePayment(user: AuthenticatedUser, paymentId: string) {
+    if (user.roleCode !== "SUPER_ADMIN") {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only Super Admin is authorized to delete payment transactions and receipts.",
+      });
+    }
+
+    const payment = await db.paymentTransaction.findUnique({
+      where: { id: paymentId },
+      include: {
+        feeStructure: {
+          include: {
+            installments: { orderBy: { installmentNumber: "asc" } },
+          },
+        },
+      },
+    });
+
+    if (!payment) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Payment transaction with ID '${paymentId}' not found.`,
+      });
+    }
+
+    return await db.$transaction(
+      async (tx) => {
+        // 1. Delete the payment transaction
+        await tx.paymentTransaction.delete({
+          where: { id: paymentId },
+        });
+
+        // 2. If linked to a fee structure, recalculate paid & pending balances
+        if (payment.feeStructureId) {
+          const remainingPayments = await tx.paymentTransaction.findMany({
+            where: {
+              feeStructureId: payment.feeStructureId,
+              status: PaymentTransactionStatus.SUCCESS,
+            },
+          });
+
+          const totalPaid = remainingPayments.reduce((acc, p) => acc + p.amount, 0);
+
+          const fee = await tx.feeStructure.findUnique({
+            where: { id: payment.feeStructureId },
+            include: { installments: { orderBy: { installmentNumber: "asc" } } },
+          });
+
+          if (fee) {
+            const newPending = Math.max(0, fee.netPayableAmount - totalPaid);
+            const newStatus =
+              newPending === 0
+                ? FeePaymentStatus.PAID
+                : totalPaid > 0
+                ? FeePaymentStatus.PARTIAL
+                : FeePaymentStatus.PENDING;
+
+            await tx.feeStructure.update({
+              where: { id: fee.id },
+              data: {
+                paidAmount: totalPaid,
+                pendingAmount: newPending,
+                paymentStatus: newStatus,
+              },
+            });
+
+            // Re-allocate installments chronologically
+            let remaining = totalPaid;
+            for (const inst of fee.installments) {
+              let instPaid = 0;
+              let instStatus: InstallmentStatus = InstallmentStatus.PENDING;
+              if (remaining > 0) {
+                if (remaining >= inst.amount) {
+                  instPaid = inst.amount;
+                  instStatus = InstallmentStatus.PAID;
+                  remaining -= inst.amount;
+                } else {
+                  instPaid = remaining;
+                  instStatus = InstallmentStatus.PARTIAL;
+                  remaining = 0;
+                }
+              }
+
+              if (inst.paidAmount !== instPaid || inst.status !== instStatus) {
+                await tx.feeInstallment.update({
+                  where: { id: inst.id },
+                  data: {
+                    paidAmount: instPaid,
+                    status: instStatus,
+                    paidAt: instStatus === InstallmentStatus.PAID ? inst.paidAt || new Date() : null,
+                  },
+                });
+              }
+            }
+          }
+        }
+
+        // 3. Audit trail
+        await AuditService.log({
+          actorId: user.id,
+          action: "PAYMENT_RECORD_DELETED",
+          resourceType: "PaymentTransaction",
+          resourceId: paymentId,
+          newData: {
+            transactionReference: payment.transactionReference,
+            receiptNumber: payment.receiptNumber,
+            amount: payment.amount,
+            feeStructureId: payment.feeStructureId,
+            studentId: payment.studentId,
+          },
+        });
+
+        return {
+          success: true,
+          deletedId: paymentId,
+          transactionReference: payment.transactionReference,
+          receiptNumber: payment.receiptNumber,
+        };
+      },
+      { maxWait: 20000, timeout: 60000 }
+    );
+  }
 }
+
 

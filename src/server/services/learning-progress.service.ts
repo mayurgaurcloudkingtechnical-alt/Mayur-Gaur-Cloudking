@@ -228,5 +228,154 @@ export class LearningProgressService {
       expiresInSec: 300,
     };
   }
+
+  /**
+   * Returns aggregated learning activity history (completed lessons, exam attempts, and earned certificates).
+   */
+  static async getLearningHistory(ctx: any) {
+    const { studentProfile } = await this.getStudentProfile(ctx);
+    if (!studentProfile) {
+      return {
+        completedLessons: [],
+        examAttempts: [],
+        certificates: [],
+        recentActivity: [],
+      };
+    }
+
+    // 1. Completed lessons
+    const completedProgresses = await ctx.db.lessonProgress.findMany({
+      where: {
+        enrollment: { studentId: studentProfile.id },
+        isCompleted: true,
+      },
+      include: {
+        lesson: {
+          select: {
+            id: true,
+            title: true,
+            type: true,
+            durationMin: true,
+            module: {
+              select: {
+                title: true,
+                course: {
+                  select: { id: true, title: true, slug: true },
+                },
+              },
+            },
+          },
+        },
+      },
+      orderBy: { completedAt: "desc" },
+      take: 25,
+    });
+
+    const mappedLessons = completedProgresses.map((p: any) => ({
+      id: p.id,
+      lessonId: p.lessonId,
+      lessonTitle: p.lesson.title,
+      lessonType: p.lesson.type,
+      durationMin: p.lesson.durationMin,
+      moduleTitle: p.lesson.module.title,
+      courseId: p.lesson.module.course.id,
+      courseTitle: p.lesson.module.course.title,
+      completedAt: p.completedAt,
+    }));
+
+    // 2. Exam attempts
+    const examAttempts = await ctx.db.examAttempt.findMany({
+      where: {
+        studentId: studentProfile.id,
+      },
+      include: {
+        exam: {
+          select: {
+            id: true,
+            title: true,
+            totalMarks: true,
+            course: {
+              select: { id: true, title: true },
+            },
+          },
+        },
+      },
+      orderBy: { startedAt: "desc" },
+      take: 25,
+    });
+
+    const mappedExams = examAttempts.map((a: any) => ({
+      id: a.id,
+      examId: a.examId,
+      examTitle: a.exam.title,
+      courseTitle: a.exam.course?.title || "Course Assessment",
+      status: a.status,
+      startedAt: a.startedAt,
+      submittedAt: a.submittedAt,
+      finalScore: a.finalScore,
+      totalMarks: a.exam.totalMarks,
+      percentage: a.percentage,
+      isPassed: a.isPassed,
+    }));
+
+    // 3. Certificates
+    const certificates = await ctx.db.certificate.findMany({
+      where: {
+        studentId: studentProfile.id,
+      },
+      include: {
+        course: {
+          select: { id: true, title: true, slug: true },
+        },
+      },
+      orderBy: { issuedDate: "desc" },
+      take: 25,
+    });
+
+    const mappedCertificates = certificates.map((c: any) => ({
+      id: c.id,
+      certificateNo: c.certificateNo,
+      courseTitle: c.course.title,
+      issuedDate: c.issuedDate,
+      status: c.status,
+    }));
+
+    // 4. Unified chronologically sorted recent activity timeline
+    const recentActivity = [
+      ...mappedLessons.map((l: any) => ({
+        type: "LESSON_COMPLETED" as const,
+        id: `lesson_${l.id}`,
+        title: l.lessonTitle,
+        subtitle: `${l.courseTitle} • ${l.moduleTitle}`,
+        timestamp: l.completedAt || new Date(),
+        metadata: { lessonId: l.lessonId, lessonType: l.lessonType },
+      })),
+      ...mappedExams.map((e: any) => ({
+        type: "EXAM_ATTEMPT" as const,
+        id: `exam_${e.id}`,
+        title: e.examTitle,
+        subtitle: `${e.courseTitle} • ${e.isPassed ? "PASSED" : "NOT PASSED"} (${e.percentage}%)`,
+        timestamp: e.submittedAt || e.startedAt,
+        metadata: { attemptId: e.id, isPassed: e.isPassed, percentage: e.percentage },
+      })),
+      ...mappedCertificates.map((c: any) => ({
+        type: "CERTIFICATE_EARNED" as const,
+        id: `cert_${c.id}`,
+        title: `Certificate Earned: ${c.courseTitle}`,
+        subtitle: `Credential No: ${c.certificateNo}`,
+        timestamp: c.issuedDate,
+        metadata: { certificateNo: c.certificateNo },
+      })),
+    ]
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 30);
+
+    return {
+      completedLessons: mappedLessons,
+      examAttempts: mappedExams,
+      certificates: mappedCertificates,
+      recentActivity,
+    };
+  }
 }
 

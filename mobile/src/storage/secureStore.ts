@@ -97,11 +97,24 @@ export const TokenStorage = {
     }
   },
 
+  async savePushToken(pushToken: string): Promise<void> {
+    await setItem(APP_CONFIG.TOKEN_STORAGE_KEYS.PUSH_TOKEN, pushToken);
+  },
+
+  async getPushToken(): Promise<string | null> {
+    return await getItem(APP_CONFIG.TOKEN_STORAGE_KEYS.PUSH_TOKEN);
+  },
+
+  async deletePushToken(): Promise<void> {
+    await deleteItem(APP_CONFIG.TOKEN_STORAGE_KEYS.PUSH_TOKEN);
+  },
+
   async clearSession(): Promise<void> {
     await Promise.all([
       deleteItem(APP_CONFIG.TOKEN_STORAGE_KEYS.ACCESS_TOKEN),
       deleteItem(APP_CONFIG.TOKEN_STORAGE_KEYS.REFRESH_TOKEN),
       deleteItem(APP_CONFIG.TOKEN_STORAGE_KEYS.SESSION_USER),
+      deleteItem(APP_CONFIG.TOKEN_STORAGE_KEYS.PUSH_TOKEN),
     ]);
   },
 };

@@ -7,6 +7,7 @@ import { SITE_CONFIG } from "@/lib/constants/site";
 import { TopAnnouncementBar } from "@/components/public/top-announcement-bar";
 import { FloatingWhatsApp } from "@/components/public/floating-whatsapp";
 import { CareerCounselingModal } from "@/components/public/career-counseling-modal";
+import { CourseBuyModal } from "@/components/public/course-buy-modal";
 
 export default async function PublicLayout({
   children,
@@ -46,6 +47,7 @@ export default async function PublicLayout({
       <PublicFooter />
       <FloatingWhatsApp />
       <CareerCounselingModal />
+      <CourseBuyModal />
     </div>
   );
 }

@@ -135,5 +135,13 @@ export const learningRouter = router({
         input.lessonId
       );
     }),
+
+  /**
+   * Returns aggregated learning activity history (completed lessons, exam attempts, and earned certificates).
+   */
+  getLearningHistory: protectedProcedure.query(async ({ ctx }) => {
+    return LearningProgressService.getLearningHistory(ctx);
+  }),
 });
+
 

@@ -35,4 +35,38 @@ export const notificationRouter = router({
   markAllAsRead: protectedProcedure.mutation(async ({ ctx }) => {
     return NotificationService.markAllAsRead(ctx.user.id);
   }),
+
+  /**
+   * Registers a mobile device push notification token foundation
+   */
+  registerPushToken: protectedProcedure
+    .input(
+      z.object({
+        pushToken: z.string().min(1),
+        deviceId: z.string().optional(),
+        platform: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (ctx.sessionId) {
+        try {
+          await ctx.db.userDeviceSession.update({
+            where: { id: ctx.sessionId },
+            data: {
+              deviceId: input.deviceId ?? undefined,
+              platform: input.platform ?? undefined,
+              lastUsedAt: new Date(),
+            },
+          });
+        } catch {
+          // Fault tolerance if session id not found
+        }
+      }
+
+      return {
+        success: true,
+        registered: true,
+        pushToken: input.pushToken,
+      };
+    }),
 });

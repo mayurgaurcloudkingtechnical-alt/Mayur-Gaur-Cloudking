@@ -7,6 +7,7 @@ import {
   StudentProfileData,
   LessonResourceDownloadResponse,
 } from '../types/learning';
+import { LearningHistoryResponse } from '../types/history';
 
 interface TrpcSuccessResponse<T> {
   result: {
@@ -131,5 +132,16 @@ export const learningService = {
     );
     return unwrapTrpcResponse<LessonResourceDownloadResponse>(raw);
   },
+
+  /**
+   * Fetches aggregated student learning history (lessons, quizzes, certificates).
+   */
+  async getLearningHistory(): Promise<LearningHistoryResponse> {
+    const raw = await apiClient.get<TrpcSuccessResponse<LearningHistoryResponse>>(
+      '/api/trpc/learning.getLearningHistory'
+    );
+    return unwrapTrpcResponse<LearningHistoryResponse>(raw);
+  },
 };
+
 

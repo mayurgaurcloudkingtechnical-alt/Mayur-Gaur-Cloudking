@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { PublicEnquiryForm } from "@/components/public/public-enquiry-form";
 import { CourseBrochureModal } from "@/components/public/course-brochure-modal";
+import { CourseBuySidebarCard, CourseBuyButton } from "@/components/public/course-buy-sidebar-card";
 
 interface CourseDetailPageProps {
   params: {
@@ -327,21 +328,34 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   </div>
                 </div>
 
-                {/* Enquiry Action Button */}
+                {/* Action Buttons: Razorpay Buy + Call & Apply */}
                 <div className="space-y-2 pt-2">
-                  <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-10 shadow-lg shadow-emerald-950/40 rounded-xl">
-                    <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center justify-center gap-2">
-                      <Phone className="h-4 w-4" />
-                      <span>Call Admissions Desk</span>
-                    </a>
-                  </Button>
+                  <CourseBuyButton
+                    course={{
+                      id: course.id,
+                      title: course.title,
+                      slug: course.slug,
+                      baseFee: course.baseFee,
+                      durationWeeks: course.durationWeeks,
+                      level: course.level,
+                    }}
+                  />
 
-                  <Button asChild variant="outline" className="w-full border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white text-xs font-semibold h-9 rounded-xl">
-                    <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`} className="flex items-center justify-center gap-1.5">
-                      <Mail className="h-3.5 w-3.5" />
-                      <span>Apply for Admission</span>
-                    </Link>
-                  </Button>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button asChild variant="outline" className="w-full border-emerald-600/60 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60 text-xs font-semibold h-9 rounded-xl">
+                      <a href={`tel:${SITE_CONFIG.contact.phoneTel}`} className="flex items-center justify-center gap-1.5">
+                        <Phone className="h-3.5 w-3.5" />
+                        <span>Call Desk</span>
+                      </a>
+                    </Button>
+
+                    <Button asChild variant="outline" className="w-full border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 hover:text-white text-xs font-semibold h-9 rounded-xl">
+                      <Link href={`/contact?course=${encodeURIComponent(course.title)}&action=apply`} className="flex items-center justify-center gap-1.5">
+                        <Mail className="h-3.5 w-3.5" />
+                        <span>Apply</span>
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
 
                 <p className="text-[11px] text-slate-400 text-center leading-tight">
@@ -530,8 +544,20 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
               </div>
             </div>
 
-            {/* Right Col: Official Course Flyer, Admissions Form & Support */}
+            {/* Right Col: Instant Buy Card, Official Flyer, Admissions Form & Support */}
             <div className="space-y-6">
+              {/* Instant Online Enrollment & Buy Card via Razorpay */}
+              <CourseBuySidebarCard
+                course={{
+                  id: course.id,
+                  title: course.title,
+                  slug: course.slug,
+                  baseFee: course.baseFee,
+                  durationWeeks: course.durationWeeks,
+                  level: course.level,
+                }}
+              />
+
               {/* Official Course Flyer / Brochure with Interactive Modal */}
               <CourseBrochureModal courseTitle={course.title} brochureUrl={brochureUrl} />
 

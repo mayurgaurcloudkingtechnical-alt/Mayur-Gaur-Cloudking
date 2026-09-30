@@ -8,7 +8,14 @@ import {
   Alert,
 } from 'react-native';
 import { learningService } from '../api/learning';
+import { quizService } from '../api/quiz';
 import { CoursePlayerResponse } from '../types/learning';
+import {
+  StudentExamViewDetails,
+  ExamAttemptRecord,
+  AttemptResultResponse,
+  AnswerState,
+} from '../types/quiz';
 import { theme } from '../constants/theme';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
@@ -19,6 +26,11 @@ import { VideoPlayer } from '../components/learning/VideoPlayer';
 import { DocumentViewer } from '../components/learning/DocumentViewer';
 import { RichTextContent } from '../components/learning/RichTextContent';
 import { QuizPlaceholder } from '../components/learning/QuizPlaceholder';
+import { QuizInstructions } from '../components/quiz/QuizInstructions';
+import { QuestionCard } from '../components/quiz/QuestionCard';
+import { QuizTimer } from '../components/quiz/QuizTimer';
+import { QuizReviewModal } from '../components/quiz/QuizReviewModal';
+import { QuizResultView } from '../components/quiz/QuizResultView';
 
 interface LessonScreenProps {
   enrollmentId: string;
@@ -38,6 +50,20 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   const [toggling, setToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Quiz Lifecycle State
+  const [quizState, setQuizState] = useState<
+    'LOADING' | 'INSTRUCTIONS' | 'RUNNER' | 'RESULT' | 'NO_EXAM'
+  >('LOADING');
+  const [examData, setExamData] = useState<StudentExamViewDetails | null>(null);
+  const [attempt, setAttempt] = useState<ExamAttemptRecord | null>(null);
+  const [quizAnswers, setQuizAnswers] = useState<Record<string, AnswerState>>({});
+  const [quizCurrentIndex, setQuizCurrentIndex] = useState(0);
+  const [saveStatusMap, setSaveStatusMap] = useState<Record<string, string>>({});
+  const [isStartingQuiz, setIsStartingQuiz] = useState(false);
+  const [isSubmittingQuiz, setIsSubmittingQuiz] = useState(false);
+  const [reviewModalVisible, setReviewModalVisible] = useState(false);
+  const [quizResult, setQuizResult] = useState<AttemptResultResponse | null>(null);
+
   const fetchLesson = useCallback(async () => {
     try {
       setError(null);
@@ -54,6 +80,172 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
     fetchLesson();
   }, [fetchLesson]);
 
+  // Load Exam/Quiz when active lesson is a QUIZ or TEST
+  useEffect(() => {
+    if (!data?.currentLesson) return;
+
+    const isQuizType =
+      data.currentLesson.type === 'QUIZ' || data.currentLesson.type === 'TEST';
+
+    if (!isQuizType) {
+      return;
+    }
+
+    const loadExam = async () => {
+      setQuizState('LOADING');
+      try {
+        const exams = await quizService.listStudentExams(data.course.id);
+        const matched =
+          exams.find((e) => e.module?.id === data.currentLesson.moduleId) ||
+          exams.find((e) => e.course?.id === data.course.id) ||
+          exams[0];
+
+        if (matched) {
+          const details = await quizService.getStudentExam(matched.id);
+          setExamData(details);
+          setQuizState('INSTRUCTIONS');
+        } else {
+          setQuizState('NO_EXAM');
+        }
+      } catch (err) {
+        console.warn('Could not load exam for lesson:', err);
+        setQuizState('NO_EXAM');
+      }
+    };
+
+    loadExam();
+  }, [data?.currentLesson?.id, data?.currentLesson?.type, data?.course?.id]);
+
+  const handleStartQuiz = async () => {
+    if (!examData) return;
+    setIsStartingQuiz(true);
+    try {
+      const attemptRes = await quizService.startAttempt(examData.exam.id);
+      setAttempt(attemptRes);
+
+      // Pre-populate answers from attempt if resuming
+      const initialAnswers: Record<string, AnswerState> = {};
+      if (Array.isArray(attemptRes.answers)) {
+        attemptRes.answers.forEach((ans) => {
+          initialAnswers[ans.questionId] = {
+            answer: ans.selectedAnswer,
+            isMarked: ans.isMarkedForReview,
+          };
+        });
+      }
+      setQuizAnswers(initialAnswers);
+      setQuizCurrentIndex(0);
+      setQuizState('RUNNER');
+    } catch (err: any) {
+      Alert.alert('Cannot Start Assessment', err?.message || 'Unable to start attempt.');
+    } finally {
+      setIsStartingQuiz(false);
+    }
+  };
+
+  const handleSelectAnswer = async (qId: string, answer: string | null) => {
+    if (!attempt) return;
+    const currentObj = quizAnswers[qId] || { answer: null, isMarked: false };
+    setQuizAnswers((prev) => ({
+      ...prev,
+      [qId]: { ...currentObj, answer },
+    }));
+    setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Saving...' }));
+
+    try {
+      await quizService.saveAnswer(attempt.id, qId, answer, currentObj.isMarked);
+      setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Saved' }));
+    } catch (err) {
+      setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Error saving' }));
+    }
+  };
+
+  const handleToggleReview = async (qId: string) => {
+    if (!attempt) return;
+    const currentObj = quizAnswers[qId] || { answer: null, isMarked: false };
+    const newMarked = !currentObj.isMarked;
+
+    setQuizAnswers((prev) => ({
+      ...prev,
+      [qId]: { ...currentObj, isMarked: newMarked },
+    }));
+    setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Saving...' }));
+
+    try {
+      await quizService.saveAnswer(attempt.id, qId, currentObj.answer, newMarked);
+      setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Saved' }));
+    } catch (err) {
+      setSaveStatusMap((prev) => ({ ...prev, [qId]: 'Error saving' }));
+    }
+  };
+
+  const performSubmit = async (isTimeout: boolean) => {
+    if (!attempt) return;
+    setIsSubmittingQuiz(true);
+    setReviewModalVisible(false);
+
+    try {
+      await quizService.submitAttempt(attempt.id, isTimeout);
+      const result = await quizService.getAttemptResult(attempt.id);
+      setQuizResult(result);
+      setQuizState('RESULT');
+
+      // Progress synchronization: auto-mark lesson complete upon passing
+      if (result.isPassed && data?.currentLesson && !data.currentLesson.isCompleted) {
+        try {
+          const targetLessonId = data.currentLesson.id;
+          const progRes = await learningService.toggleLessonComplete(
+            enrollmentId,
+            targetLessonId,
+            true
+          );
+          setData((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              currentLesson: { ...prev.currentLesson, isCompleted: true },
+              stats: {
+                ...prev.stats,
+                completedLessons: progRes.completedLessons,
+                progressPercent: progRes.progressPercent,
+              },
+            };
+          });
+        } catch (e) {
+          console.warn('Progress sync warning:', e);
+        }
+      }
+    } catch (err: any) {
+      Alert.alert('Submission Error', err?.message || 'Failed to submit assessment.');
+    } finally {
+      setIsSubmittingQuiz(false);
+    }
+  };
+
+  const handleSubmitQuizPrompt = (isTimeout = false) => {
+    if (isTimeout) {
+      performSubmit(true);
+      return;
+    }
+
+    Alert.alert(
+      'Submit Assessment',
+      'Are you sure you want to finish and submit your answers for grading?',
+      [
+        { text: 'Keep Reviewing', style: 'cancel' },
+        { text: 'Submit Now', onPress: () => performSubmit(false) },
+      ]
+    );
+  };
+
+  const handleRetakeQuiz = () => {
+    setQuizResult(null);
+    setAttempt(null);
+    setQuizAnswers({});
+    setQuizCurrentIndex(0);
+    setQuizState('INSTRUCTIONS');
+  };
+
   const handleToggleComplete = async (andContinue = false) => {
     if (!data?.currentLesson) return;
     const newStatus = !data.currentLesson.isCompleted;
@@ -66,7 +258,6 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
         newStatus
       );
 
-      // Update state locally with response from backend
       setData((prev) => {
         if (!prev) return prev;
         return {
@@ -83,7 +274,6 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
         };
       });
 
-      // If user selected "Complete & Next" and there is a next lesson, navigate to it
       if (andContinue && res.isCompleted && data.nextLesson) {
         onNavigateToLesson(enrollmentId, data.nextLesson.id);
       }
@@ -123,6 +313,10 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
   const isDocument = currentLesson.type === 'PDF' || currentLesson.type === 'DOCUMENT';
   const isQuiz = currentLesson.type === 'QUIZ' || currentLesson.type === 'TEST';
   const isRichText = currentLesson.type === 'RICH_TEXT';
+
+  const examQuestions = examData?.exam.questions || [];
+  const totalExamQuestions = examQuestions.length;
+  const activeQuestionEntry = examQuestions[quizCurrentIndex];
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
@@ -176,19 +370,136 @@ export const LessonScreen: React.FC<LessonScreenProps> = ({
         </View>
       )}
 
-      {/* 3. QUIZ / TEST LESSON */}
+      {/* 3. INTERACTIVE QUIZ / TEST LESSON */}
       {isQuiz && (
         <View style={styles.sectionWrapper}>
-          <QuizPlaceholder
-            lessonTitle={currentLesson.title}
-            moduleTitle={currentLesson.moduleTitle}
-            durationMin={currentLesson.durationMin}
-            summary={currentLesson.summary}
-          />
+          {quizState === 'LOADING' ? (
+            <Card style={styles.quizLoadingCard}>
+              <LoadingSpinner message="Loading assessment data..." />
+            </Card>
+          ) : quizState === 'INSTRUCTIONS' && examData ? (
+            <QuizInstructions
+              examData={examData}
+              moduleTitle={currentLesson.moduleTitle}
+              isStarting={isStartingQuiz}
+              onStartQuiz={handleStartQuiz}
+            />
+          ) : quizState === 'RUNNER' && attempt && activeQuestionEntry ? (
+            <View style={styles.quizRunnerContainer}>
+              {/* Runner Top Bar */}
+              <View style={styles.runnerTopBar}>
+                <View>
+                  <Text style={styles.runnerExamTitle} numberOfLines={1}>
+                    {examData?.exam.title}
+                  </Text>
+                  <Text style={styles.runnerAttemptNumber}>
+                    Attempt #{attempt.attemptNumber}
+                  </Text>
+                </View>
+                <QuizTimer
+                  startedAt={attempt.startedAt}
+                  durationMinutes={examData?.exam.durationMinutes || 30}
+                  onTimeout={() => handleSubmitQuizPrompt(true)}
+                />
+              </View>
+
+              {/* Active Question Card */}
+              <QuestionCard
+                question={activeQuestionEntry.question}
+                questionIndex={quizCurrentIndex}
+                totalQuestions={totalExamQuestions}
+                selectedAnswer={quizAnswers[activeQuestionEntry.question.id]?.answer ?? null}
+                isMarkedForReview={quizAnswers[activeQuestionEntry.question.id]?.isMarked ?? false}
+                marks={
+                  activeQuestionEntry.marksOverride !== null
+                    ? activeQuestionEntry.marksOverride
+                    : activeQuestionEntry.question.marks
+                }
+                negativeMarking={examData?.exam.negativeMarking ?? false}
+                negativeMarksPerQuestion={examData?.exam.negativeMarksPerQuestion ?? 0}
+                saveStatus={saveStatusMap[activeQuestionEntry.question.id] || 'Saved'}
+                onSelectAnswer={(answer) =>
+                  handleSelectAnswer(activeQuestionEntry.question.id, answer)
+                }
+                onToggleReview={() => handleToggleReview(activeQuestionEntry.question.id)}
+              />
+
+              {/* Runner Navigation Bar */}
+              <View style={styles.runnerNavRow}>
+                <Button
+                  title="← Previous"
+                  variant="outline"
+                  onPress={() => setQuizCurrentIndex((prev) => Math.max(0, prev - 1))}
+                  disabled={quizCurrentIndex === 0}
+                  style={{ flex: 1 }}
+                />
+
+                <Button
+                  title="Review Palette"
+                  variant="outline"
+                  onPress={() => setReviewModalVisible(true)}
+                  style={{ flex: 1 }}
+                />
+
+                {quizCurrentIndex < totalExamQuestions - 1 ? (
+                  <Button
+                    title="Next →"
+                    variant="primary"
+                    onPress={() =>
+                      setQuizCurrentIndex((prev) =>
+                        Math.min(totalExamQuestions - 1, prev + 1)
+                      )
+                    }
+                    style={{ flex: 1 }}
+                  />
+                ) : (
+                  <Button
+                    title="Review & Submit"
+                    variant="primary"
+                    onPress={() => setReviewModalVisible(true)}
+                    style={{ flex: 1 }}
+                  />
+                )}
+              </View>
+
+              {/* Review Palette Modal */}
+              <QuizReviewModal
+                visible={reviewModalVisible}
+                totalQuestions={totalExamQuestions}
+                questionIds={examQuestions.map((q) => q.question.id)}
+                answers={quizAnswers}
+                currentIndex={quizCurrentIndex}
+                isSubmitting={isSubmittingQuiz}
+                onSelectQuestion={(idx) => setQuizCurrentIndex(idx)}
+                onClose={() => setReviewModalVisible(false)}
+                onSubmit={() => handleSubmitQuizPrompt(false)}
+              />
+            </View>
+          ) : quizState === 'RESULT' && quizResult ? (
+            <QuizResultView
+              result={quizResult}
+              canRetake={(examData?.attemptCount || 0) < (examData?.exam.maxAttempts || 3)}
+              onRetake={handleRetakeQuiz}
+              onContinue={() => {
+                if (nextLesson) {
+                  onNavigateToLesson(enrollmentId, nextLesson.id);
+                } else {
+                  onBackToCourse();
+                }
+              }}
+            />
+          ) : (
+            <QuizPlaceholder
+              lessonTitle={currentLesson.title}
+              moduleTitle={currentLesson.moduleTitle}
+              durationMin={currentLesson.durationMin}
+              summary={currentLesson.summary}
+            />
+          )}
         </View>
       )}
 
-      {/* 4. WRITTEN CONTENT / RICH TEXT / LECTURE NOTES (rendered for RICH_TEXT and as companion notes) */}
+      {/* 4. WRITTEN CONTENT / RICH TEXT / LECTURE NOTES (rendered for RICH_TEXT and companion notes) */}
       <Card style={styles.sectionCard}>
         <Text style={styles.sectionHeading}>
           {isRichText ? 'Lesson Content' : 'Curriculum Notes & Topics'}
@@ -350,6 +661,39 @@ const styles = StyleSheet.create({
   },
   sectionWrapper: {
     marginBottom: theme.spacing.md,
+  },
+  quizLoadingCard: {
+    padding: theme.spacing.xl,
+    alignItems: 'center',
+  },
+  quizRunnerContainer: {
+    marginBottom: theme.spacing.md,
+  },
+  runnerTopBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#0F172A',
+    borderRadius: theme.borderRadius.md,
+    padding: 12,
+    marginBottom: theme.spacing.sm,
+    borderWidth: 1,
+    borderColor: '#1E293B',
+  },
+  runnerExamTitle: {
+    color: '#F8FAFC',
+    fontSize: theme.typography.fontSize.xs,
+    fontWeight: '700',
+    maxWidth: 180,
+  },
+  runnerAttemptNumber: {
+    color: '#64748B',
+    fontSize: 10,
+    marginTop: 2,
+  },
+  runnerNavRow: {
+    flexDirection: 'row',
+    gap: 8,
   },
   sectionCard: {
     padding: theme.spacing.md,

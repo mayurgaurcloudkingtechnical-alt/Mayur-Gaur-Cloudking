@@ -15,6 +15,9 @@ import { CourseDetailsScreen } from '../screens/CourseDetailsScreen';
 import { LessonScreen } from '../screens/LessonScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 import { HomeScreen } from '../screens/HomeScreen';
+import { CertificateScreen } from '../screens/CertificateScreen';
+import { LearningHistoryScreen } from '../screens/LearningHistoryScreen';
+import { NotificationScreen } from '../screens/NotificationScreen';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -26,7 +29,10 @@ type Tab = 'dashboard' | 'courses' | 'profile';
 type ScreenState =
   | { type: 'tab'; tab: Tab }
   | { type: 'course-details'; enrollmentId: string; fromTab: Tab }
-  | { type: 'lesson'; enrollmentId: string; lessonId?: string; fromTab: Tab };
+  | { type: 'lesson'; enrollmentId: string; lessonId?: string; fromTab: Tab }
+  | { type: 'certificate'; certificateId?: string; courseId?: string; fromTab: Tab }
+  | { type: 'learning-history'; fromTab: Tab }
+  | { type: 'notifications'; fromTab: Tab };
 
 export const RootNavigator: React.FC = () => {
   const { status, user, logout } = useAuth();
@@ -113,6 +119,18 @@ export const RootNavigator: React.FC = () => {
     setScreen({ type: 'lesson', enrollmentId, lessonId, fromTab: activeTab });
   };
 
+  const navigateToCertificate = (courseId?: string, certificateId?: string) => {
+    setScreen({ type: 'certificate', certificateId, courseId, fromTab: activeTab });
+  };
+
+  const navigateToHistory = () => {
+    setScreen({ type: 'learning-history', fromTab: activeTab });
+  };
+
+  const navigateToNotifications = () => {
+    setScreen({ type: 'notifications', fromTab: activeTab });
+  };
+
   const navigateBack = () => {
     if (screen.type === 'lesson') {
       setScreen({
@@ -121,6 +139,12 @@ export const RootNavigator: React.FC = () => {
         fromTab: screen.fromTab,
       });
     } else if (screen.type === 'course-details') {
+      setScreen({ type: 'tab', tab: screen.fromTab });
+    } else if (
+      screen.type === 'certificate' ||
+      screen.type === 'learning-history' ||
+      screen.type === 'notifications'
+    ) {
       setScreen({ type: 'tab', tab: screen.fromTab });
     }
   };
@@ -137,15 +161,26 @@ export const RootNavigator: React.FC = () => {
             onNavigateToCourseDetails={navigateToCourseDetails}
             onNavigateToLesson={navigateToLesson}
             onNavigateToProfile={() => navigateToTab('profile')}
+            onNavigateToCertificates={() => navigateToCertificate()}
+            onNavigateToHistory={navigateToHistory}
+            onNavigateToNotifications={navigateToNotifications}
           />
         )}
 
         {screen.type === 'tab' && screen.tab === 'courses' && (
-          <MyCoursesScreen onSelectCourse={navigateToCourseDetails} />
+          <MyCoursesScreen
+            onSelectCourse={navigateToCourseDetails}
+            onViewCertificate={(courseId, certId) => navigateToCertificate(courseId, certId)}
+          />
         )}
 
         {screen.type === 'tab' && screen.tab === 'profile' && (
-          <ProfileScreen onBack={() => navigateToTab('dashboard')} />
+          <ProfileScreen
+            onBack={() => navigateToTab('dashboard')}
+            onNavigateToCertificates={() => navigateToCertificate()}
+            onNavigateToHistory={navigateToHistory}
+            onNavigateToNotifications={navigateToNotifications}
+          />
         )}
 
         {screen.type === 'course-details' && (
@@ -153,6 +188,7 @@ export const RootNavigator: React.FC = () => {
             enrollmentId={screen.enrollmentId}
             onBack={navigateBack}
             onOpenLesson={navigateToLesson}
+            onViewCertificate={(courseId, certId) => navigateToCertificate(courseId, certId)}
           />
         )}
 
@@ -162,6 +198,44 @@ export const RootNavigator: React.FC = () => {
             lessonId={screen.lessonId}
             onBackToCourse={navigateBack}
             onNavigateToLesson={navigateToLesson}
+          />
+        )}
+
+        {screen.type === 'certificate' && (
+          <CertificateScreen
+            initialCertificateId={screen.certificateId}
+            courseId={screen.courseId}
+            onBack={navigateBack}
+          />
+        )}
+
+        {screen.type === 'learning-history' && (
+          <LearningHistoryScreen
+            onBack={navigateBack}
+            onOpenCertificate={(certId) => navigateToCertificate(undefined, certId)}
+          />
+        )}
+
+        {screen.type === 'notifications' && (
+          <NotificationScreen
+            navigation={{
+              goBack: navigateBack,
+              navigate: (target: string, params?: any) => {
+                if (target === 'CourseDetails' && params?.courseId) {
+                  navigateToCourseDetails(params.courseId);
+                } else if (target === 'Lesson' && params?.courseId) {
+                  navigateToLesson(params.courseId, params.lessonId);
+                } else if (target === 'Certificate') {
+                  navigateToCertificate(params?.courseId, params?.certificateId || params?.certNumber);
+                } else if (target === 'LearningHistory') {
+                  navigateToHistory();
+                } else if (target === 'Notifications') {
+                  navigateToNotifications();
+                } else if (target === 'QuizModal') {
+                  navigateToHistory();
+                }
+              },
+            }}
           />
         )}
       </View>

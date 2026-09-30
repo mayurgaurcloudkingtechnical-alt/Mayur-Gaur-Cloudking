@@ -11,7 +11,15 @@ import { Button } from "@/components/ui/button";
 import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { EditPaymentDialog } from "./edit-payment-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
-import { Edit, Printer, Loader2, Download, Filter, X } from "lucide-react";
+import { Edit, Printer, Loader2, Download, Filter, X, Trash2, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 interface PaymentsTableProps {
   initialStudentId?: string;
@@ -29,17 +37,47 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
   // Edit payment modal state
   const [editingPayment, setEditingPayment] = useState<any | null>(null);
 
+  // Delete payment modal state (Super Admin only)
+  const [deletingPayment, setDeletingPayment] = useState<{
+    id: string;
+    ref: string;
+    amount: number;
+    studentName: string;
+  } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
   // Dual fee receipt modal state
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
   const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
 
+  const { data: authUser } = api.auth.me.useQuery();
+  const isSuperAdmin = authUser?.roleCode === "SUPER_ADMIN";
+
   const utils = api.useUtils();
+  const deletePaymentMutation = api.finance.deletePayment.useMutation();
+
   const { data, isLoading } = api.finance.listPayments.useQuery({
     page,
     limit: 20,
     studentId: filterStudentId || undefined,
     paymentMethod: methodFilter,
   });
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingPayment) return;
+    try {
+      setIsDeleting(true);
+      await deletePaymentMutation.mutateAsync({ paymentId: deletingPayment.id });
+      utils.finance.listPayments.invalidate();
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      setDeletingPayment(null);
+    } catch (err: any) {
+      alert("Failed to delete transaction: " + (err.message || "Unknown error"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleOpenReceipt = async (identifier: string) => {
     try {
@@ -342,6 +380,27 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
                           <Edit className="h-3 w-3 text-slate-600" />
                           <span className="hidden sm:inline">Edit</span>
                         </Button>
+
+                        {/* Super Admin Delete Payment / Receipt Button */}
+                        {isSuperAdmin && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setDeletingPayment({
+                                id: p.id,
+                                ref: p.receiptNumber || p.transactionReference,
+                                amount: p.amount,
+                                studentName,
+                              })
+                            }
+                            className="h-7 px-2 text-xs border-rose-300 text-rose-700 hover:bg-rose-50 font-medium inline-flex items-center gap-1"
+                            title="Permanently delete payment transaction and recalculate student balance (Super Admin Only)"
+                          >
+                            <Trash2 className="h-3 w-3 text-rose-600" />
+                            <span className="hidden sm:inline">Delete</span>
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -391,6 +450,64 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
             setEditingPayment(null);
           }}
         />
+      )}
+
+      {/* Super Admin Delete Confirmation Dialog */}
+      {deletingPayment && (
+        <Dialog open={!!deletingPayment} onOpenChange={(open) => !open && !isDeleting && setDeletingPayment(null)}>
+          <DialogContent className="sm:max-w-md bg-white">
+            <DialogHeader>
+              <div className="flex items-center gap-2 text-rose-600">
+                <AlertTriangle className="h-5 w-5" />
+                <DialogTitle className="text-base font-bold text-slate-900">
+                  Delete Payment Transaction & Receipt
+                </DialogTitle>
+              </div>
+              <DialogDescription className="text-xs text-slate-600 pt-2 space-y-2">
+                <p>
+                  You are about to permanently delete transaction{" "}
+                  <strong className="font-mono text-slate-900">{deletingPayment.ref}</strong> for{" "}
+                  <strong>{deletingPayment.studentName}</strong> amounting to{" "}
+                  <strong className="text-rose-700">{formatPaiseToRupees(deletingPayment.amount)}</strong>.
+                </p>
+                <div className="p-2.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] leading-relaxed">
+                  <strong>Notice:</strong> This action will remove the transaction record and receipt. If this payment was linked to a fee structure, the student&apos;s paid and pending fee balances and installment schedules will be automatically recalculated and preserved.
+                </div>
+              </DialogDescription>
+            </DialogHeader>
+
+            <DialogFooter className="gap-2 sm:gap-0 pt-3 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setDeletingPayment(null)}
+                disabled={isDeleting}
+                className="text-xs h-8"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeleteConfirm}
+                disabled={isDeleting}
+                className="text-xs h-8 bg-rose-600 hover:bg-rose-700 text-white font-semibold inline-flex items-center gap-1.5"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-3 w-3" />
+                    <span>Delete Record</span>
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Dual Fee Receipt Viewer Modal */}

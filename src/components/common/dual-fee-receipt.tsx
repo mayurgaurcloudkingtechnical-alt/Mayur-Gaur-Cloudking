@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { Printer, Edit3, Check, RotateCcw, X, Save, AlertCircle } from "lucide-react";
+import { Printer, Edit3, Check, RotateCcw, X, Save, AlertCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { rupeesToWords } from "@/lib/utils";
@@ -159,8 +159,35 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
 
   const utils = api.useUtils();
 
+  const { data: authUser } = api.auth.me.useQuery();
+  const isSuperAdmin = authUser?.roleCode === "SUPER_ADMIN";
+
   const updateFeeMutation = api.finance.updateFeeStructure.useMutation();
   const updatePaymentMutation = api.finance.updatePayment.useMutation();
+  const deletePaymentMutation = api.finance.deletePayment.useMutation();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteReceipt = async () => {
+    if (!data.paymentId) return;
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete receipt ${receiptNumber} (₹${totalPaid.toLocaleString("en-IN")})? Outstanding student fee balances will be automatically recalculated.`
+    );
+    if (!confirmed) return;
+
+    try {
+      setIsDeleting(true);
+      await deletePaymentMutation.mutateAsync({ paymentId: data.paymentId });
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.listPayments.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      if (onSaved) onSaved();
+      if (onClose) onClose();
+    } catch (err: any) {
+      alert("Failed to delete receipt: " + (err.message || "Unknown error"));
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const handleSaveToDatabase = async () => {
     setSaveError(null);
@@ -915,6 +942,21 @@ ${innerHtml}
                   ? "Saving..."
                   : "Save to Database"}
               </span>
+            </Button>
+          )}
+
+          {/* Super Admin Delete Receipt Button */}
+          {isSuperAdmin && data.paymentId && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={handleDeleteReceipt}
+              disabled={isDeleting || deletePaymentMutation.isPending}
+              className="text-rose-700 hover:bg-rose-50 border-rose-300 text-xs h-8 gap-1.5 font-bold shadow-xs"
+              title="Delete receipt and transaction (Super Admin Only)"
+            >
+              <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+              <span>{isDeleting ? "Deleting..." : "Delete Receipt"}</span>
             </Button>
           )}
 

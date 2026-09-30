@@ -3,6 +3,7 @@ import { UserProfile } from "../types";
 import { AuthApi } from "../api/auth";
 import { TokenStorage } from "../storage/secureStore";
 import { registerAuthFailureHandler } from "../api/client";
+import { PushNotificationService } from "../services/pushNotification.service";
 
 export type AuthStatus = "loading" | "authenticated" | "unauthenticated";
 
@@ -80,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const session = await AuthApi.login(credentials);
       setUser(session.user);
       setStatus("authenticated");
+      PushNotificationService.registerDevicePushToken().catch(() => {});
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to sign in";
       setError(msg);
@@ -89,6 +91,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = async () => {
     try {
+      await PushNotificationService.unregisterDevicePushToken();
       await AuthApi.logout();
     } finally {
       setUser(null);

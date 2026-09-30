@@ -14,7 +14,15 @@ export interface ContextUser {
   permissions: string[];
 }
 
-export async function createTRPCContext(opts?: FetchCreateContextFnOptions) {
+export interface Context {
+  db: typeof db;
+  session: any;
+  user: ContextUser | null;
+  sessionId?: string;
+  headers?: any;
+}
+
+export async function createTRPCContext(opts?: FetchCreateContextFnOptions): Promise<Context> {
   const reqHeaders = opts?.req?.headers;
   const authHeader = reqHeaders?.get?.("authorization");
 
@@ -53,6 +61,7 @@ export async function createTRPCContext(opts?: FetchCreateContextFnOptions) {
             expires: new Date(Date.now() + 3600 * 1000).toISOString(),
           },
           user,
+          sessionId: tokenPayload.sessionId,
           headers: reqHeaders,
         };
       }
@@ -82,5 +91,3 @@ export async function createTRPCContext(opts?: FetchCreateContextFnOptions) {
     headers: reqHeaders,
   };
 }
-
-export type Context = Awaited<ReturnType<typeof createTRPCContext>>;
