@@ -35,7 +35,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Brand Wordmark */}
         <Link href="/" className="group flex items-center">
-          <SoftlabLogo size="md" />
+          <SoftlabLogo size="md" variant="dark" />
         </Link>
 
         {/* Desktop Navigation Links */}

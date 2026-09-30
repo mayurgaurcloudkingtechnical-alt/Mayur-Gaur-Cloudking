@@ -220,7 +220,7 @@ export default function LoginPage() {
         {/* Brand Header */}
         <div className="mb-6 flex flex-col items-center text-center">
           <Link href="/">
-            <SoftlabLogo size="xl" showTagline={true} className="justify-center" variant="light" />
+            <SoftlabLogo size="xl" showTagline={true} className="justify-center" variant="dark" />
           </Link>
           <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 border border-emerald-800 px-3 py-1 rounded-full">
             <GraduationCap className="w-3.5 h-3.5" />

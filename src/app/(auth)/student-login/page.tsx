@@ -174,7 +174,7 @@ export default function StudentLoginPage() {
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <Link href="/" className="inline-block">
-            <SoftlabLogo size="lg" />
+            <SoftlabLogo size="lg" variant="dark" />
           </Link>
         </div>
 

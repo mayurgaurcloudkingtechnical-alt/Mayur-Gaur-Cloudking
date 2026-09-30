@@ -15,7 +15,7 @@ export function PublicFooter() {
           {/* Column 1: Brand & Identity */}
           <div className="space-y-4">
             <Link href="/" className="inline-block">
-              <SoftlabLogo size="md" />
+              <SoftlabLogo size="md" variant="dark" />
             </Link>
             <p className="text-xs text-slate-400 leading-relaxed">
               {SITE_CONFIG.shortDescription}

@@ -253,7 +253,11 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
 
         <div className="border-t border-slate-200 p-4">
           <div className="rounded-lg bg-slate-50 p-3 text-xs text-slate-500">
-            <p className="font-semibold text-slate-700">SOFTLAB GLOBAL</p>
+            <p className="font-black tracking-tight text-xs flex items-center gap-1 select-none">
+              <span className="text-[#16a34a]">SOFT</span>
+              <span className="text-[#0284c7]">LAB</span>
+              <span className="text-[#0284c7] font-black tracking-widest text-[9px]">GLOBAL</span>
+            </p>
             <p className="mt-0.5">Prayagraj, UP 211001</p>
             <p className="mt-0.5 font-mono text-[10px]">v0.1.0 • Day 1 Foundation</p>
           </div>
