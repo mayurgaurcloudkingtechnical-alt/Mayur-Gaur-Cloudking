@@ -28,9 +28,10 @@ import {
   Share2,
   Building2,
   ExternalLink,
+  Globe,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
-import { DPGU_CONFIG } from "@/config/university.config";
+import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
 import { api } from "@/lib/trpc/react";
 
 interface NavItem {
@@ -77,6 +78,13 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Exams & Quizzes", href: "/student/exams", icon: <ClipboardCheck className="h-4 w-4" /> },
           { title: "Marksheets", href: "/student/marksheets", icon: <FileCheck2 className="h-4 w-4" /> },
           { title: "Certificates", href: "/student/certificates", icon: <Award className="h-4 w-4" /> },
+          {
+            title: "DDU USA Verification",
+            href: DDU_CONFIG.portals.verificationUrl,
+            icon: <Globe className="h-4 w-4" />,
+            external: true,
+            badge: "USA",
+          },
           { title: "Fees & Breakdown", href: "/student/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "Payment History", href: "/student/payments", icon: <CreditCard className="h-4 w-4" /> },
           { title: "Career & Placement", href: "/student/placements", icon: <Briefcase className="h-4 w-4" /> },
@@ -95,6 +103,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "DDU Global Portal", href: DDU_CONFIG.portals.mainWebsiteUrl, icon: <Globe className="h-4 w-4" />, external: true, badge: "USA" },
           { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
@@ -107,6 +116,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Fee Collection", href: "/counselor/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
+          { title: "DDU Global Portal", href: DDU_CONFIG.portals.mainWebsiteUrl, icon: <Globe className="h-4 w-4" />, external: true, badge: "USA" },
           { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
@@ -135,6 +145,23 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
                   icon: <Building2 className="h-4 w-4" />,
                   external: true,
                   badge: "DPGU",
+                },
+                {
+                  title: "DDU Skill Admin (USA)",
+                  href: DDU_CONFIG.portals.adminDashboardUrl,
+                  icon: <Globe className="h-4 w-4" />,
+                  external: true,
+                  badge: "USA",
+                },
+              ]
+            : ["ADMIN", "DIRECTOR"].includes(roleCode)
+            ? [
+                {
+                  title: "DDU Skill Admin (USA)",
+                  href: DDU_CONFIG.portals.adminDashboardUrl,
+                  icon: <Globe className="h-4 w-4" />,
+                  external: true,
+                  badge: "USA",
                 },
               ]
             : []),

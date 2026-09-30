@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -49,15 +49,35 @@ export function CertificatesManagementView() {
           </p>
         </div>
 
-        <div className="relative">
-          <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by student or certificate ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 pr-4 py-2 rounded-lg border border-slate-300 text-sm bg-white w-64 md:w-80"
-          />
+        <div className="flex items-center gap-3">
+          <a
+            href="https://skill.delawaredigitaluniversity.us/dashboard"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition shadow-sm"
+          >
+            <span>DDU Skill Admin (USA)</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          <a
+            href="https://delawaredigitaluniversity.us/verify/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-3.5 py-2 rounded-lg transition shadow-sm"
+          >
+            <span>DDU Verification Desk</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search by student or certificate ID..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 pr-4 py-2 rounded-lg border border-slate-300 text-sm bg-white w-64 md:w-80"
+            />
+          </div>
         </div>
       </div>
 

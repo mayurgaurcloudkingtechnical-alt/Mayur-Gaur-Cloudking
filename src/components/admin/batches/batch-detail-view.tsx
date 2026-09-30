@@ -81,6 +81,16 @@ export function BatchDetailView({ batchId }: BatchDetailViewProps) {
     },
   });
 
+  const deleteBatchMutation = api.batch.delete.useMutation({
+    onSuccess: () => {
+      alert("Batch cohort deleted successfully.");
+      window.location.href = "/admin/batches";
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete batch.");
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -146,6 +156,20 @@ export function BatchDetailView({ batchId }: BatchDetailViewProps) {
               className="gap-1.5 text-xs"
             >
               <Edit2 className="h-3.5 w-3.5" /> Edit Cohort
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (confirm(`Permanently delete batch ${batch.name} (${batch.code})? Enrolled students will be unlinked and scheduled classes removed.`)) {
+                  deleteBatchMutation.mutate({ id: batch.id });
+                }
+              }}
+              disabled={deleteBatchMutation.isPending}
+              className="gap-1.5 text-xs border-red-200 bg-red-50 hover:bg-red-100 text-red-600"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete Cohort
             </Button>
 
             {/* Lifecycle Status Selector */}

@@ -643,5 +643,76 @@ export const batchRouter = router({
         syllabusCompletionRate: classesCount > 0 ? Math.round((completedClasses / classesCount) * 100) : 0,
       };
     }),
+
+  /**
+   * Deletes a batch and cleanly unlinks enrollments, fee structures, and deletes classes.
+   */
+  delete: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
+    .input(z.object({ id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const batch = await ctx.db.batch.findUnique({
+        where: { id: input.id },
+        include: { course: true },
+      });
+
+      if (!batch) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Batch not found." });
+      }
+
+      await ctx.db.$transaction(async (tx) => {
+        // 1. Unlink students/enrollments from batch
+        await tx.enrollment.updateMany({
+          where: { batchId: input.id },
+          data: { batchId: null },
+        });
+
+        // 2. Unlink fee structures
+        await tx.feeStructure.updateMany({
+          where: { batchId: input.id },
+          data: { batchId: null },
+        });
+
+        // 3. Unlink leads & applications
+        await tx.lead.updateMany({
+          where: { interestedBatchId: input.id },
+          data: { interestedBatchId: null },
+        });
+        await tx.admissionApplication.updateMany({
+          where: { batchId: input.id },
+          data: { batchId: null },
+        });
+
+        // 4. Delete attendance & classes
+        await tx.attendanceEntry.deleteMany({
+          where: { record: { batchId: input.id } },
+        });
+        await tx.attendanceRecord.deleteMany({
+          where: { batchId: input.id },
+        });
+        await tx.scheduledClass.deleteMany({
+          where: { batchId: input.id },
+        });
+
+        // 5. Delete batch trainers
+        await tx.batchTrainer.deleteMany({
+          where: { batchId: input.id },
+        });
+
+        // 6. Delete batch
+        await tx.batch.delete({
+          where: { id: input.id },
+        });
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "BATCH_DELETED",
+        resourceType: "Batch",
+        resourceId: input.id,
+        newData: { code: batch.code, name: batch.name, courseTitle: batch.course.title },
+      });
+
+      return { success: true };
+    }),
 });
 

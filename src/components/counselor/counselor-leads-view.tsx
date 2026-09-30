@@ -29,6 +29,7 @@ import {
   ExternalLink,
   GraduationCap,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
@@ -60,6 +61,16 @@ export function CounselorLeadsView({
 
   const utils = api.useUtils();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
+
+  const deleteLeadMutation = api.crm.deleteLead.useMutation({
+    onSuccess: () => {
+      utils.crm.listLeads.invalidate();
+      alert("Lead deleted successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete lead.");
+    },
+  });
 
   const handleProceedFromEnquiry = (enquiryData: StudentEnquiryData, createdLeadId?: string) => {
     const matchedCourse = courses.find((c: any) =>
@@ -616,6 +627,20 @@ export function CounselorLeadsView({
                             >
                               <GraduationCap className="h-3 w-3" />
                               <span>{lead.status === "ADMITTED" ? "Manage" : "Admit"}</span>
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                if (confirm(`Permanently delete lead "${lead.fullName}" (${lead.phone})? All activities, followups, and applications will be removed.`)) {
+                                  deleteLeadMutation.mutate({ leadId: lead.id });
+                                }
+                              }}
+                              disabled={deleteLeadMutation.isPending}
+                              className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 p-1.5"
+                              title="Delete Lead"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
                             </Button>
                           </div>
                         </td>

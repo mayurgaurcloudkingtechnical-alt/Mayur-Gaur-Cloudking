@@ -492,7 +492,7 @@ export class FeeStructureService {
       }),
     ]);
 
-    const totalBusiness = aggregates._sum.totalCourseFee || aggregates._sum.netPayableAmount || 0;
+    const totalBusiness = aggregates._sum.netPayableAmount || 0;
     const totalDiscount = aggregates._sum.discountAmount || 0;
     const totalReceivable = aggregates._sum.netPayableAmount || 0;
     const totalCollected = aggregates._sum.paidAmount || 0;
@@ -518,5 +518,58 @@ export class FeeStructureService {
       recentPayments,
       pendingStudents,
     };
+  }
+
+  /**
+   * Deletes a fee structure and all associated installments & payment records cleanly.
+   */
+  static async deleteFeeStructure(user: AuthenticatedUser, feeStructureId: string) {
+    if (!["SUPER_ADMIN", "ADMIN", "DIRECTOR"].includes(user.roleCode)) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only administrators can delete a fee structure record.",
+      });
+    }
+
+    const feeStructure = await db.feeStructure.findUnique({
+      where: { id: feeStructureId },
+      include: { student: { include: { user: true } }, course: true },
+    });
+
+    if (!feeStructure) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Fee structure not found." });
+    }
+
+    await db.$transaction(async (tx) => {
+      // 1. Delete payment transactions linked to this fee structure
+      await tx.paymentTransaction.deleteMany({
+        where: { feeStructureId },
+      });
+
+      // 2. Delete installments
+      await tx.feeInstallment.deleteMany({
+        where: { feeStructureId },
+      });
+
+      // 3. Delete fee structure itself
+      await tx.feeStructure.delete({
+        where: { id: feeStructureId },
+      });
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "FEE_STRUCTURE_DELETED",
+      resourceType: "FeeStructure",
+      resourceId: feeStructureId,
+      newData: {
+        studentId: feeStructure.studentId,
+        courseId: feeStructure.courseId,
+        studentName: `${feeStructure.student?.user?.firstName || ""} ${feeStructure.student?.user?.lastName || ""}`,
+        courseName: feeStructure.course?.title,
+      },
+    });
+
+    return { success: true };
   }
 }

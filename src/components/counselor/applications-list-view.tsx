@@ -384,27 +384,25 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                               <Archive className="h-3.5 w-3.5" />
                             </Button>
                           ) : null}
-                          {app.stage !== ApplicationStage.CONVERTED && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => {
-                                if (
-                                  confirm(
-                                    `Permanently delete unconverted application ${app.applicationNumber}? This cannot be undone.`
-                                  )
-                                ) {
-                                  deleteMutation.mutate({ applicationId: app.id });
-                                }
-                              }}
-                              disabled={deleteMutation.isPending}
-                              className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
-                              title="Delete Application"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => {
+                              if (
+                                confirm(
+                                  `Permanently delete application ${app.applicationNumber}? This cannot be undone.`
+                                )
+                              ) {
+                                deleteMutation.mutate({ applicationId: app.id });
+                              }
+                            }}
+                            disabled={deleteMutation.isPending}
+                            className="h-7 w-7 p-0 text-red-500 hover:text-red-700"
+                            title="Delete Application"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
                         </div>
                       </td>
                     </tr>

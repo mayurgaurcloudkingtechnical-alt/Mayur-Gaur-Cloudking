@@ -26,6 +26,7 @@ import {
   Building,
   School,
   IndianRupee,
+  Trash2,
 } from "lucide-react";
 import { RazorpayCheckoutButton } from "@/components/payment/razorpay-checkout-button";
 import { EditApplicationDialog } from "./edit-application-dialog";
@@ -64,6 +65,16 @@ export function ApplicationDetailView({
     },
     onError: (err: { message?: string }) => {
       setStageError(err.message || "Conversion to student failed.");
+    },
+  });
+
+  const deleteAppMutation = api.crm.deleteApplication.useMutation({
+    onSuccess: () => {
+      alert("Application deleted successfully.");
+      window.location.href = backHref;
+    },
+    onError: (err: { message?: string }) => {
+      alert(err.message || "Failed to delete application.");
     },
   });
 
@@ -123,6 +134,22 @@ export function ApplicationDetailView({
         >
           <Edit className="h-3.5 w-3.5" />
           <span>Edit Full Details & Photo</span>
+        </Button>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            if (confirm(`Permanently delete application ${app.applicationNumber}? This cannot be undone.`)) {
+              deleteAppMutation.mutate({ applicationId: app.id });
+            }
+          }}
+          disabled={deleteAppMutation.isPending}
+          className="border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold flex items-center gap-1.5 h-8 shadow-xs"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          <span>Delete Application</span>
         </Button>
       </div>
 

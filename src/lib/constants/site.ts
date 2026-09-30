@@ -32,6 +32,7 @@ export const SITE_CONFIG = {
     { label: "Home", href: "/" },
     { label: "Courses", href: "/courses" },
     { label: "Dr. Preeti Global University", href: "/dr-preeti-global-university" },
+    { label: "Global Certification (USA)", href: "/delaware-digital-university" },
     { label: "Faculty", href: "/trainers" },
     { label: "Career Support", href: "/career" },
     { label: "Services", href: "/services" },

@@ -1406,21 +1406,33 @@ export class CrmApplicationService {
 
     if (!app) throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
 
-    if (app.convertedStudentProfileId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Cannot delete an application that has already been converted to an enrolled student. Archive it instead.",
-      });
+    const isSuperAdmin =
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR";
+
+    if (!isSuperAdmin) {
+      if (app.convertedStudentProfileId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete an application that has already been converted to an enrolled student. Super Admin privileges required.",
+        });
+      }
+
+      if (app.payments && app.payments.length > 0) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cannot delete an application with recorded payment transactions. Super Admin privileges required.",
+        });
+      }
     }
 
-    if (app.payments && app.payments.length > 0) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Cannot delete an application with recorded payment transactions. Archive it instead to maintain financial audit trails.",
+    await db.$transaction(async (tx) => {
+      await tx.paymentTransaction.updateMany({
+        where: { admissionId: applicationId },
+        data: { admissionId: null },
       });
-    }
-
-    await db.admissionApplication.delete({ where: { id: applicationId } });
+      await tx.admissionApplication.delete({ where: { id: applicationId } });
+    });
 
     await AuditService.log({
       actorId: user.id,

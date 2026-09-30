@@ -34,3 +34,37 @@ export const DPGU_CONFIG = {
 } as const;
 
 export type UniversityConfig = typeof DPGU_CONFIG;
+
+/**
+ * Centralized Configuration for Delaware Digital University (USA) Partner Programs
+ * Global Skill Certification, Credential Verification & SoftLab Administration Desk
+ */
+export const DDU_CONFIG = {
+  universityName: "Delaware Digital University",
+  shortName: "DDU",
+  country: "United States Of America",
+  state: "Delaware",
+  registrationNumber: "7349298", // Registered with the Delaware Department of State
+  institutionType: "Non-profit Educational Institution in the State of Delaware, USA",
+  address: "The Green, City of Dover, Delaware 19901, United States Of America",
+  phone: "+1 302 2138121",
+  certificationBadge: "USA Globally Accredited Skill Certification",
+
+  // Official Endpoints
+  portals: {
+    // Official University Website
+    mainWebsiteUrl: "https://delawaredigitaluniversity.us/",
+    // SoftLab Administration & Management Desk
+    adminDashboardUrl: "https://skill.delawaredigitaluniversity.us/dashboard",
+    // Student & Employer Global Credential Verification
+    verificationUrl: "https://delawaredigitaluniversity.us/verify/",
+    // TVET (Skill Development) Programs
+    tvetSkillUrl: "https://delawaredigitaluniversity.us/tvetddu/",
+  },
+
+  // Relationship description
+  disclaimer:
+    "Delaware Digital University is registered with the Delaware Department of State with registration number 7349298. DDU is a non-profit educational institution in the State of Delaware, USA. In partnership with SoftLab Global, graduates of accredited technical cohorts qualify for globally verifiable skill credentials and digital certificates.",
+} as const;
+
+export type DDUConfig = typeof DDU_CONFIG;

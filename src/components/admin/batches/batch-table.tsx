@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { BatchStatus, DeliveryMode } from "@prisma/client";
 import { api } from "@/lib/trpc/react";
-import { Eye, Edit2, Plus, Minus, Users, ClipboardCheck } from "lucide-react";
+import { Eye, Edit2, Plus, Minus, Users, ClipboardCheck, Trash2 } from "lucide-react";
 import { EditBatchDialog } from "./edit-batch-dialog";
 
 export interface BatchItem {
@@ -51,6 +51,17 @@ interface BatchTableProps {
 export function BatchTable({ batches, isLoading }: BatchTableProps) {
   const [editingBatch, setEditingBatch] = React.useState<BatchItem | null>(null);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
+  const utils = api.useUtils();
+
+  const deleteBatchMutation = api.batch.delete.useMutation({
+    onSuccess: () => {
+      utils.batch.list.invalidate();
+      alert("Batch cohort deleted successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete batch.");
+    },
+  });
 
   const toggleExpand = (id: string) => {
     setExpandedIds((prev) => {
@@ -241,6 +252,19 @@ export function BatchTable({ batches, isLoading }: BatchTableProps) {
                             >
                               <Eye className="w-4 h-4" />
                             </Link>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Permanently delete batch ${b.name} (${b.code})? Enrolled students will be unlinked and scheduled classes removed.`)) {
+                                  deleteBatchMutation.mutate({ id: b.id });
+                                }
+                              }}
+                              disabled={deleteBatchMutation.isPending}
+                              className="p-2 rounded hover:bg-red-50 text-red-600 transition-colors border border-red-200"
+                              title="Delete Batch"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
                           </div>
                         </div>
                       </TableCell>

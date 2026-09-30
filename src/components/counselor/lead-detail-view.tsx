@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2 } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2 } from "lucide-react";
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
@@ -33,6 +33,16 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
   const assignMutation = api.crm.assignLead.useMutation({
     onSuccess: () => {
       utils.crm.getLeadDetails.invalidate({ leadId });
+    },
+  });
+
+  const deleteLeadMutation = api.crm.deleteLead.useMutation({
+    onSuccess: () => {
+      alert("Lead deleted successfully.");
+      window.location.href = "/counselor/leads";
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete lead.");
     },
   });
 
@@ -230,6 +240,21 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
                   <span>Print Fee Receipt ({latestPayment.receiptNumber || latestPayment.transactionReference})</span>
                 </Button>
               )}
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  if (confirm(`Permanently delete lead "${lead.fullName}" (${lead.phone})? All activities, followups, and applications will be removed.`)) {
+                    deleteLeadMutation.mutate({ leadId: lead.id });
+                  }
+                }}
+                disabled={deleteLeadMutation.isPending}
+                className="border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Lead</span>
+              </Button>
             </div>
           </CardContent>
         </Card>

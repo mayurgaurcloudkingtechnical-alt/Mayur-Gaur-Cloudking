@@ -101,6 +101,18 @@ export const financeRouter = router({
       return FeeStructureService.updateFeeStructure(asAuthUser(ctx.user), input);
     }),
 
+  deleteFeeStructure: protectedProcedure
+    .input(z.object({ feeStructureId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!["SUPER_ADMIN", "DIRECTOR", "ADMIN"].includes(ctx.user.roleCode)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only administrators can delete fee structure records.",
+        });
+      }
+      return FeeStructureService.deleteFeeStructure(asAuthUser(ctx.user), input.feeStructureId);
+    }),
+
   // ==========================================
   // INSTALLMENTS
   // ==========================================

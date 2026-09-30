@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React from "react";
 import Link from "next/link";
@@ -28,6 +28,30 @@ export default function StudentCertificatesPage() {
         <p className="text-sm text-slate-600">
           Official, cryptographically verifiable credentials earned through completed courses.
         </p>
+      </div>
+
+      {/* Global Certification Card */}
+      <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 border border-emerald-500/30 rounded-2xl p-6 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+        <div className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-950/80 border border-emerald-700 text-emerald-400 text-xs font-semibold">
+            <span>Delaware Digital University (USA) Partner</span>
+          </div>
+          <h3 className="text-lg font-bold text-white">Global TVET Skill Credential Verification</h3>
+          <p className="text-xs text-slate-300 max-w-xl">
+            Students enrolled in dual-certification programs can verify their Delaware Digital University international credentials and transcripts on the official USA university verification desk.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href="https://delawaredigitaluniversity.us/verify/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm whitespace-nowrap"
+          >
+            <span>DDU Online Verification</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
 
       {!certificates || certificates.length === 0 ? (

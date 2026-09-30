@@ -575,6 +575,51 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
                   )}
                 </div>
               </div>
+
+              {/* Delaware Digital University USA Global Certification Card */}
+              <div className="bg-gradient-to-br from-slate-900 via-slate-950 to-emerald-950/70 p-6 sm:p-8 rounded-3xl border border-emerald-500/30 shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Award className="h-5 w-5" />
+                    </div>
+                    <h2 className="text-xl font-bold text-white">Global University Certification (USA)</h2>
+                  </div>
+                  <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-800">
+                    Dual Credential Option
+                  </span>
+                </div>
+
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Upon program completion, learners can opt to receive co-branded, globally verifiable credentials from{" "}
+                  <strong className="text-white">Delaware Digital University (USA)</strong>, registered under the State of Delaware Department of State (Reg #7349298, Dover, USA).
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-xs text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>International TVET Skill Transcript</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <span>Worldwide Online Employer Verification</span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800 flex flex-wrap items-center gap-3">
+                  <Button asChild variant="outline" className="border-emerald-600/50 bg-emerald-950/30 text-emerald-300 hover:bg-emerald-900/50 text-xs font-semibold h-8 rounded-xl">
+                    <Link href="/delaware-digital-university">
+                      Learn About USA Credential
+                      <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                    </Link>
+                  </Button>
+                  <Button asChild variant="ghost" className="text-slate-400 hover:text-white text-xs h-8">
+                    <a href="https://delawaredigitaluniversity.us/verify/" target="_blank" rel="noopener noreferrer">
+                      Verify Credential Desk
+                    </a>
+                  </Button>
+                </div>
+              </div>
             </div>
 
             {/* Right Col: Instant Buy Card, Official Flyer, Admissions Form & Support */}

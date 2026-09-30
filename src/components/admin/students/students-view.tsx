@@ -24,6 +24,7 @@ import {
   Calendar,
   IndianRupee,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { PaymentMethod } from "@prisma/client";
 
@@ -128,6 +129,16 @@ export function StudentsView() {
     },
     onError: (err) => {
       setNotification({ type: "error", message: err.message || "Failed to create student record." });
+    },
+  });
+
+  const deleteStudentMutation = api.admin.deleteStudent.useMutation({
+    onSuccess: () => {
+      refetch();
+      alert("Student record and all associated records deleted successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete student record.");
     },
   });
 
@@ -523,6 +534,19 @@ export function StudentsView() {
                               >
                                 <ClipboardCheck className="w-4 h-4" />
                               </Link>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (confirm(`Permanently delete student ${s.name} (${s.studentId})? All enrollments, fees, attendance, and account credentials will be removed.`)) {
+                                    deleteStudentMutation.mutate({ studentId: s.id });
+                                  }
+                                }}
+                                disabled={deleteStudentMutation.isPending}
+                                className="p-1.5 rounded border border-red-200 bg-red-50 hover:bg-red-100 text-red-600 transition-colors"
+                                title="Delete Student Record"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </div>
                         </td>

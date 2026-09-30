@@ -1241,5 +1241,29 @@ export const crmRouter = router({
     .mutation(async ({ input, ctx }) => {
       return CrmLeadService.updateFranchiseSale(asAuthUser(ctx.user), input);
     }),
+
+  /**
+   * Deletes a lead and its associated activities, followups, and calling items.
+   */
+  deleteLead: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
+    .input(z.object({ leadId: z.string() }))
+    .mutation(async ({ input, ctx }) => {
+      const lead = await db.lead.findUnique({
+        where: { id: input.leadId },
+      });
+      if (!lead) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
+      }
+
+      await db.$transaction(async (tx) => {
+        await tx.callingQueueItem.deleteMany({ where: { leadId: input.leadId } });
+        await tx.leadActivity.deleteMany({ where: { leadId: input.leadId } });
+        await tx.followUpHistory.deleteMany({ where: { leadId: input.leadId } });
+        await tx.admissionApplication.deleteMany({ where: { leadId: input.leadId } });
+        await tx.lead.delete({ where: { id: input.leadId } });
+      });
+
+      return { success: true };
+    }),
 });
 

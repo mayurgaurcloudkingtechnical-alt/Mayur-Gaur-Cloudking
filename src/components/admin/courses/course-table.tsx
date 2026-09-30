@@ -221,22 +221,20 @@ export function CourseTable({ courses, isLoading }: CourseTableProps) {
                         </Button>
                       )}
 
-                      {c._count.batches === 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0 text-red-400 hover:text-red-700"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => {
-                            if (confirm(`Permanently delete course "${c.title}"? This cannot be undone.`)) {
-                              deleteMutation.mutate({ id: c.id });
-                            }
-                          }}
-                          title="Delete Empty Course"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                        disabled={deleteMutation.isPending}
+                        onClick={() => {
+                          if (confirm(`Permanently delete course "${c.title}"? This cannot be undone.`)) {
+                            deleteMutation.mutate({ id: c.id });
+                          }
+                        }}
+                        title="Delete Course"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>

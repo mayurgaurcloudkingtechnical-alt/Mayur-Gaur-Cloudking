@@ -1734,4 +1734,106 @@ export const adminRouter = router({
 
       return idCard;
     }),
+
+  deleteStudent: requireRoleProcedure(privilegedAdminRoles)
+    .input(z.object({ studentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const student = await ctx.db.studentProfile.findUnique({
+        where: { id: input.studentId },
+        include: { user: true },
+      });
+
+      if (!student) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Student record not found." });
+      }
+
+      const userId = student.userId;
+
+      await ctx.db.$transaction(async (tx) => {
+        // 1. Delete ID Card
+        await tx.studentIdCard.deleteMany({ where: { studentId: input.studentId } });
+
+        // 2. Delete placement records
+        await tx.placementApplication.deleteMany({ where: { studentId: input.studentId } });
+        await tx.studentPlacementProfile.deleteMany({ where: { studentId: input.studentId } });
+
+        // 3. Delete certificates, exam attempts & attendance
+        await tx.certificate.deleteMany({ where: { studentId: input.studentId } });
+        await tx.examAttempt.deleteMany({ where: { studentId: input.studentId } });
+        await tx.attendanceEntry.deleteMany({ where: { studentId: input.studentId } });
+
+        // 4. Delete payments & fee structures
+        await tx.paymentTransaction.deleteMany({ where: { studentId: input.studentId } });
+        await tx.feeInstallment.deleteMany({
+          where: { feeStructure: { studentId: input.studentId } },
+        });
+        await tx.feeStructure.deleteMany({ where: { studentId: input.studentId } });
+
+        // 5. Delete enrollments
+        await tx.enrollment.deleteMany({ where: { studentId: input.studentId } });
+
+        // 6. Delete StudentProfile
+        await tx.studentProfile.delete({ where: { id: input.studentId } });
+
+        // 7. Delete User account if not assigned to another profile
+        if (userId) {
+          const isTrainer = await tx.trainerProfile.count({ where: { userId } });
+          if (!isTrainer) {
+            await tx.user.delete({ where: { id: userId } });
+          }
+        }
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "STUDENT_DELETED",
+        resourceType: "StudentProfile",
+        resourceId: input.studentId,
+        newData: {
+          studentName: `${student.user.firstName} ${student.user.lastName}`,
+          email: student.user.email,
+        },
+      });
+
+      return { success: true };
+    }),
+
+  deleteEnrollment: requireRoleProcedure(privilegedAdminRoles)
+    .input(z.object({ enrollmentId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const enrollment = await ctx.db.enrollment.findUnique({
+        where: { id: input.enrollmentId },
+        include: { course: true, student: { include: { user: true } } },
+      });
+
+      if (!enrollment) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Enrollment record not found." });
+      }
+
+      await ctx.db.$transaction(async (tx) => {
+        // Delete payment transactions for this enrollment
+        await tx.paymentTransaction.deleteMany({ where: { enrollmentId: input.enrollmentId } });
+        // Delete installments for fee structure of this enrollment
+        await tx.feeInstallment.deleteMany({
+          where: { feeStructure: { enrollmentId: input.enrollmentId } },
+        });
+        // Delete fee structure
+        await tx.feeStructure.deleteMany({ where: { enrollmentId: input.enrollmentId } });
+        // Delete enrollment
+        await tx.enrollment.delete({ where: { id: input.enrollmentId } });
+      });
+
+      await AuditService.log({
+        actorId: ctx.user.id,
+        action: "ENROLLMENT_DELETED",
+        resourceType: "Enrollment",
+        resourceId: input.enrollmentId,
+        newData: {
+          studentName: `${enrollment.student.user.firstName} ${enrollment.student.user.lastName}`,
+          courseTitle: enrollment.course.title,
+        },
+      });
+
+      return { success: true };
+    }),
 });

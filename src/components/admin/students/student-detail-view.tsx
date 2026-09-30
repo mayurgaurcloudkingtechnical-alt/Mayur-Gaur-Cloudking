@@ -318,6 +318,46 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
     },
   });
 
+  const deleteStudentMutation = api.admin.deleteStudent.useMutation({
+    onSuccess: () => {
+      alert("Student record deleted successfully.");
+      window.location.href = "/admin/students";
+    },
+    onError: (err) => {
+      setNotification({ type: "error", message: err.message || "Failed to delete student record." });
+    },
+  });
+
+  const deleteEnrollmentMutation = api.admin.deleteEnrollment.useMutation({
+    onSuccess: () => {
+      setNotification({ type: "success", message: "Course enrollment and linked fee structure deleted successfully." });
+      refetch();
+    },
+    onError: (err) => {
+      setNotification({ type: "error", message: err.message || "Failed to delete enrollment." });
+    },
+  });
+
+  const deletePaymentMutation = api.finance.deletePayment.useMutation({
+    onSuccess: () => {
+      setNotification({ type: "success", message: "Payment transaction deleted successfully." });
+      refetch();
+    },
+    onError: (err) => {
+      setNotification({ type: "error", message: err.message || "Failed to delete payment transaction." });
+    },
+  });
+
+  const deleteFeeStructureMutation = api.finance.deleteFeeStructure.useMutation({
+    onSuccess: () => {
+      setNotification({ type: "success", message: "Fee structure deleted successfully." });
+      refetch();
+    },
+    onError: (err) => {
+      setNotification({ type: "error", message: err.message || "Failed to delete fee structure." });
+    },
+  });
+
   const assignCourseMutation = api.admin.assignCourseToStudent.useMutation({
     onSuccess: () => {
       setNotification({ type: "success", message: "New course and fee structure successfully assigned!" });
@@ -483,6 +523,21 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
           >
             <PlusCircle className="h-4 w-4" />
             Assign New Course
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => {
+              if (confirm(`Permanently delete student ${student.user.firstName} ${student.user.lastName} (${student.studentId})? All enrollments, fee records, attendance, and account credentials will be removed.`)) {
+                deleteStudentMutation.mutate({ studentId: student.id });
+              }
+            }}
+            disabled={deleteStudentMutation.isPending}
+            className="border-red-200 bg-red-50 hover:bg-red-100 text-red-600 gap-1.5 shadow-sm"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete Student
           </Button>
         </div>
       </div>
@@ -1210,6 +1265,21 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                       <Calendar className="h-3.5 w-3.5 text-slate-500" />
                       {enrollment.batch ? "Change Batch" : "Assign Batch"}
                     </Button>
+
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (confirm(`Permanently remove enrollment in "${enrollment.course.title}" for this student? This will delete linked course fee records.`)) {
+                          deleteEnrollmentMutation.mutate({ enrollmentId: enrollment.id });
+                        }
+                      }}
+                      disabled={deleteEnrollmentMutation.isPending}
+                      className="text-xs border-red-200 bg-red-50 hover:bg-red-100 text-red-600 gap-1"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete Enrollment
+                    </Button>
                   </div>
                 </div>
 
@@ -1330,6 +1400,26 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
               >
                 <Edit3 className="h-3.5 w-3.5" />
                 <span>Edit Fee Structure</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const fs = student.enrollments[0]?.feeStructure;
+                  if (fs) {
+                    if (confirm(`Permanently delete this fee structure and all associated installments and payments?`)) {
+                      deleteFeeStructureMutation.mutate({ feeStructureId: fs.id });
+                    }
+                  } else {
+                    setNotification({ type: "error", message: "No active fee structure found for student." });
+                  }
+                }}
+                disabled={deleteFeeStructureMutation.isPending}
+                className="border-red-200 bg-red-50 hover:bg-red-100 text-red-600 text-xs gap-1.5 shadow-sm font-semibold"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                <span>Delete Fee Structure</span>
               </Button>
 
               <Button
@@ -1599,6 +1689,21 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                                     >
                                       <Printer className="h-3 w-3" />
                                       <span>Print Receipt</span>
+                                    </Button>
+
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => {
+                                        if (confirm(`Permanently delete payment transaction ${p.receiptNumber || p.transactionReference || p.id} of ₹${p.amount / 100}? Pending and paid amounts will adjust automatically.`)) {
+                                          deletePaymentMutation.mutate({ paymentId: p.id });
+                                        }
+                                      }}
+                                      disabled={deletePaymentMutation.isPending}
+                                      className="text-[10px] h-6 px-2 gap-1 text-red-600 border-red-200 hover:bg-red-50 font-semibold"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                      <span>Delete</span>
                                     </Button>
                                   </div>
                                 </td>

@@ -78,7 +78,7 @@ export default async function CoursesPage() {
                   100% Practical Labs & Placement Support
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-teal-300 shadow-sm backdrop-blur-md">
-                  ISO 9001:2015 Certified Curriculum
+                  Delaware Digital University (USA) Dual Certification
                 </span>
                 <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-cyan-300 shadow-sm backdrop-blur-md">
                   Live Cloud, DevOps & AI Deployments

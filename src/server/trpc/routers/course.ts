@@ -381,10 +381,10 @@ export const courseRouter = router({
         });
       }
 
-      if (course.batches.length > 0) {
+      if (course.batches.length > 0 && ctx.user.roleCode !== UserRoleCode.SUPER_ADMIN) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Cannot delete course with active batches (${course.batches.length} active). Please archive the course instead.`,
+          message: `Cannot delete course with active batches (${course.batches.length} active). Only Super Admin can override this.`,
         });
       }
 

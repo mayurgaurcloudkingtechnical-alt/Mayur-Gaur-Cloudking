@@ -31,6 +31,8 @@ import {
   Download,
   BookOpen,
   Laptop,
+  Globe,
+  ExternalLink,
 } from "lucide-react";
 
 export const metadata: Metadata = {
@@ -347,7 +349,124 @@ export default async function HomePage() {
       </section>
 
       {/* ==================================================================== */}
-      {/* 5. HIRING PARTNERS & RECENT PLACEMENTS WALL                          */}
+      {/* 5. GLOBAL CERTIFICATION & UNIVERSITY ACCREDITATIONS                  */}
+      {/* ==================================================================== */}
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-[#020817] via-slate-950 to-[#020817] text-white border-b border-slate-800 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:32px_32px] opacity-10 pointer-events-none" />
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto mb-14">
+            <span className="text-xs font-bold uppercase tracking-wider text-emerald-400 bg-emerald-950/80 px-3.5 py-1.5 rounded-full border border-emerald-800 inline-flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5" />
+              <span>International & Academic Accreditations</span>
+            </span>
+            <h2 className="mt-4 text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
+              Dual Global Recognition & University Affiliations
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-400">
+              SoftLab Global graduates earn globally verifiable credentials recognized by overseas employers, multinational tech firms, and higher education bodies.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Delaware Digital University USA */}
+            <div className="relative rounded-3xl p-8 bg-gradient-to-br from-slate-900/95 via-slate-950/95 to-slate-900/95 border border-emerald-500/30 hover:border-emerald-500 transition-all shadow-2xl flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-emerald-400 bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-800">
+                    USA Global Skill Partner
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">Reg #7349298 (Delaware, USA)</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  Delaware Digital University (USA)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Headquartered in City of Dover, Delaware, USA. Provides internationally recognized TVET skill certifications, international student transcripts, and worldwide online employer verification.
+                </p>
+                <div className="space-y-2 pt-2 text-xs text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>State of Delaware Registered International University</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Direct SoftLab Administration & Credential Desk</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+                    <span>Instant Public Online Employer Verification Desk</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-slate-800 flex flex-wrap gap-3">
+                <Button asChild className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs">
+                  <Link href="/delaware-digital-university">
+                    Explore USA Certification
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-slate-700 bg-slate-900 text-slate-300 hover:text-white text-xs">
+                  <a href="https://delawaredigitaluniversity.us/verify/" target="_blank" rel="noopener noreferrer">
+                    Verify Credential
+                    <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+
+            {/* Dr. Preeti Global University India */}
+            <div className="relative rounded-3xl p-8 bg-gradient-to-br from-slate-900/95 via-slate-950/95 to-slate-900/95 border border-sky-500/30 hover:border-sky-500 transition-all shadow-2xl flex flex-col justify-between">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-sky-400 bg-sky-950/70 px-3 py-1 rounded-full border border-sky-800">
+                    Indian University Partner
+                  </span>
+                  <span className="text-xs text-slate-400 font-mono">UGC Recognized</span>
+                </div>
+                <h3 className="text-xl sm:text-2xl font-black text-white">
+                  Dr. Preeti Global University (India)
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  Established state private university offering recognized academic degree, diploma, lateral entry, and research programs with career mentoring and placement by SoftLab Global.
+                </p>
+                <div className="space-y-2 pt-2 text-xs text-slate-300">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                    <span>UGC Recognized Degree & Professional Programs</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                    <span>Regular & Lateral Entry Schemes Available</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-sky-400 flex-shrink-0" />
+                    <span>Dual Degree + Professional SoftLab Industry Diploma</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-6 mt-6 border-t border-slate-800 flex flex-wrap gap-3">
+                <Button asChild className="bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs">
+                  <Link href="/dr-preeti-global-university">
+                    Explore University Programs
+                    <ArrowRight className="w-3.5 h-3.5 ml-1.5" />
+                  </Link>
+                </Button>
+                <Button asChild variant="outline" className="border-slate-700 bg-slate-900 text-slate-300 hover:text-white text-xs">
+                  <a href="https://delawaredigitaluniversity.us/" target="_blank" rel="noopener noreferrer">
+                    Official Portal
+                    <ExternalLink className="w-3.5 h-3.5 ml-1.5" />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ==================================================================== */}
+      {/* 6. HIRING PARTNERS & RECENT PLACEMENTS WALL                          */}
       {/* ==================================================================== */}
       <section className="py-16 sm:py-20 bg-slate-950 text-white border-b border-slate-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

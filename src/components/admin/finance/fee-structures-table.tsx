@@ -13,7 +13,7 @@ import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 import { EditFeeStructureDialog } from "./edit-fee-structure-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
-import { IndianRupee, Search, CreditCard, Download, Edit, Printer, Loader2, X, Filter } from "lucide-react";
+import { IndianRupee, Search, CreditCard, Download, Edit, Printer, Loader2, X, Filter, Trash2 } from "lucide-react";
 
 interface FeeStructuresTableProps {
   initialStudentId?: string;
@@ -49,6 +49,17 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
     paymentStatus: statusFilter,
     studentId: filterStudentId || undefined,
     limit: 25,
+  });
+
+  const deleteFeeMutation = api.finance.deleteFeeStructure.useMutation({
+    onSuccess: () => {
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      alert("Fee structure record deleted successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete fee structure.");
+    },
   });
 
   const getStatusBadge = (status: FeePaymentStatus) => {
@@ -362,6 +373,23 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                             <span className="hidden sm:inline">Collect</span>
                           </Button>
                         )}
+
+                        {/* Delete Fee Structure button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            if (confirm(`Permanently delete fee structure for ${studentFullName} (${fee.course.title})? All installments and transaction receipts will be removed.`)) {
+                              deleteFeeMutation.mutate({ feeStructureId: fee.id });
+                            }
+                          }}
+                          disabled={deleteFeeMutation.isPending}
+                          className="h-7 px-2 text-xs border-red-200 text-red-600 hover:bg-red-50 font-medium inline-flex items-center gap-1"
+                          title="Delete Fee Structure"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span className="hidden sm:inline">Delete</span>
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
