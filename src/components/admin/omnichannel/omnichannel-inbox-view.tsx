@@ -22,6 +22,7 @@ import {
   Clock,
   Sparkles,
   AlertTriangle,
+  PhoneCall,
 } from "lucide-react";
 
 export function OmnichannelInboxView() {
@@ -70,6 +71,17 @@ export function OmnichannelInboxView() {
     onSuccess: () => {
       alert("Official brochure sent via WhatsApp!");
       utils.omnichannel.getConversation.invalidate({ conversationId: selectedConvId! });
+    },
+  });
+
+  const triggerCallMutation = api.omnichannel.triggerAiCall.useMutation({
+    onSuccess: (data) => {
+      alert(`AI Call Completed!\nOutcome: ${data.result.callOutcome}\nSummary: ${data.summary}`);
+      utils.omnichannel.getConversation.invalidate({ conversationId: selectedConvId! });
+      utils.omnichannel.listConversations.invalidate();
+    },
+    onError: (err) => {
+      alert(`Call failed: ${err.message}`);
     },
   });
 
@@ -261,6 +273,17 @@ export function OmnichannelInboxView() {
                     disabled={sendBrochureMutation.isPending}
                   >
                     <FileText className="h-3.5 w-3.5 mr-1" /> Send Brochure
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                    onClick={() => triggerCallMutation.mutate({ leadId: activeConv.leadId })}
+                    disabled={triggerCallMutation.isPending}
+                  >
+                    <PhoneCall className={`h-3.5 w-3.5 mr-1 ${triggerCallMutation.isPending ? "animate-spin" : ""}`} />
+                    {triggerCallMutation.isPending ? "Calling..." : "Call Lead with AI"}
                   </Button>
                 </div>
               </div>

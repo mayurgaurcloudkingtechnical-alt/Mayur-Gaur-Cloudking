@@ -1,0 +1,25 @@
+appId: com.softlabglobal.lms
+productName: SoftLab Global LMS
+copyright: "Copyright © 2026 SoftLab Global"
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - "dist/**/*"
+  - "package.json"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: "SoftLab Global LMS"

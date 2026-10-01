@@ -1,0 +1,39 @@
+{
+  "name": "softlab-global-desktop",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SoftLab Global LMS Windows Desktop Application",
+  "main": "dist/electron/main.js",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"VITE,ELECTRON\" -c \"cyan,magenta\" \"vite\" \"wait-on tcp:5173 && cross-env NODE_ENV=development electron .\"",
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.node.json",
+    "build": "npm run build:renderer && npm run build:main",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.node.json --noEmit",
+    "package:win": "npm run build && electron-builder --win --x64"
+  },
+  "dependencies": {
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.451.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwind-merge": "^2.5.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.2",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^9.0.1",
+    "cross-env": "^7.0.3",
+    "electron": "^32.0.1",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.47",
+    "rimraf": "^6.0.1",
+    "tailwindcss": "^3.4.13",
+    "typescript": "^5.6.2",
+    "vite": "^5.4.8",
+    "wait-on": "^8.0.1"
+  }
+}

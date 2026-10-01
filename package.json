@@ -12,7 +12,10 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "desktop:dev": "npm --prefix desktop run dev",
+    "desktop:typecheck": "npm --prefix desktop run typecheck",
+    "desktop:build": "npm --prefix desktop run build"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

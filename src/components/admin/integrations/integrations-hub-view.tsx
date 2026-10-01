@@ -23,6 +23,13 @@ import {
   Sparkles,
   Key,
   Webhook,
+  RefreshCw,
+  Bot,
+  PhoneCall,
+  Layers,
+  Radio,
+  Check,
+  AlertTriangle,
 } from "lucide-react";
 
 export function IntegrationsHubView() {
@@ -31,6 +38,24 @@ export function IntegrationsHubView() {
   const { data: settingsData } = api.admin.getSystemSettings.useQuery();
   const gatewayStatus = api.payment.getGatewayStatus.useQuery();
   const razorpayConfig = settingsData?.razorpay;
+
+  const integrationsHealth = api.omnichannel.getIntegrationsHealth.useQuery();
+  const catalogStatus = api.omnichannel.getCatalogSyncStatus.useQuery();
+  const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+
+  const utils = api.useUtils();
+  const syncCatalogMutation = api.omnichannel.syncCatalog.useMutation({
+    onSuccess: (data) => {
+      setSyncFeedback(data.message);
+      utils.omnichannel.getCatalogSyncStatus.invalidate();
+      utils.omnichannel.getIntegrationsHealth.invalidate();
+      setTimeout(() => setSyncFeedback(null), 8000);
+    },
+    onError: (err) => {
+      setSyncFeedback(`Sync failed: ${err.message}`);
+      setTimeout(() => setSyncFeedback(null), 8000);
+    },
+  });
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -140,12 +165,205 @@ export function IntegrationsHubView() {
             Manage payment gateways, lead ingestion webhooks, transactional messaging, and infrastructure connectors.
           </p>
         </div>
-        <Link href="/admin/settings">
-          <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-xs">
-            <Settings className="h-4 w-4" />
-            Security & Authority Settings
+        <div className="flex items-center gap-2">
+          <Link href="/admin/ai-command">
+            <Button variant="outline" className="text-xs gap-1.5 border-slate-300">
+              <Bot className="h-3.5 w-3.5 text-blue-600" />
+              AI Command Center
+            </Button>
+          </Link>
+          <Link href="/admin/settings">
+            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-xs">
+              <Settings className="h-4 w-4" />
+              Security Settings
+            </Button>
+          </Link>
+        </div>
+      </div>
+
+      {/* Sync Feedback Toast */}
+      {syncFeedback && (
+        <div className="p-3.5 bg-blue-50 border border-blue-200 rounded-xl text-blue-900 text-xs flex items-center justify-between animate-fade-in shadow-sm">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            <span className="font-medium">{syncFeedback}</span>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => setSyncFeedback(null)}
+            className="h-6 px-2 text-xs text-blue-700 hover:bg-blue-100"
+          >
+            Dismiss
           </Button>
-        </Link>
+        </div>
+      )}
+
+      {/* Production Omnichannel & Meta WhatsApp Health Sentinel */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-white shadow-lg space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <Radio className="h-4 w-4 animate-pulse" />
+              </span>
+              <h4 className="text-base font-bold text-white tracking-tight">
+                AI Omnichannel Admissions & Meta WhatsApp Production Sentinel
+              </h4>
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Central Lead engine, Meta WhatsApp Cloud API, AI Voice calling, and LMS Course Master live telemetry.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              onClick={() => syncCatalogMutation.mutate()}
+              disabled={syncCatalogMutation.isPending}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs gap-1.5 font-medium shadow-sm"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${syncCatalogMutation.isPending ? "animate-spin" : ""}`} />
+              {syncCatalogMutation.isPending ? "Syncing Catalogue..." : "Sync WhatsApp Catalogue"}
+            </Button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: WhatsApp Business Cloud API */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <MessageSquare className="h-4 w-4 text-emerald-400" />
+                  Meta WhatsApp API
+                </span>
+                <Badge
+                  className={
+                    integrationsHealth.data?.whatsapp.status === "CONNECTED"
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px]"
+                      : "bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]"
+                  }
+                >
+                  {integrationsHealth.data?.whatsapp.status || "CODE_READY"}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Webhook: <span className="font-mono text-emerald-300">/api/webhooks/whatsapp</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Verify Token: <span className="font-mono text-slate-300">{integrationsHealth.data?.whatsapp.verifyToken || "soft••••••"}</span>
+              </p>
+            </div>
+
+            <div className="border-t border-slate-700 pt-2 text-[10px] text-slate-400 space-y-0.5">
+              <div className="flex justify-between">
+                <span>Last Inbound:</span>
+                <span className="text-slate-200">
+                  {integrationsHealth.data?.whatsapp.lastInboundMessageAt
+                    ? new Date(integrationsHealth.data.whatsapp.lastInboundMessageAt).toLocaleTimeString("en-IN")
+                    : "No inbound yet"}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Last Outbound:</span>
+                <span className="text-slate-200">
+                  {integrationsHealth.data?.whatsapp.lastOutboundMessageAt
+                    ? new Date(integrationsHealth.data.whatsapp.lastOutboundMessageAt).toLocaleTimeString("en-IN")
+                    : "Ready to dispatch"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: WhatsApp Catalogue Sync */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Layers className="h-4 w-4 text-purple-400" />
+                  WhatsApp Catalogue
+                </span>
+                <Badge
+                  className={
+                    catalogStatus.data?.status === "CONNECTED"
+                      ? "bg-purple-500/20 text-purple-300 border-purple-500/40 text-[10px]"
+                      : "bg-blue-500/20 text-blue-300 border-blue-500/40 text-[10px]"
+                  }
+                >
+                  {catalogStatus.data?.status || "CODE_READY"}
+                </Badge>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                LMS Course Master: <span className="font-semibold text-white">{catalogStatus.data?.totalCourses ?? 46} Courses</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Catalogue Mapped: <span className="font-semibold text-emerald-400">{catalogStatus.data?.syncedCourses ?? 0}</span>
+              </p>
+            </div>
+
+            <div className="border-t border-slate-700 pt-2 text-[10px] text-slate-400 flex justify-between">
+              <span>Last Sync:</span>
+              <span className="text-slate-200">
+                {catalogStatus.data?.lastSyncAt
+                  ? new Date(catalogStatus.data.lastSyncAt).toLocaleTimeString("en-IN")
+                  : "Sync pending"}
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: AI Admissions Counselor */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <Bot className="h-4 w-4 text-sky-400" />
+                  AI Counselor
+                </span>
+                <Badge className="bg-sky-500/20 text-sky-300 border-sky-500/40 text-[10px]">
+                  ACTIVE & GROUNDED
+                </Badge>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Knowledge Base: <span className="text-white font-medium">14 Grounded Domains</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Languages: <span className="text-emerald-400 font-medium">English, Hindi, Hinglish</span>
+              </p>
+            </div>
+
+            <div className="border-t border-slate-700 pt-2 text-[10px] text-slate-400 flex justify-between">
+              <span>Auto-Escalation:</span>
+              <span className="text-emerald-300 font-medium">Discounts & Grievances</span>
+            </div>
+          </div>
+
+          {/* Card 4: AI Voice Calling Agent */}
+          <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <PhoneCall className="h-4 w-4 text-amber-400" />
+                  AI Voice Agent
+                </span>
+                <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
+                  READY
+                </Badge>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Model: <span className="text-white font-medium">SoftLab Neural Agent</span>
+              </p>
+              <p className="text-[11px] text-slate-400">
+                Context Handover: <span className="text-emerald-400 font-medium">WhatsApp History Synced</span>
+              </p>
+            </div>
+
+            <div className="border-t border-slate-700 pt-2 text-[10px] text-slate-400 flex justify-between">
+              <span>Campus Lab:</span>
+              <span className="text-slate-200">Civil Lines, Prayagraj</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Dual Lead Ads Webhook Credentials Banner */}

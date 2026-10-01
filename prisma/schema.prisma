@@ -462,6 +462,20 @@ model Course {
   lateralEntryFee   Int?          @default(0) // in Paise
   isLateralEligible Boolean       @default(false)
 
+  // Single Course Master & WhatsApp Catalogue Synchronization
+  courseCode             String?
+  discountedFee          Int?          // in Paise
+  emiPlans               Json?
+  placementInfo          String?       @default("100% Placement Support with 1,200+ Corporate Hiring Partners")
+  mode                   String?       @default("HYBRID") // "CLASSROOM", "ONLINE", "HYBRID"
+  branch                 String?       @default("Civil Lines, Prayagraj")
+  brochureUrl            String?
+  metaCatalogId          String?
+  metaProductId          String?
+  whatsappCatalogStatus  String?       @default("PENDING") // "PENDING", "SYNCED", "ERROR", "ARCHIVED"
+  lastCatalogSyncAt      DateTime?
+  catalogSyncError       String?
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   deletedAt     DateTime?

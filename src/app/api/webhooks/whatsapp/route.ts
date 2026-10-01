@@ -3,15 +3,15 @@ import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
 import { OmnichannelInboxService } from "@/server/services/omnichannel-inbox.service";
 import { AiCounselorService } from "@/server/services/ai-counselor.service";
+import { AiCallingAgentService } from "@/server/services/ai-calling-agent.service";
 import { db } from "@/server/db/client";
 import { LeadSource } from "@prisma/client";
+import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
 /**
- * WhatsApp Cloud API Webhook
- * GET: Verification challenge from Meta Developer Portal
- * POST: Incoming WhatsApp message / prospective lead / AI Counselor auto-replies
+ * WhatsApp Cloud API Webhook Verification (GET)
  */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -25,26 +25,73 @@ export async function GET(req: NextRequest) {
     "softlab_whatsapp_2026";
 
   if (mode === "subscribe" && token === expectedToken) {
+    console.log("[WhatsApp Webhook] Verification successful for Meta challenge.");
     return new Response(challenge || "", { status: 200 });
   }
 
   return NextResponse.json({
     status: "active",
-    platform: "WhatsApp Cloud API & Business Messaging",
-    message: "SoftLab Global WhatsApp Webhook active",
+    platform: "Official Meta WhatsApp Business Cloud API & Webhook Sentinel",
+    mode: mode || "health_check",
+    verified: false,
+    message: "SoftLab Global WhatsApp Webhook active. Awaiting subscribe challenge.",
   });
 }
 
+/**
+ * Incoming WhatsApp Message & Status Webhook (POST)
+ */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    const signature = req.headers.get("x-hub-signature-256");
+    const appSecret = process.env.WHATSAPP_APP_SECRET;
 
-    // Helper to process an incoming WhatsApp message
-    const processMessage = async (fromPhone: string, senderName: string, messageText: string, rawPayload: any) => {
+    // 1. Signature validation (Phase 18: Security & Reliability)
+    if (appSecret && signature) {
+      const hmac = crypto.createHmac("sha256", appSecret);
+      const digest = `sha256=${hmac.update(rawBody).digest("hex")}`;
+      if (signature !== digest) {
+        console.warn("[WhatsApp Webhook Warning]: Invalid webhook signature rejected.");
+        return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+      }
+    }
+
+    let body: any = {};
+    try {
+      body = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
+    }
+
+    // Process a single incoming message
+    const processMessage = async (
+      fromPhone: string,
+      senderName: string,
+      messageText: string,
+      msgId: string,
+      rawPayload: any
+    ) => {
       const trimmedText = messageText.trim();
       const lowerText = trimmedText.toLowerCase();
 
-      // 1. Check for Opt-Out
+      // Idempotency: skip already processed message ID
+      if (msgId) {
+        const existingMsg = await db.omnichannelMessage.findFirst({
+          where: {
+            metadata: {
+              path: ["wamid"],
+              equals: msgId,
+            },
+          },
+        });
+        if (existingMsg) {
+          console.log(`[WhatsApp Webhook] Duplicate message skipped: ${msgId}`);
+          return;
+        }
+      }
+
+      // Check for Opt-Out (STOP / UNSUBSCRIBE)
       if (lowerText === "stop" || lowerText === "unsubscribe" || lowerText === "optout") {
         await WhatsAppBusinessService.handleOptOut(fromPhone, "User sent STOP via WhatsApp");
         await WhatsAppBusinessService.sendMessage({
@@ -54,7 +101,7 @@ export async function POST(req: NextRequest) {
         return;
       }
 
-      // 2. Ingest or fetch lead
+      // Ingest / Deduplicate Lead in CRM
       const ingestRes = await CrmIngestionService.ingestLead({
         fullName: senderName,
         phone: fromPhone,
@@ -66,10 +113,14 @@ export async function POST(req: NextRequest) {
 
       const leadId = ingestRes.leadId;
 
-      // 3. Attach to OmnichannelConversation
-      const conversation = await OmnichannelInboxService.getOrCreateConversation(leadId, "WHATSAPP", fromPhone);
+      // Attach or create Omnichannel Conversation
+      const conversation = await OmnichannelInboxService.getOrCreateConversation(
+        leadId,
+        "WHATSAPP",
+        fromPhone
+      );
 
-      // 4. Save Inbound Message
+      // Record incoming message in DB
       await OmnichannelInboxService.addMessage({
         conversationId: conversation.id,
         senderType: "LEAD",
@@ -77,15 +128,25 @@ export async function POST(req: NextRequest) {
         channel: "WHATSAPP",
         messageType: "TEXT",
         content: trimmedText,
+        metadata: {
+          wamid: msgId,
+        },
         rawPayload,
       });
 
-      // 5. If conversation is managed by AI, invoke AI Counselor
+      // If conversation is handled by AI, invoke AI Counselor
       if (conversation.status === "AI_HANDLING") {
         const lead = await db.lead.findUnique({
           where: { id: leadId },
           include: { course: true },
         });
+
+        // Determine ongoing language from previous AI message if available
+        const lastAiMsg = await db.omnichannelMessage.findFirst({
+          where: { conversationId: conversation.id, senderType: "AI_AGENT" },
+          orderBy: { createdAt: "desc" },
+        });
+        const existingLang = (lastAiMsg?.metadata as any)?.language;
 
         const aiResult = await AiCounselorService.counsel({
           leadId,
@@ -94,23 +155,41 @@ export async function POST(req: NextRequest) {
           courseName: lead?.course?.title,
           userMessage: trimmedText,
           channel: "WHATSAPP",
+          conversationLanguage: existingLang,
         });
 
-        // Update lead score, temperature, intent
+        // Update lead score, temperature, and qualifications
+        const qualificationData: any = {};
+        if (aiResult.qualificationExtracted?.education) {
+          qualificationData.qualification = aiResult.qualificationExtracted.education;
+        }
+
         await db.lead.update({
           where: { id: leadId },
           data: {
             leadScore: aiResult.leadScore,
             temperature: aiResult.temperature,
+            lastInteraction: new Date(),
+            ...qualificationData,
           },
         });
 
-        // Send AI Counselor response on WhatsApp
-        await WhatsAppBusinessService.sendMessage({
-          toPhone: fromPhone,
-          text: aiResult.replyText,
-          leadId,
-        });
+        // Dispatch AI Counselor response via WhatsApp
+        if (aiResult.suggestedAction === "SEND_BROCHURE" && aiResult.matchedCourse) {
+          await WhatsAppBusinessService.sendCourseBrochure(
+            fromPhone,
+            senderName,
+            aiResult.matchedCourse.courseName,
+            aiResult.matchedCourse.brochureUrl,
+            leadId
+          );
+        } else {
+          await WhatsAppBusinessService.sendMessage({
+            toPhone: fromPhone,
+            text: aiResult.replyText,
+            leadId,
+          });
+        }
 
         // Save Outbound AI Counselor Message
         await OmnichannelInboxService.addMessage({
@@ -124,30 +203,54 @@ export async function POST(req: NextRequest) {
             intent: aiResult.intent,
             score: aiResult.leadScore,
             confidence: aiResult.confidence,
+            language: aiResult.detectedLanguage,
+            course: aiResult.matchedCourse?.courseName,
           },
         });
 
-        // If escalation is flagged (e.g. discount query or complaint), flag conversation for human
+        // If human escalation is required, flag conversation
         if (aiResult.escalationRequired) {
           await db.omnichannelConversation.update({
             where: { id: conversation.id },
             data: { status: "NEEDS_HUMAN" },
           });
         }
+
+        // If user requested a callback and lead is HOT, initiate AI voice call
+        if (aiResult.intent === "CALLBACK_REQUEST" || trimmedText.toLowerCase().includes("call me")) {
+          try {
+            await AiCallingAgentService.triggerDirectLeadCall({
+              leadId,
+              preferredLanguage: aiResult.detectedLanguage === "ENGLISH" ? "English" : "Hindi",
+            });
+          } catch (callErr: any) {
+            console.error("[AI Call Trigger Error]:", callErr.message);
+          }
+        }
       }
     };
 
-    // Standard WhatsApp Cloud API payload format
+    // 2. Standard WhatsApp Cloud API Payload Structure
     if (body.object === "whatsapp_business_account" && Array.isArray(body.entry)) {
       for (const entry of body.entry) {
         if (Array.isArray(entry.changes)) {
           for (const change of entry.changes) {
             const value = change.value;
+
+            // Handle delivery & read status updates
+            if (value && Array.isArray(value.statuses)) {
+              for (const statusObj of value.statuses) {
+                console.log(`[WhatsApp Status] Message ${statusObj.id} status: ${statusObj.status}`);
+              }
+            }
+
+            // Handle incoming messages
             if (value && Array.isArray(value.messages)) {
               for (const msg of value.messages) {
-                const fromPhone = msg.from; // e.g. "919876543210"
+                const fromPhone = msg.from;
                 const contact = value.contacts?.find((c: any) => c.wa_id === fromPhone);
                 const senderName = contact?.profile?.name || "WhatsApp Inquirer";
+                const msgId = msg.id || "";
 
                 let messageText = "";
                 if (msg.type === "text") {
@@ -162,7 +265,7 @@ export async function POST(req: NextRequest) {
                 }
 
                 if (fromPhone && messageText) {
-                  await processMessage(fromPhone, senderName, messageText, msg);
+                  await processMessage(fromPhone, senderName, messageText, msgId, msg);
                 }
               }
             }
@@ -173,21 +276,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "success", received: true });
     }
 
-    // Direct / Zapier / Twilio WhatsApp payload format
+    // 3. Direct / Sandbox fallback payload format
     const phone = body.phone || body.From || body.from || body.mobile || "";
     const fullName = body.name || body.fullName || body.ProfileName || "WhatsApp User";
     const notes = body.message || body.Body || body.text || body.notes || "WhatsApp lead inquiry";
+    const msgId = body.messageId || body.id || `direct_${Date.now()}`;
 
     if (!phone || phone.replace(/\D/g, "").length < 10) {
       return NextResponse.json({ status: "ignored", message: "No valid phone number" }, { status: 200 });
     }
 
-    await processMessage(phone, fullName, notes, body);
+    await processMessage(phone, fullName, notes, msgId, body);
 
-    return NextResponse.json({
-      status: "success",
-      code: 200,
-    });
+    return NextResponse.json({ status: "success", code: 200 });
   } catch (error: any) {
     console.error("[WhatsAppWebhook Error]:", error);
     return NextResponse.json(

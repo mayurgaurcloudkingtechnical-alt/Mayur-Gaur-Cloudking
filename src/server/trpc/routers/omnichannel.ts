@@ -3,6 +3,8 @@ import { router, protectedProcedure } from "../init";
 import { TRPCError } from "@trpc/server";
 import { OmnichannelInboxService } from "@/server/services/omnichannel-inbox.service";
 import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
+import { AiCallingAgentService } from "@/server/services/ai-calling-agent.service";
+import { WhatsAppCatalogueSyncService } from "@/server/services/whatsapp-catalogue-sync.service";
 import { db } from "@/server/db/client";
 
 export const omnichannelRouter = router({
@@ -271,4 +273,43 @@ export const omnichannelRouter = router({
         },
       });
     }),
+
+  /**
+   * Trigger an instant AI voice call to a lead with previous WhatsApp context loaded
+   */
+  triggerAiCall: protectedProcedure
+    .input(
+      z.object({
+        leadId: z.string(),
+        preferredLanguage: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return AiCallingAgentService.triggerDirectLeadCall({
+        leadId: input.leadId,
+        performerUserId: ctx.user.id,
+        preferredLanguage: input.preferredLanguage,
+      });
+    }),
+
+  /**
+   * Super Admin: Synchronize LMS Course Master with Meta WhatsApp Business Catalogue
+   */
+  syncCatalog: protectedProcedure.mutation(async () => {
+    return WhatsAppCatalogueSyncService.syncAllCourses();
+  }),
+
+  /**
+   * Get current catalogue synchronization status
+   */
+  getCatalogSyncStatus: protectedProcedure.query(async () => {
+    return WhatsAppCatalogueSyncService.getCatalogueStatus();
+  }),
+
+  /**
+   * Get complete omnichannel and external integrations health check
+   */
+  getIntegrationsHealth: protectedProcedure.query(async () => {
+    return WhatsAppBusinessService.getSystemIntegrationsHealth();
+  }),
 });

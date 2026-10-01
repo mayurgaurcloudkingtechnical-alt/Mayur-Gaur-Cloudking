@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2, CreditCard, Bot } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2, CreditCard, Bot, PhoneCall } from "lucide-react";
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
@@ -53,6 +53,15 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
       utils.crm.getLeadDetails.invalidate({ leadId });
     },
     onError: (err) => alert(err.message),
+  });
+
+  const triggerAiCallMutation = api.omnichannel.triggerAiCall.useMutation({
+    onSuccess: (data) => {
+      alert(`AI Call Completed!\nOutcome: ${data.result.callOutcome}\nSummary: ${data.summary}`);
+      utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
+      utils.crm.getLeadDetails.invalidate({ leadId });
+    },
+    onError: (err) => alert(`Call failed: ${err.message}`),
   });
 
   const deleteLeadMutation = api.crm.deleteLead.useMutation({
@@ -290,6 +299,17 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
               >
                 <CreditCard className="h-3.5 w-3.5 text-cyan-600" />
                 <span>Send Razorpay Link</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => triggerAiCallMutation.mutate({ leadId: lead.id })}
+                disabled={triggerAiCallMutation.isPending}
+                className="border-amber-300 text-amber-800 hover:bg-amber-50 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <PhoneCall className={`h-3.5 w-3.5 text-amber-600 ${triggerAiCallMutation.isPending ? "animate-spin" : ""}`} />
+                <span>{triggerAiCallMutation.isPending ? "Connecting AI Call..." : "Call Lead with AI"}</span>
               </Button>
 
               <Button

@@ -1,5 +1,6 @@
-import { CallingOutcome } from "@prisma/client";
+import { CallingOutcome, LeadStatus } from "@prisma/client";
 import { SoftLabKnowledgeService } from "./softlab-knowledge.service";
+import { db } from "@/server/db/client";
 
 export interface ConversationTurn {
   role: "agent" | "lead";
@@ -334,4 +335,122 @@ export class AiCallingAgentService {
       humanHandoffRequired,
     };
   }
+
+  /**
+   * Conducts an AI voice call for a specific CRM lead, loading previous WhatsApp context
+   */
+  public static async triggerDirectLeadCall(params: {
+    leadId: string;
+    performerUserId?: string;
+    preferredLanguage?: string;
+  }): Promise<{ success: boolean; result: ExtractedCallResult; summary: string }> {
+    const lead = await db.lead.findUnique({
+      where: { id: params.leadId },
+      include: {
+        course: true,
+        conversations: {
+          include: {
+            messages: {
+              orderBy: { createdAt: "desc" },
+              take: 5,
+            },
+          },
+        },
+      },
+    });
+
+    if (!lead) {
+      throw new Error(`Lead ${params.leadId} not found for AI Voice call.`);
+    }
+
+    // Extract recent WhatsApp conversation history if available
+    const waConvo = lead.conversations.find((c) => c.channel === "WHATSAPP");
+    const recentMessages = waConvo?.messages?.slice().reverse() || [];
+    const conversationSummary = recentMessages.length > 0
+      ? recentMessages.map((m) => `${m.senderName}: "${m.content}"`).join(" | ")
+      : undefined;
+
+    // Detect language from previous communication if not explicitly provided
+    let language = params.preferredLanguage || "Hindi";
+    if (conversationSummary && conversationSummary.toLowerCase().includes("in english")) {
+      language = "English";
+    }
+
+    const callResult = await this.simulateRealisticCall({
+      leadName: lead.fullName,
+      phone: lead.phone,
+      courseTitle: lead.course?.title || "Full Stack & AI Development",
+      language,
+      remarks: conversationSummary ? `WhatsApp context: ${conversationSummary}` : undefined,
+      simulatedScenario: "INTERESTED_STUDENT",
+    });
+
+    // 1. Record call on CustomerTimelineEvent
+    await db.customerTimelineEvent.create({
+      data: {
+        leadId: lead.id,
+        eventType: "CALL_COMPLETED",
+        source: "AI_CALLING",
+        title: `AI Voice Call Completed (${callResult.callOutcome})`,
+        summary: callResult.conversationSummary,
+        metadata: {
+          interestLevel: callResult.interestLevel,
+          durationSeconds: callResult.durationSeconds,
+          education: callResult.education,
+          learningMode: callResult.learningMode,
+          transcriptTurnsCount: callResult.transcript.length,
+          recommendedAction: callResult.recommendedAction,
+        },
+      },
+    });
+
+    // 2. Attach call transcript to Omnichannel conversation
+    if (waConvo) {
+      await db.omnichannelMessage.create({
+        data: {
+          conversationId: waConvo.id,
+          senderType: "AI_AGENT",
+          senderName: "SoftLab AI Voice Agent",
+          channel: "VOICE_CALL",
+          messageType: "TRANSCRIPT",
+          content: `📞 Voice Call Completed (${callResult.durationSeconds}s)\nOutcome: ${callResult.callOutcome}\nSummary: ${callResult.conversationSummary}\nRecommended Action: ${callResult.recommendedAction}`,
+          metadata: {
+            transcript: callResult.transcript as any,
+            outcome: callResult.callOutcome,
+            score: callResult.interestLevel === "HOT" ? 90 : 75,
+          } as any,
+        },
+      });
+    }
+
+    // 3. Update Lead score and temperature
+    const newScore = Math.max(lead.leadScore || 50, callResult.interestLevel === "HOT" ? 90 : 75);
+    const newStatus =
+      callResult.interestLevel === "HOT"
+        ? LeadStatus.INTERESTED
+        : lead.status === LeadStatus.NEW
+        ? LeadStatus.CONTACTED
+        : lead.status;
+
+    await db.lead.update({
+      where: { id: lead.id },
+      data: {
+        leadScore: newScore,
+        temperature: callResult.interestLevel === "HOT" ? "HOT" : "WARM",
+        status: newStatus,
+        lastInteraction: new Date(),
+        preferredCallbackTime: callResult.callbackTimeText,
+        notes: lead.notes
+          ? `${lead.notes}\n[AI Call Summary]: ${callResult.conversationSummary}`
+          : `[AI Call Summary]: ${callResult.conversationSummary}`,
+      },
+    });
+
+    return {
+      success: true,
+      result: callResult,
+      summary: callResult.conversationSummary,
+    };
+  }
 }
+
