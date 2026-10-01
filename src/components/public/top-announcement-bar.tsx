@@ -5,11 +5,11 @@ import { SITE_CONFIG } from "@/lib/constants/site";
 
 export function TopAnnouncementBar() {
   return (
-    <div className="bg-slate-900 text-slate-200 border-b border-slate-800 text-xs hidden md:block">
+    <div className="bg-slate-900 text-slate-200 border-b border-slate-800 text-xs hidden md:block overflow-x-clip">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           {/* Left: Contact Hotlines */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4 lg:gap-6 whitespace-nowrap">
             <a
               href={`tel:${SITE_CONFIG.contact.phoneTel}`}
               className="flex items-center gap-1.5 hover:text-emerald-400 transition-colors font-medium"
@@ -24,7 +24,7 @@ export function TopAnnouncementBar() {
               <Mail className="h-3.5 w-3.5 text-emerald-400" />
               <span>{SITE_CONFIG.contact.admissionsEmail}</span>
             </a>
-            <div className="flex items-center gap-1.5 text-slate-400">
+            <div className="hidden lg:flex items-center gap-1.5 text-slate-400">
               <MapPin className="h-3.5 w-3.5 text-emerald-400" />
               <span>Civil Lines Campus, Prayagraj</span>
             </div>

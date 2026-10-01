@@ -4,6 +4,7 @@ import Image from "next/image";
 interface SoftlabLogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   showTagline?: boolean;
+  showSubTagline?: boolean;
   className?: string;
   variant?: "light" | "dark";
   layout?: "stacked" | "inline";
@@ -12,6 +13,7 @@ interface SoftlabLogoProps {
 export function SoftlabLogo({
   size = "md",
   showTagline = true,
+  showSubTagline = false,
   className = "",
   variant = "light",
   layout = "stacked",
@@ -139,17 +141,19 @@ export function SoftlabLogo({
 
         {/* Tagline */}
         {showTagline && (
-          <div className="flex flex-col mt-1">
+          <div className="flex flex-col mt-0.5 whitespace-nowrap">
             <span
               className={`font-bold tracking-wider uppercase ${config.sub} ${taglineColor}`}
             >
               Learn Today • Code Tomorrow
             </span>
-            <span
-              className={`text-[9px] tracking-tight ${subTaglineColor} hidden sm:inline`}
-            >
-              Center for Excellence • Prayagraj
-            </span>
+            {showSubTagline && (
+              <span
+                className={`text-[9px] tracking-tight ${subTaglineColor}`}
+              >
+                Center for Excellence • Prayagraj
+              </span>
+            )}
           </div>
         )}
       </div>
