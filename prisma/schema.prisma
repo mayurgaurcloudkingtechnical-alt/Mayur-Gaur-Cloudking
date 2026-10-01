@@ -300,6 +300,12 @@ model User {
   // Corporate Services Management
   serviceEnquiries      ServiceEnquiry[]   @relation("ServiceEnquiryCounselor")
 
+  // Omnichannel, AI Knowledge & Escalations
+  timelineActorEvents            CustomerTimelineEvent[]    @relation("TimelineActor")
+  assignedOmnichannelConversations OmnichannelConversation[] @relation("ConversationStaffAssignee")
+  createdAiKnowledgeDocs         AiKnowledgeDoc[]           @relation("AiKnowledgeCreator")
+  assignedEscalations            EscalationTask[]           @relation("EscalationStaffAssignee")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -786,6 +792,27 @@ model Lead {
   universityProgram           String?
   universitySpecialization    String?
 
+  // Marketing Attribution & UTMs
+  utmSource                   String?
+  utmMedium                   String?
+  utmCampaign                 String?
+  utmContent                  String?
+  utmTerm                     String?
+
+  // Omnichannel Qualification, Scoring & Preferences
+  preferredContactMethod      String?      @default("WHATSAPP") // "WHATSAPP", "CALL", "EMAIL"
+  preferredCallbackTime       String?
+  objections                  String?      @db.Text
+  temperature                 String?      @default("WARM")     // "HOT", "WARM", "COLD"
+  leadScore                   Int?         @default(50)         // 0 to 100
+  paymentStatus               String?      @default("NONE")     // "NONE", "LINK_SENT", "PARTIAL", "COMPLETED", "FAILED"
+  lmsStatus                   String?      @default("NONE")     // "NONE", "ACCOUNT_CREATED", "ACTIVE", "ENROLLED"
+  admissionStatus             String?      @default("NONE")     // "NONE", "APPLICATION_SUBMITTED", "APPROVED", "ENROLLED"
+  lastInteraction             DateTime?
+  lostReason                  String?
+  isOptedOut                  Boolean      @default(false)
+  optOutDate                  DateTime?
+
   createdById         String?
   createdBy           User?        @relation("LeadCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt           DateTime     @default(now())
@@ -796,6 +823,13 @@ model Lead {
   applications        AdmissionApplication[]
   convertedFranchise  Franchise?             @relation("LeadFranchise")
   callingQueueItems   CallingQueueItem[]
+  
+  // Omnichannel & Automation Relations
+  timelineEvents       CustomerTimelineEvent[]
+  conversations        OmnichannelConversation[]
+  automationStates     AutomationSequenceState[]
+  escalationTasks      EscalationTask[]
+  razorpayPaymentLinks RazorpayPaymentLink[]
 
   @@index([email])
   @@index([phone])
@@ -807,6 +841,10 @@ model Lead {
   @@index([nextFollowUp])
   @@index([interestedCourseId])
   @@index([franchiseState])
+  @@index([temperature])
+  @@index([paymentStatus])
+  @@index([lmsStatus])
+  @@index([isOptedOut])
   @@map("leads")
 }
 
@@ -897,6 +935,7 @@ model AdmissionApplication {
   convertedStudentProfileId String?          @unique
   convertedStudentProfile   StudentProfile?  @relation(fields: [convertedStudentProfileId], references: [id], onDelete: SetNull)
   payments                  PaymentTransaction[]
+  razorpayPaymentLinks      RazorpayPaymentLink[]
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
 
@@ -2546,6 +2585,179 @@ model ServiceEnquiryActivity {
 
   @@map("service_enquiry_activities")
 }
+
+// ==============================================================================
+// 20. OMNICHANNEL ADMISSIONS, AI KNOWLEDGE & WORKFLOW AUTOMATION
+// ==============================================================================
+
+model CustomerTimelineEvent {
+  id          String   @id @default(cuid())
+  leadId      String
+  lead        Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  eventType   String   // "WEB_ENQUIRY", "WHATSAPP_INBOUND", "WHATSAPP_OUTBOUND", "AI_VOICE_CALL", "COUNSELOR_NOTE", "PAYMENT_LINK_SENT", "PAYMENT_RECEIVED", "ADMISSION_CONFIRMED", "LMS_ENROLLED", "ESCALATION"
+  source      String   // "WEBSITE", "WHATSAPP", "AI_CALLING", "RAZORPAY", "LMS", "COUNSELOR"
+  title       String
+  summary     String?  @db.Text
+  metadata    Json?
+  actorId     String?
+  actor       User?    @relation("TimelineActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([leadId])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("customer_timeline_events")
+}
+
+model OmnichannelConversation {
+  id               String   @id @default(cuid())
+  leadId           String
+  lead             Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  channel          String   // "WHATSAPP", "WEB_CHAT", "VOICE_CALL"
+  externalThreadId String?  // e.g. WhatsApp phone number or browser session ID
+  status           String   @default("AI_HANDLING") // "AI_HANDLING", "NEEDS_HUMAN", "HUMAN_RESOLVED", "CLOSED"
+  assignedStaffId  String?
+  assignedStaff    User?    @relation("ConversationStaffAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  unreadCount      Int      @default(0)
+  lastMessageAt    DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  messages         OmnichannelMessage[]
+
+  @@index([leadId])
+  @@index([channel])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("omnichannel_conversations")
+}
+
+model OmnichannelMessage {
+  id              String                  @id @default(cuid())
+  conversationId  String
+  conversation    OmnichannelConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderType      String                  // "LEAD", "AI_AGENT", "STAFF", "SYSTEM"
+  senderName      String?
+  channel         String                  // "WHATSAPP", "WEB_CHAT", "VOICE_CALL"
+  messageType     String                  @default("TEXT") // "TEXT", "TEMPLATE", "MEDIA", "BUTTON_REPLY", "TRANSCRIPT", "PAYMENT_LINK"
+  content         String                  @db.Text
+  mediaUrl        String?
+  status          String                  @default("SENT") // "SENT", "DELIVERED", "READ", "FAILED"
+  externalMsgId   String?
+  rawPayload      Json?
+  metadata        Json?
+  createdAt       DateTime                @default(now())
+
+  @@index([conversationId])
+  @@index([createdAt])
+  @@map("omnichannel_messages")
+}
+
+model AiKnowledgeDoc {
+  id              String    @id @default(cuid())
+  category        String    // "COURSES", "FEES", "SYLLABUS", "FAQS", "ADMISSIONS", "PLACEMENT", "POLICIES", "BRANCHES", "TRAINERS", "COMPANY_INFO", "OFFERS", "CALLING_SCRIPTS", "WHATSAPP_TEMPLATES", "OBJECTION_HANDLING"
+  title           String
+  slug            String    @unique
+  content         String    @db.Text
+  tags            String[]  @default([])
+  keywords        String[]  @default([])
+  isActive        Boolean   @default(true)
+  priority        Int       @default(0)
+  verifiedBy      String?
+  lastVerifiedAt  DateTime?
+  createdById     String?
+  createdBy       User?     @relation("AiKnowledgeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([category])
+  @@index([isActive])
+  @@map("ai_knowledge_docs")
+}
+
+model AutomationSequence {
+  id           String                    @id @default(cuid())
+  name         String
+  code         String                    @unique
+  triggerEvent String                    // "NEW_LEAD", "CALL_NOT_ANSWERED", "PAYMENT_PENDING", "APPLICATION_STARTED"
+  description  String?                   @db.Text
+  steps        Json                      // [{ stepNumber: 1, delayMinutes: 0, channel: "WHATSAPP", templateCode: "WELCOME_BROCHURE" }, ...]
+  isActive     Boolean                   @default(true)
+  createdById  String?
+  createdAt    DateTime                  @default(now())
+  updatedAt    DateTime                  @updatedAt
+
+  leadStates   AutomationSequenceState[]
+
+  @@map("automation_sequences")
+}
+
+model AutomationSequenceState {
+  id          String             @id @default(cuid())
+  sequenceId  String
+  sequence    AutomationSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  leadId      String
+  lead        Lead               @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  currentStep Int                @default(0)
+  status      String             @default("PENDING") // "PENDING", "RUNNING", "COMPLETED", "PAUSED", "CANCELLED"
+  lastRunAt   DateTime?
+  nextRunAt   DateTime?
+  logs        Json?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@index([sequenceId])
+  @@index([leadId])
+  @@index([status])
+  @@index([nextRunAt])
+  @@map("automation_sequence_states")
+}
+
+model EscalationTask {
+  id              String    @id @default(cuid())
+  leadId          String
+  lead            Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  reason          String    // "LOW_CONFIDENCE", "COMPLAINT", "DISCOUNT_REQUEST", "NEGATIVE_SENTIMENT", "HUMAN_TAKEOVER_REQUESTED"
+  severity        String    @default("MEDIUM") // "LOW", "MEDIUM", "HIGH", "CRITICAL"
+  status          String    @default("OPEN")   // "OPEN", "IN_PROGRESS", "RESOLVED", "DISMISSED"
+  assignedStaffId String?
+  assignedStaff   User?     @relation("EscalationStaffAssignee", fields: [assignedStaffId], references: [id], onDelete: SetNull)
+  description     String?   @db.Text
+  resolutionNotes String?   @db.Text
+  resolvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([leadId])
+  @@index([severity])
+  @@index([status])
+  @@map("escalation_tasks")
+}
+
+model RazorpayPaymentLink {
+  id            String                @id @default(cuid())
+  leadId        String
+  lead          Lead                  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  applicationId String?
+  application   AdmissionApplication? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  razorpayLinkId String               @unique
+  shortUrl      String
+  amountPaise   Int
+  currency      String                @default("INR")
+  description   String?
+  status        String                @default("CREATED") // "CREATED", "PAID", "EXPIRED", "CANCELLED"
+  paymentId     String?
+  paidAt        DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([leadId])
+  @@index([applicationId])
+  @@index([razorpayLinkId])
+  @@index([status])
+  @@map("razorpay_payment_links")
+}
+
 
 
 

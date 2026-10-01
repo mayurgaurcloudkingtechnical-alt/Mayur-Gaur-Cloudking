@@ -21,6 +21,9 @@ import { notificationRouter } from "./notification";
 import { systemRouter } from "./system";
 import { bulkCallingRouter } from "./bulk-calling";
 import { servicesRouter } from "./services";
+import { omnichannelRouter } from "./omnichannel";
+import { aiKnowledgeRouter } from "./ai-knowledge";
+import { automationsRouter } from "./automations";
 
 export const appRouter = router({
   auth: authRouter,
@@ -45,6 +48,9 @@ export const appRouter = router({
   system: systemRouter,
   bulkCalling: bulkCallingRouter,
   services: servicesRouter,
+  omnichannel: omnichannelRouter,
+  aiKnowledge: aiKnowledgeRouter,
+  automations: automationsRouter,
 });
 
 

@@ -125,6 +125,23 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           ...(["SUPER_ADMIN", "ADMIN", "DIRECTOR"].includes(roleCode)
             ? [
                 {
+                  title: "AI Command Center",
+                  href: "/admin/ai-command",
+                  icon: <BarChart3 className="h-4 w-4" />,
+                  badge: "AI",
+                },
+                {
+                  title: "Omnichannel Inbox",
+                  href: "/admin/inbox",
+                  icon: <PhoneCall className="h-4 w-4" />,
+                  badge: "Live",
+                },
+                {
+                  title: "AI Knowledge Center",
+                  href: "/admin/ai-knowledge",
+                  icon: <BookOpen className="h-4 w-4" />,
+                },
+                {
                   title: "Services",
                   href: "/admin/services",
                   icon: <Briefcase className="h-4 w-4" />,

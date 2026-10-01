@@ -172,6 +172,56 @@ export class BulkCallingCrmIntegrationService {
         },
       });
 
+      // Omnichannel Timeline & Transcript Recording
+      try {
+        await db.customerTimelineEvent.create({
+          data: {
+            leadId,
+            eventType: "AI_VOICE_CALL",
+            source: "AI_CALLING",
+            title: `AI Voice Call: ${result.callOutcome} (${result.durationSeconds}s)`,
+            summary: result.conversationSummary,
+            metadata: {
+              interestLevel: result.interestLevel,
+              callOutcome: result.callOutcome,
+              recommendedAction: result.recommendedAction,
+              durationSeconds: result.durationSeconds,
+            },
+          },
+        });
+
+        // Also create/update voice conversation thread
+        let conv = await db.omnichannelConversation.findFirst({
+          where: { leadId, channel: "VOICE_CALL" },
+        });
+        if (!conv) {
+          conv = await db.omnichannelConversation.create({
+            data: {
+              leadId,
+              channel: "VOICE_CALL",
+              status: result.humanHandoffRequired ? "NEEDS_HUMAN" : "AI_HANDLING",
+            },
+          });
+        }
+
+        await db.omnichannelMessage.create({
+          data: {
+            conversationId: conv.id,
+            senderType: "AI_AGENT",
+            senderName: "SoftLab AI Voice Agent",
+            channel: "VOICE_CALL",
+            messageType: "TRANSCRIPT",
+            content: `AI Call Outcome: ${result.callOutcome} (${result.interestLevel})\nSummary: ${result.conversationSummary}\nNext Step: ${result.recommendedAction}`,
+            metadata: {
+              durationSeconds: result.durationSeconds,
+              transcript: queueItem.transcript,
+            },
+          },
+        });
+      } catch (err: any) {
+        console.warn("Could not log omnichannel timeline for AI voice call:", err.message);
+      }
+
       // 3. Create Follow-Up Task if callback was requested
       if (result.callbackTime || result.callOutcome === CallingOutcome.FOLLOW_UP_REQUIRED) {
         await db.followUpHistory.create({

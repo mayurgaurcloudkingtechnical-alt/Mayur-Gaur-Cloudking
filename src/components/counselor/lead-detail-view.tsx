@@ -7,7 +7,7 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2 } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2, CreditCard, Bot } from "lucide-react";
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
@@ -34,6 +34,25 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
     onSuccess: () => {
       utils.crm.getLeadDetails.invalidate({ leadId });
     },
+  });
+
+  const { data: omnichannelTimeline = [] } = api.omnichannel.getCustomerTimeline.useQuery({ leadId });
+
+  const sendBrochureMutation = api.omnichannel.sendWhatsAppBrochure.useMutation({
+    onSuccess: () => {
+      alert("Official brochure dispatched to WhatsApp!");
+      utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
+    },
+    onError: (err) => alert(err.message),
+  });
+
+  const sendPaymentLinkMutation = api.omnichannel.sendRazorpayLink.useMutation({
+    onSuccess: () => {
+      alert("Razorpay payment link sent to WhatsApp!");
+      utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
+      utils.crm.getLeadDetails.invalidate({ leadId });
+    },
+    onError: (err) => alert(err.message),
   });
 
   const deleteLeadMutation = api.crm.deleteLead.useMutation({
@@ -241,6 +260,38 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
                 </Button>
               )}
 
+              {/* Omnichannel Automation Actions */}
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => sendBrochureMutation.mutate({ leadId: lead.id })}
+                disabled={sendBrochureMutation.isPending}
+                className="border-emerald-300 text-emerald-800 hover:bg-emerald-50 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <MessageSquare className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Send WhatsApp Brochure</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  const amt = prompt("Enter fee amount in ₹:", "45000");
+                  if (amt) {
+                    sendPaymentLinkMutation.mutate({
+                      leadId: lead.id,
+                      amountRupees: parseInt(amt) || 45000,
+                      paymentUrl: `https://www.softlabglobal.com/pay/${lead.id}`,
+                    });
+                  }
+                }}
+                disabled={sendPaymentLinkMutation.isPending}
+                className="border-cyan-300 text-cyan-800 hover:bg-cyan-50 text-xs font-semibold flex items-center gap-1.5"
+              >
+                <CreditCard className="h-3.5 w-3.5 text-cyan-600" />
+                <span>Send Razorpay Link</span>
+              </Button>
+
               <Button
                 size="sm"
                 variant="outline"
@@ -371,6 +422,93 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* 360° Omnichannel Customer Timeline Card */}
+      <Card className="border-slate-200 bg-white">
+        <CardHeader className="pb-3 border-b">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bot className="h-4 w-4 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
+                360° Omnichannel Customer Timeline ({omnichannelTimeline.length})
+              </CardTitle>
+            </div>
+            <Badge variant="outline" className="bg-cyan-50 text-cyan-700 border-cyan-200 text-[10px]">
+              Unified Data Stream
+            </Badge>
+          </div>
+          <CardDescription className="text-xs text-slate-500">
+            Real-time chronological events from Website, WhatsApp Business, AI Calling, Razorpay, and LMS.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-3">
+          {omnichannelTimeline.length === 0 ? (
+            <p className="text-xs text-slate-400 italic py-4 text-center">
+              No omnichannel events recorded yet for this applicant.
+            </p>
+          ) : (
+            <div className="relative pl-6 border-l-2 border-slate-100 space-y-4 py-2">
+              {omnichannelTimeline.map((ev: any) => {
+                const isPayment = ev.eventType.includes("PAYMENT");
+                const isWhatsApp = ev.eventType.includes("WHATSAPP");
+                const isVoice = ev.eventType.includes("VOICE") || ev.eventType.includes("CALL");
+                const isLms = ev.eventType.includes("LMS") || ev.eventType.includes("ADMISSION");
+
+                return (
+                  <div key={ev.id} className="relative space-y-1 text-xs">
+                    {/* Circle Bullet */}
+                    <div
+                      className={`absolute -left-[31px] top-0.5 h-3.5 w-3.5 rounded-full border-2 border-white shadow-xs ${
+                        isPayment
+                          ? "bg-emerald-500"
+                          : isWhatsApp
+                          ? "bg-emerald-600"
+                          : isVoice
+                          ? "bg-amber-500"
+                          : isLms
+                          ? "bg-purple-600"
+                          : "bg-cyan-600"
+                      }`}
+                    />
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900">{ev.title}</span>
+                        <Badge
+                          variant="secondary"
+                          className="text-[10px] px-1.5 py-0 uppercase tracking-wider"
+                        >
+                          {ev.source}
+                        </Badge>
+                      </div>
+                      <span className="text-[11px] text-slate-400">
+                        {new Date(ev.createdAt).toLocaleString("en-IN", {
+                          day: "numeric",
+                          month: "short",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+
+                    {ev.summary && (
+                      <p className="text-slate-600 leading-relaxed bg-slate-50 p-2 rounded border border-slate-100 whitespace-pre-wrap">
+                        {ev.summary}
+                      </p>
+                    )}
+
+                    {ev.actor && (
+                      <div className="text-[11px] text-slate-400">
+                        Staff: {ev.actor.firstName} {ev.actor.lastName} ({ev.actor.roleCode})
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

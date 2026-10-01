@@ -1,5 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
+import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
+import { OmnichannelInboxService } from "@/server/services/omnichannel-inbox.service";
+import { AiCounselorService } from "@/server/services/ai-counselor.service";
+import { db } from "@/server/db/client";
 import { LeadSource } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +11,7 @@ export const dynamic = "force-dynamic";
 /**
  * WhatsApp Cloud API Webhook
  * GET: Verification challenge from Meta Developer Portal
- * POST: Incoming WhatsApp message / prospective lead
+ * POST: Incoming WhatsApp message / prospective lead / AI Counselor auto-replies
  */
 export async function GET(req: NextRequest) {
   const searchParams = req.nextUrl.searchParams;
@@ -35,6 +39,104 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
+    // Helper to process an incoming WhatsApp message
+    const processMessage = async (fromPhone: string, senderName: string, messageText: string, rawPayload: any) => {
+      const trimmedText = messageText.trim();
+      const lowerText = trimmedText.toLowerCase();
+
+      // 1. Check for Opt-Out
+      if (lowerText === "stop" || lowerText === "unsubscribe" || lowerText === "optout") {
+        await WhatsAppBusinessService.handleOptOut(fromPhone, "User sent STOP via WhatsApp");
+        await WhatsAppBusinessService.sendMessage({
+          toPhone: fromPhone,
+          text: "You have been unsubscribed from automated messages from SoftLab Global. You will receive no further messages. Reply START to re-subscribe.",
+        });
+        return;
+      }
+
+      // 2. Ingest or fetch lead
+      const ingestRes = await CrmIngestionService.ingestLead({
+        fullName: senderName,
+        phone: fromPhone,
+        source: LeadSource.WHATSAPP,
+        notes: `WhatsApp: "${trimmedText}"`,
+        campaignName: "WhatsApp Direct Inbound",
+        rawPayload,
+      });
+
+      const leadId = ingestRes.leadId;
+
+      // 3. Attach to OmnichannelConversation
+      const conversation = await OmnichannelInboxService.getOrCreateConversation(leadId, "WHATSAPP", fromPhone);
+
+      // 4. Save Inbound Message
+      await OmnichannelInboxService.addMessage({
+        conversationId: conversation.id,
+        senderType: "LEAD",
+        senderName,
+        channel: "WHATSAPP",
+        messageType: "TEXT",
+        content: trimmedText,
+        rawPayload,
+      });
+
+      // 5. If conversation is managed by AI, invoke AI Counselor
+      if (conversation.status === "AI_HANDLING") {
+        const lead = await db.lead.findUnique({
+          where: { id: leadId },
+          include: { course: true },
+        });
+
+        const aiResult = await AiCounselorService.counsel({
+          leadId,
+          leadName: senderName,
+          leadPhone: fromPhone,
+          courseName: lead?.course?.title,
+          userMessage: trimmedText,
+          channel: "WHATSAPP",
+        });
+
+        // Update lead score, temperature, intent
+        await db.lead.update({
+          where: { id: leadId },
+          data: {
+            leadScore: aiResult.leadScore,
+            temperature: aiResult.temperature,
+          },
+        });
+
+        // Send AI Counselor response on WhatsApp
+        await WhatsAppBusinessService.sendMessage({
+          toPhone: fromPhone,
+          text: aiResult.replyText,
+          leadId,
+        });
+
+        // Save Outbound AI Counselor Message
+        await OmnichannelInboxService.addMessage({
+          conversationId: conversation.id,
+          senderType: "AI_AGENT",
+          senderName: "SoftLab AI Counselor",
+          channel: "WHATSAPP",
+          messageType: "TEXT",
+          content: aiResult.replyText,
+          metadata: {
+            intent: aiResult.intent,
+            score: aiResult.leadScore,
+            confidence: aiResult.confidence,
+          },
+        });
+
+        // If escalation is flagged (e.g. discount query or complaint), flag conversation for human
+        if (aiResult.escalationRequired) {
+          await db.omnichannelConversation.update({
+            where: { id: conversation.id },
+            data: { status: "NEEDS_HUMAN" },
+          });
+        }
+      }
+    };
+
     // Standard WhatsApp Cloud API payload format
     if (body.object === "whatsapp_business_account" && Array.isArray(body.entry)) {
       for (const entry of body.entry) {
@@ -59,15 +161,8 @@ export async function POST(req: NextRequest) {
                     "";
                 }
 
-                if (fromPhone) {
-                  await CrmIngestionService.ingestLead({
-                    fullName: senderName,
-                    phone: fromPhone,
-                    source: LeadSource.WHATSAPP,
-                    notes: `WhatsApp Message: "${messageText}"`,
-                    campaignName: "WhatsApp Direct Inbound",
-                    rawPayload: msg,
-                  });
+                if (fromPhone && messageText) {
+                  await processMessage(fromPhone, senderName, messageText, msg);
                 }
               }
             }
@@ -87,20 +182,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ignored", message: "No valid phone number" }, { status: 200 });
     }
 
-    const result = await CrmIngestionService.ingestLead({
-      fullName,
-      phone,
-      source: LeadSource.WHATSAPP,
-      notes,
-      campaignName: "WhatsApp Business Outreach",
-      rawPayload: body,
-    });
+    await processMessage(phone, fullName, notes, body);
 
     return NextResponse.json({
       status: "success",
       code: 200,
-      leadId: result.leadId,
-      isNew: result.isNew,
     });
   } catch (error: any) {
     console.error("[WhatsAppWebhook Error]:", error);

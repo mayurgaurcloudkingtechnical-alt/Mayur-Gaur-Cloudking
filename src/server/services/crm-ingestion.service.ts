@@ -1,6 +1,8 @@
 import { db } from "@/server/db/client";
 import { LeadSource, LeadStatus, UserRoleCode, NotificationType, NotificationPriority } from "@prisma/client";
 import { normalizePhone, normalizeEmail } from "./crm-lead.service";
+import { OmnichannelInboxService } from "./omnichannel-inbox.service";
+import { FollowUpAutomationService } from "./follow-up-automation.service";
 
 export interface IngestLeadPayload {
   fullName: string;
@@ -143,6 +145,19 @@ export class CrmIngestionService {
         },
       });
 
+      // Unified Chronological Timeline Event
+      await OmnichannelInboxService.recordTimelineEvent({
+        leadId: existingLead.id,
+        eventType: "LEAD_RE_ENGAGED",
+        source: payload.source,
+        title: `Lead Re-engaged via ${payload.source}`,
+        summary: payload.notes || "Lead submitted new inquiry form or message",
+        metadata: {
+          campaign: payload.campaignName,
+          source: payload.source,
+        },
+      });
+
       // Broadcast real-time alerts to Counselor, Director, Admin, and Super Admin
       await this.broadcastLeadNotification({
         leadId: existingLead.id,
@@ -174,6 +189,8 @@ export class CrmIngestionService {
         source: payload.source,
         status: LeadStatus.NEW,
         qualityScore: "WARM",
+        temperature: "WARM",
+        leadScore: 60,
         interestedCourseId: matchedCourseId,
         notes: payload.notes || `Ingested via ${payload.source}`,
         campaignName: payload.campaignName || null,
@@ -196,6 +213,26 @@ export class CrmIngestionService {
         notes: `New lead captured from ${payload.source}. Campaign: ${payload.campaignName || "Direct"}. Auto-assigned to staff.`,
       },
     });
+
+    // Record Unified Timeline Event
+    await OmnichannelInboxService.recordTimelineEvent({
+      leadId: newLead.id,
+      eventType: "LEAD_CAPTURED",
+      source: payload.source,
+      title: `New Lead Captured via ${payload.source}`,
+      summary: `Initial enquiry for ${payload.interestedCourseName || "course"}. Assigned to counselor & telecaller.`,
+      metadata: {
+        campaign: payload.campaignName,
+        source: payload.source,
+      },
+    });
+
+    // Auto-enroll in follow-up automation sequence
+    try {
+      await FollowUpAutomationService.enrollLeadInSequence(newLead.id);
+    } catch (e: any) {
+      console.warn("Could not auto-enroll lead into sequence:", e.message);
+    }
 
     // Broadcast real-time alerts to Counselor, Director, Admin, and Super Admin
     await this.broadcastLeadNotification({

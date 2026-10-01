@@ -193,6 +193,33 @@ export class OnlinePaymentService {
         studentProfileId = provision.studentProfileId;
         enrollmentId = provision.enrollmentId;
         feeStructureId = provision.feeStructureId;
+
+        // Omnichannel Sync: Update central lead status & timeline
+        if (existingTx.admission.leadId) {
+          await tx.lead.update({
+            where: { id: existingTx.admission.leadId },
+            data: {
+              status: "ADMITTED",
+              paymentStatus: "COMPLETED",
+              lmsStatus: "ENROLLED",
+              admissionStatus: "ENROLLED",
+            },
+          });
+          await tx.customerTimelineEvent.create({
+            data: {
+              leadId: existingTx.admission.leadId,
+              eventType: "PAYMENT_RECEIVED",
+              source: "RAZORPAY",
+              title: "Razorpay Admission Payment Confirmed",
+              summary: `Payment of ₹${Math.floor(existingTx.amount / 100).toLocaleString("en-IN")} received. Official receipt: ${receiptNumber}`,
+              metadata: {
+                receiptNumber,
+                amount: existingTx.amount,
+                gatewayPaymentId: input.gatewayPaymentId,
+              },
+            },
+          });
+        }
       }
 
       const updatedPayment = await tx.paymentTransaction.update({
