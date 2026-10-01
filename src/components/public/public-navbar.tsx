@@ -124,10 +124,10 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
       {/* ==================================================================== */}
       {/* TIER 2: ACADEMIC & INSTITUTIONAL NAVIGATION BAR (DESKTOP)             */}
       {/* ==================================================================== */}
-      <div className="hidden md:block w-full border-t border-slate-800/70 bg-slate-900/60 backdrop-blur">
+      <div className="hidden md:block w-full border-t border-b border-slate-800/80 bg-slate-900/80 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <nav
-            className="flex items-center justify-start lg:justify-between gap-1 py-1.5 overflow-x-auto no-scrollbar"
+            className="flex items-center justify-center gap-1.5 lg:gap-2.5 py-2 overflow-x-auto no-scrollbar"
             aria-label="Main Navigation"
           >
             {SITE_CONFIG.navLinks.map((link) => {
