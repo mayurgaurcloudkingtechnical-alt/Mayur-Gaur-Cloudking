@@ -10,6 +10,8 @@ export const META_ADS_CONFIG = {
   PAGE_URL: process.env.META_PAGE_URL || "https://www.facebook.com/profile.php?id=61594488322411",
   ADMIN_PROFILE_ID: process.env.META_ADMIN_PROFILE_ID || "61594287061208",
   ADMIN_PROFILE_URL: process.env.META_ADMIN_PROFILE_URL || "https://www.facebook.com/profile.php?id=61594287061208",
+  APP_ID: process.env.WHATSAPP_APP_ID || "1572356260711362",
+  BUSINESS_ID: process.env.META_BUSINESS_ID || "2161320211099371",
 
   // Primary Active Facebook Boost Ad
   ACTIVE_BOOST: {
