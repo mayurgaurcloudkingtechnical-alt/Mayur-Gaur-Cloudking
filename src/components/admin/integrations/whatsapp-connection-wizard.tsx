@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { useState } from "react";
+import Link from "next/link";
 import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -118,6 +119,27 @@ export function WhatsAppConnectionWizard() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link href="/admin/inbox">
+              <Button
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 font-bold shadow-sm"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Live WhatsApp Inbox
+              </Button>
+            </Link>
+
+            <Link href="/admin/bulk-calling">
+              <Button
+                size="sm"
+                variant="outline"
+                className="bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700 text-xs h-9 gap-1.5 font-medium"
+              >
+                <Phone className="h-3.5 w-3.5 text-amber-400" />
+                AI Voice Calling
+              </Button>
+            </Link>
+
             <Button
               size="sm"
               variant="outline"
@@ -139,10 +161,10 @@ export function WhatsAppConnectionWizard() {
               size="sm"
               onClick={() => verifyMutation.mutate()}
               disabled={verifyMutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 gap-1.5 font-semibold"
+              className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 gap-1.5 font-semibold"
             >
               <RefreshCw className={`h-3.5 w-3.5 ${verifyMutation.isPending ? "animate-spin" : ""}`} />
-              Verify Live Connection
+              Verify Live
             </Button>
           </div>
         </div>
