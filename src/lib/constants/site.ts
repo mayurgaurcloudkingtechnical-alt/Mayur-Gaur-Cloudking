@@ -28,6 +28,10 @@ export const SITE_CONFIG = {
     hours: "9:00 AM – 7:00 PM IST",
     sunday: "Closed (Prior Appointment Only)",
   },
+  social: {
+    facebook: "https://www.facebook.com/profile.php?id=61594488322411",
+    facebookAdmin: "https://www.facebook.com/profile.php?id=61594287061208",
+  },
   navLinks: [
     { label: "Home", href: "/" },
     { label: "Courses", href: "/courses" },

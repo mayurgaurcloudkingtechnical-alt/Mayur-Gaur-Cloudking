@@ -164,6 +164,16 @@ export function PublicFooter() {
         <div className="mt-12 border-t border-slate-800 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
           <p>© {currentYear} {SITE_CONFIG.name}. All rights reserved.</p>
           <div className="flex items-center gap-6">
+            <a
+              href={SITE_CONFIG.social.facebook}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-400 hover:text-emerald-400 transition-colors flex items-center gap-1 font-medium"
+            >
+              <span>Facebook Official Page</span>
+              <ArrowUpRight className="h-3 w-3" />
+            </a>
+            <span>•</span>
             <span>Enterprise IT Education Platform</span>
             <span>•</span>
             <span>Prayagraj, Uttar Pradesh</span>

@@ -24,6 +24,7 @@ import {
   ExternalLink,
   Zap,
 } from "lucide-react";
+import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -282,7 +283,7 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
               </Button>
 
               <a
-                href="https://www.facebook.com/ad_center/manage/?boost_id=1324192984113691&entry_point=www_ad_center_overview_ad_cards&page_id=1322487780950878"
+                href={META_ADS_CONFIG.ACTIVE_BOOST.adCenterManageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
               >

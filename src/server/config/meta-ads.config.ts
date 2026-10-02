@@ -5,19 +5,21 @@
  */
 
 export const META_ADS_CONFIG = {
-  PAGE_ID: process.env.META_PAGE_ID || "1322487780950878",
+  PAGE_ID: process.env.META_PAGE_ID || "61594488322411",
   PAGE_NAME: "SoftLab Global",
-  PAGE_URL: "https://www.facebook.com/1322487780950878",
+  PAGE_URL: process.env.META_PAGE_URL || "https://www.facebook.com/profile.php?id=61594488322411",
+  ADMIN_PROFILE_ID: process.env.META_ADMIN_PROFILE_ID || "61594287061208",
+  ADMIN_PROFILE_URL: process.env.META_ADMIN_PROFILE_URL || "https://www.facebook.com/profile.php?id=61594287061208",
 
   // Primary Active Facebook Boost Ad
   ACTIVE_BOOST: {
     boostId: process.env.META_BOOST_ID || "1324192984113691",
-    pageId: process.env.META_PAGE_ID || "1322487780950878",
+    pageId: process.env.META_PAGE_ID || "61594488322411",
     campaignName: "SoftLab Global - IT & Coding Courses Admissions Boost",
-    adCreativeName: "FB Boost #1324192984113691",
+    adCreativeName: "FB Boost Campaign",
     status: "ACTIVE" as const,
     adCenterManageUrl:
-      "https://www.facebook.com/ad_center/manage/?boost_id=1324192984113691&entry_point=www_ad_center_overview_ad_cards&page_id=1322487780950878",
+      "https://www.facebook.com/ad_center/manage/?page_id=61594488322411",
     targetAudience: "Students & Job Seekers in UP / All-India (Age 18-32)",
     objective: "MESSAGES_AND_LEADS",
     createdAt: "2026-09-12",
