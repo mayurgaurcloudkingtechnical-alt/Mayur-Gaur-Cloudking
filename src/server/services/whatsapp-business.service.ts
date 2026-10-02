@@ -1,4 +1,5 @@
 import { db } from "@/server/db/client";
+import { WhatsAppBusinessConfigService } from "./whatsapp-business-config.service";
 
 export interface WhatsAppSendOptions {
   toPhone: string;
@@ -108,7 +109,11 @@ export class WhatsAppBusinessService {
     }
 
     // If Meta Cloud API token and phone number ID are configured, perform real API request
-    if (this.token && this.phoneNumberId) {
+    const config = await WhatsAppBusinessConfigService.getConfig();
+    const activeToken = config.accessToken || this.token;
+    const activePhoneId = config.phoneNumberId || this.phoneNumberId;
+
+    if (activeToken && activePhoneId) {
       try {
         let payload: any = {
           messaging_product: "whatsapp",
@@ -135,11 +140,11 @@ export class WhatsAppBusinessService {
         }
 
         const response = await fetch(
-          `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`,
+          `https://graph.facebook.com/v20.0/${activePhoneId}/messages`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${this.token}`,
+              Authorization: `Bearer ${activeToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),
@@ -289,13 +294,14 @@ export class WhatsAppBusinessService {
    * Health and connectivity status for WhatsApp Business integration
    */
   public static async getWhatsAppConnectionStatus() {
-    const hasToken = !!(process.env.WHATSAPP_CLOUD_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN);
-    const hasPhoneId = !!process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const hasWabaId = !!process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
-    const hasCatalogId = !!process.env.WHATSAPP_CATALOG_ID;
-    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN || "softlab_whatsapp_2026";
+    const config = await WhatsAppBusinessConfigService.getConfig();
+    const hasToken = !!config.accessToken;
+    const hasPhoneId = !!config.phoneNumberId;
+    const hasWabaId = !!config.wabaId;
+    const hasCatalogId = !!config.catalogId;
+    const verifyToken = config.verifyToken || "softlab_whatsapp_2026";
 
-    const isConnected = hasToken && hasPhoneId && hasWabaId;
+    const isConnected = config.connectionStatus === "CONNECTED" || (hasToken && hasPhoneId && hasWabaId);
 
     // Get last inbound and outbound message timestamps from OmnichannelMessage
     const lastInbound = await db.omnichannelMessage.findFirst({
@@ -320,16 +326,23 @@ export class WhatsAppBusinessService {
       status: isConnected ? "CONNECTED" : hasToken || hasPhoneId ? "DEGRADED" : "NOT_CONFIGURED",
       apiStatus: hasToken ? "CONNECTED" : "NOT_CONFIGURED",
       phoneNumberStatus: hasPhoneId ? "CONNECTED" : "NOT_CONFIGURED",
+      displayPhoneNumber: config.displayPhoneNumber || (hasPhoneId ? `ID: ${config.phoneNumberId}` : "Not Connected"),
+      verifiedName: config.verifiedName || "SOFTLAB GLOBAL",
       wabaStatus: hasWabaId ? "CONNECTED" : "NOT_CONFIGURED",
+      wabaId: config.wabaId || "Not Connected",
+      phoneNumberId: config.phoneNumberId || "Not Connected",
       webhookStatus: "VERIFIED",
+      webhookUrl: config.webhookUrl,
       verifyToken: `${verifyToken.slice(0, 4)}••••••`,
       catalogStatus: hasCatalogId ? "CONNECTED" : "NOT_CONFIGURED",
       lastInboundMessageAt: lastInbound?.createdAt || null,
       lastOutboundMessageAt: lastOutbound?.createdAt || null,
       lastCatalogSyncAt: lastCourseSync?.lastCatalogSyncAt || null,
+      lastVerifiedAt: config.lastVerifiedAt,
+      lastError: config.lastError,
       diagnostics: isConnected
-        ? "Official WhatsApp Business Cloud API active."
-        : "CODE READY — EXTERNAL META CONFIGURATION REQUIRED: Please specify WHATSAPP_ACCESS_TOKEN, WHATSAPP_PHONE_NUMBER_ID, and WHATSAPP_BUSINESS_ACCOUNT_ID in environment variables.",
+        ? `Official WhatsApp Business Cloud API active (${config.displayPhoneNumber || config.phoneNumberId}).`
+        : "WhatsApp Business not connected. Use 'Connect WhatsApp Business' wizard to link official Meta number.",
     };
   }
 

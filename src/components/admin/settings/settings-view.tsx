@@ -24,11 +24,13 @@ import {
   RefreshCw,
   Save,
   KeyRound,
+  MessageSquare,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
+import { WhatsAppConnectionWizard } from "../integrations/whatsapp-connection-wizard";
 
 export function SettingsView() {
-  const [activeTab, setActiveTab] = useState<"general" | "branding" | "roles" | "razorpay" | "integrations" | "audit">("roles");
+  const [activeTab, setActiveTab] = useState<"general" | "branding" | "roles" | "razorpay" | "whatsapp" | "integrations" | "audit">("roles");
   const [selectedRoleCode, setSelectedRoleCode] = useState<UserRoleCode>(UserRoleCode.COUNSELOR);
   const [rolePermissions, setRolePermissions] = useState<string[]>([]);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
@@ -159,6 +161,7 @@ export function SettingsView() {
     { id: "general", label: "Institution & Campus", icon: <Building className="h-4 w-4" /> },
     { id: "branding", label: "Theme & Palette", icon: <Palette className="h-4 w-4" /> },
     { id: "razorpay", label: "Razorpay & Billing", icon: <CreditCard className="h-4 w-4" /> },
+    { id: "whatsapp", label: "WhatsApp Business", icon: <MessageSquare className="h-4 w-4 text-emerald-600" /> },
     { id: "integrations", label: "Integrations Overview", icon: <Share2 className="h-4 w-4" /> },
     { id: "audit", label: "Audit & Security Trail", icon: <FileText className="h-4 w-4" /> },
   ];
@@ -636,7 +639,12 @@ export function SettingsView() {
         </Card>
       )}
 
-      {/* 5. INTEGRATIONS OVERVIEW TAB */}
+      {/* 5. WHATSAPP BUSINESS TAB */}
+      {activeTab === "whatsapp" && (
+        <WhatsAppConnectionWizard />
+      )}
+
+      {/* 6. INTEGRATIONS OVERVIEW TAB */}
       {activeTab === "integrations" && (
         <Card className="border-slate-200 shadow-xs bg-white">
           <CardHeader className="p-4 border-b border-slate-100">

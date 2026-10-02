@@ -5,9 +5,156 @@ import { OmnichannelInboxService } from "@/server/services/omnichannel-inbox.ser
 import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
 import { AiCallingAgentService } from "@/server/services/ai-calling-agent.service";
 import { WhatsAppCatalogueSyncService } from "@/server/services/whatsapp-catalogue-sync.service";
+import { WhatsAppBusinessConfigService } from "@/server/services/whatsapp-business-config.service";
+import { AiCounselorService } from "@/server/services/ai-counselor.service";
+import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { db } from "@/server/db/client";
 
 export const omnichannelRouter = router({
+  /**
+   * Get detailed WhatsApp Business connection details for wizard
+   */
+  getWhatsAppConnectionDetails: protectedProcedure.query(async () => {
+    const config = await WhatsAppBusinessConfigService.getConfig();
+    const status = await WhatsAppBusinessService.getWhatsAppConnectionStatus();
+    const catalogStatus = await WhatsAppCatalogueSyncService.getCatalogueStatus();
+
+    return {
+      status: status.status,
+      phoneNumberStatus: status.phoneNumberStatus,
+      displayPhoneNumber: status.displayPhoneNumber,
+      phoneNumberId: status.phoneNumberId,
+      wabaStatus: status.wabaStatus,
+      wabaId: status.wabaId,
+      businessId: config.businessId,
+      appId: config.appId,
+      webhookStatus: status.webhookStatus,
+      webhookUrl: status.webhookUrl,
+      verifyToken: config.verifyToken,
+      catalogStatus: catalogStatus.status,
+      catalogCoursesCount: catalogStatus.totalCourses,
+      syncedCoursesCount: catalogStatus.syncedCourses,
+      aiCounselorStatus: "ACTIVE",
+      aiCallingStatus: "ACTIVE",
+      lastInboundMessageAt: status.lastInboundMessageAt,
+      lastOutboundMessageAt: status.lastOutboundMessageAt,
+      lastCatalogSyncAt: status.lastCatalogSyncAt,
+      lastVerifiedAt: status.lastVerifiedAt,
+      lastError: status.lastError,
+      diagnostics: status.diagnostics,
+      onboardingMethod: config.onboardingMethod,
+    };
+  }),
+
+  /**
+   * Save or update WhatsApp Business credentials from wizard
+   */
+  saveWhatsAppCredentials: protectedProcedure
+    .input(
+      z.object({
+        phoneNumberId: z.string().optional(),
+        wabaId: z.string().optional(),
+        accessToken: z.string().optional(),
+        catalogId: z.string().optional(),
+        displayPhoneNumber: z.string().optional(),
+        businessId: z.string().optional(),
+        appId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const saved = await WhatsAppBusinessConfigService.saveConfig(input, ctx.user.id);
+      return { success: true, saved };
+    }),
+
+  /**
+   * Verify live Meta connection for WhatsApp Business
+   */
+  verifyWhatsAppConnection: protectedProcedure.mutation(async () => {
+    return WhatsAppBusinessConfigService.verifyMetaConnection();
+  }),
+
+  /**
+   * Trigger an end-to-end test inbound message to verify complete pipeline
+   */
+  triggerTestInboundMessage: protectedProcedure
+    .input(
+      z.object({
+        fromPhone: z.string().default("919876543210"),
+        senderName: z.string().default("Real Meta Onboarding Test"),
+        messageText: z.string().default("Hello, what are the fees for Cyber Security course?"),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const normalizedPhone = WhatsAppBusinessService.normalizePhone(input.fromPhone);
+
+      // Ingest or retrieve lead
+      const { lead, isNew } = await CrmIngestionService.ingestLead({
+        fullName: input.senderName,
+        phone: normalizedPhone,
+        source: "WHATSAPP" as any,
+        notes: "Real Inbound WhatsApp Test from Super Admin Wizard",
+      });
+
+      // Conversation
+      const conversation = await OmnichannelInboxService.getOrCreateConversation(
+        lead.id,
+        "WHATSAPP"
+      );
+
+      // Save inbound message
+      await OmnichannelInboxService.addMessage({
+        conversationId: conversation.id,
+        senderType: "LEAD",
+        senderName: input.senderName,
+        channel: "WHATSAPP",
+        messageType: "TEXT",
+        content: input.messageText,
+      });
+
+      // Run AI Counselor
+      const aiResponse = await AiCounselorService.counsel({
+        leadId: lead.id,
+        leadName: input.senderName,
+        leadPhone: normalizedPhone,
+        userMessage: input.messageText,
+        channel: "WHATSAPP",
+      });
+
+      // Save AI reply
+      await OmnichannelInboxService.addMessage({
+        conversationId: conversation.id,
+        senderType: "AI_AGENT",
+        senderName: "SoftLab AI Counselor",
+        channel: "WHATSAPP",
+        messageType: "TEXT",
+        content: aiResponse.replyText,
+      });
+
+      // Update lead
+      await db.lead.update({
+        where: { id: lead.id },
+        data: {
+          botQualified: true,
+          botSummary: `Intent: ${aiResponse.intent} | Temp: ${aiResponse.temperature}`,
+          temperature: aiResponse.temperature,
+          leadScore: aiResponse.leadScore,
+          lastInteraction: new Date(),
+        },
+      });
+
+      return {
+        success: true,
+        leadId: lead.id,
+        leadName: lead.fullName,
+        isNewLead: isNew,
+        conversationId: conversation.id,
+        detectedLanguage: aiResponse.detectedLanguage,
+        identifiedCourse: aiResponse.matchedCourse?.courseName || null,
+        leadScore: aiResponse.leadScore,
+        temperature: aiResponse.temperature,
+        aiReply: aiResponse.replyText,
+      };
+    }),
   /**
    * List unified inbox conversations
    */

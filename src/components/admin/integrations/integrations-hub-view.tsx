@@ -31,6 +31,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { WhatsAppConnectionWizard } from "./whatsapp-connection-wizard";
 
 export function IntegrationsHubView() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -198,6 +199,9 @@ export function IntegrationsHubView() {
           </Button>
         </div>
       )}
+
+      {/* Official WhatsApp Business & AI Counselor Connection Wizard */}
+      <WhatsAppConnectionWizard />
 
       {/* Production Omnichannel & Meta WhatsApp Health Sentinel */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-white shadow-lg space-y-6">

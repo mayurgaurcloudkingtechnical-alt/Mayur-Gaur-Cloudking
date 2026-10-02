@@ -1,5 +1,6 @@
 import { db } from "@/server/db/client";
 import { LmsCourseMasterService, MasterCourseRecord } from "./lms-course-master.service";
+import { WhatsAppBusinessConfigService } from "./whatsapp-business-config.service";
 
 export interface CatalogueSyncItemResult {
   courseId: string;
@@ -23,24 +24,26 @@ export interface CatalogueSyncSummary {
 }
 
 export class WhatsAppCatalogueSyncService {
-  private static catalogId = process.env.WHATSAPP_CATALOG_ID;
-  private static token = process.env.WHATSAPP_CLOUD_ACCESS_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN;
-  private static wabaId = process.env.WHATSAPP_BUSINESS_ACCOUNT_ID;
-
   /**
    * Check which Meta credentials are ready or missing
    */
-  public static getCredentialsStatus() {
+  public static async getCredentialsStatus() {
+    const config = await WhatsAppBusinessConfigService.getConfig();
+    const token = config.accessToken;
+    const catalogId = config.catalogId;
+    const wabaId = config.wabaId;
+
     const missing: string[] = [];
-    if (!this.token) missing.push("WHATSAPP_ACCESS_TOKEN");
-    if (!this.catalogId) missing.push("WHATSAPP_CATALOG_ID");
-    if (!this.wabaId) missing.push("WHATSAPP_BUSINESS_ACCOUNT_ID");
+    if (!token) missing.push("WHATSAPP_ACCESS_TOKEN");
+    if (!catalogId) missing.push("WHATSAPP_CATALOG_ID");
+    if (!wabaId) missing.push("WHATSAPP_BUSINESS_ACCOUNT_ID");
 
     return {
       isFullyConfigured: missing.length === 0,
       missing,
-      catalogId: this.catalogId || null,
-      wabaId: this.wabaId || null,
+      catalogId: catalogId || null,
+      wabaId: wabaId || null,
+      token: token || null,
     };
   }
 
@@ -48,11 +51,12 @@ export class WhatsAppCatalogueSyncService {
    * Synchronize single LMS course with Meta WhatsApp Business Catalogue
    */
   public static async syncCourse(course: MasterCourseRecord): Promise<CatalogueSyncItemResult> {
-    const { isFullyConfigured, missing } = this.getCredentialsStatus();
+    const creds = await this.getCredentialsStatus();
+    const { isFullyConfigured, missing, catalogId, token } = creds;
     const retailerId = `SLG_${course.courseCode.toUpperCase()}`;
 
     // If live credentials are available, dispatch to Meta Commerce Graph API
-    if (isFullyConfigured && this.catalogId && this.token) {
+    if (isFullyConfigured && catalogId && token) {
       try {
         const payload = {
           retailer_id: retailerId,
@@ -68,10 +72,10 @@ export class WhatsAppCatalogueSyncService {
           category: course.providerType === "UNIVERSITY" ? "Education & University Programs" : "Software & Tech Training",
         };
 
-        const response = await fetch(`https://graph.facebook.com/v19.0/${this.catalogId}/products`, {
+        const response = await fetch(`https://graph.facebook.com/v20.0/${catalogId}/products`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${this.token}`,
+            Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
@@ -85,7 +89,7 @@ export class WhatsAppCatalogueSyncService {
           await db.course.update({
             where: { id: course.id },
             data: {
-              metaCatalogId: this.catalogId,
+              metaCatalogId: catalogId,
               metaProductId,
               whatsappCatalogStatus: "SYNCED",
               lastCatalogSyncAt: new Date(),
@@ -146,7 +150,7 @@ export class WhatsAppCatalogueSyncService {
     await db.course.update({
       where: { id: course.id },
       data: {
-        metaCatalogId: this.catalogId || "simulated_catalog_slg_2026",
+        metaCatalogId: catalogId || "simulated_catalog_slg_2026",
         metaProductId: simulatedMetaProductId,
         whatsappCatalogStatus: "SYNCED",
         lastCatalogSyncAt: new Date(),
@@ -168,7 +172,7 @@ export class WhatsAppCatalogueSyncService {
    * Synchronize all active LMS courses from Course Master into Meta Catalogue
    */
   public static async syncAllCourses(): Promise<CatalogueSyncSummary> {
-    const creds = this.getCredentialsStatus();
+    const creds = await this.getCredentialsStatus();
     const courses = await LmsCourseMasterService.getAllActiveCourses();
 
     const results: CatalogueSyncItemResult[] = [];
@@ -206,7 +210,7 @@ export class WhatsAppCatalogueSyncService {
    * Summary for Admin Health Dashboard
    */
   public static async getCatalogueStatus() {
-    const creds = this.getCredentialsStatus();
+    const creds = await this.getCredentialsStatus();
     const courses = await db.course.findMany({
       where: { status: "PUBLISHED", deletedAt: null },
       select: {
