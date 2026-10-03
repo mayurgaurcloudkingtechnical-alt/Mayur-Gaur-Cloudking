@@ -40,7 +40,7 @@ export function SettingsView() {
   const [institutionName, setInstitutionName] = useState("SOFTLAB GLOBAL");
   const [campus, setCampus] = useState("Center for Excellence Prayagraj");
   const [address, setAddress] = useState("Patrika Chauraha, 13/11/8G, Tashkent Marg, Civil Lines, Prayagraj, UP – 211001");
-  const [phone, setPhone] = useState("+91 9194085890");
+  const [phone, setPhone] = useState("+91 9196596975 / +91 9196596979");
   const [email, setEmail] = useState("info@softlabglobal.com");
   const [gstin, setGstin] = useState("09AFYFS5388G1ZX");
 
@@ -81,7 +81,7 @@ export function SettingsView() {
         setInstitutionName(systemSettings.general.institutionName || "SOFTLAB GLOBAL");
         setCampus(systemSettings.general.campus || "Center for Excellence Prayagraj");
         setAddress(systemSettings.general.address || "Patrika Chauraha, 13/11/8G, Tashkent Marg, Civil Lines, Prayagraj, UP – 211001");
-        setPhone(systemSettings.general.phone || "+91 9194085890");
+        setPhone(systemSettings.general.phone || "+91 9196596975 / +91 9196596979");
         setEmail(systemSettings.general.email || "info@softlabglobal.com");
         setGstin(systemSettings.general.gstin || "09AFYFS5388G1ZX");
       }

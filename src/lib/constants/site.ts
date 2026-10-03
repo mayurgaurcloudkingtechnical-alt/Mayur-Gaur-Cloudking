@@ -19,6 +19,8 @@ export const SITE_CONFIG = {
   contact: {
     phone: "+91 9196596975",
     phoneTel: "+919196596975",
+    phone2: "+91 9196596979",
+    phoneTel2: "+919196596979",
     email: "info@softlabglobal.com",
     admissionsEmail: "info@softlabglobal.com",
   },

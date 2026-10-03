@@ -135,14 +135,24 @@ export function PublicFooter() {
                 </address>
               </div>
 
-              <div className="flex items-center gap-2.5 pt-1">
-                <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
-                <a
-                  href={`tel:${SITE_CONFIG.contact.phoneTel}`}
-                  className="font-bold text-slate-200 hover:text-emerald-300 transition-colors"
-                >
-                  {SITE_CONFIG.contact.phone}
-                </a>
+              <div className="space-y-1.5 pt-1">
+                <div className="flex items-center gap-2.5">
+                  <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
+                  <a
+                    href={`tel:${SITE_CONFIG.contact.phoneTel}`}
+                    className="font-bold text-slate-200 hover:text-emerald-300 transition-colors"
+                  >
+                    {SITE_CONFIG.contact.phone}
+                  </a>
+                </div>
+                <div className="flex items-center gap-2.5 pl-6.5">
+                  <a
+                    href={`tel:${SITE_CONFIG.contact.phoneTel2}`}
+                    className="font-bold text-slate-200 hover:text-emerald-300 transition-colors"
+                  >
+                    {SITE_CONFIG.contact.phone2}
+                  </a>
+                </div>
               </div>
 
               <div className="pt-2">

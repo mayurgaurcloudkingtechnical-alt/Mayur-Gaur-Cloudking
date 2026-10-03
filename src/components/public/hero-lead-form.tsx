@@ -66,7 +66,7 @@ export function HeroLeadForm({ courses }: HeroLeadFormProps) {
             <PhoneCall className="w-3.5 h-3.5 text-emerald-700" />
             <span>Need Immediate Assistance?</span>
           </div>
-          <p>Direct Counselor Helpline: <strong>+91 9196596975</strong></p>
+          <p>Direct Counselor Helpline: <strong>+91 9196596975</strong> / <strong>+91 9196596979</strong></p>
         </div>
         <Button
           variant="outline"

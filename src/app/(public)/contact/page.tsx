@@ -78,18 +78,27 @@ export default function ContactPage({
               <p className="text-slate-400 text-xs leading-relaxed">
                 Call our admissions counselor directly for immediate cohort information:
               </p>
-              <div>
+              <div className="space-y-1">
                 <a
                   href={`tel:${SITE_CONFIG.contact.phoneTel}`}
                   className="text-base font-mono font-extrabold text-emerald-400 hover:text-emerald-300 hover:underline block"
                 >
                   {SITE_CONFIG.contact.phone}
                 </a>
-                <span className="text-[11px] text-slate-500">Lines open Monday to Saturday</span>
+                <a
+                  href={`tel:${SITE_CONFIG.contact.phoneTel2}`}
+                  className="text-base font-mono font-extrabold text-teal-400 hover:text-teal-300 hover:underline block"
+                >
+                  {SITE_CONFIG.contact.phone2}
+                </a>
+                <span className="text-[11px] text-slate-500 block pt-0.5">Lines open Monday to Saturday</span>
               </div>
-              <div className="pt-2">
-                <Button asChild size="sm" className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold h-10 rounded-xl shadow-md">
-                  <a href={`tel:${SITE_CONFIG.contact.phoneTel}`}>Call Now</a>
+              <div className="grid grid-cols-2 gap-2 pt-2">
+                <Button asChild size="sm" className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold h-10 rounded-xl shadow-md text-xs">
+                  <a href={`tel:${SITE_CONFIG.contact.phoneTel}`}>Line 1</a>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="border-teal-500/50 text-teal-300 hover:bg-teal-950/40 font-bold h-10 rounded-xl shadow-md text-xs">
+                  <a href={`tel:${SITE_CONFIG.contact.phoneTel2}`}>Line 2</a>
                 </Button>
               </div>
             </div>

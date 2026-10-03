@@ -236,7 +236,7 @@ export default function LoginPage() {
         <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
           Civil Lines Campus: Patrika Chauraha, 13/11/8G, Tashkent Marg, Prayagraj, UP
           <br />
-          Helpline: +91 9194085890 | GSTIN: 09AFYFS5388G1ZX
+          Helpline: +91 9196596975 / +91 9196596979 | GSTIN: 09AFYFS5388G1ZX
         </p>
       </div>
     </div>

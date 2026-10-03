@@ -129,7 +129,7 @@ export function FloatingWhatsApp() {
         );
       } else if (lower.includes("admission") || lower.includes("counsel") || lower.includes("contact") || lower.includes("phone") || lower.includes("number")) {
         addBotMessage(
-          `You can reach our Admissions Helpline directly at +91 9196596975 or info@softlabglobal.com. Would you like to book a free 1-on-1 counseling call?`,
+          `You can reach our Admissions Helpline directly at +91 9196596975 / +91 9196596979 or info@softlabglobal.com. Would you like to book a free 1-on-1 counseling call?`,
           [
             { label: "Book Free Counseling", action: "counseling" },
             { label: "WhatsApp Direct", action: "whatsapp" },
