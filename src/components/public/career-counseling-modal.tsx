@@ -209,7 +209,7 @@ export function CareerCounselingModal({
               </div>
               <p className="text-sm font-extrabold text-emerald-800">{SITE_CONFIG.contact.phone}</p>
               <p className="text-[11px] text-emerald-700">
-                Patrika Chauraha, Tashkent Marg, Civil Lines, Prayagraj
+                4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj
               </p>
             </div>
 

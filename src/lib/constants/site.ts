@@ -6,15 +6,15 @@ export const SITE_CONFIG = {
   domain: "https://www.softlabglobal.com",
   canonicalUrl: "https://www.softlabglobal.com",
   address: {
-    line1: "Patrika Chauraha, 13/11/8G, Tashkent Marg",
-    line2: "Opposite Rai and Company, Civil Lines",
+    line1: "4th Floor, No. 31, M.G. Marg",
+    line2: "Civil Lines",
     city: "Prayagraj",
     state: "Uttar Pradesh",
     pincode: "211001",
     country: "India",
-    full: "Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001",
+    full: "SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001",
     googleMapsUrl:
-      "https://maps.google.com/?q=Patrika+Chauraha+Tashkent+Marg+Civil+Lines+Prayagraj+Uttar+Pradesh+211001",
+      "https://maps.google.com/?q=SoftLab+Global+4th+Floor+No+31+MG+Marg+Civil+Lines+Prayagraj+Uttar+Pradesh+211001",
   },
   contact: {
     phone: "+91 9196596975",

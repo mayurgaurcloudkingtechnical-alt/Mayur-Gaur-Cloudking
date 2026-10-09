@@ -42,7 +42,7 @@ export function StudentReceiptModal({
         centerName: receipt.company?.name || "SOFTLAB GLOBAL PRAYAGRAJ CENTRE",
         centerAddress:
           receipt.company?.address ||
-          "Address: Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001",
+          "Address: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001",
         gstNo: receipt.company?.gstin || "09AFYFS5388G1ZX",
       }
     : null;

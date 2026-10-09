@@ -212,7 +212,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-white">Visit Our Campus in Civil Lines</h3>
               <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
-                Experience our workstation labs and consult directly with our academic faculty. Located opposite Rai and Company, Tashkent Marg, Patrika Chauraha.
+                Experience our workstation labs and consult directly with our academic faculty. Located at 4th Floor, No. 31, M.G. Marg, Civil Lines.
               </p>
             </div>
 

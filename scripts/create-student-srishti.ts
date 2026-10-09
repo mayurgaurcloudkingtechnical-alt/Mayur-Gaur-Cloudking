@@ -43,7 +43,7 @@ async function main() {
         status: BatchStatus.ONGOING,
         maxCapacity: 25,
         deliveryMode: DeliveryMode.OFFLINE,
-        location: "Lab 2, Tashkent Marg, Civil Lines, Prayagraj",
+        location: "Lab 2, M.G. Marg, Civil Lines, Prayagraj",
       },
     });
     console.log(`✓ Created Active Batch: ${batch.code} - ${batch.name}`);

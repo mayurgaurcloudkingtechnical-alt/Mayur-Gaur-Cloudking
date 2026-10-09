@@ -234,7 +234,7 @@ export default function LoginPage() {
 
         {/* Address Footer */}
         <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
-          Civil Lines Campus: Patrika Chauraha, 13/11/8G, Tashkent Marg, Prayagraj, UP
+          Civil Lines Campus: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Prayagraj, UP 211001
           <br />
           Helpline: +91 9196596975 / +91 9196596979 | GSTIN: 09AFYFS5388G1ZX
         </p>

@@ -75,7 +75,7 @@ async function main() {
         endDate: new Date(Date.now() + c.durationWeeks * 7 * 24 * 60 * 60 * 1000),
         status: BatchStatus.ONGOING,
         deliveryMode: DeliveryMode.HYBRID,
-        location: "Lab 1, Tashkent Marg Campus, Prayagraj",
+        location: "Lab 1, M.G. Marg Campus, Prayagraj",
       },
     });
 

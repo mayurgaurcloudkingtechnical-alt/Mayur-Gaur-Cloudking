@@ -2,7 +2,7 @@
 
 > **Brand:** SOFTLAB GLOBAL  
 > **Domain:** [www.softlabglobal.com](http://www.softlabglobal.com/)  
-> **Address:** Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, Uttar Pradesh 211001  
+> **Address:** SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001  
 > **Phone:** +91 9194085890  
 > **GSTIN:** 09AFYFS5388G1ZX  
 > **Design Theme:** Premium modern SaaS, Light Green (`#10B981` / `#059669`) + Pure White + Slate Dark Accents.

@@ -326,7 +326,7 @@ export class EmailService {
         </p>
         
         <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
-          SOFTLAB GLOBAL Admissions Directorate • Patrika Chauraha, Civil Lines, Prayagraj, UP – 211001
+          SOFTLAB GLOBAL Admissions Directorate • 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001
         </p>
       </div>
     `;

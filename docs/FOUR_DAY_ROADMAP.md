@@ -15,7 +15,7 @@ To deliver a reliable, secure, and fully functional system without compromising 
 - **System Foundation**: Monorepo scaffolding, Next.js 14 App Router, Tailwind CSS design system with brand light green (`#10B981`) aesthetic.
 - **Relational Data Layer**: PostgreSQL 16 schema deployment, Prisma migrations, and database seed scripts (roles, default admin, initial courses).
 - **Authentication & RBAC**: NextAuth.js v5 credentials flow, password hashing (bcrypt), session cookies, server-side procedure authorization middleware.
-- **Public Portal**: Marketing landing page with institutional information (Patrika Chauraha address, GSTIN, Phone 9194085890), course catalog, and dynamic course detail views.
+- **Public Portal**: Marketing landing page with institutional information (4th Floor, No. 31, M.G. Marg address, GSTIN, Phone 9194085890), course catalog, and dynamic course detail views.
 - **Course CMS**: Course, Module, and Lesson CRUD, drag-and-drop reordering, draft/published lifecycle states, video/PDF/document content types.
 - **Student LMS**: Student dashboard, enrolled course viewer, secure video playback with ephemeral tokens, PDF viewer, lesson progress completion tracking.
 - **Trainer LMS**: Assigned course & batch dashboard, daily class attendance marking, and syllabus delivery.

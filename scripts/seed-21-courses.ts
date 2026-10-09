@@ -1,4 +1,4 @@
-﻿import { PrismaClient, ContentStatus, DeliveryMode, BatchStatus, LessonType } from "@prisma/client";
+import { PrismaClient, ContentStatus, DeliveryMode, BatchStatus, LessonType } from "@prisma/client";
 import coursesData from "./courses-list.json";
 
 const prisma = new PrismaClient();
@@ -61,7 +61,7 @@ async function main() {
         endDate: new Date(Date.now() + c.durationWeeks * 7 * 24 * 60 * 60 * 1000),
         status: BatchStatus.ONGOING,
         deliveryMode: DeliveryMode.HYBRID,
-        location: "Lab 1, Tashkent Marg Campus, Prayagraj",
+        location: "Lab 1, M.G. Marg Campus, Prayagraj",
       },
     });
 

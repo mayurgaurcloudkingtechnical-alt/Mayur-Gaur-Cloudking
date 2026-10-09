@@ -117,7 +117,7 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
         <div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding-bottom:6px;">
           <div>
             <div style="font-size:9px;font-weight:900;color:#172554;text-transform:uppercase;">SOFTLAB GLOBAL CAMPUS</div>
-            <div style="font-size:7px;color:#475569;line-height:1.4;">Patrika Chauraha, Civil Lines, Prayagraj – 211001</div>
+            <div style="font-size:7px;color:#475569;line-height:1.4;">4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj – 211001</div>
             <div style="font-size:7px;color:#475569;font-family:monospace;">Helpline: +91 9196596975 / +91 9196596979 | info@softlabglobal.com</div>
           </div>
           ${qrCodeUrl ? `<img src="${qrCodeUrl}" style="width:42px;height:42px;border:1px solid #cbd5e1;border-radius:3px;padding:2px;" />` : ""}
@@ -319,7 +319,7 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
                 SOFTLAB GLOBAL CAMPUS
               </h4>
               <p className="text-[7px] text-slate-600 leading-tight">
-                Patrika Chauraha, Civil Lines, Prayagraj – 211001
+                4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj – 211001
               </p>
               <p className="text-[7px] text-slate-600 font-mono">
                 Helpline: +91 9196596975 / +91 9196596979 | info@softlabglobal.com

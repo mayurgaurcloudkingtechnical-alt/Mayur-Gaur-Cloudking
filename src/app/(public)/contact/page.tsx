@@ -181,7 +181,7 @@ export default function ContactPage({
                   <p>{SITE_CONFIG.address.line1}</p>
                   <p>{SITE_CONFIG.address.line2}</p>
                   <p>{SITE_CONFIG.address.city}, {SITE_CONFIG.address.state} — {SITE_CONFIG.address.pincode}</p>
-                  <p className="text-slate-500 pt-1">Landmark: Opposite Rai and Company, near Patrika Chauraha</p>
+                  <p className="text-slate-500 pt-1">Landmark: 4th Floor, No. 31, M.G. Marg, Civil Lines</p>
                 </address>
 
                 <div className="pt-2 flex flex-wrap gap-3">

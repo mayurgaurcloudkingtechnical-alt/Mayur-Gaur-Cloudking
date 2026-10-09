@@ -1457,7 +1457,7 @@ export const adminRouter = router({
       general: configMap["general"] || {
         institutionName: "SOFTLAB GLOBAL",
         campus: "Center for Excellence Prayagraj",
-        address: "Patrika Chauraha, 13/11/8G, Tashkent Marg, Civil Lines, Prayagraj, UP – 211001",
+        address: "SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001",
         phone: "+91 9196596975 / +91 9196596979",
         email: "info@softlabglobal.com",
         gstin: "09AFYFS5388G1ZX",

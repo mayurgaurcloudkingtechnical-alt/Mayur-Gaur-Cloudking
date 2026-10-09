@@ -1,7 +1,7 @@
 # SOFTLAB GLOBAL — System Architecture & Engineering Blueprint
 
 > **Brand:** SOFTLAB GLOBAL  
-> **Corporate Identity:** Patrika Chauraha, 13/11/8G, Tashkent Marg, Opposite Rai and Company, Civil Lines, Prayagraj, UP 211001  
+> **Corporate Identity:** SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001  
 > **GSTIN:** 09AFYFS5388G1ZX | **Domain:** [www.softlabglobal.com](http://www.softlabglobal.com/)
 
 ---
