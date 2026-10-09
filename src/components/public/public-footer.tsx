@@ -129,7 +129,8 @@ export function PublicFooter() {
               <div className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                 <address className="not-italic leading-relaxed">
-                  <p className="font-semibold text-slate-200">{SITE_CONFIG.address.line1}</p>
+                  <p className="font-semibold text-slate-200">SoftLab Global</p>
+                  <p>{SITE_CONFIG.address.line1}</p>
                   <p>{SITE_CONFIG.address.line2}</p>
                   <p>{SITE_CONFIG.address.city}, {SITE_CONFIG.address.state} — {SITE_CONFIG.address.pincode}</p>
                 </address>
