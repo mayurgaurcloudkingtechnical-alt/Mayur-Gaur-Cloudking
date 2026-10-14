@@ -37,9 +37,18 @@ interface WizardProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  initialUser?: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone?: string | null;
+    avatarUrl?: string | null;
+    roleCode?: string;
+  } | null;
 }
 
-export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProps) {
+export function StaffOnboardingWizard({ isOpen, onClose, onSuccess, initialUser }: WizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -131,9 +140,39 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
     }
   }, [generatedIdData, employeeId]);
 
+  useEffect(() => {
+    if (initialUser && isOpen) {
+      setFirstName(initialUser.firstName || "");
+      setLastName(initialUser.lastName || "");
+      setPersonalEmail(initialUser.email || "");
+      setOfficialEmail(initialUser.email || "");
+      setPhone(initialUser.phone || "");
+      setCallingNumber(initialUser.phone || "");
+      setWhatsappNumber(initialUser.phone || "");
+      if (initialUser.avatarUrl) {
+        setProfilePhoto(initialUser.avatarUrl);
+      }
+      if (
+        initialUser.roleCode &&
+        [
+          UserRoleCode.COUNSELOR,
+          UserRoleCode.ADMIN,
+          UserRoleCode.HR,
+          UserRoleCode.ACCOUNTANT,
+          UserRoleCode.TELECALLER,
+          UserRoleCode.TRAINER,
+          UserRoleCode.DIRECTOR,
+        ].includes(initialUser.roleCode as any)
+      ) {
+        setRoleCode(initialUser.roleCode as any);
+      }
+    }
+  }, [initialUser, isOpen]);
+
   const onboardMutation = api.staffErp.onboardEmployee.useMutation({
     onSuccess: (data: any) => {
       utils.staffErp.listStaff.invalidate();
+      utils.admin.listUsers.invalidate();
       if (onSuccess) onSuccess();
       setOnboardSuccessData(data);
     },
@@ -180,6 +219,7 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
     const salaryPaise = Math.round(parseFloat(baseSalaryInRs || "0") * 100);
 
     onboardMutation.mutate({
+      existingUserId: initialUser?.id || undefined,
       employeeId: employeeId.trim() || undefined,
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -321,6 +361,30 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
           </div>
         ) : (
           <>
+            {initialUser && (
+              <div className="bg-gradient-to-r from-indigo-50 via-sky-50 to-indigo-50 border-b border-indigo-200 p-3 px-6 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-xs shadow-xs">
+                    {initialUser.firstName?.[0] || "U"}{initialUser.lastName?.[0] || ""}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-indigo-950">Promoting Registered User to Institutional Staff</span>
+                      <Badge variant="outline" className="text-[10px] bg-white text-indigo-700 border-indigo-300 font-mono">
+                        User ID: {initialUser.id.slice(0, 10)}...
+                      </Badge>
+                    </div>
+                    <p className="text-[11px] text-indigo-800 font-medium mt-0.5">
+                      {initialUser.firstName} {initialUser.lastName} ({initialUser.email}) — Pre-filled from User Management. Complete employment details below.
+                    </p>
+                  </div>
+                </div>
+                <Badge className="bg-indigo-600 text-white text-[10px] shrink-0 font-semibold shadow-xs">
+                  Account Linked
+                </Badge>
+              </div>
+            )}
+
             {/* Stepper Progress Bar */}
             <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
           <div className="flex items-center justify-between">

@@ -434,6 +434,7 @@ export const adminRouter = router({
           name: `${u.firstName} ${u.lastName}`,
           email: u.email,
           phone: u.phone,
+          avatarUrl: u.avatarUrl,
           roleCode: u.roleCode,
           roleName: u.role.name,
           permissionsCount: u.role.permissions.length,
@@ -441,6 +442,9 @@ export const adminRouter = router({
           studentId: u.studentProfile?.studentId,
           employeeId: u.staffProfile?.employeeId,
           department: u.staffProfile?.department,
+          designation: u.staffProfile?.designation,
+          hasStaffProfile: Boolean(u.staffProfile),
+          staffProfileId: u.staffProfile?.id,
           lastLoginAt: u.lastLoginAt,
           createdAt: u.createdAt,
         })),
@@ -451,7 +455,7 @@ export const adminRouter = router({
       };
     }),
 
-  createUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+  createUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
     .input(
       z.object({
         firstName: z.string().min(1, "First name is required"),
@@ -466,15 +470,29 @@ export const adminRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       const normalizedEmail = input.email.trim().toLowerCase();
-      const existing = await ctx.db.user.findUnique({
+      const existingEmail = await ctx.db.user.findUnique({
         where: { email: normalizedEmail },
       });
 
-      if (existing) {
+      if (existingEmail) {
         throw new TRPCError({
           code: "CONFLICT",
           message: `User with email '${normalizedEmail}' already exists.`,
         });
+      }
+
+      const normalizedPhone = input.phone?.trim() || null;
+      if (normalizedPhone) {
+        const existingPhone = await ctx.db.user.findFirst({
+          where: { phone: normalizedPhone },
+          select: { id: true, firstName: true, lastName: true, email: true },
+        });
+        if (existingPhone) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `User with phone number '${normalizedPhone}' already exists (${existingPhone.firstName} ${existingPhone.lastName} - ${existingPhone.email}).`,
+          });
+        }
       }
 
       const passwordHash = await bcrypt.hash(input.password, 10);
@@ -485,7 +503,7 @@ export const adminRouter = router({
             firstName: input.firstName.trim(),
             lastName: input.lastName.trim(),
             email: normalizedEmail,
-            phone: input.phone.trim(),
+            phone: normalizedPhone,
             roleCode: input.roleCode,
             passwordHash,
             status: UserStatus.ACTIVE,
@@ -540,14 +558,14 @@ export const adminRouter = router({
       return { success: true, userId: user.id };
     }),
 
-  updateUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+  updateUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
     .input(
       z.object({
         id: z.string(),
         firstName: z.string().min(1).optional(),
         lastName: z.string().min(1).optional(),
         email: z.string().email().optional(),
-        phone: z.string().optional(),
+        phone: z.string().optional().nullable(),
         roleCode: z.nativeEnum(UserRoleCode).optional(),
         status: z.nativeEnum(UserStatus).optional(),
       })
@@ -569,30 +587,103 @@ export const adminRouter = router({
         });
       }
 
-      const updated = await ctx.db.user.update({
-        where: { id: input.id },
-        data: {
-          ...(input.firstName ? { firstName: input.firstName.trim() } : {}),
-          ...(input.lastName ? { lastName: input.lastName.trim() } : {}),
-          ...(input.email ? { email: input.email.trim().toLowerCase() } : {}),
-          ...(input.phone ? { phone: input.phone.trim() } : {}),
-          ...(input.roleCode ? { roleCode: input.roleCode } : {}),
-          ...(input.status ? { status: input.status } : {}),
-        },
-      });
+      // Non-super-admins cannot elevate a user to Super Admin
+      if (
+        input.roleCode === UserRoleCode.SUPER_ADMIN &&
+        ctx.user.roleCode !== UserRoleCode.SUPER_ADMIN
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only a Super Admin can assign the Super Admin role.",
+        });
+      }
 
-      await AuditService.log({
-        actorId: ctx.user.id,
-        action: "USER_UPDATE",
-        resourceType: "User",
-        resourceId: updated.id,
-        newData: { roleCode: updated.roleCode, status: updated.status },
-      });
+      // Validate email uniqueness if changing
+      let cleanEmail: string | undefined = undefined;
+      if (input.email !== undefined) {
+        cleanEmail = input.email.trim().toLowerCase();
+        if (cleanEmail && cleanEmail !== existing.email) {
+          const emailCollision = await ctx.db.user.findFirst({
+            where: {
+              id: { not: input.id },
+              email: cleanEmail,
+            },
+            select: { id: true, firstName: true, lastName: true },
+          });
+          if (emailCollision) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `Email '${cleanEmail}' is already registered to ${emailCollision.firstName} ${emailCollision.lastName}.`,
+            });
+          }
+        }
+      }
 
-      return updated;
+      // Validate phone uniqueness if changing (convert empty string to null)
+      let cleanPhone: string | null | undefined = undefined;
+      if (input.phone !== undefined) {
+        const rawPhone = input.phone?.trim();
+        cleanPhone = rawPhone && rawPhone.length > 0 ? rawPhone : null;
+        if (cleanPhone && cleanPhone !== existing.phone) {
+          const phoneCollision = await ctx.db.user.findFirst({
+            where: {
+              id: { not: input.id },
+              phone: cleanPhone,
+            },
+            select: { id: true, firstName: true, lastName: true, email: true },
+          });
+          if (phoneCollision) {
+            throw new TRPCError({
+              code: "CONFLICT",
+              message: `Phone number '${cleanPhone}' is already in use by ${phoneCollision.firstName} ${phoneCollision.lastName} (${phoneCollision.email}). Please enter a unique mobile number.`,
+            });
+          }
+        }
+      }
+
+      try {
+        const updated = await ctx.db.user.update({
+          where: { id: input.id },
+          data: {
+            ...(input.firstName !== undefined ? { firstName: input.firstName.trim() } : {}),
+            ...(input.lastName !== undefined ? { lastName: input.lastName.trim() } : {}),
+            ...(cleanEmail !== undefined ? { email: cleanEmail } : {}),
+            ...(input.phone !== undefined ? { phone: cleanPhone } : {}),
+            ...(input.roleCode !== undefined ? { roleCode: input.roleCode } : {}),
+            ...(input.status !== undefined ? { status: input.status } : {}),
+          },
+        });
+
+        // Also synchronize staff profile phone if exists
+        if (cleanPhone !== undefined) {
+          await ctx.db.staffProfile.updateMany({
+            where: { userId: input.id },
+            data: { personalPhone: cleanPhone },
+          }).catch(() => null);
+        }
+
+        await AuditService.log({
+          actorId: ctx.user.id,
+          action: "USER_UPDATE",
+          resourceType: "User",
+          resourceId: updated.id,
+          newData: { roleCode: updated.roleCode, status: updated.status, phone: updated.phone },
+        });
+
+        return updated;
+      } catch (err: any) {
+        if (err?.code === "P2002") {
+          const target = Array.isArray(err?.meta?.target) ? err.meta.target.join(", ") : "field";
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `A unique constraint failed on (${target}). This value is already registered to another user account.`,
+          });
+        }
+        throw err;
+      }
     }),
 
-  resetPassword: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+  resetPassword: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
     .input(
       z.object({
         userId: z.string(),
@@ -600,6 +691,22 @@ export const adminRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const targetUser = await ctx.db.user.findUnique({ where: { id: input.userId } });
+      if (!targetUser) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "User not found." });
+      }
+
+      // Prevent non-super-admins from resetting Super Admin password
+      if (
+        targetUser.roleCode === UserRoleCode.SUPER_ADMIN &&
+        ctx.user.roleCode !== UserRoleCode.SUPER_ADMIN
+      ) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "Only a Super Admin can reset another Super Admin's password.",
+        });
+      }
+
       const passwordHash = await bcrypt.hash(input.newPassword, 10);
 
       await ctx.db.user.update({
@@ -617,7 +724,7 @@ export const adminRouter = router({
       return { success: true };
     }),
 
-  toggleUserStatus: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+  toggleUserStatus: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN])
     .input(
       z.object({
         userId: z.string(),
@@ -651,7 +758,7 @@ export const adminRouter = router({
       return updated;
     }),
 
-  deleteUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN])
+  deleteUser: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR])
     .input(z.object({ userId: z.string() }))
     .mutation(async ({ ctx, input }) => {
       const target = await ctx.db.user.findUnique({ where: { id: input.userId } });

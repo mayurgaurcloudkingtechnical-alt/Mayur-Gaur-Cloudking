@@ -10,6 +10,8 @@ import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AttendanceIntegrationService } from "./attendance-integration.service";
 
 export interface OnboardEmployeeInput {
+  existingUserId?: string; // Link existing platform user (from User Management)
+
   // Step 1: Employee Profile
   employeeId?: string;
   firstName: string;
@@ -132,22 +134,42 @@ export class StaffOnboardingService {
     const primaryEmail = (input.officialEmail || input.personalEmail).trim().toLowerCase();
     const cleanPhone = input.phone?.trim() || null;
 
-    // Check if user already exists
-    let user = await db.user.findFirst({
-      where: {
-        OR: [
-          { email: primaryEmail },
-          ...(cleanPhone ? [{ phone: cleanPhone }] : []),
-        ],
-      },
-      include: { staffProfile: true },
-    });
-
-    if (user && user.staffProfile) {
-      throw new TRPCError({
-        code: "CONFLICT",
-        message: `An active employee profile already exists for ${primaryEmail}.`,
+    // Check if user already exists or linking an existing user
+    let user: any = null;
+    if (input.existingUserId) {
+      user = await db.user.findUnique({
+        where: { id: input.existingUserId },
+        include: { staffProfile: true },
       });
+      if (!user) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: "Selected user account for staff onboarding was not found.",
+        });
+      }
+      if (user.staffProfile) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `This user is already an active staff member (Employee ID: ${user.staffProfile.employeeId}).`,
+        });
+      }
+    } else {
+      user = await db.user.findFirst({
+        where: {
+          OR: [
+            { email: primaryEmail },
+            ...(cleanPhone ? [{ phone: cleanPhone }] : []),
+          ],
+        },
+        include: { staffProfile: true },
+      });
+
+      if (user && user.staffProfile) {
+        throw new TRPCError({
+          code: "CONFLICT",
+          message: `An active employee profile already exists for ${primaryEmail} (Employee ID: ${user.staffProfile.employeeId}).`,
+        });
+      }
     }
 
     // Generate Employee ID
@@ -180,19 +202,37 @@ export class StaffOnboardingService {
               lastName: input.lastName.trim(),
               avatarUrl: input.profilePhoto?.trim() || null,
               roleCode: input.roleCode,
-              status: input.status === "ACTIVE" ? "ACTIVE" : "ACTIVE",
+              status: "ACTIVE",
             },
             include: { staffProfile: true },
           });
         } else {
+          // If phone is updated and differs from user's current phone, verify no conflict with another user
+          if (cleanPhone && cleanPhone !== user.phone) {
+            const phoneConflict = await tx.user.findFirst({
+              where: {
+                id: { not: user.id },
+                phone: cleanPhone,
+              },
+            });
+            if (phoneConflict) {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Phone number '${cleanPhone}' is already registered to another user (${phoneConflict.email}).`,
+              });
+            }
+          }
+
           // Update existing user role and contact numbers if linking
           user = await tx.user.update({
             where: { id: user.id },
             data: {
               roleCode: input.roleCode,
-              avatarUrl: input.profilePhoto?.trim() || user.avatarUrl,
-              callingNumber: input.callingNumber?.trim() || user.callingNumber,
-              whatsappNumber: input.whatsappNumber?.trim() || user.whatsappNumber,
+              ...(input.profilePhoto ? { avatarUrl: input.profilePhoto.trim() } : {}),
+              ...(cleanPhone ? { phone: cleanPhone } : {}),
+              callingNumber: input.callingNumber?.trim() || user.callingNumber || cleanPhone,
+              whatsappNumber: input.whatsappNumber?.trim() || user.whatsappNumber || cleanPhone,
+              ...(input.password ? { passwordHash } : {}),
             },
             include: { staffProfile: true },
           });

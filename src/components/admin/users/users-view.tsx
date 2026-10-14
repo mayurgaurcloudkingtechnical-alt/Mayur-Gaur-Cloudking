@@ -23,6 +23,8 @@ import {
   Mail,
   Phone,
   Lock,
+  Briefcase,
+  ShieldCheck,
 } from "lucide-react";
 import { UserRoleCode, UserStatus } from "@prisma/client";
 import { StaffOnboardingWizard } from "./staff-onboarding-wizard";
@@ -36,6 +38,7 @@ export function UsersView() {
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
   const [onboardOpen, setOnboardOpen] = useState(false);
+  const [selectedUserForStaff, setSelectedUserForStaff] = useState<any | null>(null);
   const [editUser, setEditUser] = useState<any | null>(null);
   const [resetPwdUser, setResetPwdUser] = useState<any | null>(null);
 
@@ -62,6 +65,9 @@ export function UsersView() {
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const utils = api.useUtils();
+  const { data: authUser } = api.auth.me.useQuery();
+  const isSuperAdmin = authUser?.roleCode === "SUPER_ADMIN";
+  const isHigherAuthority = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "HR"].includes(authUser?.roleCode || "");
 
   const { data, isLoading } = api.admin.listUsers.useQuery({
     search: search.trim() || undefined,
@@ -150,21 +156,26 @@ export function UsersView() {
 
   const handleOpenEdit = (user: any) => {
     setEditUser(user);
-    setEditFirstName(user.firstName);
-    setEditLastName(user.lastName);
-    setEditEmail(user.email);
+    setEditFirstName(user.firstName || "");
+    setEditLastName(user.lastName || "");
+    setEditEmail(user.email || "");
     setEditPhone(user.phone || "");
     setEditRoleCode(user.roleCode);
     setEditStatus(user.status);
   };
 
+  const handleOnboardAsStaff = (user: any) => {
+    setSelectedUserForStaff(user);
+    setOnboardOpen(true);
+  };
+
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     createMutation.mutate({
-      firstName: newFirstName,
-      lastName: newLastName,
-      email: newEmail,
-      phone: newPhone,
+      firstName: newFirstName.trim(),
+      lastName: newLastName.trim(),
+      email: newEmail.trim().toLowerCase(),
+      phone: newPhone.trim(),
       roleCode: newRoleCode,
       password: newPassword,
       department: newDepartment,
@@ -176,10 +187,10 @@ export function UsersView() {
     if (!editUser) return;
     updateMutation.mutate({
       id: editUser.id,
-      firstName: editFirstName,
-      lastName: editLastName,
-      email: editEmail,
-      phone: editPhone,
+      firstName: editFirstName.trim(),
+      lastName: editLastName.trim(),
+      email: editEmail.trim().toLowerCase(),
+      phone: editPhone.trim() || "",
       roleCode: editRoleCode,
       status: editStatus,
     });
@@ -362,34 +373,65 @@ export function UsersView() {
                     </td>
                     <td className="p-3 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {/* Onboard / Move to Staff */}
+                        {u.employeeId ? (
+                          <a
+                            href="/admin/staff"
+                            className="inline-flex items-center gap-1 h-7 px-2 text-[11px] font-semibold bg-emerald-50 border border-emerald-200 text-emerald-800 hover:bg-emerald-100 rounded-md transition"
+                            title={`Staff Member: ${u.employeeId} - View in Staff Directory`}
+                          >
+                            <ShieldCheck className="h-3 w-3 text-emerald-600" />
+                            <span>Staff</span>
+                          </a>
+                        ) : (
+                          <Button
+                            onClick={() => handleOnboardAsStaff(u)}
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2.5 text-xs font-semibold bg-indigo-50 border-indigo-200 text-indigo-700 hover:bg-indigo-100 hover:text-indigo-800 flex items-center gap-1 shadow-xs"
+                            title="Onboard or Move this user to institutional staff"
+                          >
+                            <UserCheck className="h-3.5 w-3.5 text-indigo-600" />
+                            <span>Move to Staff</span>
+                          </Button>
+                        )}
+
+                        {/* Edit User */}
                         <Button
                           onClick={() => handleOpenEdit(u)}
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-xs"
-                          title="Edit User"
+                          className="h-7 px-2 text-xs text-slate-700 hover:text-slate-900"
+                          title="Edit User Details"
                         >
                           <Edit2 className="h-3.5 w-3.5" />
                         </Button>
+
+                        {/* Reset Password */}
                         <Button
-                          onClick={() => setResetPwdUser(u)}
+                          onClick={() => {
+                            setResetPwdUser(u);
+                            setNewPasswordValue("");
+                          }}
                           size="sm"
                           variant="outline"
-                          className="h-7 px-2 text-xs text-sky-700"
-                          title="Reset Password"
+                          className="h-7 px-2 text-xs text-sky-700 hover:text-sky-800"
+                          title="Reset Login Credentials"
                         >
                           <KeyRound className="h-3.5 w-3.5" />
                         </Button>
-                        {u.roleCode !== "SUPER_ADMIN" && (
+
+                        {/* Delete User for Higher Authorities (Super Admin / Director) */}
+                        {isHigherAuthority && u.roleCode !== "SUPER_ADMIN" && (
                           <Button
                             onClick={() => {
-                              if (confirm(`Are you sure you want to delete user ${u.name}?`)) {
+                              if (confirm(`Are you sure you want to remove user "${u.name}" (${u.email})?`)) {
                                 deleteMutation.mutate({ userId: u.id });
                               }
                             }}
                             size="sm"
                             variant="outline"
-                            className="h-7 px-2 text-xs text-red-600 hover:text-red-700"
+                            className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
                             title="Delete User"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -491,7 +533,7 @@ export function UsersView() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label className="text-xs font-semibold">Platform Role</Label>
+                    <Label className="text-xs font-semibold">Assigned Role</Label>
                     <select
                       value={newRoleCode}
                       onChange={(e) => setNewRoleCode(e.target.value as UserRoleCode)}
@@ -586,8 +628,10 @@ export function UsersView() {
                     <Input
                       value={editPhone}
                       onChange={(e) => setEditPhone(e.target.value)}
+                      placeholder="e.g. 9196596975"
                       className="h-8 text-xs mt-1"
                     />
+                    <p className="text-[10px] text-slate-400 mt-0.5">Leave blank if unavailable. Must be unique.</p>
                   </div>
                 </div>
 
@@ -597,14 +641,17 @@ export function UsersView() {
                     <select
                       value={editRoleCode}
                       onChange={(e) => setEditRoleCode(e.target.value as UserRoleCode)}
-                      disabled={editUser.roleCode === "SUPER_ADMIN"}
+                      disabled={editUser.roleCode === "SUPER_ADMIN" && !isSuperAdmin}
                       className="w-full h-8 text-xs mt-1 rounded-md border border-slate-300 px-2 bg-white"
                     >
-                      {Object.values(UserRoleCode).map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
+                      {Object.values(UserRoleCode).map((r) => {
+                        if (r === "SUPER_ADMIN" && !isSuperAdmin) return null;
+                        return (
+                          <option key={r} value={r}>
+                            {r}
+                          </option>
+                        );
+                      })}
                     </select>
                   </div>
                   <div>
@@ -612,7 +659,7 @@ export function UsersView() {
                     <select
                       value={editStatus}
                       onChange={(e) => setEditStatus(e.target.value as UserStatus)}
-                      disabled={editUser.roleCode === "SUPER_ADMIN"}
+                      disabled={editUser.roleCode === "SUPER_ADMIN" && !isSuperAdmin}
                       className="w-full h-8 text-xs mt-1 rounded-md border border-slate-300 px-2 bg-white"
                     >
                       <option value="ACTIVE">ACTIVE</option>
@@ -660,7 +707,19 @@ export function UsersView() {
             <form onSubmit={handleResetPasswordSubmit}>
               <CardContent className="p-4 space-y-3">
                 <div>
-                  <Label className="text-xs font-semibold">New Secure Password</Label>
+                  <div className="flex items-center justify-between mb-1">
+                    <Label className="text-xs font-semibold">New Secure Password</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const randomSuffix = Math.random().toString(36).slice(-4);
+                        setNewPasswordValue(`SoftLab@2026!${randomSuffix}`);
+                      }}
+                      className="text-[11px] text-sky-600 hover:text-sky-800 font-semibold"
+                    >
+                      Generate Secure
+                    </button>
+                  </div>
                   <Input
                     required
                     type="text"
@@ -699,12 +758,16 @@ export function UsersView() {
       {/* 5-Step Staff Onboarding Wizard */}
       <StaffOnboardingWizard
         isOpen={onboardOpen}
-        onClose={() => setOnboardOpen(false)}
+        initialUser={selectedUserForStaff}
+        onClose={() => {
+          setOnboardOpen(false);
+          setSelectedUserForStaff(null);
+        }}
         onSuccess={() => {
           utils.admin.listUsers.invalidate();
           setNotification({
             type: "success",
-            message: "Employee successfully onboarded with verified credentials and checklist!",
+            message: "Employee successfully onboarded with verified credentials, 4K ID card and checklist!",
           });
         }}
       />

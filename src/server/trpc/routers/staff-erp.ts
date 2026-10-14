@@ -914,6 +914,7 @@ export const staffErpRouter = router({
   onboardEmployee: requireRoleProcedure(adminHRRoles)
     .input(
       z.object({
+        existingUserId: z.string().optional(),
         employeeId: z.string().optional(),
         firstName: z.string().min(1),
         lastName: z.string().min(1),
