@@ -1,4 +1,4 @@
-import { router, publicProcedure, requireRoleProcedure } from "../init";
+import { router, publicProcedure, protectedProcedure, requireRoleProcedure } from "../init";
 import { z } from "zod";
 import {
   UserRoleCode,
@@ -1337,7 +1337,7 @@ export const crmRouter = router({
             where: {
               OR: [
                 { title: { contains: item.courseName, mode: "insensitive" } },
-                { code: { contains: item.courseName, mode: "insensitive" } },
+                { courseCode: { contains: item.courseName, mode: "insensitive" } },
               ],
             },
           });

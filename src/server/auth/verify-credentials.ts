@@ -12,6 +12,9 @@ export interface UserAuthResult {
   lastName: string;
   roleCode: UserRoleCode;
   permissions: string[];
+  phone?: string | null;
+  callingNumber?: string | null;
+  whatsappNumber?: string | null;
 }
 
 export interface VerifyCredentialsOptions {

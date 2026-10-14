@@ -25,5 +25,21 @@
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
-  "exclude": ["node_modules", "mobile", "desktop", "apps", "packages", "services"]
+  "exclude": [
+    "node_modules",
+    "mobile",
+    "desktop",
+    "apps",
+    "packages",
+    "services",
+    "src/server/sia/**/*",
+    "src/server/sia",
+    "src/app/(sia)/**/*",
+    "src/app/(sia)",
+    "src/app/api/sia/**/*",
+    "src/app/api/sia",
+    "src/components/sia/**/*",
+    "src/components/sia",
+    "src/server/trpc/routers/sia.ts"
+  ]
 }
