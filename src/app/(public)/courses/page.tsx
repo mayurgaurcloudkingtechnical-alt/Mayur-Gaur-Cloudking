@@ -38,6 +38,9 @@ export default async function CoursesPage() {
       language: true,
       eligibility: true,
       thumbnailUrl: true,
+      programCategory: true,
+      courseCode: true,
+      specialization: true,
     },
   });
 

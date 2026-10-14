@@ -139,6 +139,7 @@ export const crmRouter = router({
         specialization: true,
         specializations: true,
         programCategory: true,
+        courseCode: true,
         admissionSession: true,
         registrationFee: true,
         examinationFee: true,

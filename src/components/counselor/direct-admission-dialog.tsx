@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   MessageSquare,
   ExternalLink,
+  Award,
 } from "lucide-react";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { StudentIdCardView, StudentIdCardData } from "@/components/common/student-id-card-view";
@@ -86,7 +87,7 @@ export function DirectAdmissionDialog({
   onSuccess,
 }: DirectAdmissionDialogProps) {
   // Provider & Course selection
-  const [providerMode, setProviderMode] = useState<"SOFTLAB" | "UNIVERSITY">("SOFTLAB");
+  const [providerMode, setProviderMode] = useState<"SOFTLAB" | "CERTIFICATION" | "UNIVERSITY">("SOFTLAB");
   const [courseId, setCourseId] = useState("");
   const [batchId, setBatchId] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>("");
@@ -166,11 +167,15 @@ export function DirectAdmissionDialog({
 
   const utils = api.useUtils();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
-  const filteredCourses = courses.filter((c: any) =>
-    providerMode === "UNIVERSITY"
-      ? c.providerType === "UNIVERSITY"
-      : c.providerType !== "UNIVERSITY"
-  );
+  const filteredCourses = courses.filter((c: any) => {
+    if (providerMode === "UNIVERSITY") {
+      return c.providerType === "UNIVERSITY";
+    }
+    if (providerMode === "CERTIFICATION") {
+      return c.programCategory === "CERTIFICATION";
+    }
+    return c.providerType !== "UNIVERSITY" && c.programCategory !== "CERTIFICATION";
+  });
 
   const { data: batchesData } = api.batch.list.useQuery(
     { courseId: courseId || undefined, pageSize: 50 },
@@ -255,7 +260,13 @@ export function DirectAdmissionDialog({
         setCourseId(targetCourseId);
         const target = courses.find((c: any) => c.id === targetCourseId);
         if (target) {
-          setProviderMode(target.providerType === "UNIVERSITY" ? "UNIVERSITY" : "SOFTLAB");
+          if (target.providerType === "UNIVERSITY") {
+            setProviderMode("UNIVERSITY");
+          } else if (target.programCategory === "CERTIFICATION") {
+            setProviderMode("CERTIFICATION");
+          } else {
+            setProviderMode("SOFTLAB");
+          }
           if (target.baseFee && typeof initialLead.customTotalFee !== "number") {
             setCustomTotalFee(target.baseFee / 100);
           }
@@ -485,7 +496,20 @@ export function DirectAdmissionDialog({
       setApplicantPhone(targetLead.phone);
       setWhatsappNumber(targetLead.phone);
       if (targetLead.city) setCity(targetLead.city);
-      if (targetLead.interestedCourseId) setCourseId(targetLead.interestedCourseId);
+      if (targetLead.interestedCourseId) {
+        setCourseId(targetLead.interestedCourseId);
+        const target = courses.find((c: any) => c.id === targetLead.interestedCourseId);
+        if (target) {
+          if (target.providerType === "UNIVERSITY") {
+            setProviderMode("UNIVERSITY");
+          } else if (target.programCategory === "CERTIFICATION") {
+            setProviderMode("CERTIFICATION");
+          } else {
+            setProviderMode("SOFTLAB");
+          }
+          if (target.baseFee) setCustomTotalFee(target.baseFee / 100);
+        }
+      }
     }
   };
 
@@ -967,10 +991,14 @@ Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
                 <Label className="text-xs font-bold text-slate-800 flex items-center justify-between">
                   <span>Admission Stream / Academic Partner *</span>
                   <span className="text-[10px] font-mono text-slate-500 font-normal">
-                    {providerMode === "UNIVERSITY" ? "University Degree Program" : "SoftLab IT Training"}
+                    {providerMode === "UNIVERSITY"
+                      ? "University Degree Program"
+                      : providerMode === "CERTIFICATION"
+                      ? "Industry Global Certification"
+                      : "SoftLab IT Training"}
                   </span>
                 </Label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -979,14 +1007,32 @@ Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
                       setBatchId("");
                       setSelectedSpecialization("");
                     }}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
                       providerMode === "SOFTLAB"
                         ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
                         : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
                     }`}
                   >
                     <BookOpen className="h-3.5 w-3.5" />
-                    <span>SoftLab Global Courses</span>
+                    <span>Flagship Courses</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProviderMode("CERTIFICATION");
+                      setCourseId("");
+                      setBatchId("");
+                      setSelectedSpecialization("");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
+                      providerMode === "CERTIFICATION"
+                        ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 font-bold border-amber-600 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-amber-50"
+                    }`}
+                  >
+                    <Award className="h-3.5 w-3.5" />
+                    <span>Certification Courses</span>
                   </button>
 
                   <button
@@ -997,14 +1043,14 @@ Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
                       setBatchId("");
                       setSelectedSpecialization("");
                     }}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
                       providerMode === "UNIVERSITY"
-                        ? "bg-amber-600 text-white border-amber-700 shadow-xs"
-                        : "bg-white text-slate-700 border-slate-300 hover:bg-amber-50"
+                        ? "bg-blue-600 text-white border-blue-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
                     }`}
                   >
                     <GraduationCap className="h-3.5 w-3.5" />
-                    <span>Dr. Preeti Global University</span>
+                    <span>DP Global University</span>
                   </button>
                 </div>
               </div>

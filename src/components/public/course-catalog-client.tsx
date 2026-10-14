@@ -5,7 +5,7 @@ import { PublicCourseData, CourseCard } from "./course-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, BookOpen, Filter, X } from "lucide-react";
+import { Search, BookOpen, Filter, X, Award, Sparkles } from "lucide-react";
 
 interface CourseCatalogClientProps {
   courses: PublicCourseData[];
@@ -14,6 +14,16 @@ interface CourseCatalogClientProps {
 export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedLevel, setSelectedLevel] = React.useState<string>("ALL");
+  const [selectedCategory, setSelectedCategory] = React.useState<"ALL" | "FLAGSHIP" | "CERTIFICATION">("ALL");
+
+  const certCount = React.useMemo(
+    () => courses.filter((c) => c.programCategory === "CERTIFICATION").length,
+    [courses]
+  );
+  const flagshipCount = React.useMemo(
+    () => courses.filter((c) => c.programCategory !== "CERTIFICATION").length,
+    [courses]
+  );
 
   // Extract distinct levels from real database courses
   const availableLevels = React.useMemo(() => {
@@ -24,28 +34,74 @@ export function CourseCatalogClient({ courses }: CourseCatalogClientProps) {
     return Array.from(levels);
   }, [courses]);
 
-  // Filter courses by search query and level
+  // Filter courses by search query, level, and program category
   const filteredCourses = React.useMemo(() => {
     return courses.filter((course) => {
       const matchesSearch =
         searchQuery === "" ||
         course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.summary.toLowerCase().includes(searchQuery.toLowerCase());
+        course.summary.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (course.courseCode && course.courseCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (course.specialization && course.specialization.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesLevel =
         selectedLevel === "ALL" || course.level === selectedLevel;
 
-      return matchesSearch && matchesLevel;
+      const matchesCategory =
+        selectedCategory === "ALL" ||
+        (selectedCategory === "CERTIFICATION" && course.programCategory === "CERTIFICATION") ||
+        (selectedCategory === "FLAGSHIP" && course.programCategory !== "CERTIFICATION");
+
+      return matchesSearch && matchesLevel && matchesCategory;
     });
-  }, [courses, searchQuery, selectedLevel]);
+  }, [courses, searchQuery, selectedLevel, selectedCategory]);
 
   const handleResetFilters = () => {
     setSearchQuery("");
     setSelectedLevel("ALL");
+    setSelectedCategory("ALL");
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
+      {/* Category Filter Tabs */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-slate-900/90 rounded-2xl border border-slate-800 max-w-fit shadow-md">
+        <button
+          onClick={() => setSelectedCategory("ALL")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            selectedCategory === "ALL"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+          }`}
+        >
+          <BookOpen className="w-3.5 h-3.5" />
+          <span>All Programs ({courses.length})</span>
+        </button>
+
+        <button
+          onClick={() => setSelectedCategory("CERTIFICATION")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            selectedCategory === "CERTIFICATION"
+              ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md shadow-amber-950/40"
+              : "text-amber-400 hover:text-amber-300 hover:bg-slate-800/60"
+          }`}
+        >
+          <Award className="w-3.5 h-3.5" />
+          <span>Industry Certification Courses ({certCount})</span>
+        </button>
+
+        <button
+          onClick={() => setSelectedCategory("FLAGSHIP")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            selectedCategory === "FLAGSHIP"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-950/40"
+              : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/60"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Flagship Career Programs ({flagshipCount})</span>
+        </button>
+      </div>
       {/* Search & Filter Controls */}
       <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 rounded-2xl border border-slate-800 shadow-xl shadow-slate-950/40">
         <div className="relative flex-1">

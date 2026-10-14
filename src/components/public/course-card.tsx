@@ -39,6 +39,9 @@ export interface PublicCourseData {
   language: string | null;
   eligibility?: string | null;
   thumbnailUrl?: string | null;
+  programCategory?: string | null;
+  courseCode?: string | null;
+  specialization?: string | null;
 }
 
 interface CourseCardProps {
@@ -372,10 +375,17 @@ export function CourseCard({ course }: CourseCardProps) {
 
         {/* Top Floating Badges */}
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 z-10">
-          <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md">
-            <ShieldCheck className="w-3 h-3" />
-            <span>100% Placement</span>
-          </span>
+          {course.programCategory === "CERTIFICATION" ? (
+            <span className="inline-flex items-center gap-1 bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full shadow-md shadow-amber-950/40">
+              <Award className="w-3 h-3 text-slate-950" />
+              <span>Global Certification</span>
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 bg-emerald-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full shadow-md">
+              <ShieldCheck className="w-3 h-3" />
+              <span>100% Placement</span>
+            </span>
+          )}
           {course.level && (
             <span className="bg-slate-900/90 text-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded-full border border-slate-700 backdrop-blur-sm">
               {course.level}

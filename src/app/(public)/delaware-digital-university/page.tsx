@@ -21,8 +21,11 @@ import {
   PhoneCall,
   MapPin,
   Check,
+  Clock,
 } from "lucide-react";
 import { DDU_CONFIG } from "@/config/university.config";
+import { db } from "@/server/db/client";
+import { ContentStatus } from "@prisma/client";
 
 export const metadata: Metadata = {
   title: "Delaware Digital University (USA) — Global Certification | SoftLab Global",
@@ -30,7 +33,29 @@ export const metadata: Metadata = {
     "SoftLab Global in partnership with Delaware Digital University (DDU, USA) provides globally accredited, verifiable skill certifications registered with the Delaware Department of State (Reg #7349298).",
 };
 
-export default function DelawareDigitalUniversityPage() {
+export default async function DelawareDigitalUniversityPage() {
+  const certCourses = await db.course.findMany({
+    where: {
+      status: ContentStatus.PUBLISHED,
+      deletedAt: null,
+      programCategory: "CERTIFICATION",
+    },
+    orderBy: {
+      sortOrder: "asc",
+    },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      courseCode: true,
+      summary: true,
+      durationWeeks: true,
+      durationYears: true,
+      baseFee: true,
+      level: true,
+      specialization: true,
+    },
+  });
   return (
     <div className="flex flex-col min-h-screen bg-slate-950 text-slate-100 selection:bg-emerald-500 selection:text-white">
       {/* 1. Hero Section - Deep Cyber Sapphire & Emerald */}
@@ -348,6 +373,113 @@ export default function DelawareDigitalUniversityPage() {
                   <p className="text-xs text-slate-300 leading-relaxed font-medium">
                     {dept.topics}
                   </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* 3.5. Industry Global Certification Programs Showcase */}
+      <section className="py-16 sm:py-20 bg-gradient-to-b from-[#030914] via-[#051326] to-[#030914] relative border-b border-slate-800/80">
+        <div className="absolute inset-0 bg-[radial-gradient(#0284c7_1px,transparent_1px)] [background-size:24px_24px] opacity-10 pointer-events-none" />
+        <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 z-10 space-y-12">
+          <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-bold uppercase tracking-wider mb-3">
+                <Award className="h-3.5 w-3.5 text-amber-400" />
+                <span>Industry Global Certification Programs</span>
+              </div>
+              <h2 className="text-3xl sm:text-5xl font-black text-white tracking-tight">
+                High-Impact Certification Tracks
+              </h2>
+              <p className="text-sm sm:text-base text-slate-300 mt-2 max-w-3xl">
+                Fast-track 2 to 4 month professional certifications in AWS Cloud, Microsoft Azure, Cisco CCNA, FortiGate NGFW, Red Hat Linux, Ethical Hacking & AI. Awarded with Delaware Digital University (USA) international credentials.
+              </p>
+            </div>
+
+            <Link
+              href="/courses"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-sky-500 text-sky-400 text-xs font-bold transition-all shadow-md shrink-0"
+            >
+              <span>View All Programs in Catalog</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {certCourses.map((cert) => {
+              const feeInRupees = Math.round(cert.baseFee / 100);
+              const waText = encodeURIComponent(
+                `Hello SoftLab Global! I want to take admission in the ${cert.title} (${cert.courseCode || ""}) certification course. Please share batch schedule and enrollment details.`
+              );
+
+              return (
+                <div
+                  key={cert.id}
+                  className="rounded-2xl border border-slate-800 bg-slate-900/80 hover:bg-slate-900 hover:border-sky-500/50 p-6 flex flex-col justify-between space-y-5 transition-all hover:scale-[1.01] shadow-xl shadow-slate-950/40 relative group"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded-md bg-sky-950/90 text-sky-400 border border-sky-800/60">
+                        {cert.courseCode || "CERTIFICATION"}
+                      </span>
+                      <span className="text-xs font-bold text-amber-400 flex items-center gap-1 bg-amber-950/40 border border-amber-900/60 px-2 py-0.5 rounded-full">
+                        <Award className="h-3 w-3" />
+                        DDU USA Accredited
+                      </span>
+                    </div>
+
+                    <h3 className="text-lg font-bold text-white group-hover:text-sky-300 transition-colors leading-snug">
+                      {cert.title}
+                    </h3>
+
+                    <p className="text-xs text-slate-400 line-clamp-3 leading-relaxed">
+                      {cert.summary}
+                    </p>
+
+                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-300 pt-1">
+                      <span className="flex items-center gap-1 bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-md">
+                        <Clock className="h-3 w-3 text-sky-400" />
+                        {cert.durationYears || `${cert.durationWeeks} Weeks`}
+                      </span>
+                      <span className="bg-slate-950/90 border border-slate-800 px-2.5 py-1 rounded-md text-slate-400">
+                        {cert.level || "Beginner to Advanced"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t border-slate-800 space-y-3">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-xs text-slate-400 uppercase font-mono">Market Fee</span>
+                      <div className="text-right">
+                        <span className="text-xl font-black text-emerald-400">
+                          ₹{feeInRupees.toLocaleString("en-IN")}
+                        </span>
+                        <span className="text-[10px] text-slate-500 block">Inclusive of Labs & Exam Prep</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <Link
+                        href={`/courses/${cert.slug}`}
+                        className="inline-flex items-center justify-center gap-1 py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-md transition-all text-center"
+                      >
+                        <span>View Details</span>
+                        <ArrowRight className="h-3 w-3" />
+                      </Link>
+
+                      <a
+                        href={`https://api.whatsapp.com/send?phone=919196596979&text=${waText}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all text-center"
+                      >
+                        <PhoneCall className="h-3 w-3" />
+                        <span>Enquire Now</span>
+                      </a>
+                    </div>
+                  </div>
                 </div>
               );
             })}
