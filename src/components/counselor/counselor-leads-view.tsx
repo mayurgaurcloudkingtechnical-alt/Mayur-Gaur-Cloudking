@@ -37,6 +37,7 @@ import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
+import { LeadAutoConnectDialog } from "./lead-auto-connect-dialog";
 
 interface CounselorLeadsViewProps {
   basePath?: string;
@@ -51,6 +52,7 @@ export function CounselorLeadsView({
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [autoConnectOpen, setAutoConnectOpen] = useState(false);
   const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
   const [selectedSource, setSelectedSource] = useState<string>("ALL");
@@ -362,6 +364,18 @@ export function CounselorLeadsView({
                   <span>Pipeline</span>
                 </button>
               </div>
+
+              {/* AI Auto-Connect Untouched & Pending Leads */}
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => setAutoConnectOpen(true)}
+                className="bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:from-indigo-700 hover:to-purple-800 text-white text-xs font-bold flex items-center gap-1.5 h-9 shadow-xs"
+                title="Auto-connect and follow up untouched, pending & remaining leads via WhatsApp & AI Calling"
+              >
+                <Zap className="h-4 w-4 text-amber-300" />
+                <span>AI Auto-Connect</span>
+              </Button>
 
               {/* Student Enquiry Form Action Button */}
               <Button
@@ -752,6 +766,16 @@ export function CounselorLeadsView({
         initialLeadId={selectedLeadForAdmission?.id}
         initialLead={selectedLeadForAdmission}
         onSuccess={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
+      />
+
+      {/* AI Auto-Connect Untouched & Pending Leads Modal */}
+      <LeadAutoConnectDialog
+        open={autoConnectOpen}
+        onClose={() => setAutoConnectOpen(false)}
+        onComplete={() => {
           refetch();
           utils.crm.getStats.invalidate();
         }}

@@ -237,4 +237,212 @@ export class StudentAdmissionNotificationService {
       results,
     };
   }
+
+  /**
+   * Connect with an individual student via LMS WhatsApp integration according to credentials
+   */
+  public static async sendStudentLmsWhatsAppMessage(params: {
+    studentProfileId: string;
+    messageType: "CREDENTIALS" | "CLASS_ALERT" | "ATTENDANCE_WARNING" | "CUSTOM";
+    customText?: string;
+    batchTitle?: string;
+    sessionTime?: string;
+    attendancePercentage?: number;
+    senderName?: string;
+    senderPhone?: string;
+  }): Promise<{
+    success: boolean;
+    phone: string;
+    whatsappUrl: string;
+    message: string;
+    messageId?: string;
+  }> {
+    const student = await db.studentProfile.findUnique({
+      where: { id: params.studentProfileId },
+      include: {
+        user: true,
+        enrollments: {
+          include: {
+            course: true,
+            batch: true,
+          },
+          take: 1,
+        },
+      },
+    });
+
+    if (!student || !student.user) {
+      throw new Error("Student profile record not found.");
+    }
+
+    const studentName = `${student.user.firstName} ${student.user.lastName}`.trim();
+    const rawPhone = student.user.phone || (student as any).whatsappNumber || "";
+    const cleanPhone = WhatsAppBusinessService.normalizePhone(rawPhone);
+    const primaryEnrollment = student.enrollments[0];
+    const courseTitle = primaryEnrollment?.course?.title || "Enrolled IT Program";
+    const batchName = params.batchTitle || primaryEnrollment?.batch?.name || "Regular Batch";
+    const senderName = params.senderName || "SoftLab Global Student Directorate";
+    const senderPhone = params.senderPhone || "9196596979";
+
+    let messageText = "";
+
+    if (params.messageType === "CREDENTIALS") {
+      messageText = [
+        `🎓 *SOFTLAB GLOBAL — STUDENT LMS PORTAL ACCESS*`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Dear *${studentName}*,`,
+        `Here are your official LMS login credentials and portal access details:`,
+        ``,
+        `🌐 *Student Portal*: https://softlabglobal.com/login`,
+        `🆔 *Student ID*: *${student.studentId}*`,
+        `📧 *Username / Email*: *${student.user.email}*`,
+        `📚 *Program*: *${courseTitle}*`,
+        `🏛️ *Cohort*: *${batchName}*`,
+        ``,
+        `🔑 *How to Access*:`,
+        `1. Visit https://softlabglobal.com/login`,
+        `2. Log in using your email and password`,
+        `3. Access live lectures, lecture notes, assessments, and digital ID card`,
+        ``,
+        `📞 *Academic Helpline*: +91 ${senderPhone.replace(/\D/g, "").slice(-10)}`,
+        `📍 *Main Campus*: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      ].join("\n");
+    } else if (params.messageType === "CLASS_ALERT") {
+      messageText = [
+        `📢 *CLASS SCHEDULE UPDATE — SOFTLAB GLOBAL LMS*`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Dear *${studentName}* (${student.studentId}),`,
+        ``,
+        `Your upcoming session for *${courseTitle}* (${batchName}) is scheduled as follows:`,
+        `🕒 *Timing / Schedule*: ${params.sessionTime || "Today as per batch timetable"}`,
+        `🏛️ *Campus / Lab*: SoftLab Global, 4th Floor, Civil Lines, Prayagraj`,
+        `💻 *Online Access*: https://softlabglobal.com/login`,
+        ``,
+        `Please ensure punctual attendance and bring your practical assignments.`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      ].join("\n");
+    } else if (params.messageType === "ATTENDANCE_WARNING") {
+      const pct = params.attendancePercentage !== undefined ? `${params.attendancePercentage}%` : "below required threshold";
+      messageText = [
+        `⚠️ *ATTENDANCE COMPLIANCE ALERT — SOFTLAB GLOBAL*`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Dear *${studentName}* (${student.studentId}),`,
+        ``,
+        `Your current attendance for *${courseTitle}* is recorded at *${pct}*.`,
+        `Institutional policy requires a minimum of *75% attendance* for corporate placement eligibility and certificate issuance.`,
+        ``,
+        `Please meet your academic mentor or counselor immediately:`,
+        `• Coordinator: *${senderName}*`,
+        `• Helpline: +91 ${senderPhone.replace(/\D/g, "").slice(-10)}`,
+        `• Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      ].join("\n");
+    } else {
+      messageText = [
+        `📌 *SOFTLAB GLOBAL ACADEMIC UPDATE*`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+        `Dear *${studentName}* (${student.studentId}),`,
+        ``,
+        params.customText || `We have an important academic update regarding your enrollment in ${courseTitle}.`,
+        ``,
+        `Portal: https://softlabglobal.com/login`,
+        `Helpline: +91 ${senderPhone.replace(/\D/g, "").slice(-10)}`,
+        `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      ].join("\n");
+    }
+
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(messageText)}`;
+
+    let waResult: any = { success: false };
+    if (cleanPhone) {
+      try {
+        waResult = await WhatsAppBusinessService.sendMessage({
+          toPhone: cleanPhone,
+          text: messageText,
+        });
+      } catch (err: any) {
+        console.error(`[StudentAdmissionNotificationService] Direct student WhatsApp error:`, err.message);
+      }
+    }
+
+    return {
+      success: waResult.success || false,
+      phone: cleanPhone,
+      whatsappUrl,
+      message: messageText,
+      messageId: waResult.messageId,
+    };
+  }
+
+  /**
+   * Broadcast WhatsApp notice to all active students in a cohort/batch
+   */
+  public static async broadcastWhatsAppToBatchStudents(params: {
+    batchId: string;
+    messageType: "CLASS_ALERT" | "ATTENDANCE_WARNING" | "CUSTOM";
+    customText?: string;
+    sessionTime?: string;
+    senderName?: string;
+    senderPhone?: string;
+  }): Promise<{
+    batchName: string;
+    totalStudents: number;
+    sentCount: number;
+    failedCount: number;
+  }> {
+    const batch = await db.batch.findUnique({
+      where: { id: params.batchId },
+      include: {
+        course: true,
+        enrollments: {
+          where: { status: "ACTIVE" },
+          include: {
+            student: {
+              include: {
+                user: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!batch) {
+      throw new Error("Cohort / Batch not found.");
+    }
+
+    let sentCount = 0;
+    let failedCount = 0;
+
+    for (const enr of batch.enrollments) {
+      try {
+        const res = await this.sendStudentLmsWhatsAppMessage({
+          studentProfileId: enr.student.id,
+          messageType: params.messageType,
+          customText: params.customText,
+          batchTitle: batch.name,
+          sessionTime: params.sessionTime,
+          senderName: params.senderName,
+          senderPhone: params.senderPhone,
+        });
+
+        if (res.success) {
+          sentCount++;
+        } else {
+          failedCount++;
+        }
+      } catch {
+        failedCount++;
+      }
+    }
+
+    return {
+      batchName: batch.name,
+      totalStudents: batch.enrollments.length,
+      sentCount,
+      failedCount,
+    };
+  }
 }
+

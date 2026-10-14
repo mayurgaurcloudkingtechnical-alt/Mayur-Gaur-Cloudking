@@ -21,6 +21,7 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { ReceiptService } from "@/server/services/receipt.service";
 import { TRPCError } from "@trpc/server";
 import { StudentAdmissionNotificationService } from "@/server/services/student-admission-notification.service";
+import { LeadAutoFollowupService } from "@/server/services/lead-auto-followup.service";
 
 function asAuthUser(user: any): AuthenticatedUser {
   return {
@@ -1371,5 +1372,41 @@ export const crmRouter = router({
   broadcastToExistingAdmittedStudents: requireRoleProcedure(admissionRoles).mutation(async () => {
     return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
   }),
+
+  /**
+   * Get counts of untouched and pending leads for AI follow-up
+   */
+  getUntouchedPendingStats: requireRoleProcedure(crmRoles).query(async ({ ctx }) => {
+    const isRestricted =
+      ctx.user.roleCode === UserRoleCode.COUNSELOR || ctx.user.roleCode === UserRoleCode.TELECALLER;
+    return LeadAutoFollowupService.getUntouchedAndPendingStats(isRestricted ? ctx.user.id : undefined);
+  }),
+
+  /**
+   * Auto connect and follow up all remaining, untouched, pending leads by WhatsApp and AI Calling
+   */
+  triggerLeadAutoFollowup: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        mode: z.enum(["WHATSAPP", "AI_CALLING", "BOTH"]).default("BOTH"),
+        limit: z.number().int().min(1).max(50).default(20),
+        courseId: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const isRestricted =
+        ctx.user.roleCode === UserRoleCode.COUNSELOR || ctx.user.roleCode === UserRoleCode.TELECALLER;
+
+      return LeadAutoFollowupService.executeBatchAutoFollowup({
+        mode: input.mode,
+        limit: input.limit,
+        courseId: input.courseId,
+        assignedToId: isRestricted ? ctx.user.id : undefined,
+        actorId: ctx.user.id,
+        actorName: `${ctx.user.firstName} ${ctx.user.lastName}`,
+        actorCallingNumber: (ctx.user as any).callingNumber || (ctx.user as any).phone,
+        actorWhatsappNumber: (ctx.user as any).whatsappNumber || (ctx.user as any).phone,
+      });
+    }),
 });
 

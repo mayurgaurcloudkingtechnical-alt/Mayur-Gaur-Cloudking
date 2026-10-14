@@ -38,6 +38,9 @@ import {
   UploadCloud,
   Eye,
   Camera,
+  MessageSquare,
+  Send,
+  Share2,
 } from "lucide-react";
 import { PaymentMethod, UserStatus } from "@prisma/client";
 import { StudentIdCardView } from "@/components/common/student-id-card-view";
@@ -194,6 +197,30 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
   const { data: batchesData } = api.batch.list.useQuery({
     courseId: newCourseId || undefined,
     pageSize: 50,
+  });
+
+  const { data: academicMetrics, refetch: refetchAcademicMetrics } =
+    api.attendance.getStudentAcademicMetrics.useQuery(
+      { studentProfileId: studentId },
+      { enabled: !!studentId }
+    );
+
+  const sendStudentWhatsAppMutation = api.admin.sendStudentWhatsAppDirect.useMutation({
+    onSuccess: (res) => {
+      setNotification({
+        type: "success",
+        message: `WhatsApp message successfully dispatched to +91 ${res.phone.slice(-10)}!`,
+      });
+      if (res.whatsappUrl) {
+        window.open(res.whatsappUrl, "_blank");
+      }
+    },
+    onError: (err) => {
+      setNotification({
+        type: "error",
+        message: `WhatsApp dispatch failed: ${err.message}`,
+      });
+    },
   });
 
   // Mutations
@@ -1297,9 +1324,26 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
                     <div>
                       <span className="text-xs font-semibold text-slate-400 uppercase">Curriculum Progress</span>
-                      <p className="font-semibold text-slate-800 mt-1">
-                        {enrollment.lessonProgress.length} Lessons Finished
-                      </p>
+                      {(() => {
+                        const courseMetric = academicMetrics?.courses.find((c) => c.enrollmentId === enrollment.id);
+                        const progressPct = courseMetric?.progressPercentage ?? 0;
+                        const totalL = courseMetric?.totalLessons ?? enrollment.lessonProgress.length;
+                        return (
+                          <div className="mt-1 space-y-1">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-semibold text-slate-800">
+                                {enrollment.lessonProgress.length} of {totalL} Lessons ({progressPct}%)
+                              </span>
+                            </div>
+                            <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                              <div
+                                className="bg-emerald-600 h-full rounded-full transition-all duration-300"
+                                style={{ width: `${Math.min(100, progressPct)}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
 
                     <div>
@@ -2111,6 +2155,110 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
                     {resetPasswordMutation.isPending ? "Updating..." : "Update Student Password"}
                   </Button>
                 </form>
+              </div>
+
+              {/* Student LMS WhatsApp Integration Card */}
+              <div className="md:col-span-2 p-5 rounded-xl border border-emerald-200 bg-emerald-50/40 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-200/60 pb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-emerald-600 rounded-lg text-white shadow-xs">
+                      <MessageSquare className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                        <span>LMS WhatsApp Integration & Student Connectivity</span>
+                        <Badge className="bg-emerald-600 text-white text-[10px]">VERIFIED CHANNEL</Badge>
+                      </h4>
+                      <p className="text-xs text-slate-500">
+                        Dispatch portal credentials, schedule updates, and attendance alerts directly to student's WhatsApp
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="text-xs text-slate-600 bg-white px-3 py-1.5 rounded-md border border-emerald-200 font-mono">
+                    Target: <strong>+91 {student.user.phone ? student.user.phone.replace(/\D/g, "").slice(-10) : "No Phone"}</strong>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  {/* Action 1: Send Credentials */}
+                  <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+                    <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <KeyRound className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Portal Credentials</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Sends official LMS URL (softlabglobal.com/login), Student ID, Username & access instructions.
+                    </p>
+                    <Button
+                      size="sm"
+                      type="button"
+                      disabled={sendStudentWhatsAppMutation.isPending}
+                      onClick={() => {
+                        sendStudentWhatsAppMutation.mutate({
+                          studentProfileId: student.id,
+                          messageType: "CREDENTIALS",
+                        });
+                      }}
+                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold h-8"
+                    >
+                      {sendStudentWhatsAppMutation.isPending ? "Sending..." : "Send Credentials via WhatsApp"}
+                    </Button>
+                  </div>
+
+                  {/* Action 2: Class Schedule Alert */}
+                  <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+                    <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Clock className="h-3.5 w-3.5 text-blue-600" />
+                      <span>Class Schedule Alert</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Notifies student about upcoming cohort session, timing, lab location & online portal link.
+                    </p>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      disabled={sendStudentWhatsAppMutation.isPending}
+                      onClick={() => {
+                        sendStudentWhatsAppMutation.mutate({
+                          studentProfileId: student.id,
+                          messageType: "CLASS_ALERT",
+                        });
+                      }}
+                      className="w-full border-blue-200 bg-blue-50/50 hover:bg-blue-100 text-blue-700 text-xs font-semibold h-8"
+                    >
+                      Send Class Timetable Notice
+                    </Button>
+                  </div>
+
+                  {/* Action 3: Attendance Warning */}
+                  <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-2xs space-y-2">
+                    <div className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-600" />
+                      <span>Attendance Compliance</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500">
+                      Dispatches official 75% attendance compliance warning and coordinator helpline.
+                    </p>
+                    <Button
+                      size="sm"
+                      type="button"
+                      variant="outline"
+                      disabled={sendStudentWhatsAppMutation.isPending}
+                      onClick={() => {
+                        sendStudentWhatsAppMutation.mutate({
+                          studentProfileId: student.id,
+                          messageType: "ATTENDANCE_WARNING",
+                          attendancePercentage: academicMetrics?.attendance?.percentage,
+                        });
+                      }}
+                      className="w-full border-amber-200 bg-amber-50/50 hover:bg-amber-100 text-amber-700 text-xs font-semibold h-8"
+                    >
+                      Send Attendance Notice
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
           </CardContent>

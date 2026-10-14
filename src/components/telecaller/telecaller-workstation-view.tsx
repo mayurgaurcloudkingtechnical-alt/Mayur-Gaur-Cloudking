@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
+import { LeadAutoConnectDialog } from "../counselor/lead-auto-connect-dialog";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -47,6 +48,7 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const [escalationNotes, setEscalationNotes] = useState("");
 
   const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [autoConnectOpen, setAutoConnectOpen] = useState(false);
   const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
 
   const utils = api.useUtils();
@@ -235,6 +237,16 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
               className="text-xs h-8"
             >
               All Leads
+            </Button>
+
+            <Button
+              size="sm"
+              onClick={() => setAutoConnectOpen(true)}
+              className="bg-gradient-to-r from-purple-700 to-indigo-700 hover:from-purple-800 hover:to-indigo-800 text-white text-xs font-bold h-8 flex items-center gap-1.5 shadow-xs"
+              title="Auto-connect and follow up untouched and pending leads via WhatsApp & AI Calling"
+            >
+              <Zap className="h-3.5 w-3.5 text-amber-300" />
+              <span>AI Auto-Connect</span>
             </Button>
           </div>
         </CardHeader>
@@ -625,6 +637,16 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
         initialLeadId={selectedLeadForAdmission?.id}
         initialLead={selectedLeadForAdmission}
         onSuccess={() => {
+          utils.crm.listLeads.invalidate();
+          utils.crm.getStats.invalidate();
+        }}
+      />
+
+      {/* AI Auto-Connect Untouched & Pending Leads Modal */}
+      <LeadAutoConnectDialog
+        open={autoConnectOpen}
+        onClose={() => setAutoConnectOpen(false)}
+        onComplete={() => {
           utils.crm.listLeads.invalidate();
           utils.crm.getStats.invalidate();
         }}

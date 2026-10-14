@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { AttendanceStatus } from "@prisma/client";
 import {
   ClipboardCheck,
@@ -17,6 +18,11 @@ import {
   Users,
   Search,
   BookOpen,
+  BarChart3,
+  TrendingUp,
+  GraduationCap,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 
 export function AttendanceOverviewView() {
@@ -28,6 +34,29 @@ export function AttendanceOverviewView() {
   );
   const [searchStudent, setSearchStudent] = useState("");
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [viewTab, setViewTab] = useState<"workspace" | "authorityReport">("workspace");
+
+  // Master Authority Report Query
+  const {
+    data: masterReport,
+    isLoading: isMasterLoading,
+    refetch: refetchMaster,
+  } = api.attendance.getAuthorityMasterReport.useQuery(undefined, {
+    enabled: viewTab === "authorityReport",
+  });
+
+  // Direct Student WhatsApp Notice Mutation
+  const sendStudentNoticeMutation = api.admin.sendStudentWhatsAppDirect.useMutation({
+    onSuccess: (res) => {
+      alert(`WhatsApp compliance notice dispatched to +91 ${res.phone.slice(-10)}!`);
+      if (res.whatsappUrl) {
+        window.open(res.whatsappUrl, "_blank");
+      }
+    },
+    onError: (err) => {
+      alert(`Failed to send WhatsApp notice: ${err.message}`);
+    },
+  });
 
   // Student status local state map: { studentProfileId: AttendanceStatus }
   const [studentStatusMap, setStudentStatusMap] = useState<Record<string, AttendanceStatus>>({});
@@ -148,8 +177,45 @@ export function AttendanceOverviewView() {
 
   return (
     <div className="space-y-4 pb-20">
-      {/* Top Filter Card matching Attendance.pdf */}
-      <div className="bg-white rounded border border-slate-200 p-4 shadow-sm">
+      {/* Top View Switcher */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setViewTab("workspace")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition ${
+              viewTab === "workspace"
+                ? "bg-slate-900 text-white shadow-xs"
+                : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+            }`}
+          >
+            <ClipboardCheck className="h-3.5 w-3.5" />
+            <span>Daily Attendance Workspace</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setViewTab("authorityReport")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold transition ${
+              viewTab === "authorityReport"
+                ? "bg-indigo-600 text-white shadow-xs"
+                : "text-slate-600 hover:text-indigo-900 hover:bg-indigo-50"
+            }`}
+          >
+            <BarChart3 className="h-3.5 w-3.5" />
+            <span>Authority Master Report & Course Tracking</span>
+          </button>
+        </div>
+
+        <div className="text-xs text-slate-500 font-medium">
+          Academic Campus: <strong className="text-slate-800">Civil Lines, Prayagraj</strong>
+        </div>
+      </div>
+
+      {viewTab === "workspace" && (
+        <>
+          {/* Top Filter Card matching Attendance.pdf */}
+          <div className="bg-white rounded border border-slate-200 p-4 shadow-sm">
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
             <label className="block text-[11px] font-medium text-slate-500 mb-1">Centre</label>
@@ -441,6 +507,232 @@ export function AttendanceOverviewView() {
           )}
         </button>
       </div>
+        </>
+      )}
+
+      {/* Authority Institutional Compliance & Course Tracking Master Report */}
+      {viewTab === "authorityReport" && (
+        <div className="space-y-6">
+          {/* Top Master Metrics */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-slate-200 shadow-2xs bg-white">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-lg">
+                  <Users className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Total Active Learners
+                  </span>
+                  <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
+                    {isMasterLoading ? "..." : masterReport?.metrics.totalActiveStudents ?? 0}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-2xs bg-white">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <ClipboardCheck className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Institutional Attendance
+                  </span>
+                  <p className="text-2xl font-extrabold text-emerald-700 mt-0.5">
+                    {isMasterLoading ? "..." : `${masterReport?.metrics.institutionalAttendancePercentage ?? 0}%`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-2xs bg-white">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                  <TrendingUp className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    Course / Syllabus Covered
+                  </span>
+                  <p className="text-2xl font-extrabold text-indigo-700 mt-0.5">
+                    {isMasterLoading ? "..." : `${masterReport?.metrics.institutionalCourseProgressPercentage ?? 0}%`}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border-slate-200 shadow-2xs bg-white">
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="p-2.5 bg-amber-50 text-amber-600 rounded-lg">
+                  <AlertCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    At-Risk Students (&lt;75%)
+                  </span>
+                  <p className="text-2xl font-extrabold text-amber-700 mt-0.5">
+                    {isMasterLoading ? "..." : masterReport?.metrics.atRiskStudentsCount ?? 0}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Batch Performance & Course Tracking Matrix */}
+          <Card className="border-slate-200 shadow-2xs bg-white">
+            <CardHeader className="py-3 px-4 border-b border-slate-100 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-[#0088cc]" />
+                  <span>Cohort Attendance & Syllabus Progress Matrix</span>
+                </CardTitle>
+                <p className="text-xs text-slate-500">Live batch compliance monitored across faculty and trainers</p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetchMaster()}
+                className="text-xs h-8"
+              >
+                <Clock className="h-3 w-3 mr-1" /> Sync
+              </Button>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 uppercase font-semibold">
+                    <tr>
+                      <th className="py-2.5 px-3">Batch Code</th>
+                      <th className="py-2.5 px-3">Cohort Name</th>
+                      <th className="py-2.5 px-3">Course / Program</th>
+                      <th className="py-2.5 px-3">Assigned Trainer</th>
+                      <th className="py-2.5 px-3 text-center">Enrolled</th>
+                      <th className="py-2.5 px-3 text-center">Sessions Held</th>
+                      <th className="py-2.5 px-3 text-center">Avg Attendance</th>
+                      <th className="py-2.5 px-3 min-w-[140px]">Syllabus Progress</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {masterReport?.batches && masterReport.batches.length > 0 ? (
+                      masterReport.batches.map((b) => (
+                        <tr key={b.batchId} className="hover:bg-slate-50/50">
+                          <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{b.batchCode}</td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{b.batchName}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{b.courseTitle}</td>
+                          <td className="py-2.5 px-3 text-slate-700">{b.trainers.join(", ") || "Faculty Assigned"}</td>
+                          <td className="py-2.5 px-3 text-center font-bold text-slate-800">{b.studentCount}</td>
+                          <td className="py-2.5 px-3 text-center text-slate-600">{b.sessionsCount}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span
+                              className={`px-2 py-0.5 rounded font-bold ${
+                                b.attendancePercentage >= 75
+                                  ? "bg-emerald-50 text-emerald-700"
+                                  : "bg-amber-50 text-amber-700"
+                              }`}
+                            >
+                              {b.attendancePercentage}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-[11px] font-semibold text-slate-700">
+                                <span>{b.courseProgressPercentage}% Complete</span>
+                              </div>
+                              <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div
+                                  className="bg-indigo-600 h-full rounded-full transition-all"
+                                  style={{ width: `${Math.min(100, b.courseProgressPercentage)}%` }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-slate-400">
+                          {isMasterLoading ? "Loading institutional matrix..." : "No active batches currently found."}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* At-Risk Students & Direct WhatsApp Outreach Roster */}
+          <Card className="border-amber-200 bg-amber-50/20 shadow-2xs">
+            <CardHeader className="py-3 px-4 border-b border-amber-200/60 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <span>At-Risk Learners Roster (&lt;75% Attendance Compliance)</span>
+                </CardTitle>
+                <p className="text-xs text-amber-800">1-click WhatsApp notification to alert students of attendance policy</p>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-amber-100/50 text-amber-950 border-b border-amber-200 font-semibold uppercase">
+                    <tr>
+                      <th className="py-2.5 px-3">Student Name</th>
+                      <th className="py-2.5 px-3">Student ID</th>
+                      <th className="py-2.5 px-3">Enrolled Course</th>
+                      <th className="py-2.5 px-3">Cohort</th>
+                      <th className="py-2.5 px-3 text-center">Attendance %</th>
+                      <th className="py-2.5 px-3 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-amber-100 bg-white">
+                    {masterReport?.atRiskStudents && masterReport.atRiskStudents.length > 0 ? (
+                      masterReport.atRiskStudents.map((s) => (
+                        <tr key={s.studentProfileId} className="hover:bg-amber-50/40">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">{s.name}</td>
+                          <td className="py-2.5 px-3 font-mono font-bold text-emerald-700">{s.studentId}</td>
+                          <td className="py-2.5 px-3 text-slate-600">{s.courseTitle}</td>
+                          <td className="py-2.5 px-3 text-slate-700">{s.batchName}</td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-900 font-bold">
+                              {s.attendancePercentage}%
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right">
+                            <Button
+                              size="sm"
+                              disabled={sendStudentNoticeMutation.isPending}
+                              onClick={() => {
+                                sendStudentNoticeMutation.mutate({
+                                  studentProfileId: s.studentProfileId,
+                                  messageType: "ATTENDANCE_WARNING",
+                                  attendancePercentage: s.attendancePercentage,
+                                });
+                              }}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] h-7 gap-1 font-semibold"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                              <span>WhatsApp Notice</span>
+                            </Button>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="py-6 text-center text-slate-500">
+                          {isMasterLoading ? "Loading roster..." : "🎉 All active learners currently meet or exceed attendance compliance!"}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

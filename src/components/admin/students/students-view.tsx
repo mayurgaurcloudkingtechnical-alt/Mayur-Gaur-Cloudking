@@ -25,6 +25,7 @@ import {
   IndianRupee,
   FileText,
   Trash2,
+  MessageSquare,
 } from "lucide-react";
 import { PaymentMethod } from "@prisma/client";
 
@@ -534,6 +535,22 @@ export function StudentsView() {
                               >
                                 <ClipboardCheck className="w-4 h-4" />
                               </Link>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const phone = s.mobile ? s.mobile.replace(/\D/g, "") : "";
+                                  if (!phone) {
+                                    alert("No valid phone number found for this student.");
+                                    return;
+                                  }
+                                  const msg = `Hello ${s.name} Ji! Official update from SoftLab Global, Civil Lines, Prayagraj regarding your student portal (Student ID: ${s.studentId}). Access portal: https://softlabglobal.com/login`;
+                                  window.open(`https://wa.me/91${phone.slice(-10)}?text=${encodeURIComponent(msg)}`, "_blank");
+                                }}
+                                className="p-1.5 rounded border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 transition-colors"
+                                title="Open WhatsApp Chat with Student"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => {

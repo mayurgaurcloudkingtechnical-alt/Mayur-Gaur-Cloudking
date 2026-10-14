@@ -1845,4 +1845,73 @@ export const adminRouter = router({
   broadcastToExistingAdmittedStudents: requireRoleProcedure(privilegedAdminRoles).mutation(async () => {
     return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
   }),
+
+  /**
+   * Connect with individual student on WhatsApp according to LMS credentials
+   */
+  sendStudentWhatsAppDirect: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TRAINER,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+        messageType: z.enum(["CREDENTIALS", "CLASS_ALERT", "ATTENDANCE_WARNING", "CUSTOM"]).default("CREDENTIALS"),
+        customText: z.string().optional(),
+        batchTitle: z.string().optional(),
+        sessionTime: z.string().optional(),
+        attendancePercentage: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actorCalling = (ctx.user as any).callingNumber || (ctx.user as any).phone || "9196596979";
+      const actorWhatsapp = (ctx.user as any).whatsappNumber || (ctx.user as any).phone || "9196596975";
+
+      return StudentAdmissionNotificationService.sendStudentLmsWhatsAppMessage({
+        studentProfileId: input.studentProfileId,
+        messageType: input.messageType,
+        customText: input.customText,
+        batchTitle: input.batchTitle,
+        sessionTime: input.sessionTime,
+        attendancePercentage: input.attendancePercentage,
+        senderName: `${ctx.user.firstName} ${ctx.user.lastName}`,
+        senderPhone: actorWhatsapp || actorCalling,
+      });
+    }),
+
+  /**
+   * Broadcast batch announcement / attendance alert to students via WhatsApp
+   */
+  broadcastBatchWhatsApp: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TRAINER,
+  ])
+    .input(
+      z.object({
+        batchId: z.string(),
+        messageType: z.enum(["CLASS_ALERT", "ATTENDANCE_WARNING", "CUSTOM"]).default("CLASS_ALERT"),
+        customText: z.string().optional(),
+        sessionTime: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actorWhatsapp = (ctx.user as any).whatsappNumber || (ctx.user as any).phone || "9196596975";
+
+      return StudentAdmissionNotificationService.broadcastWhatsAppToBatchStudents({
+        batchId: input.batchId,
+        messageType: input.messageType,
+        customText: input.customText,
+        sessionTime: input.sessionTime,
+        senderName: `${ctx.user.firstName} ${ctx.user.lastName}`,
+        senderPhone: actorWhatsapp,
+      });
+    }),
 });

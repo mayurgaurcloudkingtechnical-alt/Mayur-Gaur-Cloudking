@@ -1,7 +1,8 @@
 import { z } from "zod";
-import { router, requireRoleProcedure } from "../init";
+import { router, requireRoleProcedure, protectedProcedure } from "../init";
 import { AttendanceStatus, UserRoleCode } from "@prisma/client";
 import { AttendanceService } from "@/server/services/attendance.service";
+import { AcademicTrackingService } from "@/server/services/academic-tracking.service";
 
 export const attendanceRouter = router({
   /**
@@ -287,5 +288,51 @@ export const attendanceRouter = router({
 
       return { success: true, recordId: record.id };
     }),
+
+  /**
+   * Retrieves individual student's real-time attendance rate and course completion percentage.
+   */
+  getStudentAcademicMetrics: protectedProcedure
+    .input(z.object({ studentProfileId: z.string() }))
+    .query(async ({ input }) => {
+      return AcademicTrackingService.getStudentAcademicMetrics(input.studentProfileId);
+    }),
+
+  /**
+   * Retrieves cohort attendance statistics and student course completion for Trainer LMS.
+   */
+  getTrainerTrackingReport: requireRoleProcedure([
+    UserRoleCode.TRAINER,
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+  ])
+    .input(z.object({ batchId: z.string().optional() }).optional())
+    .query(async ({ ctx, input }) => {
+      const isAuthority =
+        ctx.user.roleCode === UserRoleCode.SUPER_ADMIN ||
+        ctx.user.roleCode === UserRoleCode.DIRECTOR ||
+        ctx.user.roleCode === UserRoleCode.ADMIN ||
+        ctx.user.roleCode === UserRoleCode.MANAGER;
+
+      return AcademicTrackingService.getTrainerBatchTrackingReport({
+        trainerUserId: ctx.user.id,
+        batchId: input?.batchId,
+        isAuthority,
+      });
+    }),
+
+  /**
+   * Master Institutional Attendance & Course Tracking Report for Authority LMS.
+   */
+  getAuthorityMasterReport: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+  ]).query(async () => {
+    return AcademicTrackingService.getAuthorityMasterReport();
+  }),
 });
 

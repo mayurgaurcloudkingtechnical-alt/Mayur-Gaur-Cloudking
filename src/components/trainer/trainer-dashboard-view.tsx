@@ -26,10 +26,13 @@ import {
   ChevronRight,
   ExternalLink,
   Target,
+  MessageSquare,
+  AlertCircle,
+  Sparkles,
 } from "lucide-react";
 
 export function TrainerDashboardView() {
-  const [activeTab, setActiveTab] = useState<"metrics" | "teaching">("metrics");
+  const [activeTab, setActiveTab] = useState<"metrics" | "teaching" | "tracking">("metrics");
 
   const { data: metricsData, isLoading: isMetricsLoading, refetch: refetchMetrics } =
     api.dashboard.getCorePerformanceMetrics.useQuery(undefined, {
@@ -39,9 +42,27 @@ export function TrainerDashboardView() {
   const { data: trainerData, isLoading: isTrainerLoading, refetch: refetchTrainer } =
     api.trainer.getDashboard.useQuery();
 
+  const { data: trackingReport, isLoading: isTrackingLoading, refetch: refetchTracking } =
+    api.attendance.getTrainerTrackingReport.useQuery(undefined, {
+      enabled: activeTab === "tracking",
+    });
+
+  const sendStudentNoticeMutation = api.admin.sendStudentWhatsAppDirect.useMutation({
+    onSuccess: (res) => {
+      alert(`Attendance warning dispatched to +91 ${res.phone.slice(-10)} via WhatsApp!`);
+      if (res.whatsappUrl) {
+        window.open(res.whatsappUrl, "_blank");
+      }
+    },
+    onError: (err) => {
+      alert(`Failed to send WhatsApp warning: ${err.message}`);
+    },
+  });
+
   const handleRefresh = () => {
     refetchMetrics();
     refetchTrainer();
+    if (activeTab === "tracking") refetchTracking();
   };
 
   const kpi = metricsData?.kpi || {
@@ -106,6 +127,17 @@ export function TrainerDashboardView() {
             >
               <BookOpen className="h-3.5 w-3.5 text-emerald-500" />
               <span>Faculty Desk</span>
+            </button>
+            <button
+              onClick={() => setActiveTab("tracking")}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                activeTab === "tracking"
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "text-slate-600 hover:text-indigo-900 hover:bg-indigo-50"
+              }`}
+            >
+              <ClipboardCheck className="h-3.5 w-3.5 text-indigo-400" />
+              <span>Attendance & Course Tracking</span>
             </button>
           </div>
 
@@ -702,6 +734,163 @@ export function TrainerDashboardView() {
                   );
                 })}
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* VIEW C: ATTENDANCE & COURSE TRACKING WORKSPACE */}
+      {activeTab === "tracking" && (
+        <div className="space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-slate-200 shadow-2xs">
+            <div>
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-indigo-600" />
+                <span>Trainer Batch Progress & Compliance Center</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Real-time cohort syllabus tracking, attendance compliance, and direct 1-click WhatsApp alerts
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => refetchTracking()}
+                disabled={isTrackingLoading}
+                className="text-xs h-8"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 mr-1 ${isTrackingLoading ? "animate-spin" : ""}`} />
+                <span>Sync Metrics</span>
+              </Button>
+            </div>
+          </div>
+
+          {/* Batches Grid */}
+          {trackingReport && trackingReport.length > 0 ? (
+            trackingReport.map((batch) => (
+              <Card key={batch.batchId} className="border-slate-200 bg-white shadow-2xs overflow-hidden">
+                <CardHeader className="py-3 px-4 bg-slate-50/70 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 px-2 py-0.5 rounded">
+                        {batch.batchCode}
+                      </span>
+                      <h4 className="font-bold text-slate-900 text-sm">{batch.batchName}</h4>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Program: {batch.courseTitle} • Faculty: {batch.trainerName}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs font-semibold">
+                    <div className="text-center">
+                      <span className="text-[10px] text-slate-400 uppercase block">Attendance</span>
+                      <span className={`text-sm font-bold ${batch.averageAttendancePercentage >= 75 ? "text-emerald-700" : "text-amber-700"}`}>
+                        {batch.averageAttendancePercentage}%
+                      </span>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="text-[10px] text-slate-400 uppercase block">Syllabus Progress</span>
+                      <span className="text-sm font-bold text-indigo-700">
+                        {batch.averageCourseProgressPercentage}%
+                      </span>
+                    </div>
+
+                    <div className="text-center">
+                      <span className="text-[10px] text-slate-400 uppercase block">At-Risk (&lt;75%)</span>
+                      <span className={`text-sm font-bold ${batch.atRiskStudentsCount > 0 ? "text-rose-600" : "text-slate-700"}`}>
+                        {batch.atRiskStudentsCount} Learners
+                      </span>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-white text-slate-500 border-b border-slate-100 uppercase font-semibold">
+                        <tr>
+                          <th className="py-2.5 px-4">Student Name</th>
+                          <th className="py-2.5 px-4">Student ID</th>
+                          <th className="py-2.5 px-4">Attendance Rate</th>
+                          <th className="py-2.5 px-4 min-w-[140px]">Curriculum Completion</th>
+                          <th className="py-2.5 px-4 text-right">Student Connect</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {batch.students.map((student) => (
+                          <tr key={student.studentProfileId} className="hover:bg-slate-50/50">
+                            <td className="py-2.5 px-4 font-semibold text-slate-900">
+                              {student.name}
+                            </td>
+                            <td className="py-2.5 px-4 font-mono font-bold text-emerald-700">
+                              {student.studentId}
+                            </td>
+                            <td className="py-2.5 px-4">
+                              <span
+                                className={`px-2 py-0.5 rounded font-bold ${
+                                  student.attendancePercentage >= 75
+                                    ? "bg-emerald-50 text-emerald-700"
+                                    : "bg-rose-50 text-rose-700"
+                                }`}
+                              >
+                                {student.attendancePercentage}%
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-4">
+                              <div className="space-y-1">
+                                <div className="flex justify-between text-[11px] font-medium text-slate-700">
+                                  <span>{student.courseProgressPercentage}% Done</span>
+                                </div>
+                                <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                                  <div
+                                    className="bg-emerald-600 h-full rounded-full transition-all"
+                                    style={{ width: `${Math.min(100, student.courseProgressPercentage)}%` }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-2.5 px-4 text-right">
+                              <Button
+                                size="sm"
+                                disabled={sendStudentNoticeMutation.isPending}
+                                onClick={() => {
+                                  sendStudentNoticeMutation.mutate({
+                                    studentProfileId: student.studentProfileId,
+                                    messageType: student.attendancePercentage < 75 ? "ATTENDANCE_WARNING" : "CLASS_ALERT",
+                                    attendancePercentage: student.attendancePercentage,
+                                    batchTitle: batch.batchName,
+                                  });
+                                }}
+                                className={`text-[11px] h-7 gap-1 font-semibold ${
+                                  student.attendancePercentage < 75
+                                    ? "bg-rose-600 hover:bg-rose-700 text-white"
+                                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                                }`}
+                              >
+                                <MessageSquare className="h-3 w-3" />
+                                <span>{student.attendancePercentage < 75 ? "Warning Notice" : "WhatsApp"}</span>
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          ) : (
+            <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500">
+              <ClipboardCheck className="h-10 w-10 mx-auto text-slate-300 mb-2" />
+              <p className="font-semibold text-slate-800">
+                {isTrackingLoading ? "Loading batch tracking report..." : "No active batches currently assigned to you."}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Batches assigned by academic administration will appear here with student progress tracking.
+              </p>
             </div>
           )}
         </div>
