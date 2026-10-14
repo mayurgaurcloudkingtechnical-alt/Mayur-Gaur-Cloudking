@@ -23,6 +23,7 @@ import {
   Loader2,
   Printer,
   IndianRupee,
+  MailCheck,
 } from "lucide-react";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { EditApplicationDialog } from "./edit-application-dialog";
@@ -105,6 +106,28 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
     onError: (err) => alert(err.message),
   });
 
+  const broadcastMutation = api.crm.broadcastToExistingAdmittedStudents.useMutation({
+    onSuccess: (res) => {
+      alert(`Broadcast Complete!\nProcessed: ${res.processed} admitted students\nSent successfully: ${res.successful}\nFailed/Skipped: ${res.failed}\n\nOfficial confirmation & credentials dispatched to students (Email & WhatsApp), and BCC copy archived to softlabglobal9@gmail.com.`);
+      utils.crm.listApplications.invalidate();
+    },
+    onError: (err) => {
+      alert(`Broadcast failed: ${err.message}`);
+    },
+  });
+
+  const handleBroadcastToExisting = () => {
+    const confirmed = window.confirm(
+      "Dispatch Admission Confirmation, Course Details, and Student LMS Login Credentials to all existing admitted students in the database?\n\n" +
+      "• Official confirmation and credentials will be sent to each student's Email & WhatsApp.\n" +
+      "• Management copy will be automatically BCC'd to softlabglobal9@gmail.com.\n\n" +
+      "Click OK to proceed."
+    );
+    if (confirmed) {
+      broadcastMutation.mutate();
+    }
+  };
+
   const handleExportCsv = async () => {
     try {
       setIsExporting(true);
@@ -148,6 +171,23 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={broadcastMutation.isPending}
+                onClick={handleBroadcastToExisting}
+                className="border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 text-xs font-semibold flex items-center gap-1.5 h-8"
+                title="Send admission confirmation and LMS login credentials to all already admitted students (BCC: softlabglobal9@gmail.com)"
+              >
+                {broadcastMutation.isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-600" />
+                ) : (
+                  <MailCheck className="h-3.5 w-3.5 text-indigo-600" />
+                )}
+                <span>{broadcastMutation.isPending ? "Sending Credentials..." : "Notify All Admitted"}</span>
+              </Button>
+
               <Button
                 type="button"
                 size="sm"

@@ -20,6 +20,7 @@ import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { ReceiptService } from "@/server/services/receipt.service";
 import { TRPCError } from "@trpc/server";
+import { StudentAdmissionNotificationService } from "@/server/services/student-admission-notification.service";
 
 function asAuthUser(user: any): AuthenticatedUser {
   return {
@@ -1362,5 +1363,13 @@ export const crmRouter = router({
       }
       return { count: createdLeads.length, leads: createdLeads };
     }),
+
+  /**
+   * Broadcast Admission Confirmation, Course Details, and LMS Credentials
+   * to ALL previously admitted students in database (with BCC to softlabglobal9@gmail.com).
+   */
+  broadcastToExistingAdmittedStudents: requireRoleProcedure(admissionRoles).mutation(async () => {
+    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
+  }),
 });
 

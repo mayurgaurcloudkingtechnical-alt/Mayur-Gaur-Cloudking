@@ -14,6 +14,7 @@ import { PERMISSION_CATEGORIES, ALL_PERMISSIONS } from "@/server/auth/permission
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcryptjs";
+import { StudentAdmissionNotificationService } from "@/server/services/student-admission-notification.service";
 
 const privilegedAdminRoles = [
   UserRoleCode.SUPER_ADMIN,
@@ -1836,4 +1837,12 @@ export const adminRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * Broadcast Admission Confirmation, Course Details, and LMS Credentials
+   * to ALL previously admitted students in database (with BCC to softlabglobal9@gmail.com).
+   */
+  broadcastToExistingAdmittedStudents: requireRoleProcedure(privilegedAdminRoles).mutation(async () => {
+    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
+  }),
 });

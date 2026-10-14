@@ -2,6 +2,7 @@ import { db } from "@/server/db/client";
 import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { OmnichannelInboxService } from "./omnichannel-inbox.service";
 import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
+import { StudentAdmissionNotificationService } from "./student-admission-notification.service";
 import crypto from "crypto";
 
 export interface CompleteAdmissionParams {
@@ -233,6 +234,27 @@ export class LmsAdmissionAutomationService {
       text: welcomeMsg,
       leadId: lead.id,
     });
+
+    // 10b. Dispatch Consolidated Admission Confirmation + Course Details + LMS Credentials
+    // Directly to student's Email (with BCC to softlabglobal9@gmail.com) and Student's WhatsApp
+    try {
+      await StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
+        studentName: lead.fullName,
+        studentEmail: lead.email,
+        studentPhone: lead.phone,
+        studentId: studentProfile.studentId,
+        admissionNumber: application.applicationNumber,
+        courseTitle: course.title,
+        specialization: course.specialization,
+        providerName: course.providerName || "SoftLab Global",
+        loginEmail: lead.email,
+        counselorName: "LMS Online Admissions Desk",
+        counselorPhone: "9196596979",
+        leadId: lead.id,
+      });
+    } catch (e: any) {
+      console.error("[StudentAdmissionNotificationService Error in LMS Enrollment]", e.message);
+    }
 
     // 11. Broadcast to WhatsApp Sales Group & Sales Team
     try {

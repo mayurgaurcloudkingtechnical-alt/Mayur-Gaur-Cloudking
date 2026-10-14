@@ -21,6 +21,7 @@ import { randomBytes } from "crypto";
 import { EmailService } from "./email.service";
 import { ReceiptService } from "./receipt.service";
 import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
+import { StudentAdmissionNotificationService } from "./student-admission-notification.service";
 
 export interface CreateApplicationInput {
   leadId: string;
@@ -784,6 +785,23 @@ export class CrmApplicationService {
         loginEmail: cleanEmail,
         temporaryPassword: tempPassword,
       }).catch((e) => console.error("[Credentials Email Error]", e));
+
+      // Consolidated Admission Confirmation + Course Details + LMS Credentials to Student Email (BCC: softlabglobal9@gmail.com) & WhatsApp
+      StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
+        studentName: input.applicantName.trim(),
+        studentEmail: cleanEmail,
+        studentPhone: cleanPhone,
+        studentId: studentProfile.studentId,
+        admissionNumber: application.applicationNumber,
+        courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+        specialization: univSpec || course.specialization,
+        providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
+        temporaryPassword: tempPassword,
+        loginEmail: cleanEmail,
+        counselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        counselorPhone: input.applicantPhone,
+        leadId,
+      }).catch((e) => console.error("[StudentAdmissionNotification Error]", e));
 
       if (paidPaise > 0 && receiptNumber) {
         EmailService.sendFeeReceipt({

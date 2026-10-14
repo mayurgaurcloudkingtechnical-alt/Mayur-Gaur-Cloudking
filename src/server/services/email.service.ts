@@ -9,9 +9,12 @@ export interface SendEmailOptions {
   text?: string;
   templateCode?: string;
   metadata?: Record<string, any>;
+  cc?: string | string[];
+  bcc?: string | string[];
 }
 
 export class EmailService {
+  public static readonly DEFAULT_MANAGEMENT_EMAIL = "softlabglobal9@gmail.com";
   /**
    * Check if SMTP environment variables are configured.
    */
@@ -42,7 +45,9 @@ export class EmailService {
     to: string,
     subject: string,
     html: string,
-    text?: string
+    text?: string,
+    cc?: string | string[],
+    bcc?: string | string[]
   ): Promise<{ success: boolean; message?: string }> {
     const config = this.getConfig();
     if (!config.user || !config.pass) {
@@ -52,11 +57,15 @@ export class EmailService {
     return new Promise((resolve) => {
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       const cleanFrom = `"${config.fromName}" <${config.fromEmail}>`;
-      const cleanTo = `<${to}>`;
+      const toRecipients = [to].flat().map((e) => e.trim()).filter(Boolean);
+      const ccRecipients = (cc ? (Array.isArray(cc) ? cc : [cc]) : []).map((e) => e.trim()).filter(Boolean);
+      const bccRecipients = (bcc ? (Array.isArray(bcc) ? bcc : [bcc]) : []).map((e) => e.trim()).filter(Boolean);
+      const allRcpt = Array.from(new Set([...toRecipients, ...ccRecipients, ...bccRecipients]));
 
       const headers = [
         `From: ${cleanFrom}`,
-        `To: ${cleanTo}`,
+        `To: ${toRecipients.map((t) => `<${t}>`).join(", ")}`,
+        ...(ccRecipients.length > 0 ? [`Cc: ${ccRecipients.map((c) => `<${c}>`).join(", ")}`] : []),
         `Subject: ${subject}`,
         `Date: ${new Date().toUTCString()}`,
         `MIME-Version: 1.0`,
@@ -90,6 +99,7 @@ export class EmailService {
       let socket: net.Socket;
       let buffer = "";
       let step = 0;
+      let rcptIndex = 0;
 
       const finish = (success: boolean, message: string) => {
         try {
@@ -157,10 +167,20 @@ export class EmailService {
             socket.write(`MAIL FROM:<${config.fromEmail}>\r\n`);
           } else if (step === 7 && code === 250) {
             step = 8;
-            socket.write(`RCPT TO:<${to}>\r\n`);
+            rcptIndex = 0;
+            if (allRcpt.length > 0) {
+              socket.write(`RCPT TO:<${allRcpt[rcptIndex++]}>\r\n`);
+            } else {
+              step = 9;
+              socket.write(`DATA\r\n`);
+            }
           } else if (step === 8 && code === 250) {
-            step = 9;
-            socket.write(`DATA\r\n`);
+            if (rcptIndex < allRcpt.length) {
+              socket.write(`RCPT TO:<${allRcpt[rcptIndex++]}>\r\n`);
+            } else {
+              step = 9;
+              socket.write(`DATA\r\n`);
+            }
           } else if (step === 9 && code === 354) {
             step = 10;
             socket.write(rawEmail);
@@ -219,7 +239,7 @@ export class EmailService {
 
     if (this.isConfigured()) {
       try {
-        const result = await this.sendViaSmtp(to, subject, html, text);
+        const result = await this.sendViaSmtp(to, subject, html, text, opts.cc, opts.bcc);
         if (result.success) {
           status = "SENT";
         } else {
@@ -337,6 +357,7 @@ export class EmailService {
       html,
       templateCode: "ADMISSION_CONFIRMATION",
       metadata: params,
+      bcc: this.DEFAULT_MANAGEMENT_EMAIL,
     });
   }
 
@@ -379,6 +400,108 @@ export class EmailService {
       html,
       templateCode: "STUDENT_CREDENTIALS",
       metadata: { studentId: params.studentId, loginEmail: params.loginEmail },
+      bcc: this.DEFAULT_MANAGEMENT_EMAIL,
+    });
+  }
+
+  /**
+   * 2b. Comprehensive Admission Confirmation & LMS Credentials Email
+   * (Sent to Student with Course Details, Credentials & BCC to softlabglobal9@gmail.com)
+   */
+  static async sendConsolidatedAdmissionWelcomeEmail(params: {
+    to: string;
+    studentName: string;
+    studentId: string;
+    admissionNumber: string;
+    courseName: string;
+    specialization?: string | null;
+    providerName?: string | null;
+    loginEmail: string;
+    temporaryPassword: string;
+    batchName?: string;
+    center?: string;
+    counselorName?: string | null;
+    counselorPhone?: string | null;
+  }) {
+    const center = params.center || "SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001";
+    const subject = `Official Admission Confirmation & LMS Credentials — SOFTLAB GLOBAL (${params.studentId})`;
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
+        <div style="text-align: center; border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 24px;">
+          <h1 style="color: #059669; margin: 0; font-size: 26px; letter-spacing: -0.5px;">SOFTLAB GLOBAL</h1>
+          <p style="margin: 6px 0 0 0; color: #64748b; font-size: 13px; font-weight: 500;">
+            Center of Excellence for Cloud, AI & Software Engineering
+          </p>
+        </div>
+
+        <p style="font-size: 16px; line-height: 1.6;">Dear <strong>${params.studentName}</strong>,</p>
+        <p style="font-size: 14px; line-height: 1.6; color: #334155;">
+          Congratulations! Your admission at <strong>SOFTLAB GLOBAL</strong> has been successfully confirmed and registered in our institutional records.
+        </p>
+
+        <!-- Course & Program Details -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 18px; margin: 20px 0;">
+          <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #cbd5e1; padding-bottom: 6px;">
+            🎓 Admission & Program Details
+          </h3>
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #64748b; width: 40%;">Student ID:</td><td style="padding: 6px 0; font-weight: bold; color: #059669;">${params.studentId}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Admission No:</td><td style="padding: 6px 0; font-weight: bold; color: #0f172a;">${params.admissionNumber}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Enrolled Program:</td><td style="padding: 6px 0; font-weight: bold; color: #0f172a;">${params.courseName}${params.specialization ? ` (${params.specialization})` : ""}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Academic Provider:</td><td style="padding: 6px 0; font-weight: bold; color: #0f172a;">${params.providerName || "SOFTLAB GLOBAL Main Campus"}</td></tr>
+            <tr><td style="padding: 6px 0; color: #64748b;">Campus Center:</td><td style="padding: 6px 0; color: #334155;">${center}</td></tr>
+          </table>
+        </div>
+
+        <!-- LMS Login Credentials -->
+        <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 18px; margin: 20px 0;">
+          <h3 style="margin: 0 0 12px 0; font-size: 14px; color: #065f46; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #a7f3d0; padding-bottom: 6px;">
+            🔑 Student LMS Portal Login Credentials
+          </h3>
+          <p style="font-size: 13px; color: #047857; margin: 0 0 10px 0;">
+            Use these credentials to access your course materials, digital ID card, live classes, and assessments:
+          </p>
+          <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #047857; width: 40%;">Portal Link:</td><td style="padding: 6px 0;"><a href="https://softlabglobal.com/login" style="color: #059669; font-weight: bold;">https://softlabglobal.com/login</a></td></tr>
+            <tr><td style="padding: 6px 0; color: #047857;">Login Username / Email:</td><td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: #0f172a;">${params.loginEmail}</td></tr>
+            <tr><td style="padding: 6px 0; color: #047857;">Temporary Password:</td><td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: #dc2626; background: #fee2e2; padding: 4px 8px; border-radius: 4px; display: inline-block;">${params.temporaryPassword}</td></tr>
+          </table>
+        </div>
+
+        <p style="text-align: center; margin: 26px 0;">
+          <a href="https://softlabglobal.com/login" style="background: #059669; color: #ffffff; padding: 12px 32px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 15px; display: inline-block;">
+            Sign In to Student Portal →
+          </a>
+        </p>
+
+        <!-- Counselor & Support Contact -->
+        <div style="background: #f1f5f9; border-radius: 6px; padding: 12px 16px; margin: 20px 0; font-size: 13px; color: #475569;">
+          <p style="margin: 0 0 4px 0;"><strong>Need Assistance?</strong> Your dedicated admissions coordinator is available:</p>
+          <p style="margin: 0;">
+            • Dedicated Helpline: <strong>+91 9196596979</strong> | Support WhatsApp: <strong>+91 9196596975</strong>
+            ${params.counselorName ? `<br/>• Enrolling Counselor: <strong>${params.counselorName}</strong>${params.counselorPhone ? ` (+91 ${params.counselorPhone.replace(/\D/g, "").slice(-10)})` : ""}` : ""}
+          </p>
+        </div>
+
+        <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px; text-align: center;">
+          SOFTLAB GLOBAL Admissions Directorate • 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001<br/>
+          Official Email: info@softlabglobal.com | Records Desk: softlabglobal9@gmail.com
+        </p>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: params.to,
+      subject,
+      html,
+      templateCode: "ADMISSION_CONFIRMATION_WITH_CREDENTIALS",
+      metadata: {
+        studentId: params.studentId,
+        admissionNumber: params.admissionNumber,
+        loginEmail: params.loginEmail,
+        courseName: params.courseName,
+      },
+      bcc: this.DEFAULT_MANAGEMENT_EMAIL,
     });
   }
 
