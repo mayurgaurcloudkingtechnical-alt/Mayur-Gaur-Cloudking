@@ -1,6 +1,7 @@
 import { db } from "@/server/db/client";
 import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { OmnichannelInboxService } from "./omnichannel-inbox.service";
+import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
 import crypto from "crypto";
 
 export interface CompleteAdmissionParams {
@@ -232,6 +233,38 @@ export class LmsAdmissionAutomationService {
       text: welcomeMsg,
       leadId: lead.id,
     });
+
+    // 11. Broadcast to WhatsApp Sales Group & Sales Team
+    try {
+      await WhatsAppSalesGroupNotificationService.broadcastAdmissionToSales({
+        applicationId: application.id,
+        studentId: studentProfile.studentId,
+        admissionNumber: application.applicationNumber,
+        applicantName: lead.fullName,
+        applicantPhone: lead.phone,
+        applicantEmail: lead.email,
+        courseTitle: course.title,
+        specialization: course.specialization,
+        providerType: (course.providerType as any) || "SOFTLAB",
+        providerName: course.providerName || "SoftLab Global",
+        universityName: course.universityName,
+        universityProgram: (course as any).universityProgram || course.title,
+        city: lead.city,
+        totalCourseFee: course.baseFee || amountPaise,
+        discountAmount: 0,
+        finalFee: course.baseFee || amountPaise,
+        paidAmount: amountPaise,
+        paymentMethod: paymentMethod,
+        receiptNumber,
+        paymentPlan: "LUMPSUM",
+        installmentCount: 1,
+        counselorName: "LMS Online Admission Desk",
+        admissionDate: new Date(),
+        leadId: lead.id,
+      });
+    } catch (err: any) {
+      console.error("[LmsAdmissionAutomationService] Error broadcasting to sales group:", err.message);
+    }
 
     return {
       success: true,

@@ -45,6 +45,33 @@ export function WhatsAppConnectionWizard() {
   const utils = api.useUtils();
   const connectionQuery = api.omnichannel.getWhatsAppConnectionDetails.useQuery();
   const catalogStatus = api.omnichannel.getCatalogSyncStatus.useQuery();
+  const salesGroupQuery = api.omnichannel.getSalesGroupConfig.useQuery();
+
+  const [salesGroupLink, setSalesGroupLink] = useState("");
+  const [salesTeamPhones, setSalesTeamPhones] = useState("");
+  const [salesBroadcastSuccess, setSalesBroadcastSuccess] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (salesGroupQuery.data) {
+      if (!salesGroupLink) setSalesGroupLink(salesGroupQuery.data.salesGroupInviteLink || "https://chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK");
+      if (!salesTeamPhones) setSalesTeamPhones((salesGroupQuery.data.salesTeamPhoneNumbers || []).join(", "));
+    }
+  }, [salesGroupQuery.data]);
+
+  const saveSalesConfigMutation = api.omnichannel.saveSalesGroupConfig.useMutation({
+    onSuccess: () => {
+      utils.omnichannel.getSalesGroupConfig.invalidate();
+      setSalesBroadcastSuccess("Sales Group configuration saved successfully!");
+      setTimeout(() => setSalesBroadcastSuccess(null), 4000);
+    },
+  });
+
+  const testSalesBroadcastMutation = api.omnichannel.testSalesGroupBroadcast.useMutation({
+    onSuccess: (data) => {
+      setSalesBroadcastSuccess(`Test admission broadcast prepared! Dispatched to: ${data.dispatchedToPhones.join(", ") || "Sales Group"}`);
+      setTimeout(() => setSalesBroadcastSuccess(null), 8000);
+    },
+  });
 
   const syncCatalogMutation = api.omnichannel.syncCatalog.useMutation({
     onSuccess: () => {
@@ -431,6 +458,106 @@ export function WhatsAppConnectionWizard() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* 4.5. WhatsApp Sales Group Auto-Broadcast Settings */}
+      <div className="bg-white border border-emerald-200 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-emerald-100 pb-4">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 rounded-xl bg-emerald-100 text-emerald-700">
+              <MessageSquare className="h-5 w-5" />
+            </span>
+            <div>
+              <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+                WhatsApp Sales Group & Team Auto-Alerts
+                <Badge className="bg-emerald-600 text-white text-[10px]">Active</Badge>
+              </h3>
+              <p className="text-xs text-slate-500">
+                Whenever any student admission is confirmed or uploaded on LMS, the student dossier is prepared and broadcasted automatically.
+              </p>
+            </div>
+          </div>
+          <a
+            href={salesGroupLink || "https://chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK"}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-200 self-start sm:self-auto transition-colors"
+          >
+            <span>Open Sales Group</span>
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
+        </div>
+
+        {salesBroadcastSuccess && (
+          <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2 font-medium">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+            <span>{salesBroadcastSuccess}</span>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">
+              WhatsApp Sales Group Invite Link
+            </Label>
+            <Input
+              value={salesGroupLink}
+              onChange={(e) => setSalesGroupLink(e.target.value)}
+              placeholder="https://chat.whatsapp.com/..."
+              className="h-9 text-xs font-mono"
+            />
+            <p className="text-[11px] text-slate-500">
+              Official WhatsApp group for the sales & counseling team.
+            </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-semibold text-slate-700">
+              Sales Team Alert Phone Numbers (Comma Separated)
+            </Label>
+            <Input
+              value={salesTeamPhones}
+              onChange={(e) => setSalesTeamPhones(e.target.value)}
+              placeholder="9196596979, 9196596975"
+              className="h-9 text-xs font-mono"
+            />
+            <p className="text-[11px] text-slate-500">
+              Numbers that receive instant direct WhatsApp messages via Meta Cloud API upon every admission.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={testSalesBroadcastMutation.isPending}
+            onClick={() => testSalesBroadcastMutation.mutate()}
+            className="text-xs h-8 border-emerald-300 text-emerald-800 hover:bg-emerald-50 font-semibold gap-1.5"
+          >
+            <Zap className="h-3.5 w-3.5 text-emerald-600" />
+            <span>{testSalesBroadcastMutation.isPending ? "Broadcasting Test..." : "Send Test Admission Card"}</span>
+          </Button>
+
+          <Button
+            type="button"
+            disabled={saveSalesConfigMutation.isPending}
+            onClick={() =>
+              saveSalesConfigMutation.mutate({
+                salesGroupInviteLink: salesGroupLink.trim() || undefined,
+                salesTeamPhoneNumbers: salesTeamPhones
+                  .split(",")
+                  .map((p) => p.trim())
+                  .filter(Boolean),
+                salesGroupNotificationEnabled: true,
+              })
+            }
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-semibold gap-1.5 shadow-sm"
+          >
+            <Check className="h-3.5 w-3.5" />
+            <span>{saveSalesConfigMutation.isPending ? "Saving..." : "Save Sales Group Settings"}</span>
+          </Button>
+        </div>
       </div>
 
       {/* 5. Modal for Direct Credentials Entry */}

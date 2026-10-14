@@ -132,6 +132,17 @@ export function IntegrationsHubView() {
       actionText: "Open Omnichannel Live Inbox",
     },
     {
+      id: "whatsapp-sales-group",
+      name: "WhatsApp Sales Group Auto-Broadcast",
+      category: "Sales & Admissions",
+      description: "Automated student admission dossier broadcast directly into the official WhatsApp Sales Group & counselors upon each enrollment.",
+      icon: <MessageSquare className="h-6 w-6 text-emerald-600" />,
+      status: "ACTIVE",
+      meta: "Group: chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK | Lines: 9196596979",
+      actionHref: "https://chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK",
+      actionText: "Open WhatsApp Sales Group",
+    },
+    {
       id: "email",
       name: "Transactional Email Service",
       category: "Infrastructure",

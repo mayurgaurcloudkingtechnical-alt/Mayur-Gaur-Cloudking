@@ -20,6 +20,7 @@ import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { EmailService } from "./email.service";
 import { ReceiptService } from "./receipt.service";
+import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
 
 export interface CreateApplicationInput {
   leadId: string;
@@ -384,7 +385,7 @@ export class CrmApplicationService {
     const firstName = nameParts[0] || "Student";
     const lastName = nameParts.slice(1).join(" ") || "Learner";
 
-    return await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       // 1. User Account
       let targetUser = await tx.user.findUnique({ where: { email: cleanEmail } });
       if (!targetUser) {
@@ -835,6 +836,49 @@ export class CrmApplicationService {
         universityFee: univFee,
       };
     }, { maxWait: 15000, timeout: 30000 });
+
+    // 10. Automatically Broadcast to WhatsApp Sales Group & Team
+    let salesGroupBroadcast: any = null;
+    try {
+      salesGroupBroadcast = await WhatsAppSalesGroupNotificationService.broadcastAdmissionToSales({
+        applicationId: result.id,
+        studentId: result.studentProfile.studentId,
+        admissionNumber: result.application.applicationNumber,
+        applicantName: input.applicantName.trim(),
+        applicantPhone: cleanPhone,
+        applicantEmail: cleanEmail,
+        courseTitle: course.title,
+        specialization: univSpec || course.specialization,
+        providerType: isUniversity ? "UNIVERSITY" : "SOFTLAB",
+        providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
+        universityName: univName,
+        universityProgram: univProg,
+        city: input.city?.trim() || null,
+        state: input.state?.trim() || null,
+        totalCourseFee: result.feeStructure.totalCourseFee,
+        discountAmount: result.feeStructure.discountAmount,
+        discountReason: input.discountReason || null,
+        finalFee: result.feeStructure.netPayableAmount,
+        paidAmount: result.payment?.amount || (input.paidAmount ? Math.floor(input.paidAmount) : 0),
+        paymentMethod: input.paymentMethod || (input.paymentType === "ONLINE" ? "RAZORPAY" : "CASH"),
+        receiptNumber: result.receiptNumber,
+        paymentPlan: input.paymentPlan || "LUMPSUM",
+        installmentCount: input.installmentCount || 1,
+        counselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        admissionDate: new Date(),
+        leadId,
+      });
+    } catch (err: any) {
+      console.error("[SalesGroupNotification] Error broadcasting admission:", err.message);
+    }
+
+    return {
+      ...result,
+      salesGroupBroadcastUrl: salesGroupBroadcast?.shareUrl || null,
+      salesGroupMessage: salesGroupBroadcast?.message || null,
+      salesGroupLink: salesGroupBroadcast?.groupLink || WhatsAppSalesGroupNotificationService.DEFAULT_SALES_GROUP_LINK,
+      dispatchedToPhones: salesGroupBroadcast?.dispatchedToPhones || [],
+    };
   }
 
   /**

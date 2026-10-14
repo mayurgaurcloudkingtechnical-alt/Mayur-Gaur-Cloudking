@@ -34,6 +34,8 @@ import {
   Layers,
   IndianRupee,
   AlertTriangle,
+  MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { StudentIdCardView, StudentIdCardData } from "@/components/common/student-id-card-view";
@@ -160,6 +162,7 @@ export function DirectAdmissionDialog({
   const [copiedCredentials, setCopiedCredentials] = useState(false);
   const [viewingIdCard, setViewingIdCard] = useState<StudentIdCardData | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
+  const [copiedSalesCard, setCopiedSalesCard] = useState(false);
 
   const utils = api.useUtils();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
@@ -750,6 +753,82 @@ Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
                   <span>{copiedCredentials ? "Copied to Clipboard!" : "Copy Full Credentials"}</span>
                 </Button>
               </div>
+            </div>
+
+            {/* 1-Click WhatsApp Sales Group Broadcast */}
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3.5 space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-emerald-600 text-white flex items-center justify-center font-bold shadow-sm">
+                    <MessageSquare className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      WhatsApp Sales Group Notification
+                      <span className="text-[10px] font-semibold bg-emerald-200 text-emerald-900 px-1.5 py-0.2 rounded-full">
+                        Automated
+                      </span>
+                    </h4>
+                    <p className="text-[11px] text-emerald-700">
+                      Post complete student admission dossier to the official sales team group.
+                    </p>
+                  </div>
+                </div>
+                {createdResult.salesGroupLink && (
+                  <a
+                    href={createdResult.salesGroupLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-[10px] text-emerald-700 underline font-medium hover:text-emerald-900 flex items-center gap-0.5"
+                  >
+                    <span>Sales Group</span>
+                    <ExternalLink className="h-2.5 w-2.5" />
+                  </a>
+                )}
+              </div>
+
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (createdResult.salesGroupBroadcastUrl) {
+                      window.open(createdResult.salesGroupBroadcastUrl, "_blank");
+                    } else if (createdResult.salesGroupMessage) {
+                      const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(createdResult.salesGroupMessage)}`;
+                      window.open(url, "_blank");
+                    } else {
+                      window.open("https://chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK", "_blank");
+                    }
+                  }}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold h-9 gap-1.5 shadow-sm"
+                >
+                  <MessageSquare className="h-4 w-4" />
+                  <span>📢 Post to WhatsApp Sales Group</span>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (createdResult.salesGroupMessage) {
+                      navigator.clipboard.writeText(createdResult.salesGroupMessage);
+                      setCopiedSalesCard(true);
+                      setTimeout(() => setCopiedSalesCard(false), 3000);
+                    }
+                  }}
+                  className="text-xs h-9 border-emerald-300 text-emerald-800 hover:bg-emerald-100/50 gap-1"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  <span>{copiedSalesCard ? "Copied!" : "Copy Card"}</span>
+                </Button>
+              </div>
+
+              {createdResult.dispatchedToPhones && createdResult.dispatchedToPhones.length > 0 && (
+                <div className="text-[10px] text-emerald-800 flex items-center gap-1 font-medium pt-0.5">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                  <span>Auto-dispatched to sales lines: {createdResult.dispatchedToPhones.join(", ")}</span>
+                </div>
+              )}
             </div>
 
             {/* Quick Actions Bar */}

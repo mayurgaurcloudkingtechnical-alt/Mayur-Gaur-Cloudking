@@ -15,6 +15,11 @@ export interface WhatsAppBusinessConfig {
   lastVerifiedAt: Date | null;
   lastError: string | null;
   onboardingMethod: "META_EMBEDDED_SIGNUP" | "DIRECT_SYSTEM_USER";
+  salesGroupInviteLink?: string;
+  salesGroupId?: string;
+  salesTeamPhoneNumbers?: string[];
+  salesGroupWebhookUrl?: string;
+  salesGroupNotificationEnabled?: boolean;
 }
 
 const SETTING_KEY = "whatsapp_business_config";
@@ -46,6 +51,11 @@ export class WhatsAppBusinessConfigService {
         lastVerifiedAt: null,
         lastError: null,
         onboardingMethod: "DIRECT_SYSTEM_USER",
+        salesGroupInviteLink: process.env.WHATSAPP_SALES_GROUP_LINK || "https://chat.whatsapp.com/DpyKh8CNUvJBhly9UVEyEK",
+        salesGroupId: process.env.WHATSAPP_SALES_GROUP_ID || "",
+        salesTeamPhoneNumbers: process.env.WHATSAPP_SALES_TEAM_PHONES ? process.env.WHATSAPP_SALES_TEAM_PHONES.split(",").map(p => p.trim()) : ["9196596979", "9196596975"],
+        salesGroupWebhookUrl: process.env.WHATSAPP_SALES_WEBHOOK_URL || "",
+        salesGroupNotificationEnabled: true,
       };
 
       const resolved: WhatsAppBusinessConfig = {
@@ -63,6 +73,11 @@ export class WhatsAppBusinessConfigService {
         lastVerifiedAt: stored.lastVerifiedAt ? new Date(stored.lastVerifiedAt) : null,
         lastError: stored.lastError || null,
         onboardingMethod: stored.onboardingMethod || "DIRECT_SYSTEM_USER",
+        salesGroupInviteLink: stored.salesGroupInviteLink || envConfig.salesGroupInviteLink,
+        salesGroupId: stored.salesGroupId || envConfig.salesGroupId,
+        salesTeamPhoneNumbers: stored.salesTeamPhoneNumbers || envConfig.salesTeamPhoneNumbers,
+        salesGroupWebhookUrl: stored.salesGroupWebhookUrl || envConfig.salesGroupWebhookUrl,
+        salesGroupNotificationEnabled: stored.salesGroupNotificationEnabled ?? envConfig.salesGroupNotificationEnabled,
       };
 
       return resolved;

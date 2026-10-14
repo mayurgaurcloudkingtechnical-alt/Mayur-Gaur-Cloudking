@@ -6,6 +6,7 @@ import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.ser
 import { AiCallingAgentService } from "@/server/services/ai-calling-agent.service";
 import { WhatsAppCatalogueSyncService } from "@/server/services/whatsapp-catalogue-sync.service";
 import { WhatsAppBusinessConfigService } from "@/server/services/whatsapp-business-config.service";
+import { WhatsAppSalesGroupNotificationService } from "@/server/services/whatsapp-sales-group-notification.service";
 import { AiCounselorService } from "@/server/services/ai-counselor.service";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { db } from "@/server/db/client";
@@ -459,4 +460,67 @@ export const omnichannelRouter = router({
   getIntegrationsHealth: protectedProcedure.query(async () => {
     return WhatsAppBusinessService.getSystemIntegrationsHealth();
   }),
+
+  /**
+   * Get WhatsApp Sales Group notification configuration
+   */
+  getSalesGroupConfig: protectedProcedure.query(async () => {
+    const config = await WhatsAppBusinessConfigService.getConfig();
+    return {
+      salesGroupInviteLink: config.salesGroupInviteLink || WhatsAppSalesGroupNotificationService.DEFAULT_SALES_GROUP_LINK,
+      salesGroupId: config.salesGroupId || "",
+      salesTeamPhoneNumbers: config.salesTeamPhoneNumbers || ["9196596979", "9196596975"],
+      salesGroupWebhookUrl: config.salesGroupWebhookUrl || "",
+      salesGroupNotificationEnabled: config.salesGroupNotificationEnabled ?? true,
+    };
+  }),
+
+  /**
+   * Save or update WhatsApp Sales Group configuration
+   */
+  saveSalesGroupConfig: protectedProcedure
+    .input(
+      z.object({
+        salesGroupInviteLink: z.string().optional(),
+        salesGroupId: z.string().optional(),
+        salesTeamPhoneNumbers: z.array(z.string()).optional(),
+        salesGroupWebhookUrl: z.string().optional(),
+        salesGroupNotificationEnabled: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const saved = await WhatsAppBusinessConfigService.saveConfig(input, ctx.user.id);
+      return { success: true, saved };
+    }),
+
+  /**
+   * Trigger a test admission announcement to WhatsApp Sales Group & Team
+   */
+  testSalesGroupBroadcast: protectedProcedure.mutation(async ({ ctx }) => {
+    return WhatsAppSalesGroupNotificationService.broadcastAdmissionToSales({
+      studentId: "SG-2026-TEST01",
+      admissionNumber: "APP-2026-TEST01",
+      applicantName: "Aman Verma (Test Admission)",
+      applicantPhone: "9196596979",
+      applicantEmail: "aman.verma@example.com",
+      courseTitle: "Full Stack Web Development & AI Engineering",
+      specialization: "MERN Stack + Next.js",
+      providerType: "SOFTLAB",
+      providerName: "SoftLab Global Main Campus",
+      city: "Prayagraj",
+      state: "Uttar Pradesh",
+      totalCourseFee: 4500000,
+      discountAmount: 500000,
+      discountReason: "Early Bird Scholarship",
+      finalFee: 4000000,
+      paidAmount: 1500000,
+      paymentMethod: "RAZORPAY",
+      receiptNumber: "RCP-2026-TEST99",
+      paymentPlan: "EMI",
+      installmentCount: 3,
+      counselorName: `${ctx.user.firstName || ""} ${ctx.user.lastName || ""}`.trim() || ctx.user.email,
+      admissionDate: new Date(),
+    });
+  }),
 });
+
