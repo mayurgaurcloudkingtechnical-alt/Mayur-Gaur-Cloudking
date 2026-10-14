@@ -118,6 +118,7 @@ export const staffErpRouter = router({
       z
         .object({
           department: z.nativeEnum(StaffDepartment).optional(),
+          reportingManagerId: z.string().optional(),
           isActive: z.boolean().optional(),
           search: z.string().optional(),
           page: z.number().int().min(1).default(1),
@@ -128,6 +129,10 @@ export const staffErpRouter = router({
     .query(async ({ input }) => {
       return StaffProfileService.listStaffProfiles(input ?? {});
     }),
+
+  listReportingManagers: requireRoleProcedure(adminHRRoles).query(async () => {
+    return StaffProfileService.listPotentialReportingManagers();
+  }),
 
   createStaffMemberWithAccount: requireRoleProcedure(adminHRRoles)
     .input(
@@ -149,6 +154,7 @@ export const staffErpRouter = router({
         workLocation: z.string().optional(),
         callingNumber: z.string().optional(),
         whatsappNumber: z.string().optional(),
+        reportingManagerId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -173,6 +179,7 @@ export const staffErpRouter = router({
         bankAccountNumber: z.string().optional(),
         bankIfsc: z.string().optional(),
         panNumber: z.string().optional(),
+        reportingManagerId: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -199,6 +206,7 @@ export const staffErpRouter = router({
         bankAccountNumber: z.string().optional(),
         bankIfsc: z.string().optional(),
         panNumber: z.string().optional(),
+        reportingManagerId: z.string().nullable().optional(),
         isActive: z.boolean().optional(),
       })
     )

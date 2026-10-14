@@ -66,6 +66,7 @@ export function AdminStaffView() {
   >("directory");
 
   const [deptFilter, setDeptFilter] = useState<StaffDepartment | undefined>(undefined);
+  const [managerFilter, setManagerFilter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
   const currentYear = new Date().getFullYear();
@@ -86,6 +87,8 @@ export function AdminStaffView() {
   const [activeSlipDetails, setActiveSlipDetails] = useState<any>(null);
 
   // Queries
+  const { data: reportingManagers = [] } = api.staffErp.listReportingManagers.useQuery();
+
   const { data: metrics, refetch: refetchMetrics } = api.staffErp.getPayrollSummaryMetrics.useQuery({
     month: selectedMonth,
     year: selectedYear,
@@ -93,6 +96,7 @@ export function AdminStaffView() {
 
   const { data: staffData, refetch: refetchStaff } = api.staffErp.listStaff.useQuery({
     department: deptFilter,
+    reportingManagerId: managerFilter === "ALL" ? undefined : managerFilter,
     search: search.trim() || undefined,
   });
 
@@ -144,6 +148,7 @@ export function AdminStaffView() {
     workLocation: string;
     residentialAddress: string;
     profilePhoto: string;
+    reportingManagerId: string;
     isActive: boolean;
   }>({
     firstName: "",
@@ -159,6 +164,7 @@ export function AdminStaffView() {
     workLocation: "PRAYAGRAJ_CAMPUS",
     residentialAddress: "",
     profilePhoto: "",
+    reportingManagerId: "",
     isActive: true,
   });
 
@@ -311,6 +317,7 @@ export function AdminStaffView() {
     panNumber: "",
     callingNumber: "",
     whatsappNumber: "",
+    reportingManagerId: "",
   });
 
   const [attForm, setAttForm] = useState({
@@ -584,7 +591,7 @@ export function AdminStaffView() {
                 className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Filter className="w-4 h-4 text-slate-400" />
               <select
                 value={deptFilter || ""}
@@ -594,6 +601,20 @@ export function AdminStaffView() {
                 <option value="">All Departments</option>
                 {Object.values(StaffDepartment).map((dept) => (
                   <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+
+              <select
+                value={managerFilter}
+                onChange={(e) => setManagerFilter(e.target.value)}
+                className="border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="ALL">All Reporting Managers</option>
+                <option value="UNASSIGNED">No Manager (Direct Head Office)</option>
+                {reportingManagers.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    {m.user.firstName} {m.user.lastName} ({m.employeeId} - {m.designation})
+                  </option>
                 ))}
               </select>
             </div>
@@ -607,6 +628,7 @@ export function AdminStaffView() {
                   <th className="py-3.5 px-4">Staff Member</th>
                   <th className="py-3.5 px-4">Department</th>
                   <th className="py-3.5 px-4">Designation</th>
+                  <th className="py-3.5 px-4">Reporting Manager</th>
                   <th className="py-3.5 px-4">Base Monthly Salary</th>
                   <th className="py-3.5 px-4">Monthly Attendance</th>
                   <th className="py-3.5 px-4">Status</th>
@@ -630,6 +652,23 @@ export function AdminStaffView() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-medium text-slate-700">{staff.designation}</td>
+                        <td className="py-3.5 px-4 text-xs">
+                          {(staff as any).reportingManager ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+                              <div>
+                                <p className="font-semibold text-slate-800">
+                                  {(staff as any).reportingManager.user.firstName} {(staff as any).reportingManager.user.lastName}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-mono">
+                                  {(staff as any).reportingManager.employeeId}
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 italic">Head Office Direct</span>
+                          )}
+                        </td>
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                           {formatPaise(staff.baseSalary)}
                         </td>
@@ -693,6 +732,7 @@ export function AdminStaffView() {
                                   workLocation: staff.workLocation || "PRAYAGRAJ_CAMPUS",
                                   residentialAddress: staff.residentialAddress || "",
                                   profilePhoto: staff.profilePhoto || "",
+                                  reportingManagerId: (staff as any).reportingManagerId || "",
                                   isActive: staff.isActive,
                                 });
                               }}
@@ -1316,6 +1356,7 @@ export function AdminStaffView() {
                   panNumber: staffForm.panNumber || undefined,
                   callingNumber: staffForm.callingNumber.trim() || staffForm.phone.trim() || undefined,
                   whatsappNumber: staffForm.whatsappNumber.trim() || staffForm.phone.trim() || undefined,
+                  reportingManagerId: staffForm.reportingManagerId || undefined,
                 });
               }}
               className="space-y-3 text-sm"
@@ -1460,6 +1501,27 @@ export function AdminStaffView() {
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Reporting Manager / Direct Supervisor
+                </label>
+                <select
+                  value={staffForm.reportingManagerId}
+                  onChange={(e) => setStaffForm({ ...staffForm, reportingManagerId: e.target.value })}
+                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
+                >
+                  <option value="">-- No Direct Manager (Reports to Head Office) --</option>
+                  {reportingManagers.map((m: any) => (
+                    <option key={m.id} value={m.id}>
+                      {m.user.firstName} {m.user.lastName} ({m.employeeId} - {m.designation})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Establishes supervisor hierarchy for live tracking, approvals, and daily reports
+                </p>
               </div>
 
               <div>
@@ -2215,6 +2277,7 @@ WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentia
                   workLocation: editForm.workLocation,
                   residentialAddress: editForm.residentialAddress || undefined,
                   profilePhoto: editForm.profilePhoto || undefined,
+                  reportingManagerId: editForm.reportingManagerId || null,
                   isActive: editForm.isActive,
                 });
               }}
@@ -2317,6 +2380,29 @@ WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentia
                     onChange={(e) => setEditForm({ ...editForm, profilePhoto: e.target.value })}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">
+                    Reporting Manager / Direct Supervisor
+                  </label>
+                  <select
+                    value={editForm.reportingManagerId}
+                    onChange={(e) => setEditForm({ ...editForm, reportingManagerId: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    <option value="">-- No Direct Manager (Reports to Head Office) --</option>
+                    {reportingManagers
+                      .filter((m: any) => m.id !== selectedStaffForEdit.id)
+                      .map((m: any) => (
+                        <option key={m.id} value={m.id}>
+                          {m.user.firstName} {m.user.lastName} ({m.employeeId} - {m.designation})
+                        </option>
+                      ))}
+                  </select>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Changes supervisor hierarchy for live call tracking, daily approvals, and departmental oversight
+                  </p>
                 </div>
 
                 <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">

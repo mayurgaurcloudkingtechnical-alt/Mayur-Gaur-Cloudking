@@ -186,11 +186,12 @@ export const workPlannerRouter = router({
           department: z.string().optional(),
           date: z.date().optional(),
           status: z.string().optional(),
+          reportingManagerId: z.string().optional(),
         })
         .optional()
     )
-    .query(async ({ input }) => {
-      return DailyReportService.listReports(input);
+    .query(async ({ ctx, input }) => {
+      return DailyReportService.listReports(asAuthUser(ctx.user), input);
     }),
 
   getCompanyWideSummary: requireRoleProcedure(directorAdminRoles)

@@ -25,6 +25,7 @@ export interface CreateStaffMemberWithAccountInput {
   workLocation?: string;
   callingNumber?: string;
   whatsappNumber?: string;
+  reportingManagerId?: string;
 }
 
 export interface CreateStaffProfileInput {
@@ -37,6 +38,7 @@ export interface CreateStaffProfileInput {
   bankAccountNumber?: string;
   bankIfsc?: string;
   panNumber?: string;
+  reportingManagerId?: string;
 }
 
 export interface UpdateStaffProfileInput {
@@ -56,11 +58,13 @@ export interface UpdateStaffProfileInput {
   bankAccountNumber?: string;
   bankIfsc?: string;
   panNumber?: string;
+  reportingManagerId?: string | null;
   isActive?: boolean;
 }
 
 export interface ListStaffParams {
   department?: StaffDepartment;
+  reportingManagerId?: string;
   isActive?: boolean;
   search?: string;
   page?: number;
@@ -153,6 +157,7 @@ export class StaffProfileService {
           panNumber: input.panNumber?.trim().toUpperCase() || null,
           gender: input.gender || null,
           workLocation: input.workLocation || "PRAYAGRAJ_CAMPUS",
+          reportingManagerId: input.reportingManagerId || null,
           isActive: true,
         },
       });
@@ -332,6 +337,7 @@ export class StaffProfileService {
         bankAccountNumber: input.bankAccountNumber?.trim() || null,
         bankIfsc: input.bankIfsc?.trim().toUpperCase() || null,
         panNumber: input.panNumber?.trim().toUpperCase() || null,
+        reportingManagerId: input.reportingManagerId || null,
         isActive: true,
       },
       include: {
@@ -420,6 +426,7 @@ export class StaffProfileService {
           bankAccountNumber: input.bankAccountNumber !== undefined ? input.bankAccountNumber.trim() || null : undefined,
           bankIfsc: input.bankIfsc !== undefined ? input.bankIfsc.trim().toUpperCase() || null : undefined,
           panNumber: input.panNumber !== undefined ? input.panNumber.trim().toUpperCase() || null : undefined,
+          reportingManagerId: input.reportingManagerId !== undefined ? (input.reportingManagerId || null) : undefined,
           isActive: input.isActive ?? undefined,
         },
         include: {
@@ -591,12 +598,17 @@ export class StaffProfileService {
    * Lists staff members with departmental and status filtering
    */
   static async listStaffProfiles(params: ListStaffParams = {}) {
-    const { department, isActive, search, page = 1, limit = 50 } = params;
+    const { department, reportingManagerId, isActive, search, page = 1, limit = 50 } = params;
     const skip = (page - 1) * limit;
 
     const where: Prisma.StaffProfileWhereInput = {
       department: department ?? undefined,
       isActive: isActive !== undefined ? isActive : undefined,
+      ...(reportingManagerId && reportingManagerId !== "ALL"
+        ? {
+            reportingManagerId: reportingManagerId === "UNASSIGNED" ? null : reportingManagerId,
+          }
+        : {}),
       ...(search
         ? {
             OR: [
@@ -625,6 +637,24 @@ export class StaffProfileService {
               lastName: true,
               phone: true,
               roleCode: true,
+              avatarUrl: true,
+              status: true,
+            },
+          },
+          reportingManager: {
+            select: {
+              id: true,
+              employeeId: true,
+              designation: true,
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  roleCode: true,
+                },
+              },
             },
           },
         },
@@ -639,6 +669,36 @@ export class StaffProfileService {
       limit,
       totalPages: Math.ceil(total / limit),
     };
+  }
+
+  /**
+   * Fetches all potential managers and directors for reporting manager dropdowns
+   */
+  static async listPotentialReportingManagers() {
+    return db.staffProfile.findMany({
+      where: {
+        isActive: true,
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        department: true,
+        designation: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            roleCode: true,
+          },
+        },
+        _count: {
+          select: { subordinates: true },
+        },
+      },
+      orderBy: [{ user: { firstName: "asc" } }],
+    });
   }
 
   /**

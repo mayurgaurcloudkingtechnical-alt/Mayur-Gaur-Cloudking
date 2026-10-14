@@ -53,12 +53,17 @@ export function DailyReportsView({ user }: { user: any }) {
   const [selectedReport, setSelectedReport] = useState<any | null>(null);
   const [reviewerComments, setReviewerComments] = useState("");
 
+  const [managerFilter, setManagerFilter] = useState<string>("ALL");
+
   const [notification, setNotification] = useState<{
     type: "success" | "error";
     message: string;
   } | null>(null);
 
   const utils = api.useUtils();
+
+  // Reporting managers for filtering (Super Admin, Director, Admin)
+  const { data: reportingManagers } = api.staffErp.listReportingManagers.useQuery();
 
   // Find staff profile for the logged-in user
   const { data: staffList } = api.staffErp.listStaff.useQuery();
@@ -74,10 +79,11 @@ export function DailyReportsView({ user }: { user: any }) {
       { enabled: Boolean(currentStaff?.id) }
     );
 
-  // Team reports list
+  // Team reports list with hierarchy filter
   const { data: teamReports, isLoading: reportsLoading } =
     api.workPlanner.listDailyReports.useQuery({
       date: new Date(reportDate),
+      reportingManagerId: managerFilter !== "ALL" ? managerFilter : undefined,
     });
 
   // Submit report mutation
@@ -186,14 +192,33 @@ export function DailyReportsView({ user }: { user: any }) {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <Label className="text-xs text-slate-500 font-semibold">Reporting Date:</Label>
-          <Input
-            type="date"
-            value={reportDate}
-            onChange={(e) => setReportDate(e.target.value)}
-            className="text-xs h-8 w-36 font-mono"
-          />
+        <div className="flex items-center gap-3">
+          {activeTab === "team-reports" && user.roleCode !== "MANAGER" && (
+            <div className="flex items-center gap-1.5">
+              <Label className="text-xs text-slate-500 font-semibold">Manager:</Label>
+              <select
+                value={managerFilter}
+                onChange={(e) => setManagerFilter(e.target.value)}
+                className="h-8 text-xs rounded-md border border-slate-300 bg-white px-2.5 py-1 text-slate-700 font-medium"
+              >
+                <option value="ALL">All Managers & Direct</option>
+                {reportingManagers?.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.user?.firstName} {m.user?.lastName} ({m.designation})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-slate-500 font-semibold">Reporting Date:</Label>
+            <Input
+              type="date"
+              value={reportDate}
+              onChange={(e) => setReportDate(e.target.value)}
+              className="text-xs h-8 w-36 font-mono"
+            />
+          </div>
         </div>
       </div>
 
@@ -393,6 +418,15 @@ export function DailyReportsView({ user }: { user: any }) {
                           {rep.staff?.user?.firstName} {rep.staff?.user?.lastName}
                         </p>
                         <p className="text-[11px] text-slate-400 font-mono">{rep.staff?.user?.email}</p>
+                        {rep.staff?.reportingManager?.user ? (
+                          <p className="text-[10px] text-indigo-600 font-medium mt-0.5">
+                            Reports to: {rep.staff.reportingManager.user.firstName} {rep.staff.reportingManager.user.lastName}
+                          </p>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 font-medium mt-0.5">
+                            Reports to: Direct
+                          </p>
+                        )}
                       </td>
 
                       <td className="p-3">

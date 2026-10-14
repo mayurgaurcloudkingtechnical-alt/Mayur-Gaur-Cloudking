@@ -25,12 +25,25 @@ export const callyzerRouter = router({
         .object({
           roleCode: z.string().optional(),
           search: z.string().optional(),
+          managerId: z.string().optional(),
         })
         .optional()
     )
-    .query(async ({ input }) => {
-      return StaffCallyzerService.getLiveTeamMonitoring(input?.roleCode, input?.search);
+    .query(async ({ ctx, input }) => {
+      return StaffCallyzerService.getLiveTeamMonitoring(
+        ctx.user,
+        input?.roleCode,
+        input?.search,
+        input?.managerId
+      );
     }),
+
+  /**
+   * List Reporting Managers / Supervisors for hierarchy filtering
+   */
+  listReportingManagers: requireRoleProcedure(managerialRoles).query(async () => {
+    return StaffCallyzerService.getReportingManagersList();
+  }),
 
   /**
    * Staff Personal Workstation State
@@ -84,6 +97,7 @@ export const callyzerRouter = router({
     .input(
       z.object({
         userId: z.string().optional(),
+        managerId: z.string().optional(),
         roleCode: z.string().optional(),
         disposition: z.string().optional(),
         date: z.string().optional(),

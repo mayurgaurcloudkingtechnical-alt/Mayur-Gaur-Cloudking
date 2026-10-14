@@ -278,19 +278,48 @@ export class DailyReportService {
   }
 
   /**
-   * List reports for given department, staff, or date
+   * List reports with organizational hierarchy filtering
+   * Managers only see their direct/indirect subordinates; Directors & Admins can filter by manager.
    */
-  static async listReports(params?: {
-    staffId?: string;
-    department?: string;
-    date?: Date;
-    status?: string;
-  }) {
+  static async listReports(
+    actor?: AuthenticatedUser,
+    params?: {
+      staffId?: string;
+      department?: string;
+      date?: Date;
+      status?: string;
+      reportingManagerId?: string;
+    }
+  ) {
+    let hierarchyFilter: any = {};
+    if (actor && actor.roleCode === UserRoleCode.MANAGER) {
+      const myProfile = await db.staffProfile.findFirst({
+        where: { userId: actor.id },
+      });
+      if (myProfile) {
+        hierarchyFilter = {
+          staff: {
+            OR: [
+              { reportingManagerId: myProfile.id },
+              { id: myProfile.id },
+            ],
+          },
+        };
+      }
+    } else if (params?.reportingManagerId) {
+      hierarchyFilter = {
+        staff: {
+          reportingManagerId: params.reportingManagerId,
+        },
+      };
+    }
+
     return db.dailyWorkReport.findMany({
       where: {
         ...(params?.staffId ? { staffId: params.staffId } : {}),
         ...(params?.department ? { department: params.department } : {}),
         ...(params?.status ? { status: params.status } : {}),
+        ...hierarchyFilter,
         ...(params?.date
           ? {
               reportDate: {
@@ -304,6 +333,11 @@ export class DailyReportService {
         staff: {
           include: {
             user: { select: { firstName: true, lastName: true, email: true, phone: true } },
+            reportingManager: {
+              include: {
+                user: { select: { firstName: true, lastName: true } },
+              },
+            },
           },
         },
         items: true,

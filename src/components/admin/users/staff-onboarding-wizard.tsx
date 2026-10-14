@@ -128,7 +128,7 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess, initialUser 
   const utils = api.useUtils();
 
   // Queries
-  const { data: managers } = api.staffErp.listStaff.useQuery();
+  const { data: managers } = api.staffErp.listReportingManagers.useQuery();
   const { data: shifts } = api.staffErp.listShifts.useQuery();
   const { data: generatedIdData } = api.staffErp.generateUniqueEmployeeId.useQuery(undefined, {
     enabled: isOpen && !employeeId,
@@ -576,9 +576,9 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess, initialUser 
                     className="w-full h-9 rounded-md border border-slate-300 text-xs px-2.5 bg-white"
                   >
                     <option value="">None / Direct to Director</option>
-                    {managers?.items?.map((m) => (
+                    {managers?.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.user?.firstName} {m.user?.lastName} ({m.designation})
+                        {m.user?.firstName} {m.user?.lastName} ({m.employeeId} - {m.designation})
                       </option>
                     ))}
                   </select>

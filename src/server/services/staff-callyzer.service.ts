@@ -277,15 +277,22 @@ export class StaffCallyzerService {
 
   /**
    * Callyzer Live Team Monitoring Dashboard (For Super Admin, Director, Admin, Manager)
-   * Real-time view filtered Post-wise / Role-wise
+   * Real-time view filtered Post-wise / Role-wise and Reporting Manager hierarchy
    */
-  static async getLiveTeamMonitoring(filterRole?: string, search?: string) {
+  static async getLiveTeamMonitoring(
+    actor?: { id: string; roleCode: UserRoleCode },
+    filterRole?: string,
+    search?: string,
+    filterManagerId?: string
+  ) {
     const rolesToMonitor: UserRoleCode[] = [
       UserRoleCode.COUNSELOR,
       UserRoleCode.TELECALLER,
       UserRoleCode.ADMIN,
       UserRoleCode.SUPER_ADMIN,
       UserRoleCode.DIRECTOR,
+      UserRoleCode.MANAGER,
+      UserRoleCode.MARKETING,
     ];
 
     // Today's boundaries in UTC / Local
@@ -300,13 +307,44 @@ export class StaffCallyzerService {
       status: "ACTIVE",
     };
 
+    // Role Hierarchy Access Control:
+    // 1. Manager: If actor is a MANAGER, restrict view to staff who report to them (or themselves)
+    if (actor && actor.roleCode === UserRoleCode.MANAGER) {
+      const myProfile = await db.staffProfile.findUnique({
+        where: { userId: actor.id },
+        select: { id: true },
+      });
+      if (myProfile) {
+        whereUser.OR = [
+          { staffProfile: { reportingManagerId: myProfile.id } },
+          { id: actor.id },
+        ];
+      }
+    } else if (filterManagerId && filterManagerId !== "ALL") {
+      // 2. Higher Authorities (SUPER_ADMIN, DIRECTOR, ADMIN) filtering by a specific manager
+      if (filterManagerId === "UNASSIGNED") {
+        whereUser.staffProfile = { reportingManagerId: null };
+      } else {
+        whereUser.OR = [
+          { staffProfile: { reportingManagerId: filterManagerId } },
+          { staffProfile: { id: filterManagerId } },
+        ];
+      }
+    }
+
     if (search && search.trim()) {
-      whereUser.OR = [
+      const searchCond = [
         { firstName: { contains: search.trim(), mode: "insensitive" } },
         { lastName: { contains: search.trim(), mode: "insensitive" } },
         { email: { contains: search.trim(), mode: "insensitive" } },
         { phone: { contains: search.trim() } },
       ];
+      if (whereUser.OR) {
+        whereUser.AND = [{ OR: whereUser.OR }, { OR: searchCond }];
+        delete whereUser.OR;
+      } else {
+        whereUser.OR = searchCond;
+      }
     }
 
     const users = await db.user.findMany({
@@ -329,6 +367,22 @@ export class StaffCallyzerService {
             designation: true,
             branch: true,
             workLocation: true,
+            reportingManagerId: true,
+            reportingManager: {
+              select: {
+                id: true,
+                employeeId: true,
+                designation: true,
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    roleCode: true,
+                  },
+                },
+              },
+            },
           },
         },
         staffLiveSession: true,
@@ -397,6 +451,11 @@ export class StaffCallyzerService {
         department: u.staffProfile?.department || "ADMISSIONS",
         designation: u.staffProfile?.designation || u.roleCode,
         branch: u.staffProfile?.branch || "PRAYAGRAJ_MAIN",
+        reportingManagerId: u.staffProfile?.reportingManagerId || null,
+        reportingManagerName: u.staffProfile?.reportingManager?.user
+          ? `${u.staffProfile.reportingManager.user.firstName} ${u.staffProfile.reportingManager.user.lastName}`
+          : "Head Office Direct",
+        reportingManagerEmployeeId: u.staffProfile?.reportingManager?.employeeId || null,
         liveStatus,
         currentCallContact: session?.currentCallContact || null,
         currentCallPhone: session?.currentCallPhone || null,
@@ -549,6 +608,7 @@ export class StaffCallyzerService {
    */
   static async listCallLogs(input: {
     userId?: string;
+    managerId?: string;
     roleCode?: string;
     disposition?: string;
     date?: string;
@@ -565,6 +625,19 @@ export class StaffCallyzerService {
     if (input.userId) where.userId = input.userId;
     if (input.roleCode && input.roleCode !== "ALL") where.roleCode = input.roleCode;
     if (input.disposition && input.disposition !== "ALL") where.disposition = input.disposition;
+
+    if (input.managerId && input.managerId !== "ALL") {
+      if (input.managerId === "UNASSIGNED") {
+        where.user = { staffProfile: { reportingManagerId: null } };
+      } else {
+        where.user = {
+          OR: [
+            { staffProfile: { reportingManagerId: input.managerId } },
+            { staffProfile: { id: input.managerId } },
+          ],
+        };
+      }
+    }
 
     if (input.date) {
       const selected = new Date(input.date);
@@ -598,6 +671,25 @@ export class StaffCallyzerService {
               lastName: true,
               roleCode: true,
               avatarUrl: true,
+              staffProfile: {
+                select: {
+                  employeeId: true,
+                  department: true,
+                  reportingManagerId: true,
+                  reportingManager: {
+                    select: {
+                      id: true,
+                      employeeId: true,
+                      user: {
+                        select: {
+                          firstName: true,
+                          lastName: true,
+                        },
+                      },
+                    },
+                  },
+                },
+              },
             },
           },
           lead: {
@@ -613,15 +705,53 @@ export class StaffCallyzerService {
     ]);
 
     return {
-      logs: logs.map((log) => ({
+      logs: logs.map((log: any) => ({
         ...log,
         durationFormatted: this.formatDuration(log.durationSeconds),
+        callerEmployeeId: log.user?.staffProfile?.employeeId || null,
+        reportingManagerName: log.user?.staffProfile?.reportingManager?.user
+          ? `${log.user.staffProfile.reportingManager.user.firstName} ${log.user.staffProfile.reportingManager.user.lastName}`
+          : "Head Office Direct",
       })),
       total,
       page,
       pageSize,
       totalPages: Math.ceil(total / pageSize),
     };
+  }
+
+  /**
+   * Fetches all potential managers and directors for Callyzer hierarchy filtering
+   */
+  static async getReportingManagersList() {
+    return db.staffProfile.findMany({
+      where: {
+        isActive: true,
+        OR: [
+          { user: { roleCode: { in: [UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN, UserRoleCode.MANAGER, UserRoleCode.HR] } } },
+          { subordinates: { some: {} } },
+        ],
+      },
+      select: {
+        id: true,
+        employeeId: true,
+        department: true,
+        designation: true,
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            roleCode: true,
+          },
+        },
+        _count: {
+          select: { subordinates: true },
+        },
+      },
+      orderBy: [{ user: { firstName: "asc" } }],
+    });
   }
 
   /**

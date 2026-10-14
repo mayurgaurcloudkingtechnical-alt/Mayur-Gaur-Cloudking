@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 
 export function CallyzerTeamMonitoringView() {
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
+  const [selectedManager, setSelectedManager] = useState<string>("ALL");
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"live" | "logs">("live");
   const [selectedStaffForLogs, setSelectedStaffForLogs] = useState<any | null>(null);
@@ -47,10 +48,14 @@ export function CallyzerTeamMonitoringView() {
 
   const utils = api.useUtils();
 
+  // Reporting Managers query
+  const { data: reportingManagers = [] } = api.callyzer.listReportingManagers.useQuery();
+
   // Live polling every 6 seconds for true real-time Callyzer experience
   const { data: liveData, isLoading, refetch, isFetching } = api.callyzer.getLiveTeamMonitoring.useQuery(
     {
       roleCode: selectedRole === "ALL" ? undefined : selectedRole,
+      managerId: selectedManager === "ALL" ? undefined : selectedManager,
       search: search.trim() || undefined,
     },
     {
@@ -62,6 +67,7 @@ export function CallyzerTeamMonitoringView() {
   // Call Logs query
   const { data: logsData, refetch: refetchLogs } = api.callyzer.listCallLogs.useQuery({
     roleCode: selectedRole === "ALL" ? undefined : selectedRole,
+    managerId: selectedManager === "ALL" ? undefined : selectedManager,
     date: selectedDate,
     search: search.trim() || undefined,
     pageSize: 30,
@@ -92,11 +98,12 @@ export function CallyzerTeamMonitoringView() {
   // Export to CSV function
   const handleExportCSV = () => {
     if (!callLogs.length) return;
-    const headers = ["Date", "Staff Name", "Role", "Contact Name", "Phone", "Type", "Status", "Duration (Sec)", "Disposition", "Notes"];
+    const headers = ["Date", "Staff Name", "Role", "Reporting Manager", "Contact Name", "Phone", "Type", "Status", "Duration (Sec)", "Disposition", "Notes"];
     const rows = callLogs.map((l: any) => [
       new Date(l.createdAt).toLocaleString(),
       `"${l.user?.firstName || ""} ${l.user?.lastName || ""}"`,
       l.roleCode,
+      `"${l.reportingManagerName || "Head Office Direct"}"`,
       `"${l.contactName || ""}"`,
       `"${l.contactPhone || ""}"`,
       l.callType,
@@ -371,6 +378,20 @@ export function CallyzerTeamMonitoringView() {
                 <option value="TELECALLER">Telecallers</option>
                 <option value="ADMIN">Admins / Higher Credentials</option>
               </select>
+
+              <select
+                value={selectedManager}
+                onChange={(e) => setSelectedManager(e.target.value)}
+                className="h-8 text-xs rounded-md border border-slate-300 px-2 bg-white"
+              >
+                <option value="ALL">🏢 All Hierarchy / All Teams</option>
+                <option value="UNASSIGNED">Direct Head Office (Unassigned)</option>
+                {reportingManagers.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    👔 {m.user.firstName} {m.user.lastName} ({m._count?.subordinates ?? 0} team)
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
         </CardContent>
@@ -422,6 +443,12 @@ export function CallyzerTeamMonitoringView() {
                           </div>
                           <p className="text-[11px] text-slate-500">
                             {staff.designation} • <span className="font-mono text-indigo-600 font-bold">{staff.employeeId}</span>
+                          </p>
+                          <p className="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                            <span className="text-slate-400">Reports to:</span>
+                            <span className="font-semibold text-slate-700 bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
+                              {staff.reportingManagerName || "Head Office Direct"}
+                            </span>
                           </p>
                         </div>
                       </div>
@@ -574,9 +601,14 @@ export function CallyzerTeamMonitoringView() {
                         <p className="font-bold text-slate-900">
                           {log.user?.firstName} {log.user?.lastName}
                         </p>
-                        <Badge variant="outline" className="text-[10px] font-mono mt-0.5">
-                          {log.roleCode}
-                        </Badge>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <Badge variant="outline" className="text-[10px] font-mono">
+                            {log.roleCode}
+                          </Badge>
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            Mgr: {log.reportingManagerName || "Head Office"}
+                          </span>
+                        </div>
                       </td>
                       <td className="p-3">
                         <p className="font-bold text-slate-900">{log.contactName}</p>
