@@ -40,9 +40,19 @@ export interface CreateStaffProfileInput {
 }
 
 export interface UpdateStaffProfileInput {
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  personalEmail?: string;
+  personalPhone?: string;
   department?: StaffDepartment;
   designation?: string;
   baseSalary?: number; // in integer Paise
+  employmentType?: string;
+  workLocation?: string;
+  residentialAddress?: string;
+  profilePhoto?: string;
   bankAccountNumber?: string;
   bankIfsc?: string;
   panNumber?: string;
@@ -355,11 +365,12 @@ export class StaffProfileService {
   }
 
   /**
-   * Updates staff profile details, designations, and salary structures
+   * Updates staff profile details, user credentials, designations, and salary structures
    */
   static async updateStaffProfile(actor: AuthenticatedUser, staffId: string, input: UpdateStaffProfileInput) {
     const existing = await db.staffProfile.findUnique({
       where: { id: staffId },
+      include: { user: true },
     });
 
     if (!existing) {
@@ -376,28 +387,56 @@ export class StaffProfileService {
       });
     }
 
-    const updated = await db.staffProfile.update({
-      where: { id: staffId },
-      data: {
-        department: input.department ?? undefined,
-        designation: input.designation?.trim() ?? undefined,
-        baseSalary: input.baseSalary ?? undefined,
-        bankAccountNumber: input.bankAccountNumber !== undefined ? input.bankAccountNumber.trim() || null : undefined,
-        bankIfsc: input.bankIfsc !== undefined ? input.bankIfsc.trim().toUpperCase() || null : undefined,
-        panNumber: input.panNumber !== undefined ? input.panNumber.trim().toUpperCase() || null : undefined,
-        isActive: input.isActive ?? undefined,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-            firstName: true,
-            lastName: true,
-            roleCode: true,
+    // Atomic update of user and staffProfile
+    const updated = await db.$transaction(async (tx) => {
+      // 1. Update user record if user fields are passed
+      const userData: any = {};
+      if (input.firstName !== undefined) userData.firstName = input.firstName.trim();
+      if (input.lastName !== undefined) userData.lastName = input.lastName.trim();
+      if (input.email !== undefined) userData.email = input.email.trim().toLowerCase();
+      if (input.phone !== undefined) userData.phone = input.phone.trim();
+      if (input.profilePhoto !== undefined) userData.avatarUrl = input.profilePhoto.trim();
+
+      if (Object.keys(userData).length > 0) {
+        await tx.user.update({
+          where: { id: existing.userId },
+          data: userData,
+        });
+      }
+
+      // 2. Update staff profile
+      return tx.staffProfile.update({
+        where: { id: staffId },
+        data: {
+          department: input.department ?? undefined,
+          designation: input.designation?.trim() ?? undefined,
+          baseSalary: input.baseSalary ?? undefined,
+          employmentType: input.employmentType?.trim() ?? undefined,
+          workLocation: input.workLocation?.trim() ?? undefined,
+          residentialAddress: input.residentialAddress?.trim() ?? undefined,
+          personalEmail: input.personalEmail !== undefined ? input.personalEmail.trim().toLowerCase() || null : undefined,
+          personalPhone: input.personalPhone !== undefined ? input.personalPhone.trim() || null : undefined,
+          profilePhoto: input.profilePhoto !== undefined ? input.profilePhoto.trim() || null : undefined,
+          bankAccountNumber: input.bankAccountNumber !== undefined ? input.bankAccountNumber.trim() || null : undefined,
+          bankIfsc: input.bankIfsc !== undefined ? input.bankIfsc.trim().toUpperCase() || null : undefined,
+          panNumber: input.panNumber !== undefined ? input.panNumber.trim().toUpperCase() || null : undefined,
+          isActive: input.isActive ?? undefined,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              avatarUrl: true,
+              roleCode: true,
+              status: true,
+            },
           },
         },
-      },
+      });
     });
 
     await AuditService.log({
@@ -418,6 +457,80 @@ export class StaffProfileService {
     });
 
     return updated;
+  }
+
+  /**
+   * Permanently deletes a staff member and all associated records with audit log
+   */
+  static async deleteStaffProfile(actor: AuthenticatedUser, staffId: string) {
+    const staff = await db.staffProfile.findUnique({
+      where: { id: staffId },
+      include: { user: true },
+    });
+
+    if (!staff) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Staff profile ${staffId} not found.`,
+      });
+    }
+
+    await db.$transaction(async (tx) => {
+      // 1. Delete dependent daily work items & reports
+      await tx.dailyWorkReportItem.deleteMany({
+        where: { report: { staffId } },
+      });
+      await tx.dailyWorkReport.deleteMany({ where: { staffId } });
+
+      // 2. Delete tasks & status histories
+      await tx.taskStatusHistory.deleteMany({
+        where: { task: { assignedStaffId: staffId } },
+      });
+      await tx.dailyWorkTask.deleteMany({ where: { assignedStaffId: staffId } });
+      await tx.staffTask.deleteMany({ where: { assignedStaffId: staffId } });
+
+      // 3. Delete attendance events & attendances
+      await tx.attendanceEvent.deleteMany({
+        where: { OR: [{ staffId }, { userId: staff.userId }] },
+      });
+      await tx.attendanceRegularizationRequest.deleteMany({ where: { staffId } });
+      await tx.overtimeRequest.deleteMany({ where: { staffId } });
+      await tx.staffAttendance.deleteMany({ where: { staffId } });
+
+      // 4. Delete leave balances & requests
+      await tx.leaveBalance.deleteMany({ where: { staffId } });
+      await tx.leaveRequest.deleteMany({ where: { staffId } });
+
+      // 5. Delete documents & checklists
+      await tx.staffDocument.deleteMany({ where: { staffId } });
+      await tx.staffOnboardingChecklist.deleteMany({ where: { staffId } });
+      await tx.staffOffboardingRecord.deleteMany({ where: { staffId } });
+
+      // 6. Delete other staff records (payroll, assets, reviews)
+      await tx.payrollRecord.deleteMany({ where: { staffId } });
+      await tx.staffPerformanceReview.deleteMany({ where: { staffId } });
+      await tx.staffAsset.deleteMany({ where: { assignedStaffId: staffId } });
+
+      // 7. Delete staff profile
+      await tx.staffProfile.delete({ where: { id: staffId } });
+
+      // 8. Delete user account
+      await tx.user.delete({ where: { id: staff.userId } });
+    });
+
+    await AuditService.log({
+      actorId: actor.id,
+      action: "STAFF_PROFILE_DELETED",
+      resourceType: "StaffProfile",
+      resourceId: staffId,
+      previousData: {
+        employeeId: staff.employeeId,
+        email: staff.user.email,
+        name: `${staff.user.firstName} ${staff.user.lastName}`,
+      },
+    });
+
+    return { success: true, message: `Staff member ${staff.employeeId} has been successfully deleted.` };
   }
 
   /**

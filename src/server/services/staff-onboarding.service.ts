@@ -6,6 +6,7 @@ import { AuditService } from "./audit.service";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
 import { EmailService } from "./email.service";
+import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AttendanceIntegrationService } from "./attendance-integration.service";
 
 export interface OnboardEmployeeInput {
@@ -16,6 +17,7 @@ export interface OnboardEmployeeInput {
   personalEmail: string;
   officialEmail?: string;
   phone: string;
+  profilePhoto?: string;
   emergencyContactName?: string;
   emergencyContactPhone?: string;
   residentialAddress?: string;
@@ -176,6 +178,7 @@ export class StaffOnboardingService {
               passwordHash,
               firstName: input.firstName.trim(),
               lastName: input.lastName.trim(),
+              avatarUrl: input.profilePhoto?.trim() || null,
               roleCode: input.roleCode,
               status: input.status === "ACTIVE" ? "ACTIVE" : "ACTIVE",
             },
@@ -187,6 +190,7 @@ export class StaffOnboardingService {
             where: { id: user.id },
             data: {
               roleCode: input.roleCode,
+              avatarUrl: input.profilePhoto?.trim() || user.avatarUrl,
               callingNumber: input.callingNumber?.trim() || user.callingNumber,
               whatsappNumber: input.whatsappNumber?.trim() || user.whatsappNumber,
             },
@@ -205,6 +209,7 @@ export class StaffOnboardingService {
             joiningDate: input.joiningDate || new Date(),
             personalEmail: input.personalEmail.trim().toLowerCase(),
             personalPhone: cleanPhone,
+            profilePhoto: input.profilePhoto?.trim() || null,
             emergencyContactName: input.emergencyContactName?.trim(),
             emergencyContactPhone: input.emergencyContactPhone?.trim(),
             residentialAddress: input.residentialAddress?.trim(),
@@ -316,9 +321,31 @@ export class StaffOnboardingService {
       }).catch((err) => console.error("[StaffOnboardingService] Email notification error:", err));
     }
 
+    // Send Welcome WhatsApp Message with Login Credentials
+    const waPhone = input.whatsappNumber?.trim() || cleanPhone;
+    if (waPhone) {
+      const waMessage = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${input.firstName.trim()} ${input.lastName.trim()}*,\n\nCongratulations on joining the SoftLab Global enterprise team as *${input.designation.trim()}* in the *${input.department}* Department!\n\n🔑 *YOUR OFFICIAL LOGIN CREDENTIALS*:\n• Employee ID: \`${employeeId}\`\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: \`${primaryEmail}\`\n• Temporary Password: \`${tempPassword}\`\n\n📌 Please log in to complete your attendance punch and access your intelligent daily work planner.\n\nWarm regards,\n*HR & Executive Management*\n*SOFTLAB GLOBAL*\n🌐 www.softlabglobal.com`;
+
+      WhatsAppBusinessService.sendMessage({
+        toPhone: waPhone,
+        text: waMessage,
+      }).catch((err: any) => console.error("[StaffOnboardingService] WhatsApp notification error:", err));
+    }
+
     return {
       success: true,
       employeeId,
+      credentials: {
+        fullName: `${result.user.firstName} ${result.user.lastName}`,
+        email: primaryEmail,
+        employeeId,
+        temporaryPassword: tempPassword,
+        phone: cleanPhone,
+        department: input.department,
+        designation: input.designation.trim(),
+        profilePhoto: input.profilePhoto?.trim() || null,
+        portalUrl: "https://lms.softlabglobal.com",
+      },
       user: {
         id: result.user.id,
         email: result.user.email,
@@ -327,6 +354,63 @@ export class StaffOnboardingService {
       },
       staffProfile: result.staffProfile,
       message: `Employee ${result.user.firstName} ${result.user.lastName} successfully onboarded with ID ${employeeId}.`,
+    };
+  }
+
+  /**
+   * Resends welcome email and WhatsApp credentials to an existing staff member
+   */
+  static async sendStaffWelcomeNotification(
+    actor: AuthenticatedUser,
+    staffId: string,
+    customPassword?: string
+  ) {
+    const staff = await db.staffProfile.findUnique({
+      where: { id: staffId },
+      include: { user: true },
+    });
+
+    if (!staff) {
+      throw new TRPCError({ code: "NOT_FOUND", message: `Staff profile ${staffId} not found.` });
+    }
+
+    const tempPassword = customPassword || `SoftLab@${new Date().getFullYear()}!${randomBytes(3).toString("hex")}`;
+    if (customPassword) {
+      const hash = await bcrypt.hash(tempPassword, 10);
+      await db.user.update({
+        where: { id: staff.userId },
+        data: { passwordHash: hash },
+      });
+    }
+
+    const fullName = `${staff.user.firstName} ${staff.user.lastName}`;
+    const primaryEmail = staff.user.email;
+    const phone = staff.personalPhone || staff.user.phone || staff.user.whatsappNumber;
+
+    // Send Email
+    await EmailService.sendStaffCredentials({
+      to: primaryEmail,
+      staffName: fullName,
+      employeeId: staff.employeeId,
+      loginEmail: primaryEmail,
+      temporaryPassword: tempPassword,
+      roleName: staff.user.roleCode,
+      designation: staff.designation,
+    }).catch((err) => console.error("[StaffOnboardingService] Resend email error:", err));
+
+    // Send WhatsApp
+    if (phone) {
+      const waMessage = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${fullName}*,\n\nYour official portal credentials for SoftLab Global (${staff.designation}):\n\n• Employee ID: \`${staff.employeeId}\`\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: \`${primaryEmail}\`\n• Temporary Password: \`${tempPassword}\`\n\nWarm regards,\n*HR & Executive Management*\n*SOFTLAB GLOBAL*`;
+      await WhatsAppBusinessService.sendMessage({
+        toPhone: phone,
+        text: waMessage,
+      }).catch((err: any) => console.error("[StaffOnboardingService] Resend WhatsApp error:", err));
+    }
+
+    return {
+      success: true,
+      message: `Welcome credentials sent to ${fullName} via Email and WhatsApp.`,
+      temporaryPassword: tempPassword,
     };
   }
 

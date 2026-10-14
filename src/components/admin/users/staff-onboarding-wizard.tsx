@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { api } from "@/lib/trpc/react";
 import {
   UserCheck,
@@ -23,12 +23,15 @@ import {
   User,
   CreditCard,
   MapPin,
+  Copy,
+  Send,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { StaffDepartment, UserRoleCode } from "@prisma/client";
+import { StaffIdCardModal } from "../staff/staff-id-card-modal";
 
 interface WizardProps {
   isOpen: boolean;
@@ -47,6 +50,7 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
   const [personalEmail, setPersonalEmail] = useState("");
   const [officialEmail, setOfficialEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [profilePhoto, setProfilePhoto] = useState("");
   const [emergencyContactName, setEmergencyContactName] = useState("");
   const [emergencyContactPhone, setEmergencyContactPhone] = useState("");
   const [residentialAddress, setResidentialAddress] = useState("");
@@ -62,6 +66,23 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
   const [workLocation, setWorkLocation] = useState("PRAYAGRAJ_CAMPUS");
   const [shiftId, setShiftId] = useState<string>("");
   const [baseSalaryInRs, setBaseSalaryInRs] = useState("45000");
+
+  // Post-onboarding Success Hub state
+  const [onboardSuccessData, setOnboardSuccessData] = useState<any>(null);
+  const [showIdCardModal, setShowIdCardModal] = useState(false);
+  const [copiedWhatsApp, setCopiedWhatsApp] = useState(false);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setProfilePhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Step 2: Documentation & KYC
   const [bankAccountNumber, setBankAccountNumber] = useState("");
@@ -111,10 +132,10 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
   }, [generatedIdData, employeeId]);
 
   const onboardMutation = api.staffErp.onboardEmployee.useMutation({
-    onSuccess: () => {
+    onSuccess: (data: any) => {
       utils.staffErp.listStaff.invalidate();
       if (onSuccess) onSuccess();
-      onClose();
+      setOnboardSuccessData(data);
     },
     onError: (err) => {
       setErrorMsg(err.message || "Failed to complete onboarding.");
@@ -165,6 +186,7 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
       personalEmail: personalEmail.trim(),
       officialEmail: officialEmail.trim() || undefined,
       phone: phone.trim(),
+      profilePhoto: profilePhoto.trim() || undefined,
       emergencyContactName: emergencyContactName.trim() || undefined,
       emergencyContactPhone: emergencyContactPhone.trim() || undefined,
       residentialAddress: residentialAddress.trim() || undefined,
@@ -221,8 +243,86 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
           </button>
         </div>
 
-        {/* Stepper Progress Bar */}
-        <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
+        {onboardSuccessData ? (
+          <div className="p-8 text-center space-y-6">
+            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-2xl font-black text-slate-900">
+                Staff Member Onboarded Successfully!
+              </h3>
+              <p className="text-sm text-slate-600 max-w-lg mx-auto">
+                <span className="font-bold text-slate-900">{onboardSuccessData.user?.name}</span> has been
+                provisioned in the system with Employee ID{" "}
+                <span className="font-mono font-bold text-indigo-700">{onboardSuccessData.employeeId}</span>.
+              </p>
+            </div>
+
+            {/* Notification Badges */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg mx-auto text-left">
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Mail className="w-4 h-4" />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-blue-900">Welcome Email Dispatched</p>
+                  <p className="text-blue-700">{onboardSuccessData.credentials?.email || personalEmail}</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="text-xs">
+                  <p className="font-bold text-emerald-900">WhatsApp Credentials Sent</p>
+                  <p className="text-emerald-700">{phone || whatsappNumber}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={() => setShowIdCardModal(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:from-blue-700 hover:to-indigo-700 transition"
+              >
+                <CreditCard className="w-4 h-4" /> View & Print Official 4K ID Card
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const msg = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${firstName} ${lastName}*,\n\nWelcome to SoftLab Global as *${designation}*!\n\n🔑 *YOUR LOGIN CREDENTIALS*:\n• Employee ID: \`${onboardSuccessData.employeeId}\`\n• Portal: https://lms.softlabglobal.com\n• Username: \`${officialEmail || personalEmail}\`\n• Temporary Password: \`${password}\`\n\nWarm regards,\n*SOFTLAB GLOBAL*`;
+                  navigator.clipboard.writeText(msg);
+                  setCopiedWhatsApp(true);
+                  setTimeout(() => setCopiedWhatsApp(false), 3000);
+                }}
+                className="px-4 py-2.5 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl font-bold text-xs flex items-center gap-1.5 hover:bg-emerald-100 transition"
+              >
+                <Copy className="w-4 h-4" />
+                {copiedWhatsApp ? "Copied to Clipboard!" : "Copy WhatsApp Card"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setOnboardSuccessData(null);
+                  onClose();
+                }}
+                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition"
+              >
+                Done & Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Stepper Progress Bar */}
+            <div className="bg-slate-50 px-6 py-3 border-b border-slate-200">
           <div className="flex items-center justify-between">
             {[
               { num: 1, label: "Profile" },
@@ -273,6 +373,51 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
                 <User className="w-4 h-4 text-indigo-600" />
                 Step 1: Employee Identity, Contacts & Designation
               </h3>
+
+              {/* Photo Upload & Preview for 4K ID Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative w-20 h-20 rounded-full p-0.5 bg-gradient-to-tr from-emerald-500 via-sky-400 to-blue-700 shadow-md flex-shrink-0">
+                  <div className="w-full h-full rounded-full overflow-hidden bg-white border border-white">
+                    {profilePhoto ? (
+                      <img src={profilePhoto} alt="Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-slate-400 bg-slate-100">
+                        <User className="w-10 h-10" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5 flex-1 text-center sm:text-left">
+                  <input
+                    type="file"
+                    ref={photoInputRef}
+                    onChange={handlePhotoUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
+                  <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+                    >
+                      <Upload className="w-3.5 h-3.5" /> Upload Passport Photo
+                    </button>
+                    {profilePhoto && (
+                      <button
+                        type="button"
+                        onClick={() => setProfilePhoto("")}
+                        className="px-2.5 py-1 text-xs text-red-600 hover:bg-red-50 rounded border border-red-200"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    High-definition picture for 4K PVC Employee ID Card auto-generation.
+                  </p>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -833,7 +978,27 @@ export function StaffOnboardingWizard({ isOpen, onClose, onSuccess }: WizardProp
             )}
           </div>
         </div>
+        </>
+        )}
       </div>
+
+      {/* 4K Official ID Card Modal */}
+      {showIdCardModal && onboardSuccessData && (
+        <StaffIdCardModal
+          isOpen={showIdCardModal}
+          onClose={() => setShowIdCardModal(false)}
+          initialData={{
+            fullName: `${firstName} ${lastName}`,
+            designation,
+            employeeId: onboardSuccessData.employeeId,
+            department,
+            contactNo: phone || "+91 9196596975",
+            email: officialEmail || personalEmail,
+            workLocation: workLocation || "Head Office, Prayagraj",
+            photoUrl: profilePhoto,
+          }}
+        />
+      )}
     </div>
   );
 }

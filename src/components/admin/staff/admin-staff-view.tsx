@@ -26,6 +26,10 @@ import {
   Download,
   Copy,
   KeyRound,
+  Edit2,
+  Trash2,
+  Send,
+  Upload,
 } from "lucide-react";
 import {
   StaffDepartment,
@@ -40,6 +44,7 @@ import { StaffAssetsTab } from "./staff-assets-tab";
 import { StaffRecruitmentTab } from "./staff-recruitment-tab";
 import { StaffOnboardingTab } from "./staff-onboarding-tab";
 import { StaffLettersTab } from "./staff-letters-tab";
+import { StaffIdCardModal } from "./staff-id-card-modal";
 
 export function AdminStaffView() {
   const [activeTab, setActiveTab] = useState<
@@ -118,6 +123,75 @@ export function AdminStaffView() {
   const [createdStaffCredentials, setCreatedStaffCredentials] = useState<any>(null);
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [copiedStaffCreds, setCopiedStaffCreds] = useState(false);
+
+  // Super Admin Staff Edit, Delete & ID Card Studio state
+  const [selectedStaffForCard, setSelectedStaffForCard] = useState<any>(null);
+  const [selectedStaffForEdit, setSelectedStaffForEdit] = useState<any>(null);
+  const [selectedStaffForDelete, setSelectedStaffForDelete] = useState<any>(null);
+  const [editForm, setEditForm] = useState<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    phone: string;
+    personalEmail: string;
+    personalPhone: string;
+    department: StaffDepartment;
+    designation: string;
+    baseSalary: number;
+    employmentType: string;
+    workLocation: string;
+    residentialAddress: string;
+    profilePhoto: string;
+    isActive: boolean;
+  }>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    personalEmail: "",
+    personalPhone: "",
+    department: StaffDepartment.COUNSELING,
+    designation: "",
+    baseSalary: 3000000,
+    employmentType: "FULL_TIME",
+    workLocation: "PRAYAGRAJ_CAMPUS",
+    residentialAddress: "",
+    profilePhoto: "",
+    isActive: true,
+  });
+
+  const updateStaffMutation = api.staffErp.updateStaffProfile.useMutation({
+    onSuccess: () => {
+      setSelectedStaffForEdit(null);
+      refetchStaff();
+      refetchMetrics();
+      alert("Staff profile updated successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to update staff member.");
+    },
+  });
+
+  const deleteStaffMutation = api.staffErp.deleteStaffProfile.useMutation({
+    onSuccess: (data) => {
+      setSelectedStaffForDelete(null);
+      refetchStaff();
+      refetchMetrics();
+      alert(data.message || "Staff member deleted successfully.");
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to delete staff member.");
+    },
+  });
+
+  const sendWelcomeMutation = api.staffErp.sendStaffWelcomeNotification.useMutation({
+    onSuccess: (data) => {
+      alert(data.message);
+    },
+    onError: (err) => {
+      alert(err.message || "Failed to send welcome credentials.");
+    },
+  });
 
   // Mutations
   const createStaffAccountMutation = api.staffErp.createStaffMemberWithAccount.useMutation({
@@ -575,15 +649,92 @@ export function AdminStaffView() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4 text-right">
-                          <button
-                            type="button"
-                            onClick={() => resetPasswordMutation.mutate({ staffId: staff.id })}
-                            disabled={resetPasswordMutation.isPending}
-                            className="px-2.5 py-1 text-xs font-semibold rounded bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition inline-flex items-center gap-1"
-                            title="Reset password and generate new credentials"
-                          >
-                            <KeyRound className="w-3 h-3" /> Reset Login
-                          </button>
+                          <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                            {/* 4K ID Card Studio & Generator */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedStaffForCard({
+                                  fullName: `${staff.user.firstName} ${staff.user.lastName}`,
+                                  designation: staff.designation,
+                                  employeeId: staff.employeeId,
+                                  department: staff.department,
+                                  contactNo: staff.personalPhone || staff.user.phone || "+91 9196596975",
+                                  email: staff.user.email,
+                                  workLocation: staff.workLocation || "Head Office, Prayagraj",
+                                  photoUrl: staff.profilePhoto || "",
+                                })
+                              }
+                              className="px-2 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition inline-flex items-center gap-1 shadow-sm"
+                              title="Open 4K Official ID Card Studio & Print"
+                            >
+                              <CreditCard className="w-3.5 h-3.5 text-blue-600" /> ID Card
+                            </button>
+
+                            {/* Edit Staff Profile */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedStaffForEdit(staff);
+                                setEditForm({
+                                  firstName: staff.user.firstName,
+                                  lastName: staff.user.lastName,
+                                  email: staff.user.email,
+                                  phone: staff.user.phone || "",
+                                  personalEmail: staff.personalEmail || "",
+                                  personalPhone: staff.personalPhone || "",
+                                  department: staff.department,
+                                  designation: staff.designation,
+                                  baseSalary: staff.baseSalary,
+                                  employmentType: staff.employmentType || "FULL_TIME",
+                                  workLocation: staff.workLocation || "PRAYAGRAJ_CAMPUS",
+                                  residentialAddress: staff.residentialAddress || "",
+                                  profilePhoto: staff.profilePhoto || "",
+                                  isActive: staff.isActive,
+                                });
+                              }}
+                              className="px-2 py-1 text-xs font-semibold rounded bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300 transition inline-flex items-center gap-1"
+                              title="Edit staff profile and credentials"
+                            >
+                              <Edit2 className="w-3 h-3 text-slate-600" /> Edit
+                            </button>
+
+                            {/* Send Welcome Email & WhatsApp Credentials */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Send welcome credentials via Email and WhatsApp to ${staff.user.firstName} ${staff.user.lastName}?`)) {
+                                  sendWelcomeMutation.mutate({ staffId: staff.id });
+                                }
+                              }}
+                              disabled={sendWelcomeMutation.isPending}
+                              className="px-2 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center gap-1"
+                              title="Resend welcome email and WhatsApp credentials"
+                            >
+                              <Send className="w-3 h-3 text-emerald-600" /> Welcome
+                            </button>
+
+                            {/* Reset Login Password */}
+                            <button
+                              type="button"
+                              onClick={() => resetPasswordMutation.mutate({ staffId: staff.id })}
+                              disabled={resetPasswordMutation.isPending}
+                              className="px-2 py-1 text-xs font-semibold rounded bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200 transition inline-flex items-center gap-1"
+                              title="Reset password and generate new credentials"
+                            >
+                              <KeyRound className="w-3 h-3" /> Reset
+                            </button>
+
+                            {/* Delete Staff Member */}
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStaffForDelete(staff)}
+                              className="px-2 py-1 text-xs font-semibold rounded bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition inline-flex items-center gap-1"
+                              title="Permanently remove staff member"
+                            >
+                              <Trash2 className="w-3 h-3 text-red-600" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -2000,6 +2151,242 @@ WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentia
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 4K ID CARD STUDIO & GENERATOR MODAL */}
+      {/* ========================================================================= */}
+      {selectedStaffForCard && (
+        <StaffIdCardModal
+          isOpen={!!selectedStaffForCard}
+          onClose={() => setSelectedStaffForCard(null)}
+          initialData={selectedStaffForCard}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: EDIT STAFF PROFILE & CREDENTIALS */}
+      {/* ========================================================================= */}
+      {selectedStaffForEdit && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-8">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-blue-600" /> Edit Staff Profile & Access
+                </h3>
+                <p className="text-xs text-slate-500 font-mono">
+                  Employee ID: {selectedStaffForEdit.employeeId}
+                </p>
+              </div>
+              <button
+                onClick={() => setSelectedStaffForEdit(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                updateStaffMutation.mutate({
+                  staffId: selectedStaffForEdit.id,
+                  firstName: editForm.firstName,
+                  lastName: editForm.lastName,
+                  email: editForm.email,
+                  phone: editForm.phone,
+                  personalEmail: editForm.personalEmail || undefined,
+                  personalPhone: editForm.personalPhone || undefined,
+                  department: editForm.department,
+                  designation: editForm.designation,
+                  baseSalary: Number(editForm.baseSalary),
+                  employmentType: editForm.employmentType,
+                  workLocation: editForm.workLocation,
+                  residentialAddress: editForm.residentialAddress || undefined,
+                  profilePhoto: editForm.profilePhoto || undefined,
+                  isActive: editForm.isActive,
+                });
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">First Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={editForm.firstName}
+                    onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Last Name *</label>
+                  <input
+                    required
+                    type="text"
+                    value={editForm.lastName}
+                    onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Official Email *</label>
+                  <input
+                    required
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Contact Phone *</label>
+                  <input
+                    required
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Department *</label>
+                  <select
+                    value={editForm.department}
+                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value as StaffDepartment })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  >
+                    {Object.values(StaffDepartment).map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Designation *</label>
+                  <input
+                    required
+                    type="text"
+                    value={editForm.designation}
+                    onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Base Monthly Salary (in INR) *</label>
+                  <input
+                    required
+                    type="number"
+                    value={editForm.baseSalary / 100}
+                    onChange={(e) => setEditForm({ ...editForm, baseSalary: Math.round(Number(e.target.value) * 100) })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Work Location</label>
+                  <input
+                    type="text"
+                    value={editForm.workLocation}
+                    onChange={(e) => setEditForm({ ...editForm, workLocation: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block font-semibold text-slate-700 mb-1">Profile Photo (URL or Base64)</label>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={editForm.profilePhoto}
+                    onChange={(e) => setEditForm({ ...editForm, profilePhoto: e.target.value })}
+                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div>
+                    <p className="font-bold text-slate-800 text-sm">Active Account Status</p>
+                    <p className="text-slate-500 text-[11px]">Allow employee login and daily attendance punches</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={editForm.isActive}
+                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
+                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={() => setSelectedStaffForEdit(null)}
+                  className="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={updateStaffMutation.isPending}
+                  className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-sm"
+                >
+                  {updateStaffMutation.isPending ? "Updating..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: DELETE / REMOVE STAFF CONFIRMATION */}
+      {/* ========================================================================= */}
+      {selectedStaffForDelete && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-red-200 animate-in fade-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto">
+              <Trash2 className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="font-bold text-slate-900 text-lg">Remove Staff Member</h3>
+              <p className="text-xs text-slate-600">
+                Are you sure you want to permanently delete{" "}
+                <span className="font-bold text-slate-900">
+                  {selectedStaffForDelete.user.firstName} {selectedStaffForDelete.user.lastName}
+                </span>{" "}
+                ({selectedStaffForDelete.employeeId})?
+              </p>
+              <p className="text-[11px] text-red-600 font-semibold bg-red-50 p-2 rounded-lg border border-red-200 mt-2">
+                ⚠️ All associated records, attendance punches, tasks, and reports will be removed.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t">
+              <button
+                type="button"
+                onClick={() => setSelectedStaffForDelete(null)}
+                className="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50 font-medium text-xs"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteStaffMutation.mutate({ staffId: selectedStaffForDelete.id })}
+                disabled={deleteStaffMutation.isPending}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 text-xs shadow-sm transition"
+              >
+                {deleteStaffMutation.isPending ? "Deleting..." : "Yes, Delete Staff Member"}
+              </button>
+            </div>
           </div>
         </div>
       )}

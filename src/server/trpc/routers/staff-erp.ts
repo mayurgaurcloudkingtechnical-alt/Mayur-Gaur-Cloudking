@@ -183,9 +183,19 @@ export const staffErpRouter = router({
     .input(
       z.object({
         staffId: z.string(),
+        firstName: z.string().min(1).optional(),
+        lastName: z.string().min(1).optional(),
+        email: z.string().email().optional(),
+        phone: z.string().optional(),
+        personalEmail: z.string().email().optional(),
+        personalPhone: z.string().optional(),
         department: z.nativeEnum(StaffDepartment).optional(),
         designation: z.string().min(1).optional(),
         baseSalary: z.number().int().positive().optional(),
+        employmentType: z.string().optional(),
+        workLocation: z.string().optional(),
+        residentialAddress: z.string().optional(),
+        profilePhoto: z.string().optional(),
         bankAccountNumber: z.string().optional(),
         bankIfsc: z.string().optional(),
         panNumber: z.string().optional(),
@@ -195,6 +205,31 @@ export const staffErpRouter = router({
     .mutation(async ({ ctx, input }) => {
       const { staffId, ...rest } = input;
       return StaffProfileService.updateStaffProfile(asAuthUser(ctx.user), staffId, rest);
+    }),
+
+  deleteStaffProfile: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        staffId: z.string(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StaffProfileService.deleteStaffProfile(asAuthUser(ctx.user), input.staffId);
+    }),
+
+  sendStaffWelcomeNotification: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        staffId: z.string(),
+        customPassword: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StaffOnboardingService.sendStaffWelcomeNotification(
+        asAuthUser(ctx.user),
+        input.staffId,
+        input.customPassword
+      );
     }),
 
   // ==========================================
@@ -885,6 +920,7 @@ export const staffErpRouter = router({
         personalEmail: z.string().email(),
         officialEmail: z.string().email().optional(),
         phone: z.string().min(8),
+        profilePhoto: z.string().optional(),
         emergencyContactName: z.string().optional(),
         emergencyContactPhone: z.string().optional(),
         residentialAddress: z.string().optional(),
