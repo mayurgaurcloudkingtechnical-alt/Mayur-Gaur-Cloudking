@@ -3,6 +3,7 @@ import { db } from "@/server/db/client";
 import { AuditService } from "@/server/services/audit.service";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { UserRoleCode } from "@prisma/client";
+import { AttendanceIntegrationService } from "@/server/services/attendance-integration.service";
 
 export interface UserAuthResult {
   id: string;
@@ -139,6 +140,33 @@ export async function verifyUserCredentials({
         },
       });
     }
+
+    // 4. Fallback: Search by StaffProfile (employeeId or personalEmail)
+    if (!user) {
+      const staffProf = await db.staffProfile.findFirst({
+        where: {
+          OR: [
+            { employeeId: { equals: rawIdentifier, mode: "insensitive" } },
+            { personalEmail: { equals: rawIdentifier.toLowerCase(), mode: "insensitive" } },
+          ],
+        },
+        include: {
+          user: {
+            include: {
+              role: {
+                select: {
+                  permissions: true,
+                  maxDiscountPercent: true,
+                },
+              },
+            },
+          },
+        },
+      });
+      if (staffProf?.user) {
+        user = staffProf.user;
+      }
+    }
   }
 
   if (!user || !user.passwordHash) {
@@ -188,6 +216,13 @@ export async function verifyUserCredentials({
   await db.user.update({
     where: { id: user.id },
     data: { lastLoginAt: new Date() },
+  });
+
+  // Enterprise HRMS Automatic Login Attendance Check-in
+  await AttendanceIntegrationService.recordLoginCheckIn({
+    userId: user.id,
+    clientIp,
+    userAgent,
   });
 
   await AuditService.log({

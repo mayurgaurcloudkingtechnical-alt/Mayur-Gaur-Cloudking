@@ -29,6 +29,7 @@ import {
   Building2,
   ExternalLink,
   Globe,
+  CheckSquare,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -103,6 +104,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
           { title: "DDU Global Portal", href: DDU_CONFIG.portals.mainWebsiteUrl, icon: <Globe className="h-4 w-4" />, external: true, badge: "USA" },
           { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
@@ -113,6 +115,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Service Enquiries", href: "/counselor/services", icon: <Briefcase className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
           { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Fee Collection", href: "/counselor/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
@@ -204,6 +207,8 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Campus & Universities", href: "/admin/campus-partnerships", icon: <Building2 className="h-4 w-4" />, badge: "Partners" },
           { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
+          { title: "Work Planner", href: "/admin/work-planner", icon: <CheckSquare className="h-4 w-4" />, badge: "AI" },
+          { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
           { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },
           { title: "Settings & RBAC", href: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
         ];

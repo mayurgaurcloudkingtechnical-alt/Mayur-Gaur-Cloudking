@@ -25,6 +25,7 @@ import { omnichannelRouter } from "./omnichannel";
 import { aiKnowledgeRouter } from "./ai-knowledge";
 import { automationsRouter } from "./automations";
 import { institutionRouter } from "./institution";
+import { workPlannerRouter } from "./work-planner";
 
 export const appRouter = router({
   auth: authRouter,
@@ -45,6 +46,7 @@ export const appRouter = router({
   placement: placementRouter,
   institution: institutionRouter,
   staffErp: staffErpRouter,
+  workPlanner: workPlannerRouter,
   analytics: analyticsRouter,
   notifications: notificationRouter,
   system: systemRouter,

@@ -12,6 +12,7 @@ import {
   Users,
   Search,
   UserPlus,
+  UserCheck,
   KeyRound,
   Shield,
   Edit2,
@@ -24,6 +25,7 @@ import {
   Lock,
 } from "lucide-react";
 import { UserRoleCode, UserStatus } from "@prisma/client";
+import { StaffOnboardingWizard } from "./staff-onboarding-wizard";
 
 export function UsersView() {
   const [search, setSearch] = useState("");
@@ -33,6 +35,7 @@ export function UsersView() {
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
+  const [onboardOpen, setOnboardOpen] = useState(false);
   const [editUser, setEditUser] = useState<any | null>(null);
   const [resetPwdUser, setResetPwdUser] = useState<any | null>(null);
 
@@ -227,14 +230,25 @@ export function UsersView() {
               />
             </div>
 
-            <Button
-              onClick={() => setCreateOpen(true)}
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
-            >
-              <UserPlus className="h-4 w-4" />
-              <span>Create New User</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setOnboardOpen(true)}
+                size="sm"
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+              >
+                <UserCheck className="h-4 w-4" />
+                <span>Onboard Employee</span>
+              </Button>
+
+              <Button
+                onClick={() => setCreateOpen(true)}
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+              >
+                <UserPlus className="h-4 w-4" />
+                <span>Create New User</span>
+              </Button>
+            </div>
           </div>
 
           {/* Role Filters */}
@@ -681,6 +695,19 @@ export function UsersView() {
           </Card>
         </div>
       )}
+
+      {/* 5-Step Staff Onboarding Wizard */}
+      <StaffOnboardingWizard
+        isOpen={onboardOpen}
+        onClose={() => setOnboardOpen(false)}
+        onSuccess={() => {
+          utils.admin.listUsers.invalidate();
+          setNotification({
+            type: "success",
+            message: "Employee successfully onboarded with verified credentials and checklist!",
+          });
+        }}
+      />
     </div>
   );
 }

@@ -14,6 +14,8 @@ import { LeaveManagementService } from "@/server/services/leave-management.servi
 import { PayrollService } from "@/server/services/payroll.service";
 import { StaffHrmsService } from "@/server/services/staff-hrms.service";
 import { StaffExtendedService } from "@/server/services/staff-extended.service";
+import { StaffOnboardingService } from "@/server/services/staff-onboarding.service";
+import { AttendanceIntegrationService } from "@/server/services/attendance-integration.service";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 import { TRPCError } from "@trpc/server";
 
@@ -854,6 +856,187 @@ export const staffErpRouter = router({
     )
     .mutation(async ({ input }) => {
       return StaffExtendedService.generateLetter(input);
+    }),
+
+  // ==========================================
+  // 14. 5-STEP EMPLOYEE ONBOARDING WIZARD
+  // ==========================================
+  generateUniqueEmployeeId: requireRoleProcedure(adminHRRoles).query(async () => {
+    return StaffOnboardingService.generateEmployeeId();
+  }),
+
+  checkCandidateUniqueness: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        email: z.string().email(),
+        phone: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return StaffOnboardingService.checkUniqueness(input.email, input.phone);
+    }),
+
+  onboardEmployee: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        employeeId: z.string().optional(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        personalEmail: z.string().email(),
+        officialEmail: z.string().email().optional(),
+        phone: z.string().min(8),
+        emergencyContactName: z.string().optional(),
+        emergencyContactPhone: z.string().optional(),
+        residentialAddress: z.string().optional(),
+        gender: z.string().optional(),
+        dateOfBirth: z.date().optional(),
+        joiningDate: z.date().optional(),
+        employmentType: z.string().optional(),
+        probationMonths: z.number().int().optional(),
+        department: z.nativeEnum(StaffDepartment),
+        designation: z.string().min(1),
+        reportingManagerId: z.string().optional(),
+        branch: z.string().optional(),
+        workLocation: z.string().optional(),
+        shiftId: z.string().optional(),
+        baseSalary: z.number().int().positive(),
+        bankAccountNumber: z.string().optional(),
+        bankIfsc: z.string().optional(),
+        panNumber: z.string().optional(),
+        documents: z
+          .array(
+            z.object({
+              documentType: z.string(),
+              title: z.string(),
+              documentUrl: z.string(),
+            })
+          )
+          .optional(),
+        roleCode: z.nativeEnum(UserRoleCode),
+        password: z.string().min(6).optional(),
+        sendInviteEmail: z.boolean().optional(),
+        callingNumber: z.string().optional(),
+        whatsappNumber: z.string().optional(),
+        initialChecklist: z
+          .object({
+            docVerificationDone: z.boolean().optional(),
+            offerLetterAckDone: z.boolean().optional(),
+            roleAssignmentDone: z.boolean().optional(),
+            crmAccessVerified: z.boolean().optional(),
+            hrmsProfileDone: z.boolean().optional(),
+            attendancePolicyAckDone: z.boolean().optional(),
+            trainingInductionDone: z.boolean().optional(),
+            managerApprovalDone: z.boolean().optional(),
+          })
+          .optional(),
+        status: z.enum(["DRAFT", "ACTIVE", "PENDING"]).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StaffOnboardingService.onboardEmployee(asAuthUser(ctx.user), input);
+    }),
+
+  updateOnboardingStep: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        staffId: z.string(),
+        stepKey: z.string(),
+        value: z.boolean(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return StaffOnboardingService.updateChecklistStep(input.staffId, {
+        [input.stepKey]: input.value,
+      });
+    }),
+
+  // ==========================================
+  // 15. ATTENDANCE REGULARIZATIONS & OVERTIME
+  // ==========================================
+  listRegularizations: protectedProcedure
+    .input(z.object({ staffId: z.string().optional(), status: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      return AttendanceIntegrationService.listRegularizations(input);
+    }),
+
+  submitRegularization: protectedProcedure
+    .input(
+      z.object({
+        staffId: z.string(),
+        date: z.date(),
+        type: z.enum([
+          "MISSED_CHECK_IN",
+          "MISSED_CHECK_OUT",
+          "REMOTE_WORK",
+          "FIELD_VISIT",
+          "FORGOTTEN_PUNCH",
+        ]),
+        requestedCheckIn: z.date().optional(),
+        requestedCheckOut: z.date().optional(),
+        reason: z.string().min(5),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return AttendanceIntegrationService.submitRegularizationRequest(asAuthUser(ctx.user), input);
+    }),
+
+  reviewRegularization: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        requestId: z.string(),
+        decision: z.enum(["APPROVED", "REJECTED"]),
+        rejectionReason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return AttendanceIntegrationService.reviewRegularizationRequest(
+        asAuthUser(ctx.user),
+        input.requestId,
+        input.decision,
+        input.rejectionReason
+      );
+    }),
+
+  listOvertimes: protectedProcedure
+    .input(z.object({ staffId: z.string().optional(), status: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      return AttendanceIntegrationService.listOvertimes(input);
+    }),
+
+  submitOvertime: protectedProcedure
+    .input(
+      z.object({
+        staffId: z.string(),
+        date: z.date(),
+        hours: z.number().positive(),
+        reason: z.string().min(5),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return AttendanceIntegrationService.submitOvertimeRequest(asAuthUser(ctx.user), input);
+    }),
+
+  reviewOvertime: requireRoleProcedure(adminHRRoles)
+    .input(
+      z.object({
+        requestId: z.string(),
+        decision: z.enum(["APPROVED", "REJECTED"]),
+        rejectionReason: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return AttendanceIntegrationService.reviewOvertimeRequest(
+        asAuthUser(ctx.user),
+        input.requestId,
+        input.decision,
+        input.rejectionReason
+      );
+    }),
+
+  getLeaveBalances: protectedProcedure
+    .input(z.object({ staffId: z.string(), year: z.number().optional() }))
+    .query(async ({ input }) => {
+      return AttendanceIntegrationService.getOrCreateLeaveBalances(input.staffId, input.year);
     }),
 });
 

@@ -326,6 +326,15 @@ model User {
   SiaToolInvocation                SiaToolInvocation[]
   SiaDevice                        SiaDevice[]
 
+  // Enterprise HRMS & Daily Management Relations
+  attendanceEvents                 AttendanceEvent[]
+  reviewedRegularizations          AttendanceRegularizationRequest[] @relation("RegularizationReviewer")
+  reviewedOvertimes                OvertimeRequest[]                 @relation("OvertimeReviewer")
+  reviewedPlannerRuns              TaskGenerationRun[]               @relation("PlannerReviewer")
+  approvedWorkTasks                DailyWorkTask[]                   @relation("WorkTaskApprover")
+  taskStatusChanges                TaskStatusHistory[]               @relation("TaskStatusChanger")
+  reviewedDailyReports             DailyWorkReport[]                 @relation("ReportReviewer")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -1711,19 +1720,29 @@ model StaffProfile {
   panNumber             String?
   shiftId               String?
   shift                 StaffShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
+  probationMonths       Int?            @default(3)
+  branch                String?         @default("PRAYAGRAJ_MAIN")
   isActive              Boolean         @default(true)
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
 
-  leaveRequests       LeaveRequest[]
-  payrollRecords      PayrollRecord[]
-  attendances         StaffAttendance[]
-  tasks               StaffTask[]               @relation("AssignedTasks")
-  performanceReviews  StaffPerformanceReview[]
-  documents           StaffDocument[]
-  assets              StaffAsset[]
-  onboardingChecklist StaffOnboardingChecklist?
-  offboardingRecord   StaffOffboardingRecord?
+  leaveRequests             LeaveRequest[]
+  payrollRecords            PayrollRecord[]
+  attendances               StaffAttendance[]
+  tasks                     StaffTask[]                       @relation("AssignedTasks")
+  performanceReviews        StaffPerformanceReview[]
+  documents                 StaffDocument[]
+  assets                    StaffAsset[]
+  onboardingChecklist       StaffOnboardingChecklist?
+  offboardingRecord         StaffOffboardingRecord?
+  attendanceEvents          AttendanceEvent[]
+  attendanceRegularizations AttendanceRegularizationRequest[]
+  overtimeRequests          OvertimeRequest[]
+  leaveBalances             LeaveBalance[]
+  assignedWorkTasks         DailyWorkTask[]                   @relation("StaffAssignedWorkTasks")
+  managedWorkTasks          DailyWorkTask[]                   @relation("StaffManagedWorkTasks")
+  dailyReports              DailyWorkReport[]                 @relation("StaffDailyReports")
+  managerDailyReports       DailyWorkReport[]                 @relation("ManagerDailyReports")
 
   @@index([userId])
   @@index([employeeId])
@@ -1977,16 +1996,25 @@ model StaffOnboardingChecklist {
   id                   String       @id @default(cuid())
   staffId              String       @unique
   staff                StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  personalDetailsDone  Boolean      @default(false)
-  documentsUploaded    Boolean      @default(false)
-  bankDetailsVerified  Boolean      @default(false)
-  workstationAssigned  Boolean      @default(false)
-  idCardIssued         Boolean      @default(false)
-  emailAccountCreated  Boolean      @default(false)
-  slackOrPortalInvited Boolean      @default(false)
-  orientationCompleted Boolean      @default(false)
-  completionPercent    Int          @default(0)
-  status               String       @default("IN_PROGRESS")
+  personalDetailsDone       Boolean   @default(false)
+  documentsUploaded         Boolean   @default(false)
+  bankDetailsVerified       Boolean   @default(false)
+  workstationAssigned       Boolean   @default(false)
+  idCardIssued              Boolean   @default(false)
+  emailAccountCreated       Boolean   @default(false)
+  slackOrPortalInvited      Boolean   @default(false)
+  orientationCompleted      Boolean   @default(false)
+  // Step 4 Extended Checklist items
+  docVerificationDone       Boolean   @default(false)
+  offerLetterAckDone        Boolean   @default(false)
+  roleAssignmentDone        Boolean   @default(false)
+  crmAccessVerified         Boolean   @default(false)
+  hrmsProfileDone           Boolean   @default(false)
+  attendancePolicyAckDone   Boolean   @default(false)
+  trainingInductionDone     Boolean   @default(false)
+  managerApprovalDone       Boolean   @default(false)
+  completionPercent         Int       @default(0)
+  status                    String    @default("IN_PROGRESS")
   completedAt          DateTime?
   notes                String?      @db.Text
   createdAt            DateTime     @default(now())
@@ -3463,5 +3491,220 @@ model DriveNomination {
   @@index([studentProfileId])
   @@index([institutionEnrollmentId])
   @@map("drive_nominations")
+}
+
+// ==============================================================================
+// 27. ENTERPRISE HRMS, AUTOMATIC LOGIN ATTENDANCE & INTELLIGENT DAILY MANAGEMENT
+// ==============================================================================
+
+model AttendanceEvent {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  staffId        String?
+  staff          StaffProfile? @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  eventType      String        // "LOGIN_CHECKIN", "LOGOUT_CHECKOUT", "AUTO_RECONCILE", "MANUAL_PUNCH"
+  source         String        // "CRM_LMS_LOGIN", "MANUAL_CORRECTION", "SYSTEM_RECONCILE", "MOBILE_APP"
+  ipAddress      String?
+  userAgent      String?
+  idempotencyKey String?       @unique
+  timestamp      DateTime      @default(now())
+  status         String        @default("PROCESSED") // "PROCESSED", "DUPLICATE", "RECONCILED", "EXCEPTION"
+  metadata       Json?
+  createdAt      DateTime      @default(now())
+
+  @@index([userId])
+  @@index([staffId])
+  @@index([timestamp])
+  @@index([idempotencyKey])
+  @@map("attendance_events")
+}
+
+model AttendanceRegularizationRequest {
+  id                String       @id @default(cuid())
+  staffId           String
+  staff             StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  attendanceId      String?
+  date              DateTime     @db.Date
+  type              String       // "MISSED_CHECK_IN", "MISSED_CHECK_OUT", "REMOTE_WORK", "FIELD_VISIT", "FORGOTTEN_PUNCH"
+  requestedCheckIn  DateTime?
+  requestedCheckOut DateTime?
+  reason            String       @db.Text
+  status            String       @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  reviewerId        String?
+  reviewer          User?        @relation("RegularizationReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewedAt        DateTime?
+  rejectionReason   String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@index([staffId])
+  @@index([date])
+  @@index([status])
+  @@map("attendance_regularization_requests")
+}
+
+model OvertimeRequest {
+  id              String       @id @default(cuid())
+  staffId         String
+  staff           StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  date            DateTime     @db.Date
+  hours           Float
+  reason          String       @db.Text
+  status          String       @default("PENDING") // "PENDING", "APPROVED", "REJECTED"
+  reviewerId      String?
+  reviewer        User?        @relation("OvertimeReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  rejectionReason String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([staffId])
+  @@index([status])
+  @@map("overtime_requests")
+}
+
+model LeaveBalance {
+  id        String       @id @default(cuid())
+  staffId   String
+  staff     StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  year      Int
+  leaveType LeaveType
+  allocated Float        @default(12)
+  used      Float        @default(0)
+  pending   Float        @default(0)
+  balance   Float        @default(12)
+  updatedAt DateTime     @updatedAt
+
+  @@unique([staffId, year, leaveType])
+  @@index([staffId])
+  @@map("leave_balances")
+}
+
+model TaskGenerationRun {
+  id             String          @id @default(cuid())
+  runDate        DateTime        @db.Date
+  reportingStart DateTime
+  reportingEnd   DateTime
+  status         String          @default("DRAFT") // "DRAFT", "DIRECTOR_REVIEW", "APPROVED", "REJECTED"
+  generatedCount Int             @default(0)
+  approvedCount  Int             @default(0)
+  sourceMetrics  Json?
+  reviewNotes    String?         @db.Text
+  reviewedById   String?
+  reviewedBy     User?           @relation("PlannerReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  tasks          DailyWorkTask[]
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  @@index([runDate])
+  @@index([status])
+  @@map("task_generation_runs")
+}
+
+model DailyWorkTask {
+  id                 String             @id @default(cuid())
+  taskCode           String             @unique // e.g. "TASK-20261014-001"
+  title              String
+  description        String             @db.Text
+  generationRunId    String?
+  generationRun      TaskGenerationRun? @relation(fields: [generationRunId], references: [id], onDelete: SetNull)
+  reportingDate      DateTime           @db.Date
+  department         String             // "COUNSELING", "SALES", "MARKETING", "PLACEMENT", "HR", "OPERATIONS", "ACADEMICS"
+  sourceType         String             // "CRM_OVERDUE_FOLLOWUP", "CRM_NEW_UNATTENDED", "CRM_ADMISSION_PIPELINE", "RECRUITER_VACANCY", "CAMPUS_DRIVE", "HR_PENDING", "DIRECTOR_DIRECTIVE"
+  sourceReferenceId  String?
+  assignedStaffId    String
+  assignedStaff      StaffProfile       @relation("StaffAssignedWorkTasks", fields: [assignedStaffId], references: [id], onDelete: Cascade)
+  reportingManagerId String?
+  reportingManager   StaffProfile?      @relation("StaffManagedWorkTasks", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  priority           String             @default("MEDIUM") // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  dueDate            DateTime
+  targetQuantity     Int?
+  completedQuantity  Int?               @default(0)
+  expectedOutcome    String?            @db.Text
+  evidenceNotes      String?            @db.Text
+  evidenceUrl        String?
+  status             String             @default("DRAFT") // "DRAFT", "DIRECTOR_REVIEW", "APPROVED", "ASSIGNED", "IN_PROGRESS", "SUBMITTED_FOR_REVIEW", "COMPLETED", "REJECTED", "BLOCKED", "CANCELLED", "OVERDUE"
+  escalated          Boolean            @default(false)
+  escalationReason   String?
+  approvedById       String?
+  approvedBy         User?              @relation("WorkTaskApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt         DateTime?
+  completedAt        DateTime?
+  reportItems        DailyWorkReportItem[]
+  statusHistory      TaskStatusHistory[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([reportingDate])
+  @@index([assignedStaffId])
+  @@index([department])
+  @@index([status])
+  @@index([sourceType])
+  @@map("daily_work_tasks")
+}
+
+model TaskStatusHistory {
+  id        String        @id @default(cuid())
+  taskId    String
+  task      DailyWorkTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  oldStatus String
+  newStatus String
+  actorId   String?
+  actor     User?         @relation("TaskStatusChanger", fields: [actorId], references: [id], onDelete: SetNull)
+  comment   String?       @db.Text
+  createdAt DateTime      @default(now())
+
+  @@index([taskId])
+  @@map("task_status_histories")
+}
+
+model DailyWorkReport {
+  id                 String                @id @default(cuid())
+  reportDate         DateTime              @db.Date
+  staffId            String
+  staff              StaffProfile          @relation("StaffDailyReports", fields: [staffId], references: [id], onDelete: Cascade)
+  department         String
+  reportingManagerId String?
+  reportingManager   StaffProfile?         @relation("ManagerDailyReports", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  status             String                @default("SUBMITTED") // "DRAFT", "SUBMITTED", "PENDING_REVIEW", "APPROVED", "REJECTED", "RETURNED_FOR_CORRECTION"
+  actualWorkSummary  String                @db.Text
+  resultsSummary     String?               @db.Text
+  crmFollowUpsDone   Int                   @default(0)
+  crmLeadsContacted  Int                   @default(0)
+  crmAdmissionsDone  Int                   @default(0)
+  nextDayPriorities  String?               @db.Text
+  remarks            String?               @db.Text
+  reviewerComments   String?               @db.Text
+  reviewedById       String?
+  reviewedBy         User?                 @relation("ReportReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt         DateTime?
+  items              DailyWorkReportItem[]
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@unique([staffId, reportDate])
+  @@index([reportDate])
+  @@index([status])
+  @@index([department])
+  @@map("daily_work_reports")
+}
+
+model DailyWorkReportItem {
+  id               String          @id @default(cuid())
+  reportId         String
+  report           DailyWorkReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  taskId           String?
+  task             DailyWorkTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  taskTitle        String
+  status           String          // "COMPLETED", "IN_PROGRESS", "BLOCKED"
+  blockedReason    String?
+  measurableResult String?
+  notes            String?         @db.Text
+  createdAt        DateTime        @default(now())
+
+  @@index([reportId])
+  @@map("daily_work_report_items")
 }
 
