@@ -203,5 +203,8 @@ export async function verifyUserCredentials({
     lastName: user.lastName,
     roleCode: user.roleCode,
     permissions: user.role.permissions,
+    phone: user.phone,
+    callingNumber: user.callingNumber || user.phone,
+    whatsappNumber: user.whatsappNumber || user.phone,
   };
 }

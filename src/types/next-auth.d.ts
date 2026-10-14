@@ -9,6 +9,9 @@ declare module "next-auth" {
       permissions: string[];
       firstName: string;
       lastName: string;
+      phone?: string | null;
+      callingNumber?: string | null;
+      whatsappNumber?: string | null;
     } & DefaultSession["user"];
   }
 
@@ -18,6 +21,9 @@ declare module "next-auth" {
     permissions?: string[];
     firstName: string;
     lastName: string;
+    phone?: string | null;
+    callingNumber?: string | null;
+    whatsappNumber?: string | null;
   }
 }
 
@@ -28,5 +34,8 @@ declare module "next-auth/jwt" {
     permissions?: string[];
     firstName?: string;
     lastName?: string;
+    phone?: string | null;
+    callingNumber?: string | null;
+    whatsappNumber?: string | null;
   }
 }

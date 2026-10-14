@@ -23,6 +23,8 @@ export interface CreateStaffMemberWithAccountInput {
   panNumber?: string;
   gender?: string;
   workLocation?: string;
+  callingNumber?: string;
+  whatsappNumber?: string;
 }
 
 export interface CreateStaffProfileInput {
@@ -111,11 +113,16 @@ export class StaffProfileService {
     const passwordHash = await bcrypt.hash(tempPassword, 10);
 
     const result = await db.$transaction(async (tx) => {
+      const assignedCalling = input.callingNumber?.trim() || cleanPhone;
+      const assignedWhatsapp = input.whatsappNumber?.trim() || cleanPhone;
+
       // 1. Create User
       const user = await tx.user.create({
         data: {
           email: cleanEmail,
           phone: cleanPhone,
+          callingNumber: assignedCalling,
+          whatsappNumber: assignedWhatsapp,
           passwordHash,
           firstName: input.firstName.trim(),
           lastName: input.lastName.trim(),
@@ -199,6 +206,9 @@ export class StaffProfileService {
         employeeId,
         roleCode: input.roleCode,
         fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+        phone: cleanPhone,
+        callingNumber: result.user.callingNumber,
+        whatsappNumber: result.user.whatsappNumber,
       },
     };
   }
@@ -424,6 +434,8 @@ export class StaffProfileService {
             firstName: true,
             lastName: true,
             phone: true,
+            callingNumber: true,
+            whatsappNumber: true,
             roleCode: true,
           },
         },
@@ -453,6 +465,8 @@ export class StaffProfileService {
             firstName: true,
             lastName: true,
             phone: true,
+            callingNumber: true,
+            whatsappNumber: true,
             roleCode: true,
           },
         },

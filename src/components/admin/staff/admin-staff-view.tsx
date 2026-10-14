@@ -233,6 +233,8 @@ export function AdminStaffView() {
     bankAccountNumber: "",
     bankIfsc: "",
     panNumber: "",
+    callingNumber: "",
+    whatsappNumber: "",
   });
 
   const [attForm, setAttForm] = useState({
@@ -1153,6 +1155,8 @@ export function AdminStaffView() {
                   bankAccountNumber: staffForm.bankAccountNumber || undefined,
                   bankIfsc: staffForm.bankIfsc || undefined,
                   panNumber: staffForm.panNumber || undefined,
+                  callingNumber: staffForm.callingNumber.trim() || staffForm.phone.trim() || undefined,
+                  whatsappNumber: staffForm.whatsappNumber.trim() || staffForm.phone.trim() || undefined,
                 });
               }}
               className="space-y-3 text-sm"
@@ -1200,9 +1204,47 @@ export function AdminStaffView() {
                     type="text"
                     placeholder="10-digit number"
                     value={staffForm.phone}
-                    onChange={(e) => setStaffForm({ ...staffForm, phone: e.target.value })}
+                    onChange={(e) => {
+                      const newPhone = e.target.value;
+                      setStaffForm((prev) => ({
+                        ...prev,
+                        phone: newPhone,
+                        callingNumber: prev.callingNumber === prev.phone || !prev.callingNumber ? newPhone : prev.callingNumber,
+                        whatsappNumber: prev.whatsappNumber === prev.phone || !prev.whatsappNumber ? newPhone : prev.whatsappNumber,
+                      }));
+                    }}
                     className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
                   />
+                </div>
+              </div>
+
+              {/* Assigned Calling & WhatsApp Lines */}
+              <div className="grid grid-cols-2 gap-3 bg-blue-50/70 p-3 rounded-lg border border-blue-200">
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 mb-1">
+                    Assigned Calling Line
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9196596975"
+                    value={staffForm.callingNumber}
+                    onChange={(e) => setStaffForm({ ...staffForm, callingNumber: e.target.value })}
+                    className="w-full border border-blue-300 bg-white rounded-lg px-3 py-1.5 text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-blue-700 mt-0.5">Used for LMS click-to-call & CRM caller ID</p>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-blue-900 mb-1">
+                    Assigned WhatsApp Number
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 9196596975"
+                    value={staffForm.whatsappNumber}
+                    onChange={(e) => setStaffForm({ ...staffForm, whatsappNumber: e.target.value })}
+                    className="w-full border border-blue-300 bg-white rounded-lg px-3 py-1.5 text-xs font-mono"
+                  />
+                  <p className="text-[10px] text-blue-700 mt-0.5">Used for LMS 1-click WhatsApp outreach</p>
                 </div>
               </div>
 
@@ -1330,6 +1372,18 @@ export function AdminStaffView() {
                   {createdStaffCredentials.temporaryPassword}
                 </span>
               </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">Calling Line:</span>
+                <span className="font-mono font-bold text-slate-800">
+                  {createdStaffCredentials.callingNumber || createdStaffCredentials.phone || "+91 9196596975"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 font-semibold">WhatsApp Outreach:</span>
+                <span className="font-mono font-bold text-emerald-700">
+                  {createdStaffCredentials.whatsappNumber || createdStaffCredentials.phone || "+91 9196596975"}
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500 pt-1">
                 Portal: <a href="/login" className="text-blue-600 underline font-medium">https://softlabglobal.com/login</a>
               </p>
@@ -1343,7 +1397,9 @@ export function AdminStaffView() {
 Employee ID: ${createdStaffCredentials.employeeId}
 Portal URL: https://softlabglobal.com/login
 Login Email: ${createdStaffCredentials.email}
-Temporary Password: ${createdStaffCredentials.temporaryPassword}`;
+Temporary Password: ${createdStaffCredentials.temporaryPassword}
+Calling Line: ${createdStaffCredentials.callingNumber || createdStaffCredentials.phone || "+91 9196596975"}
+WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentials.phone || "+91 9196596975"}`;
                   navigator.clipboard.writeText(text);
                   setCopiedStaffCreds(true);
                   setTimeout(() => setCopiedStaffCreds(false), 3000);

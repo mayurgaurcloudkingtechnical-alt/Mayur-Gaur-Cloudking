@@ -145,6 +145,8 @@ export const staffErpRouter = router({
         panNumber: z.string().optional(),
         gender: z.string().optional(),
         workLocation: z.string().optional(),
+        callingNumber: z.string().optional(),
+        whatsappNumber: z.string().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

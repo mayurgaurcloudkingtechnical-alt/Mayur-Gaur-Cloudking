@@ -1265,5 +1265,102 @@ export const crmRouter = router({
 
       return { success: true };
     }),
+
+  /**
+   * Retrieves the current logged-in counselor or telecaller's calling & WhatsApp lines.
+   */
+  getMyCallingProfile: protectedProcedure.query(async ({ ctx }) => {
+    const user = await db.user.findUnique({
+      where: { id: ctx.user.id },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        callingNumber: true,
+        whatsappNumber: true,
+        roleCode: true,
+      },
+    });
+
+    const officialCalling = user?.callingNumber || user?.phone || "+91 9196596975";
+    const officialWhatsapp = user?.whatsappNumber || user?.phone || "919196596975";
+
+    return {
+      userId: user?.id || ctx.user.id,
+      firstName: user?.firstName || ctx.user.firstName,
+      lastName: user?.lastName || ctx.user.lastName,
+      displayName: `${user?.firstName || ctx.user.firstName} ${user?.lastName || ctx.user.lastName}`.trim(),
+      roleCode: user?.roleCode || ctx.user.roleCode,
+      callingNumber: officialCalling,
+      whatsappNumber: officialWhatsapp,
+      cleanCallingNumber: officialCalling.replace(/\D/g, ""),
+      cleanWhatsappNumber: officialWhatsapp.replace(/\D/g, ""),
+    };
+  }),
+
+  /**
+   * Bulk upload/create leads from CSV or dataset for counselor / telecaller.
+   */
+  bulkCreateLeads: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TELECALLER,
+  ])
+    .input(
+      z.object({
+        leads: z.array(
+          z.object({
+            fullName: z.string().min(1),
+            phone: z.string().min(10),
+            email: z.string().optional(),
+            city: z.string().optional(),
+            courseName: z.string().optional(),
+            source: z.nativeEnum(LeadSource).optional(),
+            notes: z.string().optional(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ input, ctx }) => {
+      const createdLeads: any[] = [];
+      for (const item of input.leads) {
+        const cleanPhone = item.phone.replace(/\D/g, "").slice(-10);
+        if (cleanPhone.length !== 10) continue;
+
+        let interestedCourseId: string | undefined = undefined;
+        if (item.courseName) {
+          const matchedCourse = await db.course.findFirst({
+            where: {
+              OR: [
+                { title: { contains: item.courseName, mode: "insensitive" } },
+                { code: { contains: item.courseName, mode: "insensitive" } },
+              ],
+            },
+          });
+          if (matchedCourse) interestedCourseId = matchedCourse.id;
+        }
+
+        try {
+          const lead = await CrmLeadService.createLead(asAuthUser(ctx.user), {
+            fullName: item.fullName.trim(),
+            phone: cleanPhone,
+            email: item.email?.trim() || undefined,
+            city: item.city?.trim() || "Prayagraj",
+            interestedCourseId,
+            source: item.source || LeadSource.BULK_UPLOAD,
+            notes: item.notes?.trim() || `Bulk imported by ${ctx.user.firstName}`,
+            assignedToId: ctx.user.id,
+          });
+          createdLeads.push(lead.lead);
+        } catch {
+          // Continue with next lead if duplicate or validation error
+        }
+      }
+      return { count: createdLeads.length, leads: createdLeads };
+    }),
 });
 

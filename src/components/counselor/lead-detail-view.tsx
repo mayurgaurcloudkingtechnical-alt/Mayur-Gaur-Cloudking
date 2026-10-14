@@ -26,6 +26,7 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
 
   const utils = api.useUtils();
   const { data, isLoading, error } = api.crm.getLeadDetails.useQuery({ leadId });
+  const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
   const { data: staffList = [] } = api.crm.listCounselors.useQuery(undefined, {
     enabled: canAssign,
   });
@@ -206,9 +207,41 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-              <div className="flex items-center gap-2.5 text-slate-700">
+              <div className="flex items-center gap-2 text-slate-700 flex-wrap">
                 <Phone className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span className="font-semibold">{lead.phone}</span>
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                      const counselorName = myProfile?.displayName || myProfile?.firstName || "Counselor";
+                      const counselorPhone = myProfile?.callingNumber || "+91 9196596975";
+                      const courseTitle = lead.course?.title || "our professional IT programs";
+                      const text = encodeURIComponent(
+                        `Hello ${lead.fullName}! 👋 This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`
+                      );
+                      window.open(`https://wa.me/91${clean}?text=${text}`, "_blank");
+                    }}
+                    className="h-6 px-2 text-[10px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
+                    title="1-Click WhatsApp Automation"
+                  >
+                    <MessageSquare className="h-3 w-3" />
+                    <span>WhatsApp</span>
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    asChild
+                    className="h-6 px-2 text-[10px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold"
+                    title={`Call: ${lead.phone}`}
+                  >
+                    <a href={`tel:${lead.phone.replace(/\D/g, "").slice(-10)}`}>
+                      <Phone className="h-3 w-3 text-blue-600" />
+                      <span>Call</span>
+                    </a>
+                  </Button>
+                </div>
               </div>
               <div className="flex items-center gap-2.5 text-slate-700">
                 <Mail className="h-4 w-4 text-emerald-600 shrink-0" />

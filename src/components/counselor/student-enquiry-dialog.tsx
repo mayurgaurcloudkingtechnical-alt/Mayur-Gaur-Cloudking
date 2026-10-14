@@ -33,6 +33,7 @@ import {
   Sparkles,
   HelpCircle,
 } from "lucide-react";
+import { LeadInstantActionDialog, LeadActionTarget } from "./lead-instant-action-dialog";
 
 export interface StudentEnquiryData {
   // Enquiry Details
@@ -176,12 +177,17 @@ export function StudentEnquiryDialog({
 }: StudentEnquiryDialogProps) {
   const { data: authUser } = api.auth.me.useQuery();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
+  const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
   const utils = api.useUtils();
 
   const printAreaRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState<"enquiry" | "personal" | "academic" | "courses" | "counselling">("enquiry");
   const [isPrintPreview, setIsPrintPreview] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Instant Outreach Modal State
+  const [instantLead, setInstantLead] = useState<LeadActionTarget | null>(null);
+  const [instantActionOpen, setInstantActionOpen] = useState(false);
 
   // Form State
   const [formData, setFormData] = useState<StudentEnquiryData>({
@@ -367,9 +373,21 @@ export function StudentEnquiryDialog({
     setErrorMsg(null);
     const leadId = await saveAsLead();
     if (leadId) {
-      alert(`Student Enquiry logged successfully! Saved as CRM Lead.`);
-      onOpenChange(false);
       if (onSuccess) onSuccess(leadId);
+      onOpenChange(false);
+      setInstantLead({
+        id: leadId,
+        fullName: formData.fullName,
+        phone: formData.mobileNumber,
+        email: formData.emailId || undefined,
+        city: formData.city || undefined,
+        courseTitle: formData.recommendedCourse || formData.selectedCourses[0] || "Professional IT Program",
+        rawLead: {
+          id: leadId,
+          ...formData,
+        },
+      });
+      setInstantActionOpen(true);
     }
   };
 
@@ -1538,5 +1556,19 @@ export function StudentEnquiryDialog({
         </DialogFooter>
       </div>
     </Dialog>
+
+    {/* Instant Action Dialog with WhatsApp, Call, and Direct Admission Redirect */}
+    <LeadInstantActionDialog
+      open={instantActionOpen}
+      onOpenChange={setInstantActionOpen}
+      lead={instantLead}
+      counselorProfile={myProfile}
+      onProceedToApplication={() => {
+        if (onProceedToAdmission && instantLead) {
+          onProceedToAdmission(formData, instantLead.id);
+        }
+      }}
+    />
+    </>
   );
 }

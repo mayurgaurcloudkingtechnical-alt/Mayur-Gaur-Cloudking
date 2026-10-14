@@ -66,6 +66,9 @@ export const authConfig: NextAuthConfig = {
         token.permissions = user.permissions || [];
         token.firstName = user.firstName;
         token.lastName = user.lastName;
+        token.phone = user.phone;
+        token.callingNumber = user.callingNumber;
+        token.whatsappNumber = user.whatsappNumber;
       }
       return token;
     },
@@ -76,6 +79,9 @@ export const authConfig: NextAuthConfig = {
         session.user.permissions = (token.permissions as string[]) || [];
         session.user.firstName = token.firstName as string;
         session.user.lastName = token.lastName as string;
+        session.user.phone = token.phone as string | null | undefined;
+        session.user.callingNumber = token.callingNumber as string | null | undefined;
+        session.user.whatsappNumber = token.whatsappNumber as string | null | undefined;
       }
       return session;
     },

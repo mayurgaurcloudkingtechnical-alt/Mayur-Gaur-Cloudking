@@ -30,6 +30,8 @@ import {
   GraduationCap,
   FileText,
   Trash2,
+  Phone,
+  MessageSquare,
 } from "lucide-react";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
@@ -61,6 +63,7 @@ export function CounselorLeadsView({
 
   const utils = api.useUtils();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
+  const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
 
   const deleteLeadMutation = api.crm.deleteLead.useMutation({
     onSuccess: () => {
@@ -613,7 +616,41 @@ export function CounselorLeadsView({
                           )}
                         </td>
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* 1-Click WhatsApp Automation */}
+                            <Button
+                              size="sm"
+                              onClick={() => {
+                                const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                                const counselorName = myProfile?.displayName || myProfile?.firstName || "Counselor";
+                                const counselorPhone = myProfile?.callingNumber || "+91 9196596975";
+                                const courseTitle = lead.course?.title || "our professional IT programs";
+                                const text = encodeURIComponent(
+                                  `Hello ${lead.fullName}! 👋 This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`
+                                );
+                                window.open(`https://wa.me/91${clean}?text=${text}`, "_blank");
+                              }}
+                              className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
+                              title="1-Click WhatsApp Automation"
+                            >
+                              <MessageSquare className="h-3 w-3" />
+                              <span>WhatsApp</span>
+                            </Button>
+
+                            {/* 1-Click Calling Link */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              asChild
+                              className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold"
+                              title={`Direct Call: ${lead.phone}`}
+                            >
+                              <a href={`tel:${lead.phone.replace(/\D/g, "").slice(-10)}`}>
+                                <Phone className="h-3 w-3 text-blue-600" />
+                                <span>Call</span>
+                              </a>
+                            </Button>
+
                             <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">
                               <Link href={`${basePath}/${lead.id}`}>View & Log</Link>
                             </Button>
@@ -694,10 +731,18 @@ export function CounselorLeadsView({
         }}
       />
 
-      {/* Create Lead Modal */}
+      {/* Create Lead Modal with Instant Actions & Bulk Upload */}
       <CreateLeadDialog
         open={createLeadOpen}
         onOpenChange={setCreateLeadOpen}
+        onProceedToApplication={(lead) => {
+          setSelectedLeadForAdmission(lead);
+          setDirectAdmissionOpen(true);
+        }}
+        onSuccess={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
       />
 
       {/* Unified Direct Admission & Fee Collection Modal */}

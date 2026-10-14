@@ -23,8 +23,10 @@ import {
   AlertCircle,
   ExternalLink,
   Zap,
+  GraduationCap,
 } from "lucide-react";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
+import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -44,7 +46,11 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const [selectedCounselorId, setSelectedCounselorId] = useState<string>("");
   const [escalationNotes, setEscalationNotes] = useState("");
 
+  const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
+
   const utils = api.useUtils();
+  const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
 
   const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery({
     status: selectedStatus === "ALL" ? undefined : selectedStatus,
@@ -120,13 +126,15 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   };
 
   const handleOpenWhatsApp = (phone: string, name: string, courseName?: string | null) => {
-    const cleanNumber = phone.startsWith("91") ? phone : `91${phone}`;
+    const cleanNumber = phone.replace(/\D/g, "").slice(-10);
+    const callerLine = myProfile?.callingNumber || user.callingNumber || user.whatsappNumber || "+91 9196596975";
+    const telecallerName = myProfile?.displayName || user.firstName;
     const text = encodeURIComponent(
-      `Hello ${name}! 👋 This is ${user.firstName} from SoftLab Global regarding your inquiry for ${
-        courseName || "our professional IT programs"
-      }. When is a good time for a quick 2-minute call?`
+      `Hello ${name}! 👋 This is ${telecallerName} from SOFTLAB GLOBAL (Civil Lines, Prayagraj). Thank you for inquiring about ${
+        courseName || "our 100% Placement-Backed IT Programs"
+      }. When is a good time for a quick 2-minute call? (Direct Helpline: ${callerLine})`
     );
-    window.open(`https://wa.me/${cleanNumber}?text=${text}`, "_blank");
+    window.open(`https://wa.me/91${cleanNumber}?text=${text}`, "_blank");
   };
 
   return (
@@ -501,6 +509,20 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                             Busy/NA
                           </Button>
 
+                          {/* 1-Click Redirect to Admission Application */}
+                          <Button
+                            size="sm"
+                            onClick={() => {
+                              setSelectedLeadForAdmission(lead);
+                              setDirectAdmissionOpen(true);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2 text-[10px] gap-1 shadow-xs font-semibold"
+                            title="Redirect directly to Admission Application"
+                          >
+                            <GraduationCap className="h-3 w-3" />
+                            <span>Admit</span>
+                          </Button>
+
                           {/* Escalate to Counselor Button */}
                           <Button
                             size="sm"
@@ -595,6 +617,18 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
           </Card>
         </div>
       )}
+
+      {/* Direct Admission Dialog */}
+      <DirectAdmissionDialog
+        open={directAdmissionOpen}
+        onOpenChange={setDirectAdmissionOpen}
+        initialLeadId={selectedLeadForAdmission?.id}
+        initialLead={selectedLeadForAdmission}
+        onSuccess={() => {
+          utils.crm.listLeads.invalidate();
+          utils.crm.getStats.invalidate();
+        }}
+      />
     </div>
   );
 }
