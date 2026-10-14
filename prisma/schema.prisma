@@ -268,6 +268,8 @@ model User {
   createdJobDrives   JobDrive[]          @relation("JobDriveCreator")
   assignedRecruiters RecruiterContact[]  @relation("RecruiterAssignee")
   recruiterFollowUps RecruiterFollowUp[]
+  verifiedHiringJobs ExtractedHiringJob[] @relation("HiringJobReviewer")
+  reviewedChangeProposals JobChangeProposal[] @relation("HiringProposalReviewer")
 
   // Staff ERP & HR relations
   staffProfile            StaffProfile?
@@ -1502,8 +1504,10 @@ model JobDrive {
   eligibleDegreeTypes   String[]          @default([])
   participatingColleges DriveInstitution[]
   nominations           DriveNomination[]
-
   applications PlacementApplication[]
+  extractedHiringJobs ExtractedHiringJob[]
+  sourceReferences    JobSourceReference[]
+  changeProposals     JobChangeProposal[]
 
   @@index([companyId])
   @@index([recruiterId])
@@ -1623,6 +1627,221 @@ model PlacementJoiningRecord {
   updatedAt       DateTime             @updatedAt
 
   @@map("placement_joining_records")
+}
+
+// ==============================================================================
+// 10B. WHATSAPP HIRING AUTOMATION & RECRUITMENT INTELLIGENCE
+// ==============================================================================
+
+enum HiringSourceType {
+  WHATSAPP_GROUP
+  FORWARDED_MESSAGE
+  PROVIDER_WEBHOOK
+  EMAIL_DIGEST
+  MANUAL_IMPORT
+}
+
+enum HiringProcessingStatus {
+  RECEIVED
+  AI_PROCESSING
+  PENDING_VERIFICATION
+  APPROVED
+  PUBLISHED
+  UPDATED
+  CLOSED
+  REJECTED
+  DUPLICATE
+  PROCESSING_FAILED
+}
+
+enum HiringTrustPolicy {
+  REVIEW_FIRST
+  CONTROLLED_AUTO_PUBLISH
+}
+
+model HiringSource {
+  id                String            @id @default(cuid())
+  name              String
+  sourceType        HiringSourceType  @default(WHATSAPP_GROUP)
+  identifier        String?
+  description       String?           @db.Text
+  consentStatus     String            @default("AUTHORIZED") // AUTHORIZED, PENDING_CONSENT, REVOKED
+  isEnabled         Boolean           @default(true)
+  allowedCategories String[]          @default([])
+  autoPublishTrust  Boolean           @default(false)
+  minConfidence     Float             @default(0.85)
+  lastSyncAt        DateTime?
+  lastMessageAt     DateTime?
+  totalReceived     Int               @default(0)
+  totalExtracted    Int               @default(0)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  messages          IncomingHiringMessage[]
+  sourceReferences  JobSourceReference[]
+  logs              HiringAutomationLog[]
+
+  @@index([isEnabled])
+  @@index([sourceType])
+  @@map("hiring_sources")
+}
+
+model IncomingHiringMessage {
+  id                String                 @id @default(cuid())
+  sourceId          String?
+  source            HiringSource?          @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  providerMessageId String?                @unique
+  contentHash       String
+  rawText           String                 @db.Text
+  senderPhone       String?
+  senderName        String?
+  channel           String                 @default("WHATSAPP")
+  receivedAt        DateTime               @default(now())
+  processingStatus  HiringProcessingStatus @default(RECEIVED)
+  errorMessage      String?                @db.Text
+  retryCount        Int                    @default(0)
+  duplicateOfId     String?
+  duplicateOf       IncomingHiringMessage? @relation("MessageDuplicates", fields: [duplicateOfId], references: [id])
+  duplicates        IncomingHiringMessage[] @relation("MessageDuplicates")
+
+  extractedJob      ExtractedHiringJob?
+  sourceReferences  JobSourceReference[]
+  logs              HiringAutomationLog[]
+
+  @@index([contentHash])
+  @@index([processingStatus])
+  @@index([sourceId])
+  @@index([receivedAt])
+  @@map("incoming_hiring_messages")
+}
+
+model ExtractedHiringJob {
+  id                   String                 @id @default(cuid())
+  messageId            String                 @unique
+  message              IncomingHiringMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  jobDriveId           String?
+  jobDrive             JobDrive?              @relation(fields: [jobDriveId], references: [id], onDelete: SetNull)
+  
+  jobTitle             String
+  companyName          String
+  recruiterName        String?
+  recruiterDesignation String?
+  recruiterEmail       String?
+  recruiterPhone       String?
+  
+  jobDescription       String                 @db.Text
+  requiredSkills       String[]               @default([])
+  qualification        String?
+  eligibleBranches     String[]               @default([])
+  experienceRequired   String?
+  isFresher            Boolean                @default(false)
+  openingsCount        Int                    @default(1)
+  
+  salaryPackage        String?
+  minSalary            Int?
+  maxSalary            Int?
+  salaryType           String?                @default("ANNUAL_CTC")
+  currency             String                 @default("INR")
+  location             String?
+  workMode             String                 @default("ON_SITE")
+  employmentType       String                 @default("FULL_TIME")
+  shift                String?
+  deadline             DateTime?
+  interviewDate        DateTime?
+  
+  applicationMethod    String?
+  applicationEmail     String?
+  applicationLink      String?
+  companyWebsite       String?
+  requiredDocuments    String[]               @default([])
+  
+  feesMentioned        Boolean                @default(false)
+  feeDetails           String?
+  isSuspicious         Boolean                @default(false)
+  suspicionReason      String?                @db.Text
+  confidenceScore      Float                  @default(0.0)
+  missingFields        String[]               @default([])
+  status               HiringProcessingStatus @default(PENDING_VERIFICATION)
+  rejectionReason      String?
+  
+  verifiedById         String?
+  verifiedBy           User?                  @relation("HiringJobReviewer", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt           DateTime?
+  autoPublished        Boolean                @default(false)
+  
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+
+  changeProposals      JobChangeProposal[]
+
+  @@index([status])
+  @@index([companyName])
+  @@index([jobTitle])
+  @@index([isSuspicious])
+  @@map("extracted_hiring_jobs")
+}
+
+model JobSourceReference {
+  id          String                @id @default(cuid())
+  jobDriveId  String?
+  jobDrive    JobDrive?             @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  messageId   String
+  message     IncomingHiringMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sourceId    String?
+  source      HiringSource?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  receivedAt  DateTime              @default(now())
+
+  @@index([jobDriveId])
+  @@index([messageId])
+  @@map("job_source_references")
+}
+
+model JobChangeProposal {
+  id              String             @id @default(cuid())
+  jobDriveId      String
+  jobDrive        JobDrive           @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  extractedJobId  String
+  extractedJob    ExtractedHiringJob @relation(fields: [extractedJobId], references: [id], onDelete: Cascade)
+  fieldChanges    Json
+  status          String             @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedById    String?
+  reviewedBy      User?              @relation("HiringProposalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt      DateTime?
+  createdAt       DateTime           @default(now())
+
+  @@index([jobDriveId])
+  @@index([status])
+  @@map("job_change_proposals")
+}
+
+model HiringAutomationLog {
+  id          String                 @id @default(cuid())
+  sourceId    String?
+  source      HiringSource?          @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  messageId   String?
+  message     IncomingHiringMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  level       String                 @default("INFO") // INFO, WARN, ERROR, SUCCESS
+  event       String
+  details     Json?
+  error       String?                @db.Text
+  createdAt   DateTime               @default(now())
+
+  @@index([event])
+  @@index([createdAt])
+  @@map("hiring_automation_logs")
+}
+
+model HiringAutomationConfig {
+  id                  String             @id @default("default")
+  trustPolicy         HiringTrustPolicy  @default(REVIEW_FIRST)
+  autoPublishMinScore Float              @default(0.85)
+  enableHinglishAi    Boolean            @default(true)
+  rejectSuspicious    Boolean            @default(true)
+  maxDailyIngestion   Int                @default(500)
+  webhookSecret       String             @default("slg_hiring_wh_sec_2026")
+  updatedAt           DateTime           @updatedAt
+
+  @@map("hiring_automation_config")
 }
 
 // ==============================================================================

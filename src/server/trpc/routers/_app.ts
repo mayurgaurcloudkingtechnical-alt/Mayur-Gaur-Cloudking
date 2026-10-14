@@ -27,8 +27,10 @@ import { automationsRouter } from "./automations";
 import { institutionRouter } from "./institution";
 import { workPlannerRouter } from "./work-planner";
 import { callyzerRouter } from "./callyzer";
+import { hiringAutomationRouter } from "./hiring-automation";
 
 export const appRouter = router({
+  hiringAutomation: hiringAutomationRouter,
   auth: authRouter,
   admin: adminRouter,
   dashboard: dashboardRouter,

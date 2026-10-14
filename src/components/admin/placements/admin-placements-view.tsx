@@ -27,13 +27,19 @@ import {
   FileText,
   UserCheck,
   Sparkles,
+  MessageSquare,
 } from "lucide-react";
+import { useSearchParams } from "next/navigation";
 import { JobDriveStatus, JobType, PlacementApplicationStatus, InterviewRoundType } from "@prisma/client";
+import { WhatsAppHiringView } from "./whatsapp-hiring-view";
 
 export function AdminPlacementsView() {
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get("tab") === "whatsapp-hiring" ? "whatsappHiring" : "overview";
+
   const [activeTab, setActiveTab] = useState<
-    "overview" | "drives" | "crm" | "talentPool" | "pipeline" | "offers" | "reports"
-  >("overview");
+    "overview" | "drives" | "crm" | "talentPool" | "pipeline" | "offers" | "reports" | "whatsappHiring"
+  >(initialTab);
 
   const [searchDrive, setSearchDrive] = useState("");
   const [statusFilter, setStatusFilter] = useState<JobDriveStatus | "ALL">("ALL");
@@ -386,6 +392,7 @@ export function AdminPlacementsView() {
       <div className="border-b border-slate-200 flex flex-wrap gap-4 text-sm font-medium">
         {[
           { id: "overview", label: "Analytics Overview" },
+          { id: "whatsappHiring", label: "WhatsApp Hiring Automation", badge: "AI" },
           { id: "drives", label: `Job Drives (${drives?.length ?? 0})` },
           { id: "crm", label: `Recruiter CRM (${partners?.length ?? 0})` },
           { id: "talentPool", label: `Talent Pool (${talentPool?.length ?? 0})` },
@@ -398,11 +405,17 @@ export function AdminPlacementsView() {
             onClick={() => setActiveTab(tab.id as any)}
             className={`pb-3 transition flex items-center gap-1.5 ${
               activeTab === tab.id
-                ? "border-b-2 border-blue-600 text-blue-600 font-semibold"
+                ? "border-b-2 border-indigo-600 text-indigo-600 font-semibold"
                 : "border-b-2 border-transparent text-slate-500 hover:text-slate-800"
             }`}
           >
-            {tab.label}
+            {tab.id === "whatsappHiring" && <MessageSquare className="w-4 h-4 text-emerald-600" />}
+            <span>{tab.label}</span>
+            {tab.badge && (
+              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 font-mono">
+                {tab.badge}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -1213,6 +1226,13 @@ export function AdminPlacementsView() {
             </ul>
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* TAB: WHATSAPP HIRING AUTOMATION */}
+      {/* ========================================================================= */}
+      {activeTab === "whatsappHiring" && (
+        <WhatsAppHiringView />
       )}
 
       {/* ========================================================================= */}
