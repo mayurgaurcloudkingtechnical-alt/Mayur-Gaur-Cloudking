@@ -27,6 +27,8 @@ export interface StudentAdmissionNotificationData {
   paymentPlan?: "LUMPSUM" | "EMI" | string;
   installmentCount?: number;
   counselorName?: string | null;
+  counselorPhone?: string | null;
+  counselorWhatsappNumber?: string | null;
   admissionDate?: Date;
   leadId?: string | null;
 }
@@ -87,6 +89,9 @@ export class WhatsAppSalesGroupNotificationService {
       `• Payment Mode: ${data.paymentPlan === "EMI" ? `EMI (${data.installmentCount || 3} Slots)` : "Lumpsum"}`,
       ``,
       `🎯 *Counselor / Enrolled By*: ${data.counselorName || "Admissions Team"}`,
+      ...(data.counselorWhatsappNumber || data.counselorPhone
+        ? [`📱 *Counselor Dedicated WhatsApp*: +91 ${(data.counselorWhatsappNumber || data.counselorPhone || "").replace(/\D/g, "").slice(-10)}`]
+        : []),
       `🕒 *Admission Timestamp*: ${formattedDate}`,
       `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       `🌐 *LMS Student Portal*: https://softlabglobal.com/login`,
@@ -115,6 +120,7 @@ export class WhatsAppSalesGroupNotificationService {
     message: string;
     dispatchedToPhones: string[];
     groupLink: string;
+    counselorDedicatedPhone?: string | null;
   }> {
     const message = this.formatAdmissionAnnouncement(data);
     const shareUrl = this.generateWhatsAppShareUrl(message);
@@ -191,6 +197,7 @@ export class WhatsAppSalesGroupNotificationService {
       message,
       dispatchedToPhones,
       groupLink,
+      counselorDedicatedPhone: data.counselorWhatsappNumber || data.counselorPhone || null,
     };
   }
 }

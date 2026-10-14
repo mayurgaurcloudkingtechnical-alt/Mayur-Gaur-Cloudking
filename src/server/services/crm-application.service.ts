@@ -840,6 +840,19 @@ export class CrmApplicationService {
     // 10. Automatically Broadcast to WhatsApp Sales Group & Team
     let salesGroupBroadcast: any = null;
     try {
+      const counselorUser = await db.user.findUnique({
+        where: { id: user.id },
+        select: {
+          firstName: true,
+          lastName: true,
+          phone: true,
+          whatsappNumber: true,
+          callingNumber: true,
+        },
+      });
+
+      const counselorDedicatedPhone = counselorUser?.whatsappNumber || counselorUser?.callingNumber || counselorUser?.phone || "9196596979";
+
       salesGroupBroadcast = await WhatsAppSalesGroupNotificationService.broadcastAdmissionToSales({
         applicationId: result.id,
         studentId: result.studentProfile.studentId,
@@ -865,6 +878,8 @@ export class CrmApplicationService {
         paymentPlan: input.paymentPlan || "LUMPSUM",
         installmentCount: input.installmentCount || 1,
         counselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        counselorPhone: counselorDedicatedPhone,
+        counselorWhatsappNumber: counselorUser?.whatsappNumber || counselorDedicatedPhone,
         admissionDate: new Date(),
         leadId,
       });

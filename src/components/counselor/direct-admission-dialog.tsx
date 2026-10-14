@@ -460,6 +460,14 @@ export function DirectAdmissionDialog({
 
       setCreatedResult(res);
 
+      // Auto-Broadcast: Jaise hi submit/done ho, turant WhatsApp window auto-open ho to post directly into Sales Group!
+      if (res.salesGroupBroadcastUrl) {
+        window.open(res.salesGroupBroadcastUrl, "_blank");
+      } else if (res.salesGroupMessage) {
+        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(res.salesGroupMessage)}`;
+        window.open(url, "_blank");
+      }
+
       if (onSuccess) onSuccess(res.application.id);
     },
     onError: (err) => {
@@ -823,12 +831,17 @@ Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
                 </Button>
               </div>
 
-              {createdResult.dispatchedToPhones && createdResult.dispatchedToPhones.length > 0 && (
-                <div className="text-[10px] text-emerald-800 flex items-center gap-1 font-medium pt-0.5">
-                  <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                  <span>Auto-dispatched to sales lines: {createdResult.dispatchedToPhones.join(", ")}</span>
-                </div>
-              )}
+              <div className="flex flex-wrap items-center justify-between gap-1 pt-0.5 text-[10px] text-emerald-800 font-medium">
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3 text-emerald-600 shrink-0" />
+                  <span>Auto-opened WhatsApp window to post directly into Sales Group.</span>
+                </span>
+                {createdResult.counselorDedicatedPhone && (
+                  <span className="bg-emerald-200/70 text-emerald-900 px-1.5 py-0.5 rounded font-mono font-semibold">
+                    Sender Line: +91 {createdResult.counselorDedicatedPhone.replace(/\D/g, "").slice(-10)}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Quick Actions Bar */}
