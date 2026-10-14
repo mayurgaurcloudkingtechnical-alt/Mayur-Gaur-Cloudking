@@ -206,6 +206,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
           { title: "Campus & Universities", href: "/admin/campus-partnerships", icon: <Building2 className="h-4 w-4" />, badge: "Partners" },
           { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
+          { title: "Callyzer Live Tracking", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "Live" },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
           { title: "Work Planner", href: "/admin/work-planner", icon: <CheckSquare className="h-4 w-4" />, badge: "AI" },
           { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },

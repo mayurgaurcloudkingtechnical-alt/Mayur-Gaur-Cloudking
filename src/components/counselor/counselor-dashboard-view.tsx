@@ -11,6 +11,7 @@ import { LeadStatus } from "@prisma/client";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
+import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
 
 interface CounselorDashboardViewProps {
   maxDiscount: number;
@@ -77,6 +78,9 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
 
   return (
     <div className="space-y-6">
+      {/* Callyzer Live Telephony Desk & Target Tracker */}
+      <CallyzerWorkstationWidget />
+
       {/* Quick Action Toolbar */}
       <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white rounded-xl border border-slate-200 shadow-xs">
         <div>
@@ -132,6 +136,9 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
           </Button>
         </div>
       </div>
+
+      {/* Callyzer Live Telephony Desk & Active Workstation */}
+      <CallyzerWorkstationWidget />
 
       {/* Alert if follow-ups are due */}
       {dueCount > 0 && (

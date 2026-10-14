@@ -28,6 +28,7 @@ import {
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
 import { LeadAutoConnectDialog } from "../counselor/lead-auto-connect-dialog";
+import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -141,6 +142,9 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
 
   return (
     <div className="space-y-6">
+      {/* Callyzer Live Telephony Desk & Active Dialer */}
+      <CallyzerWorkstationWidget />
+
       {/* Top Telecaller Calling Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-slate-200 bg-white shadow-sm">

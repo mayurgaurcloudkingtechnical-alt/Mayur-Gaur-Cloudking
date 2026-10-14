@@ -26,6 +26,7 @@ import { aiKnowledgeRouter } from "./ai-knowledge";
 import { automationsRouter } from "./automations";
 import { institutionRouter } from "./institution";
 import { workPlannerRouter } from "./work-planner";
+import { callyzerRouter } from "./callyzer";
 
 export const appRouter = router({
   auth: authRouter,
@@ -47,6 +48,7 @@ export const appRouter = router({
   institution: institutionRouter,
   staffErp: staffErpRouter,
   workPlanner: workPlannerRouter,
+  callyzer: callyzerRouter,
   analytics: analyticsRouter,
   notifications: notificationRouter,
   system: systemRouter,

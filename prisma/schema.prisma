@@ -335,6 +335,10 @@ model User {
   taskStatusChanges                TaskStatusHistory[]               @relation("TaskStatusChanger")
   reviewedDailyReports             DailyWorkReport[]                 @relation("ReportReviewer")
 
+  // Callyzer Call Monitoring & Live Staff Tracking Relations
+  staffCallLogs                    StaffCallLog[]                    @relation("UserCallLogs")
+  staffLiveSession                 StaffLiveSession?                 @relation("UserLiveSession")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -873,6 +877,7 @@ model Lead {
   applications       AdmissionApplication[]
   convertedFranchise Franchise?             @relation("LeadFranchise")
   callingQueueItems  CallingQueueItem[]
+  staffCallLogs      StaffCallLog[]
 
   // Omnichannel & Automation Relations
   timelineEvents       CustomerTimelineEvent[]
@@ -3707,4 +3712,64 @@ model DailyWorkReportItem {
   @@index([reportId])
   @@map("daily_work_report_items")
 }
+
+// ============================================================================
+// CALLYZER LIVE CALL MONITORING & POST-WISE STAFF TRACKING
+// ============================================================================
+
+model StaffCallLog {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation("UserCallLogs", fields: [userId], references: [id], onDelete: Cascade)
+  staffProfileId   String?
+  leadId           String?
+  lead             Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  contactName      String
+  contactPhone     String
+  callType         String    @default("OUTGOING") // "OUTGOING", "INCOMING", "MISSED", "REJECTED"
+  callStatus       String    @default("CONNECTED") // "CONNECTED", "BUSY", "NO_ANSWER", "FAILED"
+  disposition      String    @default("INTERESTED") // "INTERESTED", "ADMISSION_CONFIRMED", "CALLBACK", "FOLLOW_UP", "NOT_INTERESTED", "BUSY_NO_ANSWER", "WRONG_NUMBER", "ENQUIRY_RESOLVED"
+  durationSeconds  Int       @default(0)
+  notes            String?   @db.Text
+  nextFollowUpDate DateTime?
+  startedAt        DateTime  @default(now())
+  endedAt          DateTime?
+  roleCode         String    @default("TELECALLER") // "COUNSELOR", "TELECALLER", "MARKETING", "ADMIN"
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+  @@index([leadId])
+  @@index([startedAt])
+  @@index([disposition])
+  @@index([roleCode])
+  @@map("staff_call_logs")
+}
+
+model StaffLiveSession {
+  id                    String    @id @default(cuid())
+  userId                String    @unique
+  user                  User      @relation("UserLiveSession", fields: [userId], references: [id], onDelete: Cascade)
+  staffProfileId        String?
+  status                String    @default("AVAILABLE") // "AVAILABLE", "ON_CALL", "ON_BREAK", "WRAP_UP", "OFFLINE"
+  currentCallContact    String?
+  currentCallPhone      String?
+  currentCallStartedAt  DateTime?
+  breakReason           String?
+  breakStartedAt        DateTime?
+  lastActiveAt          DateTime  @default(now())
+  dailyTargetCalls      Int       @default(50)
+  todayCallsCount       Int       @default(0)
+  todayTalkTimeSeconds  Int       @default(0)
+  todayConnectedCount   Int       @default(0)
+  todayConversionsCount Int       @default(0)
+  roleCode              String    @default("TELECALLER")
+  department            String?
+  updatedAt             DateTime  @updatedAt
+
+  @@index([status])
+  @@index([roleCode])
+  @@index([lastActiveAt])
+  @@map("staff_live_sessions")
+}
+
 

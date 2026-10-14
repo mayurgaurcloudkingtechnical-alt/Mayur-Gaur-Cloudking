@@ -45,6 +45,7 @@ import { StaffRecruitmentTab } from "./staff-recruitment-tab";
 import { StaffOnboardingTab } from "./staff-onboarding-tab";
 import { StaffLettersTab } from "./staff-letters-tab";
 import { StaffIdCardModal } from "./staff-id-card-modal";
+import { CallyzerTeamMonitoringView } from "@/components/callyzer/callyzer-team-monitoring-view";
 
 export function AdminStaffView() {
   const [activeTab, setActiveTab] = useState<
@@ -61,6 +62,7 @@ export function AdminStaffView() {
     | "tasks"
     | "performance"
     | "documents"
+    | "callyzer"
   >("directory");
 
   const [deptFilter, setDeptFilter] = useState<StaffDepartment | undefined>(undefined);
@@ -539,6 +541,7 @@ export function AdminStaffView() {
       <div className="border-b border-slate-200 flex flex-wrap gap-3 text-sm font-medium">
         {[
           { id: "directory", label: `Staff Directory (${staffData?.total ?? 0})` },
+          { id: "callyzer", label: "🔴 Callyzer Live Tracking" },
           { id: "attendance", label: "Daily & Monthly Attendance" },
           { id: "leaves", label: `Leave Approvals (${leavesData?.total ?? 0})` },
           { id: "payroll", label: "Monthly Payroll & Payslips" },
@@ -1272,6 +1275,11 @@ export function AdminStaffView() {
       {/* TAB 12: DOCUMENT & LETTER GENERATOR */}
       {/* ========================================================================= */}
       {activeTab === "letters" && <StaffLettersTab />}
+
+      {/* ========================================================================= */}
+      {/* TAB 13: CALLYZER LIVE TEAM MONITORING */}
+      {/* ========================================================================= */}
+      {activeTab === "callyzer" && <CallyzerTeamMonitoringView />}
 
       {/* ========================================================================= */}
       {/* MODAL: ONBOARD STAFF MEMBER */}
