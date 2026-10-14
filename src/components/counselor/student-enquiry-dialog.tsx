@@ -405,7 +405,8 @@ export function StudentEnquiryDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
       <div className="space-y-3 max-h-[92vh] overflow-y-auto p-1 font-sans">
         {/* Header */}
         <DialogHeader className="border-b border-slate-200 pb-3">

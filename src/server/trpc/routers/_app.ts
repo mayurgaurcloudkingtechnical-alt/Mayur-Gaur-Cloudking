@@ -24,6 +24,7 @@ import { servicesRouter } from "./services";
 import { omnichannelRouter } from "./omnichannel";
 import { aiKnowledgeRouter } from "./ai-knowledge";
 import { automationsRouter } from "./automations";
+import { siaRouter } from "./sia";
 
 export const appRouter = router({
   auth: authRouter,
@@ -51,6 +52,7 @@ export const appRouter = router({
   omnichannel: omnichannelRouter,
   aiKnowledge: aiKnowledgeRouter,
   automations: automationsRouter,
+  sia: siaRouter,
 });
 
 

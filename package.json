@@ -15,7 +15,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "desktop:dev": "npm --prefix desktop run dev",
     "desktop:typecheck": "npm --prefix desktop run typecheck",
-    "desktop:build": "npm --prefix desktop run build"
+    "desktop:build": "npm --prefix desktop run build",
+    "desktop:package": "npm --prefix desktop run package:win",
+    "whatsapp:catalogue:create": "tsx scripts/create-new-whatsapp-catalogue.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

@@ -204,9 +204,9 @@ export function WhatsAppConnectionWizard() {
           <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 font-semibold uppercase block">Catalogue</span>
             <p className="text-xs font-bold text-purple-400 mt-1 flex items-center gap-1">
-              {catalogStatus.data?.syncedCourses ?? 0} / {catalogStatus.data?.totalCourses ?? 46} SYNCED
+              {catalogStatus.data?.syncedCourses ?? 0} / {catalogStatus.data?.totalCourses ?? 46} READY
             </p>
-            <span className="text-[10px] text-slate-400 mt-0.5 block">Course Master</span>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">New Catalogue Feed</span>
           </div>
 
           <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
@@ -296,7 +296,8 @@ export function WhatsAppConnectionWizard() {
           <div className="flex items-center gap-2.5 text-xs text-blue-900">
             <Info className="h-4 w-4 text-blue-600 flex-shrink-0" />
             <span>
-              <strong>Zero manual catalogue work:</strong> All 46 courses are automatically synced to Meta with 1 click.
+              <strong>Create a brand-new catalogue:</strong> Builds a professional Meta feed from all 46 SoftLab Global
+              courses (www.softlabglobal.com). Does not sync any existing Meta catalogue.
             </span>
           </div>
 
@@ -307,7 +308,7 @@ export function WhatsAppConnectionWizard() {
             className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold h-8 gap-1.5 shadow-xs"
           >
             <RefreshCw className={`h-3 w-3 ${syncCatalogMutation.isPending ? "animate-spin" : ""}`} />
-            {syncCatalogMutation.isPending ? "Syncing..." : "Sync All 46 Courses"}
+            {syncCatalogMutation.isPending ? "Building Catalogue..." : "Create New Catalogue (46 Courses)"}
           </Button>
         </div>
       </div>
