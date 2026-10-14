@@ -138,6 +138,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
 
               const isUniversity = link.href === "/dr-preeti-global-university";
               const isGlobalCert = link.href === "/delaware-digital-university";
+              const isCampusPartnership = link.href === "/campus-partnerships";
 
               return (
                 <Link
@@ -150,11 +151,14 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                       ? "text-amber-300 hover:text-amber-200 hover:bg-amber-950/30 border border-amber-500/20"
                       : isGlobalCert
                       ? "text-sky-300 hover:text-sky-200 hover:bg-sky-950/30 border border-sky-500/20"
+                      : isCampusPartnership
+                      ? "text-emerald-300 hover:text-emerald-200 hover:bg-emerald-950/30 border border-emerald-500/20"
                       : "text-slate-300 hover:text-emerald-300 hover:bg-slate-900/80"
                   }`}
                 >
                   {isUniversity && <Award className="h-3 w-3 text-amber-400 shrink-0" />}
                   {isGlobalCert && <Globe className="h-3 w-3 text-sky-400 shrink-0" />}
+                  {isCampusPartnership && <Building2 className="h-3 w-3 text-emerald-400 shrink-0" />}
                   <span>{link.label}</span>
                 </Link>
               );
@@ -201,6 +205,11 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   {isGlobalCert && (
                     <span className="text-[10px] uppercase font-bold text-sky-400 bg-sky-950/80 px-1.5 py-0.5 rounded border border-sky-500/40">
                       USA
+                    </span>
+                  )}
+                  {link.href === "/campus-partnerships" && (
+                    <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40">
+                      PARTNER
                     </span>
                   )}
                 </Link>

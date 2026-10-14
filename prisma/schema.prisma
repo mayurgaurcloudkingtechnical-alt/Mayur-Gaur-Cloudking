@@ -29,6 +29,9 @@ enum UserRoleCode {
   STUDENT
   MARKETING
   FRANCHISE_PARTNER
+  INSTITUTION_ADMIN
+  INSTITUTION_OFFICER
+  RECRUITER
 }
 
 enum UserStatus {
@@ -298,6 +301,13 @@ model User {
   // Corporate Services Management
   serviceEnquiries ServiceEnquiry[] @relation("ServiceEnquiryCounselor")
 
+  // Campus & Institutional Partnerships
+  institutionMemberships  InstitutionUserMembership[]
+  uploadedStudentImports  StudentImportJob[]          @relation("StudentImportUploader")
+  approvedInstitutions    InstitutionApproval[]       @relation("InstitutionApprover")
+  createdJobFairs         JobFair[]                   @relation("JobFairCreator")
+  verifiedStudentPayments StudentRegistrationPayment[] @relation("PaymentVerifier")
+
   // Omnichannel, AI Knowledge & Escalations
   timelineActorEvents              CustomerTimelineEvent[]   @relation("TimelineActor")
   assignedOmnichannelConversations OmnichannelConversation[] @relation("ConversationStaffAssignee")
@@ -421,6 +431,12 @@ model StudentProfile {
   idCard               StudentIdCard?
   documents            StudentDocument[]
 
+  // Campus & Institutional Partnerships
+  institutionEnrollments StudentInstitutionEnrollment[]
+  jobFairRegistrations   JobFairRegistration[]
+  driveNominations       DriveNomination[]
+  registrationPayments   StudentRegistrationPayment[]
+
   @@index([studentId])
   @@map("student_profiles")
 }
@@ -501,6 +517,7 @@ model Course {
   questionBank  QuestionBank[]
   certificates  Certificate[]
   jobDrives     JobDrive[]
+  institutionMappings InstitutionCourseMapping[]
 
   @@index([slug])
   @@index([status])
@@ -1361,6 +1378,7 @@ model CorporatePartner {
   jobDrives  JobDrive[]
   recruiters RecruiterContact[]
   followUps  RecruiterFollowUp[]
+  jobFairStalls JobFairRecruiter[]
 
   @@index([isActive])
   @@map("corporate_partners")
@@ -1460,6 +1478,16 @@ model JobDrive {
   createdBy               User              @relation("JobDriveCreator", fields: [createdById], references: [id])
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
+
+  // Campus Partnerships & Job Fair Expansion
+  jobFairId             String?
+  jobFair               JobFair?          @relation(fields: [jobFairId], references: [id], onDelete: SetNull)
+  eligiblePassingYears  Int[]             @default([])
+  minCgpa               Float?
+  maxActiveBacklogs     Int?
+  eligibleDegreeTypes   String[]          @default([])
+  participatingColleges DriveInstitution[]
+  nominations           DriveNomination[]
 
   applications PlacementApplication[]
 
@@ -3090,3 +3118,350 @@ model SiaDeviceCommand {
   @@index([deviceId, status])
   @@map("sia_device_commands")
 }
+
+// ==============================================================================
+// 21. CAMPUS PLACEMENT, JOB FAIR & UNIVERSITY PARTNERSHIPS
+// ==============================================================================
+
+enum InstitutionType {
+  COLLEGE
+  UNIVERSITY
+  ENGINEERING_COLLEGE
+  MANAGEMENT_INSTITUTE
+  ITI
+  POLYTECHNIC
+  OTHER
+}
+
+enum InstitutionStatus {
+  PENDING_APPROVAL
+  APPROVED
+  CORRECTION_REQUESTED
+  REJECTED
+  SUSPENDED
+}
+
+enum InstitutionRole {
+  INSTITUTION_ADMIN
+  INSTITUTION_OFFICER
+  COORDINATOR
+}
+
+model Institution {
+  id                         String            @id @default(cuid())
+  code                       String            @unique // e.g. "INST-2026-001"
+  name                       String
+  type                       InstitutionType   @default(COLLEGE)
+  affiliation                String?           // Affiliating University
+  recognition                String?           // UGC, AICTE, NAAC, etc.
+  registrationNumber         String?
+  address                    String?
+  district                   String?
+  city                       String?
+  state                      String?
+  pincode                    String?
+  website                    String?
+  officialEmail              String            @unique
+  officialPhone              String?
+  authorizedPersonName       String
+  authorizedPersonDesignation String
+  authorizedPersonEmail      String
+  authorizedPersonPhone      String
+  placementOfficerName       String?
+  placementOfficerEmail      String?
+  placementOfficerPhone      String?
+  departmentsOffered         String[]          @default([])
+  estimatedStudentCount      Int?
+  agreementDocumentUrl       String?
+  status                     InstitutionStatus @default(PENDING_APPROVAL)
+  rejectionReason            String?           @db.Text
+  correctionNotes            String?           @db.Text
+  approvedAt                 DateTime?
+  approvedById               String?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+
+  members                    InstitutionUserMembership[]
+  approvals                  InstitutionApproval[]
+  courseMappings             InstitutionCourseMapping[]
+  students                   StudentInstitutionEnrollment[]
+  importJobs                 StudentImportJob[]
+  driveParticipations        DriveInstitution[]
+  jobFairParticipations      JobFairInstitution[]
+  payments                   StudentRegistrationPayment[]
+
+  @@index([status])
+  @@index([city])
+  @@index([state])
+  @@map("institutions")
+}
+
+model InstitutionUserMembership {
+  id            String          @id @default(cuid())
+  institutionId String
+  institution   Institution     @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role          InstitutionRole @default(INSTITUTION_ADMIN)
+  isPrimary     Boolean         @default(false)
+  status        String          @default("ACTIVE") // ACTIVE, SUSPENDED, INVITED
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@unique([institutionId, userId])
+  @@index([institutionId])
+  @@index([userId])
+  @@map("institution_user_memberships")
+}
+
+model InstitutionApproval {
+  id            String      @id @default(cuid())
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  decision      String      // APPROVED, REJECTED, CORRECTION_REQUESTED
+  remarks       String?     @db.Text
+  actionById    String
+  actionBy      User        @relation("InstitutionApprover", fields: [actionById], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([institutionId])
+  @@index([actionById])
+  @@map("institution_approvals")
+}
+
+model InstitutionCourseMapping {
+  id                    String      @id @default(cuid())
+  institutionId         String
+  institution           Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institutionCourseName String      // e.g. "B.Tech Computer Science"
+  institutionDepartment String?     // e.g. "Computer Science & Engineering"
+  degreeType            String?     // e.g. "B.Tech", "MCA", "BCA", "Diploma"
+  standardCourseId      String?
+  standardCourse        Course?     @relation(fields: [standardCourseId], references: [id], onDelete: SetNull)
+  academicYears         String[]    @default([]) // e.g. ["2022-2026", "2023-2027"]
+  status                String      @default("APPROVED") // APPROVED, PENDING, REJECTED
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+
+  students              StudentInstitutionEnrollment[]
+
+  @@index([institutionId])
+  @@index([standardCourseId])
+  @@map("institution_course_mappings")
+}
+
+model StudentInstitutionEnrollment {
+  id                    String                    @id @default(cuid())
+  institutionId         String
+  institution           Institution               @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  studentProfileId      String
+  student               StudentProfile            @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  enrollmentNumber      String                    // Institutional Enrollment / Registration No.
+  rollNumber            String?
+  courseMappingId       String?
+  courseMapping         InstitutionCourseMapping? @relation(fields: [courseMappingId], references: [id], onDelete: SetNull)
+  courseName            String                    // e.g. "B.Tech CSE"
+  department            String?
+  degreeType            String?
+  academicYear          String                    // e.g. "2022-2026"
+  admissionYear         Int?
+  passingYear           Int                       // e.g. 2026
+  currentSemester       Int?
+  currentYear           Int?
+  academicPercentage    Float?
+  cgpa                  Float?
+  activeBacklogs        Int                       @default(0)
+  historyBacklogs       Int                       @default(0)
+  placementEligibility  Boolean                   @default(true)
+  ineligibilityReason   String?
+  consentForRecruiters  Boolean                   @default(true)
+  isProfileComplete     Boolean                   @default(true)
+  registrationFeeAmount Int                       @default(0) // In Paise
+  feeAmountPaid         Int                       @default(0) // In Paise
+  paymentStatus         String                    @default("NOT_APPLICABLE") // NOT_APPLICABLE, PENDING, PARTIALLY_PAID, PAID, WAIVED, REFUNDED
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  payments              StudentRegistrationPayment[]
+  driveNominations      DriveNomination[]
+  jobFairRegistrations  JobFairRegistration[]
+
+  @@unique([institutionId, enrollmentNumber])
+  @@index([institutionId])
+  @@index([studentProfileId])
+  @@index([passingYear])
+  @@index([placementEligibility])
+  @@map("student_institution_enrollments")
+}
+
+model StudentRegistrationPayment {
+  id                   String                       @id @default(cuid())
+  enrollmentId         String
+  enrollment           StudentInstitutionEnrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  institutionId        String
+  institution          Institution                  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  studentProfileId     String
+  student              StudentProfile               @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  amount               Int                          // in Paise
+  currency             String                       @default("INR")
+  paymentMethod        String                       @default("OFFLINE_COLLEGE") // CASH, UPI, BANK_TRANSFER, ONLINE, WAIVED
+  transactionReference String?
+  paymentStatus        String                       @default("PENDING") // PENDING, VERIFIED, REJECTED, WAIVED
+  verifiedById         String?
+  verifiedBy           User?                        @relation("PaymentVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt           DateTime?
+  receiptUrl           String?
+  notes                String?                      @db.Text
+  createdAt            DateTime                     @default(now())
+  updatedAt            DateTime                     @updatedAt
+
+  @@index([enrollmentId])
+  @@index([institutionId])
+  @@index([studentProfileId])
+  @@index([paymentStatus])
+  @@map("student_registration_payments")
+}
+
+model StudentImportJob {
+  id               String      @id @default(cuid())
+  institutionId    String
+  institution      Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  uploadedById     String
+  uploadedBy       User        @relation("StudentImportUploader", fields: [uploadedById], references: [id])
+  fileName         String
+  totalRecords     Int         @default(0)
+  validRecords     Int         @default(0)
+  invalidRecords   Int         @default(0)
+  duplicateRecords Int         @default(0)
+  createdRecords   Int         @default(0)
+  updatedRecords   Int         @default(0)
+  failedRecords    Int         @default(0)
+  status           String      @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
+  errorReport      Json?
+  createdAt        DateTime    @default(now())
+
+  @@index([institutionId])
+  @@index([uploadedById])
+  @@map("student_import_jobs")
+}
+
+model JobFair {
+  id                   String               @id @default(cuid())
+  fairCode             String               @unique // e.g. "FAIR-2026-PRAYAGRAJ"
+  title                String
+  slug                 String               @unique
+  description          String?              @db.Text
+  theme                String?
+  fairType             String               @default("HYBRID") // "ONLINE", "OFFLINE", "HYBRID"
+  venue                String?
+  city                 String?              @default("Prayagraj")
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  maxCapacity          Int?
+  bannerUrl            String?
+  status               String               @default("PUBLISHED") // "DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"
+  createdById          String
+  createdBy            User                 @relation("JobFairCreator", fields: [createdById], references: [id])
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  institutions         JobFairInstitution[]
+  recruiters           JobFairRecruiter[]
+  registrations        JobFairRegistration[]
+  drives               JobDrive[]
+
+  @@index([status])
+  @@index([startDate])
+  @@map("job_fairs")
+}
+
+model JobFairInstitution {
+  id                    String      @id @default(cuid())
+  jobFairId             String
+  jobFair               JobFair     @relation(fields: [jobFairId], references: [id], onDelete: Cascade)
+  institutionId         String
+  institution           Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  status                String      @default("CONFIRMED") // INVITED, REGISTERED, CONFIRMED, ATTENDED, DECLINED
+  expectedStudentCount  Int?
+  nominatedStudentCount Int         @default(0)
+  registeredAt          DateTime    @default(now())
+
+  @@unique([jobFairId, institutionId])
+  @@index([jobFairId])
+  @@index([institutionId])
+  @@map("job_fair_institutions")
+}
+
+model JobFairRecruiter {
+  id             String           @id @default(cuid())
+  jobFairId      String
+  jobFair        JobFair          @relation(fields: [jobFairId], references: [id], onDelete: Cascade)
+  partnerId      String
+  partner        CorporatePartner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  status         String           @default("CONFIRMED") // INVITED, CONFIRMED, ATTENDED, CANCELLED
+  stallNumber    String?
+  vacanciesCount Int              @default(1)
+  notes          String?          @db.Text
+  createdAt      DateTime         @default(now())
+
+  @@unique([jobFairId, partnerId])
+  @@index([jobFairId])
+  @@index([partnerId])
+  @@map("job_fair_recruiters")
+}
+
+model JobFairRegistration {
+  id                      String                        @id @default(cuid())
+  jobFairId               String
+  jobFair                 JobFair                       @relation(fields: [jobFairId], references: [id], onDelete: Cascade)
+  studentProfileId        String
+  student                 StudentProfile                @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  institutionEnrollmentId String?
+  institutionEnrollment   StudentInstitutionEnrollment? @relation(fields: [institutionEnrollmentId], references: [id], onDelete: SetNull)
+  status                  String                        @default("REGISTERED") // REGISTERED, ATTENDED, SHORTLISTED, INTERVIEWED, OFFERED, ABSENT
+  gatePassCode            String?
+  registeredAt            DateTime                      @default(now())
+
+  @@unique([jobFairId, studentProfileId])
+  @@index([jobFairId])
+  @@index([studentProfileId])
+  @@map("job_fair_registrations")
+}
+
+model DriveInstitution {
+  id            String      @id @default(cuid())
+  jobDriveId    String
+  jobDrive      JobDrive    @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  institutionId String
+  institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  status        String      @default("INVITED") // INVITED, ACCEPTED, NOMINATED
+
+  @@unique([jobDriveId, institutionId])
+  @@index([jobDriveId])
+  @@index([institutionId])
+  @@map("drive_institutions")
+}
+
+model DriveNomination {
+  id                      String                       @id @default(cuid())
+  jobDriveId              String
+  jobDrive                JobDrive                     @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  institutionEnrollmentId String
+  institutionEnrollment   StudentInstitutionEnrollment @relation(fields: [institutionEnrollmentId], references: [id], onDelete: Cascade)
+  studentProfileId        String
+  student                 StudentProfile               @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
+  isEligible              Boolean                      @default(true)
+  ineligibilityReason     String?
+  isOverridden            Boolean                      @default(false)
+  overrideReason          String?
+  overriddenById          String?
+  nominatedAt             DateTime                     @default(now())
+
+  @@unique([jobDriveId, studentProfileId])
+  @@index([jobDriveId])
+  @@index([studentProfileId])
+  @@index([institutionEnrollmentId])
+  @@map("drive_nominations")
+}
+

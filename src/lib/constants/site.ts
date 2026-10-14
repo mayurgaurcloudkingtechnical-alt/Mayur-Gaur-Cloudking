@@ -41,6 +41,7 @@ export const SITE_CONFIG = {
     { label: "Global Certification (USA)", href: "/delaware-digital-university" },
     { label: "Faculty", href: "/trainers" },
     { label: "Career Support", href: "/career" },
+    { label: "Campus Partnerships", href: "/campus-partnerships" },
     { label: "Services", href: "/services" },
     { label: "About Us", href: "/about" },
     { label: "Franchise", href: "/franchise" },

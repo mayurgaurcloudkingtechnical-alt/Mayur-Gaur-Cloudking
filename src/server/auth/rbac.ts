@@ -59,6 +59,11 @@ const LEGACY_MAP: Record<string, string[]> = {
   "services.enquiries": ["services:enquiries", "services:leads", "services:read"],
   "services.packages": ["services:packages", "services:read"],
   "services.pricing": ["services:pricing", "services:manage"],
+  "institution.view": ["institution:read", "institution:view"],
+  "institution.manage": ["institution:manage", "institution:admin"],
+  "institution.students": ["institution:students", "institution:manage_students"],
+  "institution.drives": ["institution:drives", "institution:drives:nominate"],
+  "institution.jobfairs": ["institution:jobfairs", "institution:jobfairs:register"],
 };
 
 /**

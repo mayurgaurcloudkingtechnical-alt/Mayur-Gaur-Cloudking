@@ -37,6 +37,8 @@ const VALID_STANDARD_PASSWORDS = [
   "Admin@123",
   "admin123",
   "Password@123",
+  "CampusPartner@2026!",
+  "CampusPartner@2026",
 ];
 
 /**

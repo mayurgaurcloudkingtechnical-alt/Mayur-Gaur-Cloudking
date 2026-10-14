@@ -119,6 +119,17 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "DDU Global Portal", href: DDU_CONFIG.portals.mainWebsiteUrl, icon: <Globe className="h-4 w-4" />, external: true, badge: "USA" },
           { title: "Ads & Webhooks Feed", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
+      case "INSTITUTION_ADMIN":
+      case "INSTITUTION_OFFICER":
+        return [
+          { title: "Institutional Dashboard", href: "/institution/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Student Roster", href: "/institution/dashboard?tab=students", icon: <Users className="h-4 w-4" /> },
+          { title: "Add New Student", href: "/institution/dashboard?tab=add-student", icon: <UserPlus className="h-4 w-4" /> },
+          { title: "Bulk Student Import", href: "/institution/dashboard?tab=import", icon: <FileText className="h-4 w-4" /> },
+          { title: "Placement Drives", href: "/institution/dashboard?tab=drives", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Job Fairs & Events", href: "/institution/dashboard?tab=jobfairs", icon: <Calendar className="h-4 w-4" /> },
+          { title: "Reports & Exports", href: "/institution/dashboard?tab=reports", icon: <BarChart3 className="h-4 w-4" /> },
+        ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -190,6 +201,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Exams & Results", href: "/admin/exams", icon: <FileCheck2 className="h-4 w-4" /> },
           { title: "Certificates", href: "/admin/certificates", icon: <Award className="h-4 w-4" /> },
           { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Campus & Universities", href: "/admin/campus-partnerships", icon: <Building2 className="h-4 w-4" />, badge: "Partners" },
           { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
           { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },

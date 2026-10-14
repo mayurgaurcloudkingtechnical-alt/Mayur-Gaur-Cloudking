@@ -24,6 +24,7 @@ import { servicesRouter } from "./services";
 import { omnichannelRouter } from "./omnichannel";
 import { aiKnowledgeRouter } from "./ai-knowledge";
 import { automationsRouter } from "./automations";
+import { institutionRouter } from "./institution";
 
 export const appRouter = router({
   auth: authRouter,
@@ -42,6 +43,7 @@ export const appRouter = router({
   exam: examRouter,
   certificate: certificateRouter,
   placement: placementRouter,
+  institution: institutionRouter,
   staffErp: staffErpRouter,
   analytics: analyticsRouter,
   notifications: notificationRouter,
