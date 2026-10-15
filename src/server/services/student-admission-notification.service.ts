@@ -69,7 +69,7 @@ export class StudentAdmissionNotificationService {
         `• Enrolled Program: *${input.courseTitle}*`,
         ...(input.specialization ? [`• Specialization: *${input.specialization}*`] : []),
         `• Academic Provider: ${input.providerName || "SOFTLAB GLOBAL Main Campus"}`,
-        `• Campus: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
+        `• Campus: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
         ``,
         `📋 *OFFICIAL ADMISSION RECORD*:`,
         `• Student ID: *${input.studentId}*`,
@@ -305,7 +305,7 @@ export class StudentAdmissionNotificationService {
         `3. Access live lectures, lecture notes, assessments, and digital ID card`,
         ``,
         `📞 *Academic Helpline*: +91 ${senderPhone.replace(/\D/g, "").slice(-10)}`,
-        `📍 *Main Campus*: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
+        `📍 *Main Campus*: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
         `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       ].join("\n");
     } else if (params.messageType === "CLASS_ALERT") {
@@ -316,7 +316,7 @@ export class StudentAdmissionNotificationService {
         ``,
         `Your upcoming session for *${courseTitle}* (${batchName}) is scheduled as follows:`,
         `🕒 *Timing / Schedule*: ${params.sessionTime || "Today as per batch timetable"}`,
-        `🏛️ *Campus / Lab*: SoftLab Global, 4th Floor, Civil Lines, Prayagraj`,
+        `🏛️ *Campus / Lab*: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj`,
         `💻 *Online Access*: https://softlabglobal.com/login`,
         ``,
         `Please ensure punctual attendance and bring your practical assignments.`,
@@ -335,7 +335,7 @@ export class StudentAdmissionNotificationService {
         `Please meet your academic mentor or counselor immediately:`,
         `• Coordinator: *${senderName}*`,
         `• Helpline: +91 ${senderPhone.replace(/\D/g, "").slice(-10)}`,
-        `• Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`,
+        `• Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`,
         `━━━━━━━━━━━━━━━━━━━━━━━━━━`,
       ].join("\n");
     } else {

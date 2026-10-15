@@ -145,7 +145,7 @@ export class LeadAutoFollowupService {
       `We are inviting you for a *Free 1-on-1 Academic Demo & Career Counseling Session* this week!`,
       ``,
       `🏢 *Campus Address*:`,
-      `SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
+      `SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
       ``,
       `📞 *Connect Directly with Your Counselor*:`,
       `• Counselor: *${counselorName}*`,

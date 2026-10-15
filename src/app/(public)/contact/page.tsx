@@ -179,9 +179,8 @@ export default function ContactPage({
                 <address className="not-italic text-xs sm:text-sm text-slate-300 leading-relaxed space-y-1">
                   <p className="font-bold text-white">{SITE_CONFIG.name}</p>
                   <p>{SITE_CONFIG.address.line1}</p>
-                  <p>{SITE_CONFIG.address.line2}</p>
                   <p>{SITE_CONFIG.address.city}, {SITE_CONFIG.address.state} — {SITE_CONFIG.address.pincode}</p>
-                  <p className="text-slate-500 pt-1">Landmark: 4th Floor, No. 31, M.G. Marg, Civil Lines</p>
+                  <p className="text-slate-500 pt-1">Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj</p>
                 </address>
 
                 <div className="pt-2 flex flex-wrap gap-3">

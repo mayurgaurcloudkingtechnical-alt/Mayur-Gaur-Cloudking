@@ -6,15 +6,15 @@ export const SITE_CONFIG = {
   domain: "https://www.softlabglobal.com",
   canonicalUrl: "https://www.softlabglobal.com",
   address: {
-    line1: "4th Floor, No. 31, M.G. Marg",
+    line1: "211/C/59, M.G. Marg",
     line2: "Civil Lines",
     city: "Prayagraj",
     state: "Uttar Pradesh",
     pincode: "211001",
     country: "India",
-    full: "SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh 211001",
+    full: "SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001",
     googleMapsUrl:
-      "https://maps.google.com/?q=SoftLab+Global+4th+Floor+No+31+MG+Marg+Civil+Lines+Prayagraj+Uttar+Pradesh+211001",
+      "https://maps.google.com/?q=SoftLab+Global+211+C+59+MG+Marg+Civil+Lines+Prayagraj+Uttar+Pradesh+211001",
   },
   contact: {
     phone: "+91 9196596975",

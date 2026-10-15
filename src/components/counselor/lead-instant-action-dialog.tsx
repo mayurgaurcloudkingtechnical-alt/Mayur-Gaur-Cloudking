@@ -73,7 +73,7 @@ Thank you for your enquiry regarding ${courseName}.
 I am connecting with you directly from our official counseling desk. 
 When is a convenient time for a quick 2-minute call to discuss your syllabus, fee structure, and 100% placement support?
 
-Official Campus: SoftLab Global, 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj.
+Official Campus: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001.
 Direct Helpline: ${counselorPhone}`;
 
   const whatsappUrl = `https://wa.me/${waPhone}?text=${encodeURIComponent(defaultWhatsappMessage)}`;

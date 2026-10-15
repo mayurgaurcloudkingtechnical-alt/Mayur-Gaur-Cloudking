@@ -209,7 +209,7 @@ export function CareerCounselingModal({
               </div>
               <p className="text-sm font-extrabold text-emerald-800">{SITE_CONFIG.contact.phone}</p>
               <p className="text-[11px] text-emerald-700">
-                4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj
+                211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001
               </p>
             </div>
 

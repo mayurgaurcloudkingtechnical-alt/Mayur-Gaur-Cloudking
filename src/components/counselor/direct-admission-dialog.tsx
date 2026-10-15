@@ -631,7 +631,7 @@ SoftLab LMS: https://softlabglobal.com/login
 DPGU Student Portal: https://student.dpguindia.com/Default.aspx
 Login Email: ${createdResult.credentials.email}
 Temporary Password: ${createdResult.credentials.temporaryPassword}
-Advisory Center: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`
+Advisory Center: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`
       : `SOFTLAB GLOBAL — STUDENT LMS LOGIN CREDENTIALS
 Student Name: ${createdResult.credentials.fullName}
 Student ID: ${createdResult.credentials.studentId}
@@ -639,7 +639,7 @@ Admission No: ${createdResult.credentials.admissionNumber}
 Portal URL: https://softlabglobal.com/login
 Login Email: ${createdResult.credentials.email}
 Temporary Password: ${createdResult.credentials.temporaryPassword}
-Campus: 4th Floor, No. 31, M.G. Marg, Civil Lines, Prayagraj`;
+Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`;
 
     navigator.clipboard.writeText(credText);
     setCopiedCredentials(true);
