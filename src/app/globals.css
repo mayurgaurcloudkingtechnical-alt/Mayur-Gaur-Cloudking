@@ -58,6 +58,25 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Sleek modern 3px scrollbar for horizontal navigation */
+  .nav-scrollbar::-webkit-scrollbar {
+    height: 3px;
+  }
+  .nav-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .nav-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(16, 185, 129, 0.35);
+    border-radius: 9999px;
+  }
+  .nav-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(16, 185, 129, 0.75);
+  }
+  .nav-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(16, 185, 129, 0.35) transparent;
+  }
 }
 
 @media print {

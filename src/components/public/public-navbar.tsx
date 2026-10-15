@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { Menu, X, UserCheck, GraduationCap, Building2, Sparkles, PhoneCall, Globe, Award } from "lucide-react";
+import { Menu, X, UserCheck, GraduationCap, Building2, Sparkles, PhoneCall, Globe, Award, ChevronLeft, ChevronRight } from "lucide-react";
 import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
 
 interface PublicNavbarProps {
@@ -16,6 +16,58 @@ interface PublicNavbarProps {
 export function PublicNavbar({ userRole }: PublicNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const pathname = usePathname();
+
+  // Horizontal navigation scroll management
+  const navRef = React.useRef<HTMLElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+  const [isOverflowing, setIsOverflowing] = React.useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = navRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 4;
+    setIsOverflowing(hasOverflow);
+    setCanScrollLeft(hasOverflow && el.scrollLeft > 4);
+    setCanScrollRight(
+      hasOverflow && Math.ceil(el.scrollLeft) < el.scrollWidth - el.clientWidth - 4
+    );
+  }, []);
+
+  React.useEffect(() => {
+    checkScroll();
+    const el = navRef.current;
+    if (!el) return;
+
+    el.addEventListener("scroll", checkScroll, { passive: true });
+    window.addEventListener("resize", checkScroll, { passive: true });
+
+    // Center active link into view automatically
+    const activeEl = el.querySelector<HTMLElement>("[data-active='true']");
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+
+    return () => {
+      el.removeEventListener("scroll", checkScroll);
+      window.removeEventListener("resize", checkScroll);
+    };
+  }, [checkScroll, pathname]);
+
+  const scrollByAmount = (offset: number) => {
+    if (navRef.current) {
+      navRef.current.scrollBy({ left: offset, behavior: "smooth" });
+    }
+  };
+
+  const handleWheel = (e: React.WheelEvent<HTMLElement>) => {
+    const el = navRef.current;
+    if (el && el.scrollWidth > el.clientWidth) {
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        el.scrollLeft += e.deltaY;
+      }
+    }
+  };
 
   // Close mobile drawer on route transition
   React.useEffect(() => {
@@ -124,10 +176,29 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
       {/* ==================================================================== */}
       {/* TIER 2: ACADEMIC & INSTITUTIONAL NAVIGATION BAR (DESKTOP)             */}
       {/* ==================================================================== */}
-      <div className="hidden md:block w-full border-t border-b border-slate-800/80 bg-slate-900/80 backdrop-blur">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="hidden md:block w-full border-t border-b border-slate-800/80 bg-slate-900/90 backdrop-blur">
+        <div className="relative mx-auto max-w-7xl px-2 sm:px-4 lg:px-6">
+          {/* Left Scroll Navigation Button */}
+          {canScrollLeft && (
+            <div className="absolute left-0 top-0 bottom-0 z-20 flex items-center pl-2 pr-6 bg-gradient-to-r from-slate-900 via-slate-900/95 to-transparent pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => scrollByAmount(-240)}
+                className="h-7 w-7 rounded-full bg-slate-800/95 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500 flex items-center justify-center shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                aria-label="Scroll left navigation"
+                title="Scroll left"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <nav
-            className="flex items-center justify-center gap-1.5 lg:gap-2.5 py-2 overflow-x-auto no-scrollbar"
+            ref={navRef}
+            onWheel={handleWheel}
+            className={`w-full flex items-center gap-1.5 lg:gap-2 py-2 overflow-x-auto scroll-smooth nav-scrollbar ${
+              isOverflowing ? "justify-start px-9" : "justify-center px-1"
+            }`}
             aria-label="Main Navigation"
           >
             {SITE_CONFIG.navLinks.map((link) => {
@@ -145,7 +216,8 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  data-active={isActive ? "true" : "false"}
+                  className={`shrink-0 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     isActive
                       ? "text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm shadow-emerald-950/60"
                       : isBosse
@@ -168,6 +240,21 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
               );
             })}
           </nav>
+
+          {/* Right Scroll Navigation Button */}
+          {canScrollRight && (
+            <div className="absolute right-0 top-0 bottom-0 z-20 flex items-center pr-2 pl-6 bg-gradient-to-l from-slate-900 via-slate-900/95 to-transparent pointer-events-auto">
+              <button
+                type="button"
+                onClick={() => scrollByAmount(240)}
+                className="h-7 w-7 rounded-full bg-slate-800/95 hover:bg-emerald-600 text-slate-200 hover:text-white border border-slate-700 hover:border-emerald-500 flex items-center justify-center shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                aria-label="Scroll right navigation"
+                title="Scroll right"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
