@@ -26,7 +26,8 @@ export class WhatsAppBusinessService {
   /**
    * Normalize phone number to international E.164 (without leading +)
    */
-  public static normalizePhone(phone: string): string {
+  public static normalizePhone(phone?: string | null): string {
+    if (!phone) return "";
     const digits = phone.replace(/\D/g, "");
     if (digits.length === 10) {
       return `91${digits}`;

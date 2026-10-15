@@ -1,4 +1,4 @@
-import { UserRoleCode, EnrollmentStatus, AttendanceStatus } from "@prisma/client";
+import { UserRoleCode, EnrollmentStatus, AttendanceStatus, BatchStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { AuditService } from "./audit.service";
 import { TrainerService } from "./trainer.service";
@@ -331,7 +331,7 @@ export class AttendanceService {
         },
       }),
       ctx.db.batch.findMany({
-        where: { deletedAt: null },
+        where: { status: { not: BatchStatus.CANCELLED } },
         select: {
           id: true,
           name: true,

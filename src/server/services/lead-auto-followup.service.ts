@@ -50,6 +50,7 @@ export class LeadAutoFollowupService {
         { assignedToId },
         { assignedCounselorId: assignedToId },
         { assignedTelecallerId: assignedToId },
+        { assignedToId: null, assignedCounselorId: null, assignedTelecallerId: null },
       ];
     }
 
@@ -119,9 +120,15 @@ export class LeadAutoFollowupService {
     counselorPhone?: string;
     courseTitle?: string;
   }): Promise<boolean> {
-    const { lead, counselorName = "SoftLab Global Academic Counseling", counselorPhone = "9196596979" } = params;
+    const { lead, counselorName = "SoftLab Global Academic Counseling" } = params;
+    const counselorPhone = params.counselorPhone ? params.counselorPhone.replace(/\D/g, "").slice(-10) : "9196596979";
     const cleanPhone = WhatsAppBusinessService.normalizePhone(lead.phone);
     const course = params.courseTitle || (lead as any).course?.title || "Industry-Standard Professional IT Course";
+
+    if (!cleanPhone || cleanPhone.length < 10) {
+      console.warn(`[LeadAutoFollowupService] Skipping WhatsApp outreach for lead ${lead.id}: invalid phone (${lead.phone})`);
+      return false;
+    }
 
     const message = [
       `👋 *Hello ${lead.fullName} Ji!*`,
@@ -142,7 +149,7 @@ export class LeadAutoFollowupService {
       ``,
       `📞 *Connect Directly with Your Counselor*:`,
       `• Counselor: *${counselorName}*`,
-      `• Direct Helpline: *+91 ${counselorPhone.replace(/\D/g, "").slice(-10)}*`,
+      `• Direct Helpline: *+91 ${counselorPhone}*`,
       ``,
       `Reply *"YES"* or *"DEMO"* to book your preferred session time immediately! 🚀`,
     ].join("\n");
@@ -212,6 +219,14 @@ export class LeadAutoFollowupService {
   }> {
     const { lead } = params;
     const course = params.courseTitle || (lead as any).course?.title || "Advanced Software & AI Engineering";
+
+    if (!lead.phone || (lead.phone || "").replace(/\D/g, "").length < 10) {
+      console.warn(`[LeadAutoFollowupService] Skipping AI call for lead ${lead.id}: invalid phone (${lead.phone})`);
+      return {
+        success: false,
+        summary: "Invalid phone number",
+      };
+    }
 
     try {
       const callSim = await AiCallingAgentService.simulateRealisticCall({
@@ -301,6 +316,7 @@ export class LeadAutoFollowupService {
         { assignedToId: input.assignedToId },
         { assignedCounselorId: input.assignedToId },
         { assignedTelecallerId: input.assignedToId },
+        { assignedToId: null, assignedCounselorId: null, assignedTelecallerId: null },
       ];
     }
 
@@ -365,6 +381,21 @@ export class LeadAutoFollowupService {
 
       if (waSuccess || aiCallSuccess) {
         updatedCount++;
+
+        // If the lead was unassigned, claim it for the active counselor/telecaller
+        if (!lead.assignedToId && input.actorId) {
+          try {
+            await db.lead.update({
+              where: { id: lead.id },
+              data: {
+                assignedToId: input.actorId,
+                assignedCounselorId: lead.assignedCounselorId || input.actorId,
+              },
+            });
+          } catch (e: any) {
+            console.warn(`[LeadAutoFollowupService] Failed to auto-assign lead ${lead.id}:`, e.message);
+          }
+        }
       }
 
       results.push({
