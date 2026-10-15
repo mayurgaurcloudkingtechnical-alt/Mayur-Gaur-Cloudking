@@ -30,6 +30,7 @@ export function LeadAutoConnectDialog({ open, onClose, onComplete }: LeadAutoCon
   const [mode, setMode] = useState<"BOTH" | "WHATSAPP" | "AI_CALLING">("BOTH");
   const [batchLimit, setBatchLimit] = useState<number>(20);
   const [results, setResults] = useState<any | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const utils = api.useUtils();
   const { data: stats, isLoading: isStatsLoading, refetch: refetchStats } =
@@ -40,12 +41,13 @@ export function LeadAutoConnectDialog({ open, onClose, onComplete }: LeadAutoCon
   const autoFollowupMutation = api.crm.triggerLeadAutoFollowup.useMutation({
     onSuccess: (res) => {
       setResults(res);
+      setErrorMessage(null);
       refetchStats();
       utils.crm.listLeads.invalidate();
       if (onComplete) onComplete();
     },
     onError: (err) => {
-      alert(`Auto Follow-up failed: ${err.message}`);
+      setErrorMessage(err.message || "Failed to execute auto follow-up on leads.");
     },
   });
 
@@ -110,6 +112,23 @@ export function LeadAutoConnectDialog({ open, onClose, onComplete }: LeadAutoCon
               </p>
             </div>
           </div>
+
+          {errorMessage && (
+            <div className="p-3.5 bg-red-50 border border-red-200 rounded-lg text-xs text-red-800 flex items-start gap-2.5 animate-in fade-in duration-200">
+              <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-bold text-red-900">Follow-up Execution Notice</p>
+                <p className="mt-0.5 text-red-700">{errorMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setErrorMessage(null)}
+                className="text-red-400 hover:text-red-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+          )}
 
           {!results ? (
             <div className="space-y-4">

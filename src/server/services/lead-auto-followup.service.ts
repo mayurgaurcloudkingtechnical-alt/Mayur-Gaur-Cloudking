@@ -43,7 +43,6 @@ export class LeadAutoFollowupService {
   public static async getUntouchedAndPendingStats(assignedToId?: string) {
     const baseWhere: any = {
       isOptedOut: false,
-      deletedAt: null,
     };
 
     if (assignedToId) {
@@ -68,14 +67,26 @@ export class LeadAutoFollowupService {
         where: {
           ...baseWhere,
           OR: [{ status: LeadStatus.NEW }, { lastInteraction: null }],
+          status: {
+            notIn: [LeadStatus.ADMITTED, LeadStatus.LOST],
+          },
         },
       }),
-      // Pending leads: In follow-up / trial / contacted
+      // Pending leads: In active outreach pipeline
       db.lead.count({
         where: {
           ...baseWhere,
           status: {
-            in: [LeadStatus.CONTACTED, LeadStatus.FOLLOW_UP, LeadStatus.INTERESTED, LeadStatus.DEMO, LeadStatus.NEGOTIATION],
+            in: [
+              LeadStatus.NEW,
+              LeadStatus.CONTACTED,
+              LeadStatus.FOLLOW_UP,
+              LeadStatus.INTERESTED,
+              LeadStatus.DEMO,
+              LeadStatus.NEGOTIATION,
+              LeadStatus.DISCUSSION,
+              LeadStatus.ON_HOLD,
+            ],
           },
         },
       }),
@@ -84,6 +95,9 @@ export class LeadAutoFollowupService {
         where: {
           ...baseWhere,
           temperature: "HOT",
+          status: {
+            notIn: [LeadStatus.ADMITTED, LeadStatus.LOST],
+          },
         },
       }),
     ]);
@@ -157,6 +171,16 @@ export class LeadAutoFollowupService {
           },
         });
 
+        // Record lead activity in CRM history
+        await db.leadActivity.create({
+          data: {
+            leadId: lead.id,
+            activityType: "AI_WHATSAPP_FOLLOWUP",
+            disposition: "CONNECTED",
+            notes: `Automated WhatsApp nurture sent to candidate for course "${course}" with invitation to free academic demo session.`,
+          },
+        });
+
         // Update lead interaction
         await db.lead.update({
           where: { id: lead.id },
@@ -198,6 +222,52 @@ export class LeadAutoFollowupService {
         simulatedScenario: "INTERESTED_STUDENT",
       });
 
+      if (callSim) {
+        // 1. Record call on CustomerTimelineEvent
+        await db.customerTimelineEvent.create({
+          data: {
+            leadId: lead.id,
+            eventType: "CALL_COMPLETED",
+            source: "AI_CALLING",
+            title: `AI Voice Follow-up Call (${callSim.callOutcome})`,
+            summary: callSim.conversationSummary,
+            metadata: {
+              interestLevel: callSim.interestLevel,
+              durationSeconds: callSim.durationSeconds,
+              summary: callSim.conversationSummary,
+              recommendedAction: callSim.recommendedAction,
+            },
+          },
+        });
+
+        // 2. Record lead activity in CRM
+        await db.leadActivity.create({
+          data: {
+            leadId: lead.id,
+            activityType: "AI_VOICE_CALL",
+            disposition: callSim.callOutcome,
+            notes: `AI Voice Outreach: ${callSim.conversationSummary}`,
+          },
+        });
+
+        // 3. Update lead interaction, status, and temperature
+        const newStatus =
+          lead.status === LeadStatus.NEW
+            ? LeadStatus.CONTACTED
+            : callSim.interestLevel === "HOT"
+            ? LeadStatus.INTERESTED
+            : lead.status;
+
+        await db.lead.update({
+          where: { id: lead.id },
+          data: {
+            lastInteraction: new Date(),
+            status: newStatus,
+            temperature: callSim.interestLevel === "HOT" ? "HOT" : (lead.temperature || "WARM"),
+          },
+        });
+      }
+
       return {
         success: true,
         outcome: callSim.callOutcome,
@@ -221,9 +291,8 @@ export class LeadAutoFollowupService {
 
     const where: any = {
       isOptedOut: false,
-      deletedAt: null,
       status: {
-        in: [LeadStatus.NEW, LeadStatus.CONTACTED, LeadStatus.FOLLOW_UP, LeadStatus.DEMO, LeadStatus.INTERESTED],
+        notIn: [LeadStatus.ADMITTED, LeadStatus.LOST],
       },
     };
 
