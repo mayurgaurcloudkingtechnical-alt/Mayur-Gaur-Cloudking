@@ -62,6 +62,28 @@ export function PublicFooter() {
               </li>
               <li className="pt-1 border-t border-slate-800">
                 <a
+                  href="https://www.bosse.ac.in/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors flex items-center gap-1"
+                >
+                  <span>BOSSE Official Board</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                <a
+                  href="https://www.bosse.ac.in/student/student_login.php"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-emerald-400 font-semibold hover:text-emerald-300 transition-colors flex items-center gap-1"
+                >
+                  <span>BOSSE Student Zone</span>
+                  <ArrowUpRight className="h-3 w-3" />
+                </a>
+              </li>
+              <li className="pt-1 border-t border-slate-800">
+                <a
                   href="https://cons.dpguindia.com/"
                   target="_blank"
                   rel="noopener noreferrer"

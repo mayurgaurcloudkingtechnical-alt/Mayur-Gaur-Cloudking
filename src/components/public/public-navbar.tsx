@@ -136,6 +136,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   ? pathname === "/"
                   : pathname.startsWith(link.href);
 
+              const isBosse = link.href === "/bosse";
               const isUniversity = link.href === "/dr-preeti-global-university";
               const isGlobalCert = link.href === "/delaware-digital-university";
               const isCampusPartnership = link.href === "/campus-partnerships";
@@ -147,6 +148,8 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   className={`px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
                     isActive
                       ? "text-emerald-400 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm shadow-emerald-950/60"
+                      : isBosse
+                      ? "text-emerald-300 hover:text-emerald-200 hover:bg-emerald-950/40 border border-emerald-500/30 shadow-xs"
                       : isUniversity
                       ? "text-amber-300 hover:text-amber-200 hover:bg-amber-950/30 border border-amber-500/20"
                       : isGlobalCert
@@ -156,6 +159,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                       : "text-slate-300 hover:text-emerald-300 hover:bg-slate-900/80"
                   }`}
                 >
+                  {isBosse && <GraduationCap className="h-3 w-3 text-emerald-400 shrink-0" />}
                   {isUniversity && <Award className="h-3 w-3 text-amber-400 shrink-0" />}
                   {isGlobalCert && <Globe className="h-3 w-3 text-sky-400 shrink-0" />}
                   {isCampusPartnership && <Building2 className="h-3 w-3 text-emerald-400 shrink-0" />}
@@ -179,6 +183,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   ? pathname === "/"
                   : pathname.startsWith(link.href);
 
+              const isBosse = link.href === "/bosse";
               const isUniversity = link.href === "/dr-preeti-global-university";
               const isGlobalCert = link.href === "/delaware-digital-university";
 
@@ -189,6 +194,8 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   className={`px-3.5 py-2.5 rounded-lg text-sm font-medium flex items-center justify-between ${
                     isActive
                       ? "text-emerald-400 bg-emerald-950/60 border border-emerald-500/30 font-semibold"
+                      : isBosse
+                      ? "text-emerald-300 bg-emerald-950/30 border border-emerald-500/30 font-semibold"
                       : isUniversity
                       ? "text-amber-300 bg-amber-950/20 border border-amber-500/20"
                       : isGlobalCert
@@ -197,6 +204,11 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   }`}
                 >
                   <span>{link.label}</span>
+                  {isBosse && (
+                    <span className="text-[10px] uppercase font-bold text-emerald-300 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-500/40">
+                      10th/12th
+                    </span>
+                  )}
                   {isUniversity && (
                     <span className="text-[10px] uppercase font-bold text-amber-400 bg-amber-950/80 px-1.5 py-0.5 rounded border border-amber-500/40">
                       UGC
