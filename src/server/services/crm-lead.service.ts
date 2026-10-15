@@ -85,6 +85,8 @@ export interface ListLeadsInput {
   courseId?: string;
   assignedToId?: string;
   dueToday?: boolean;
+  pipelineStage?: string;
+  serviceCategory?: string;
   page?: number;
   limit?: number;
 }
@@ -324,6 +326,14 @@ export class CrmLeadService {
 
     if (input.courseId) {
       andConditions.push({ interestedCourseId: input.courseId });
+    }
+
+    if (input.pipelineStage && input.pipelineStage !== "ALL") {
+      andConditions.push({ pipelineStage: input.pipelineStage });
+    }
+
+    if (input.serviceCategory && input.serviceCategory !== "ALL") {
+      andConditions.push({ serviceCategory: input.serviceCategory });
     }
 
     if (input.search && input.search.trim().length > 0) {
@@ -766,6 +776,8 @@ export class CrmLeadService {
       [LeadStatus.SETUP]: [],
       [LeadStatus.LAUNCHED]: [],
       [LeadStatus.ON_HOLD]: [],
+      [LeadStatus.QUALIFIED]: [],
+      [LeadStatus.DISQUALIFIED]: [],
     };
 
     for (const lead of leads) {
@@ -793,6 +805,8 @@ export class CrmLeadService {
       [LeadStatus.SETUP]: pipelineStages[LeadStatus.SETUP].length,
       [LeadStatus.LAUNCHED]: pipelineStages[LeadStatus.LAUNCHED].length,
       [LeadStatus.ON_HOLD]: pipelineStages[LeadStatus.ON_HOLD].length,
+      [LeadStatus.QUALIFIED]: pipelineStages[LeadStatus.QUALIFIED].length,
+      [LeadStatus.DISQUALIFIED]: pipelineStages[LeadStatus.DISQUALIFIED].length,
     };
 
     return {

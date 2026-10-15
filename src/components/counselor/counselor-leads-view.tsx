@@ -38,6 +38,8 @@ import { PipelineBoardView } from "./pipeline-board-view";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
 import { LeadAutoConnectDialog } from "./lead-auto-connect-dialog";
+import { LeadQualificationDialog } from "./lead-qualification-dialog";
+import { ShieldCheck } from "lucide-react";
 
 interface CounselorLeadsViewProps {
   basePath?: string;
@@ -56,6 +58,9 @@ export function CounselorLeadsView({
   const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
   const [selectedSource, setSelectedSource] = useState<string>("ALL");
+  const [selectedPipeline, setSelectedPipeline] = useState<string>("ALL");
+  const [qualificationOpen, setQualificationOpen] = useState(false);
+  const [selectedLeadForQualification, setSelectedLeadForQualification] = useState<any>(null);
   const [search, setSearch] = useState("");
   const [dueTodayOnly, setDueTodayOnly] = useState(defaultDueToday);
   const [page, setPage] = useState(1);
@@ -119,6 +124,7 @@ export function CounselorLeadsView({
     {
       status: selectedStatus === "ALL" ? undefined : selectedStatus,
       source: selectedSource === "ALL" ? undefined : selectedSource,
+      pipelineStage: selectedPipeline === "ALL" ? undefined : selectedPipeline,
       search: search.trim() || undefined,
       dueToday: dueTodayOnly || undefined,
       page,
@@ -481,6 +487,34 @@ export function CounselorLeadsView({
               </div>
             </div>
 
+            {/* Pipeline Stage Filter Chips */}
+            <div className="flex items-center gap-2 pt-1">
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Pipeline:</span>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: "ALL", label: "All Pipelines", color: "bg-slate-900 text-white" },
+                  { id: "COURSE_ADMISSIONS", label: "🎓 Course Admissions", color: "bg-indigo-600 text-white" },
+                  { id: "BOSSE_DPGU", label: "🏛️ BOSSE & University", color: "bg-purple-600 text-white" },
+                  { id: "BUSINESS_SERVICES", label: "💼 Business Services", color: "bg-emerald-600 text-white" },
+                ].map((pl) => (
+                  <button
+                    key={pl.id}
+                    onClick={() => {
+                      setSelectedPipeline(pl.id);
+                      setPage(1);
+                    }}
+                    className={`px-2.5 py-0.5 rounded-md text-xs font-semibold transition-colors ${
+                      selectedPipeline === pl.id
+                        ? pl.color + " shadow-xs"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    {pl.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Status Filter Badges */}
             <div className="flex items-center gap-2 pt-1">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status:</span>
@@ -589,23 +623,51 @@ export function CounselorLeadsView({
                           <div className="text-[11px] text-slate-400 truncate max-w-[150px]">{lead.email}</div>
                         </td>
                         <td className="py-3 px-3 text-slate-700">
-                          {lead.course?.title || <span className="text-slate-400 italic">General Inquiry</span>}
+                          <div>{lead.course?.title || <span className="text-slate-400 italic">General Inquiry</span>}</div>
+                          {lead.pipelineStage && (
+                            <div className="mt-1">
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9.5px] font-bold ${
+                                lead.pipelineStage === "COURSE_ADMISSIONS"
+                                  ? "bg-indigo-50 text-indigo-700 border border-indigo-200"
+                                  : lead.pipelineStage === "BOSSE_DPGU"
+                                  ? "bg-purple-50 text-purple-700 border border-purple-200"
+                                  : "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              }`}>
+                                {lead.pipelineStage === "COURSE_ADMISSIONS"
+                                  ? "🎓 Courses"
+                                  : lead.pipelineStage === "BOSSE_DPGU"
+                                  ? "🏛️ BOSSE / DPGU"
+                                  : "💼 Services"}
+                              </span>
+                            </div>
+                          )}
                         </td>
                         <td className="py-3 px-3">
-                          <Badge
-                            variant="secondary"
-                            className={
-                              lead.status === LeadStatus.NEW
-                                ? "bg-blue-50 text-blue-700 border-blue-200 text-[11px]"
-                                : lead.status === LeadStatus.ADMITTED
-                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px]"
-                                : lead.status === LeadStatus.INTERESTED
-                                ? "bg-purple-50 text-purple-700 border-purple-200 text-[11px]"
-                                : "bg-slate-100 text-slate-700 border-slate-200 text-[11px]"
-                            }
-                          >
-                            {lead.status}
-                          </Badge>
+                          <div className="flex flex-col gap-1">
+                            <Badge
+                              variant="secondary"
+                              className={
+                                lead.status === LeadStatus.NEW
+                                  ? "bg-blue-50 text-blue-700 border-blue-200 text-[11px]"
+                                  : lead.status === LeadStatus.ADMITTED
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 text-[11px]"
+                                  : lead.status === LeadStatus.QUALIFIED
+                                  ? "bg-emerald-100 text-emerald-800 border-emerald-300 text-[11px] font-bold"
+                                  : lead.status === LeadStatus.INTERESTED
+                                  ? "bg-purple-50 text-purple-700 border-purple-200 text-[11px]"
+                                  : lead.status === LeadStatus.DISQUALIFIED
+                                  ? "bg-rose-50 text-rose-700 border-rose-200 text-[11px]"
+                                  : "bg-slate-100 text-slate-700 border-slate-200 text-[11px]"
+                              }
+                            >
+                              {lead.status}
+                            </Badge>
+                            {lead.purchaseTimeline && (
+                              <span className="text-[9.5px] text-slate-400 font-mono">
+                                {lead.purchaseTimeline.replace(/_/g, " ")}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-3 text-slate-600">
                           {lead.nextFollowUp ? (
@@ -631,6 +693,21 @@ export function CounselorLeadsView({
                         </td>
                         <td className="py-3 px-4 text-right">
                           <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {/* Qualify & Route Modal Trigger */}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedLeadForQualification(lead);
+                                setQualificationOpen(true);
+                              }}
+                              className="h-7 px-2 text-[11px] border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-semibold"
+                              title="Qualify & Route Lead"
+                            >
+                              <ShieldCheck className="h-3 w-3 text-indigo-600" />
+                              <span>Qualify</span>
+                            </Button>
+
                             {/* 1-Click WhatsApp Automation */}
                             <Button
                               size="sm"
@@ -776,6 +853,17 @@ export function CounselorLeadsView({
         open={autoConnectOpen}
         onClose={() => setAutoConnectOpen(false)}
         onComplete={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
+      />
+
+      {/* Lead Qualification & Pipeline Routing Modal */}
+      <LeadQualificationDialog
+        open={qualificationOpen}
+        onOpenChange={setQualificationOpen}
+        lead={selectedLeadForQualification}
+        onSuccess={() => {
           refetch();
           utils.crm.getStats.invalidate();
         }}

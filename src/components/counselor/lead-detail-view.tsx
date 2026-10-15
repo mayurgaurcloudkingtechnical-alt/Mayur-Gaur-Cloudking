@@ -11,6 +11,7 @@ import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History,
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
+import { LeadQualificationDialog } from "./lead-qualification-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 
 interface LeadDetailViewProps {
@@ -21,6 +22,7 @@ interface LeadDetailViewProps {
 export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProps) {
   const [logOpen, setLogOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
+  const [qualificationOpen, setQualificationOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
 
@@ -271,7 +273,72 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
               </div>
             )}
 
+            {/* Meta Lead Ads & Pipeline Classification Card */}
+            <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/50 via-white to-slate-50/40 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-indigo-900 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+                  CRM Pipeline & Meta Lead Attribution
+                </span>
+                <Badge
+                  className={`text-[10px] font-bold ${
+                    (lead as any).pipelineStage === "COURSE_ADMISSIONS"
+                      ? "bg-indigo-100 text-indigo-800 border-indigo-200"
+                      : (lead as any).pipelineStage === "BOSSE_DPGU"
+                      ? "bg-purple-100 text-purple-800 border-purple-200"
+                      : (lead as any).pipelineStage === "BUSINESS_SERVICES"
+                      ? "bg-emerald-100 text-emerald-800 border-emerald-200"
+                      : "bg-slate-100 text-slate-700 border-slate-200"
+                  }`}
+                >
+                  {(lead as any).pipelineStage ? (lead as any).pipelineStage.replace(/_/g, " ") : "COURSE ADMISSIONS"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">Service Category</span>
+                  <span className="font-semibold text-slate-800">{(lead as any).serviceCategory || "IT_COURSES"}</span>
+                </div>
+                <div className="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">Purchase Timeline</span>
+                  <span className="font-semibold text-slate-800">
+                    {(lead as any).purchaseTimeline ? (lead as any).purchaseTimeline.replace(/_/g, " ") : "Immediate"}
+                  </span>
+                </div>
+                <div className="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">Qualification Reason</span>
+                  <span className="font-semibold text-slate-800 truncate block" title={(lead as any).qualificationReason || (lead as any).disqualificationReason || "Staff Review"}>
+                    {(lead as any).qualificationReason || (lead as any).disqualificationReason || "Staff Review"}
+                  </span>
+                </div>
+                <div className="bg-white p-2 rounded-lg border border-slate-100 shadow-2xs">
+                  <span className="text-[10px] text-slate-400 block font-medium">Meta Lead ID</span>
+                  <span className="font-mono font-medium text-slate-700 truncate block" title={(lead as any).metaLeadId || "Direct Ingestion"}>
+                    {(lead as any).metaLeadId || "Direct Ingestion"}
+                  </span>
+                </div>
+              </div>
+
+              {(lead as any).metaFormId && (
+                <div className="text-[10px] text-slate-500 font-mono flex flex-wrap gap-3 pt-1 border-t border-indigo-100/60">
+                  <span>Form ID: {(lead as any).metaFormId}</span>
+                  {(lead as any).metaCampaignId && <span>Campaign: {(lead as any).metaCampaignId}</span>}
+                  {(lead as any).metaAdId && <span>Ad: {(lead as any).metaAdId}</span>}
+                </div>
+              )}
+            </div>
+
             <div className="flex flex-wrap items-center gap-3 pt-2">
+              <Button
+                size="sm"
+                onClick={() => setQualificationOpen(true)}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span>Qualify & Route Pipeline</span>
+              </Button>
+
               <Button
                 size="sm"
                 onClick={() => setLogOpen(true)}
@@ -623,6 +690,13 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
         onOpenChange={setAppOpen}
         initialLeadId={lead.id}
         initialLead={lead}
+        onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
+      />
+
+      <LeadQualificationDialog
+        open={qualificationOpen}
+        onOpenChange={setQualificationOpen}
+        lead={lead as any}
         onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
       />
     </div>

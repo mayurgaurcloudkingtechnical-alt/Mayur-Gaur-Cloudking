@@ -94,6 +94,8 @@ export function IntegrationsHubView() {
       webhookUrl: META_ADS_WEBHOOK_URL,
       webhookKey: META_ADS_VERIFY_TOKEN,
       guideText: "In Meta for Developers / Business Suite → Webhooks → Select 'Page' → Subscribe to 'leadgen' → Enter Callback URL & Verify Token",
+      actionHref: "/admin/marketing?tab=meta-leads",
+      actionText: "Configure Meta Lead Ads & Rules",
     },
     {
       id: "stripe",
@@ -479,6 +481,15 @@ export function IntegrationsHubView() {
                 <Copy className="h-3 w-3" />
                 {copiedKey === "meta-banner-token" ? "Copied!" : "Copy"}
               </Button>
+            </div>
+
+            <div className="pt-2 flex justify-end">
+              <Link href="/admin/marketing?tab=meta-leads">
+                <Button size="sm" className="bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1.5 font-semibold shadow-xs">
+                  <ExternalLink className="h-3.5 w-3.5" />
+                  <span>Open Meta Ads Command Center & 3 Routing Rules</span>
+                </Button>
+              </Link>
             </div>
           </div>
         </div>

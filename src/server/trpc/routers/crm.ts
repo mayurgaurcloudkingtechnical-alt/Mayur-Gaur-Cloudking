@@ -221,6 +221,8 @@ export const crmRouter = router({
         courseId: z.string().optional(),
         assignedToId: z.string().optional(),
         dueToday: z.boolean().optional(),
+        pipelineStage: z.string().optional(),
+        serviceCategory: z.string().optional(),
         page: z.number().int().min(1).default(1),
         limit: z.number().int().min(1).max(50).default(20),
       })
@@ -1408,6 +1410,63 @@ export const crmRouter = router({
         actorCallingNumber: (ctx.user as any).callingNumber || (ctx.user as any).phone,
         actorWhatsappNumber: (ctx.user as any).whatsappNumber || (ctx.user as any).phone,
       });
+    }),
+
+  /**
+   * Updates qualification and pipeline status for Qualified Lead Workflow
+   */
+  updateLeadQualification: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        status: z.nativeEnum(LeadStatus),
+        pipelineStage: z.enum(["COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"]).optional(),
+        qualificationReason: z.string().optional(),
+        disqualificationReason: z.string().optional(),
+        purchaseTimeline: z.string().optional(),
+        serviceCategory: z.string().optional(),
+        nextFollowUp: z.date().optional().nullable(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const lead = await db.lead.findUnique({
+        where: { id: input.leadId },
+      });
+      if (!lead) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Lead not found." });
+      }
+
+      const updated = await db.lead.update({
+        where: { id: input.leadId },
+        data: {
+          status: input.status,
+          pipelineStage: input.pipelineStage || lead.pipelineStage,
+          qualificationReason: input.qualificationReason,
+          disqualificationReason: input.disqualificationReason,
+          purchaseTimeline: input.purchaseTimeline,
+          serviceCategory: input.serviceCategory,
+          nextFollowUp: input.nextFollowUp !== undefined ? input.nextFollowUp : lead.nextFollowUp,
+          lastInteraction: new Date(),
+        },
+      });
+
+      // Record Lead Activity
+      await db.leadActivity.create({
+        data: {
+          leadId: input.leadId,
+          userId: ctx.user.id,
+          activityType: "QUALIFICATION_UPDATE",
+          disposition: input.status,
+          notes:
+            input.notes ||
+            `Qualification status updated to ${input.status}. Reason: ${
+              input.qualificationReason || input.disqualificationReason || "Staff review"
+            }.`,
+        },
+      });
+
+      return updated;
     }),
 });
 

@@ -28,8 +28,10 @@ import { institutionRouter } from "./institution";
 import { workPlannerRouter } from "./work-planner";
 import { callyzerRouter } from "./callyzer";
 import { hiringAutomationRouter } from "./hiring-automation";
+import { metaAdsRouter } from "./meta-ads";
 
 export const appRouter = router({
+  metaAds: metaAdsRouter,
   hiringAutomation: hiringAutomationRouter,
   auth: authRouter,
   admin: adminRouter,

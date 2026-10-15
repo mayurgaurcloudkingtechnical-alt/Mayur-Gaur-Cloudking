@@ -103,6 +103,8 @@ enum LeadStatus {
   NEGOTIATION
   ADMITTED
   LOST
+  QUALIFIED
+  DISQUALIFIED
   DISCUSSION
   LOCATION_EVALUATION
   PROPOSAL_SENT
@@ -887,6 +889,21 @@ model Lead {
   automationStates     AutomationSequenceState[]
   escalationTasks      EscalationTask[]
   razorpayPaymentLinks RazorpayPaymentLink[]
+  metaWebhookLogs      MetaLeadWebhookLog[]
+
+  // Meta Lead Ads & Pipeline Tracking
+  metaLeadId             String?   @unique
+  metaFormId             String?
+  metaPageId             String?
+  metaAdId               String?
+  metaAdsetId            String?
+  metaCampaignId         String?
+  pipelineStage          String?   @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"
+  qualificationReason    String?   @db.Text
+  disqualificationReason String?   @db.Text
+  purchaseTimeline       String?   // "IMMEDIATE", "THIS_WEEK", "NEXT_MONTH", "LOOKING_AROUND"
+  serviceCategory        String?   // "SOFTWARE", "CORPORATE_TRAINING", "CAMPUS_DRIVE", "INSTITUTIONAL_PARTNERSHIP", "FRANCHISE"
+  metaRawData            Json?
 
   @@index([email])
   @@index([phone])
@@ -902,6 +919,9 @@ model Lead {
   @@index([paymentStatus])
   @@index([lmsStatus])
   @@index([isOptedOut])
+  @@index([metaLeadId])
+  @@index([metaFormId])
+  @@index([pipelineStage])
   @@map("leads")
 }
 
@@ -937,6 +957,81 @@ model FollowUpHistory {
   @@index([performedById])
   @@index([createdAt])
   @@map("follow_up_histories")
+}
+
+// ==============================================================================
+// META LEAD ADS (FACEBOOK & INSTAGRAM) INTEGRATION & ROUTING ENGINE
+// ==============================================================================
+
+model MetaLeadFormMapping {
+  id               String   @id @default(cuid())
+  formId           String   @unique
+  formName         String
+  pageId           String
+  campaignCategory String   @default("COURSES") // "COURSES", "BOSSE_DPGU", "SERVICES"
+  targetPipeline   String   @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_ENQUIRIES", "UNIVERSITY_ADMISSIONS", "BUSINESS_SERVICES"
+  defaultCourseId  String?
+  defaultOwnerRole String?  @default("COUNSELOR") // "COUNSELOR", "TELECALLER", "BUSINESS_DEVELOPMENT", "ADMIN"
+  defaultOwnerId   String?
+  fieldMappings    Json     @default("{}") // Custom questions to CRM fields mapping
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([formId])
+  @@index([campaignCategory])
+  @@index([targetPipeline])
+  @@map("meta_lead_form_mappings")
+}
+
+model MetaCampaignRoutingRule {
+  id               String   @id @default(cuid())
+  priority         Int      @default(0) // Lowest number runs first
+  name             String
+  campaignPattern  String   // e.g. "SLG_META_COURSES_LEADS_OCT26", "SLG_META_BOSSE_DPGU_LEADS_OCT26", "SLG_META_SERVICES_LEADS_OCT26"
+  formIdPattern    String?
+  targetPipeline   String   @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"
+  assignedTeam     String   @default("Admissions Team") // "Admissions Team", "Education Counselling Team", "Business Development Team"
+  defaultOwnerRole String   @default("COUNSELOR")
+  defaultOwnerId   String?
+  autoTags         Json?    // Array of tags e.g. ["META_OCT26", "ADMISSIONS"]
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([priority])
+  @@index([isActive])
+  @@map("meta_campaign_routing_rules")
+}
+
+model MetaLeadWebhookLog {
+  id             String    @id @default(cuid())
+  metaLeadId     String    @unique
+  formId         String?
+  pageId         String?
+  adId           String?
+  adsetId        String?
+  campaignId     String?
+  campaignName   String?
+  leadId         String?
+  lead           Lead?     @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  status         String    @default("PENDING") // "PENDING", "SUCCESS", "DUPLICATE", "FAILED", "RETRIED"
+  pipeline       String?   @default("COURSE_ADMISSIONS")
+  signatureValid Boolean   @default(true)
+  errorMessage   String?   @db.Text
+  retryCount     Int       @default(0)
+  lastRetriedAt  DateTime?
+  rawPayload     Json?
+  receivedAt     DateTime  @default(now())
+  processedAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([metaLeadId])
+  @@index([status])
+  @@index([formId])
+  @@index([receivedAt])
+  @@map("meta_lead_webhook_logs")
 }
 
 model AdmissionApplication {

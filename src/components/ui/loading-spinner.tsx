@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils";
 
 interface LoadingSpinnerProps extends React.HTMLAttributes<HTMLDivElement> {
   size?: "sm" | "md" | "lg";
+  text?: string;
 }
 
 export function LoadingSpinner({
   size = "md",
+  text,
   className,
   ...props
 }: LoadingSpinnerProps) {
@@ -20,7 +22,7 @@ export function LoadingSpinner({
     <div
       role="status"
       aria-label="Loading"
-      className={cn("flex items-center justify-center p-4", className)}
+      className={cn("flex flex-col items-center justify-center p-4 gap-2", className)}
       {...props}
     >
       <div
@@ -29,7 +31,11 @@ export function LoadingSpinner({
           sizeClasses[size]
         )}
       />
-      <span className="sr-only">Loading...</span>
+      {text ? (
+        <span className="text-xs text-slate-500 font-medium">{text}</span>
+      ) : (
+        <span className="sr-only">Loading...</span>
+      )}
     </div>
   );
 }
