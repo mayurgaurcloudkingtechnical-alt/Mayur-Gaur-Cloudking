@@ -5,6 +5,7 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/componen
 import { Button } from "@/components/ui/button";
 import { submitEnquiryAction, EnquiryState } from "@/app/actions/enquiry";
 import { SITE_CONFIG } from "@/lib/constants/site";
+import { trackLeadSubmission, trackWhatsAppClick } from "@/lib/analytics";
 import {
   Sparkles,
   CheckCircle2,
@@ -162,6 +163,10 @@ export function CareerCounselingModal({
       const res = await submitEnquiryAction(state, formData);
       setState(res);
       if (res.success) {
+        trackLeadSubmission({
+          source: "WEBSITE_CAREER_POPUP",
+          courseOrInterest: selectedCourse,
+        });
         dismissPopup(30);
       }
     } catch (err: any) {
@@ -215,7 +220,12 @@ export function CareerCounselingModal({
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
               <Button asChild variant="outline" className="flex-1 border-slate-300 text-xs">
-                <a href={whatsappDeskUrl} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={whatsappDeskUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackWhatsAppClick("Counseling Modal WhatsApp Desk")}
+                >
                   <MessageCircle className="w-3.5 h-3.5 text-[#25D366] mr-1.5" />
                   Chat on WhatsApp
                 </a>

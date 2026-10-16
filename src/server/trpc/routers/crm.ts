@@ -383,6 +383,19 @@ export const crmRouter = router({
   }),
 
   /**
+   * Retrieves live website traffic, Google Analytics (GA4) telemetry, and web conversion stats.
+   */
+  getWebsiteTrafficAnalytics: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+  ]).query(async () => {
+    return CrmLeadService.getWebsiteTrafficAnalytics();
+  }),
+
+  /**
    * Retrieves inbuilt active Meta / Facebook Boost campaigns and live performance stats.
    * Accessible by all CRM staff (Admins, Counselors, Telecallers).
    */

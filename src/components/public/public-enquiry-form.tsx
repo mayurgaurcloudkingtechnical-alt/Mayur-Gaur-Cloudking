@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, AlertCircle, Loader2, Send } from "lucide-react";
+import { trackLeadSubmission } from "@/lib/analytics";
 
 interface PublicCourseItem {
   id: string;
@@ -74,9 +75,15 @@ export function PublicEnquiryForm({
   }, [preselectedCourseSlug, courses, courseId]);
 
   const submitMutation = api.crm.submitEnquiry.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setSubmitted(true);
       setErrorMessage(null);
+      const selectedCourseTitle = courses.find((c) => c.id === courseId)?.title || "Course Inquiry";
+      trackLeadSubmission({
+        source: source || "WEBSITE",
+        courseOrInterest: selectedCourseTitle,
+        leadId: (data as any)?.id,
+      });
       setFullName("");
       setEmail("");
       setPhone("");

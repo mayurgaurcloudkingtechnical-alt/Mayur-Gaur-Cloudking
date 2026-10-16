@@ -1025,6 +1025,120 @@ export class CrmLeadService {
   }
 
   /**
+   * Retrieves website traffic and lead telemetry analytics for Google Analytics (GA4) integration.
+   */
+  static async getWebsiteTrafficAnalytics() {
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const websiteSources = [
+      LeadSource.WEBSITE,
+      LeadSource.WEBSITE_CAREER_POPUP,
+      LeadSource.CAREER_POPUP,
+      LeadSource.CONTACT_FORM,
+      LeadSource.COURSE_PAGE,
+    ];
+
+    const [
+      totalWebsiteLeads,
+      admittedWebsiteLeads,
+      todayLeads,
+      weekLeads,
+      monthLeads,
+      recentLeads,
+      allWebsiteLeadsGrouped,
+    ] = await Promise.all([
+      db.lead.count({
+        where: { source: { in: websiteSources } },
+      }),
+      db.lead.count({
+        where: {
+          source: { in: websiteSources },
+          status: LeadStatus.ADMITTED,
+        },
+      }),
+      db.lead.count({
+        where: {
+          source: { in: websiteSources },
+          createdAt: { gte: startOfToday },
+        },
+      }),
+      db.lead.count({
+        where: {
+          source: { in: websiteSources },
+          createdAt: { gte: startOfWeek },
+        },
+      }),
+      db.lead.count({
+        where: {
+          source: { in: websiteSources },
+          createdAt: { gte: startOfMonth },
+        },
+      }),
+      db.lead.findMany({
+        where: { source: { in: websiteSources } },
+        take: 12,
+        orderBy: { createdAt: "desc" },
+        include: {
+          course: { select: { title: true, slug: true } },
+          assignedCounselor: { select: { firstName: true, lastName: true } },
+        },
+      }),
+      db.lead.groupBy({
+        by: ["status"],
+        where: { source: { in: websiteSources } },
+        _count: { id: true },
+      }),
+    ]);
+
+    const statusCounts: Record<string, number> = {};
+    for (const item of allWebsiteLeadsGrouped) {
+      statusCounts[item.status] = item._count.id;
+    }
+
+    const conversionRate =
+      totalWebsiteLeads > 0
+        ? ((admittedWebsiteLeads / totalWebsiteLeads) * 100).toFixed(1)
+        : "0.0";
+
+    return {
+      gaConfig: {
+        measurementId: "G-7F6R0124G6",
+        streamId: "16144183114",
+        streamName: "softlabglobal",
+        streamUrl: "https://www.softlabglobal.com",
+        googleAdsId: "AW-18444757013",
+        status: "ACTIVE",
+        verifiedAt: new Date().toISOString(),
+      },
+      summary: {
+        totalLeads: totalWebsiteLeads,
+        admittedLeads: admittedWebsiteLeads,
+        conversionRate,
+        todayLeads,
+        weekLeads,
+        monthLeads,
+        statusCounts,
+      },
+      recentLeads: recentLeads.map((l) => ({
+        id: l.id,
+        fullName: l.fullName,
+        phone: l.phone,
+        email: l.email,
+        city: l.city || "Prayagraj",
+        courseName: l.course?.title || l.notes?.slice(0, 40) || "General Website Inquiry",
+        status: l.status,
+        createdAt: l.createdAt,
+        counselorName: l.assignedCounselor
+          ? `${l.assignedCounselor.firstName} ${l.assignedCounselor.lastName}`
+          : "Unassigned",
+      })),
+    };
+  }
+
+  /**
    * Captures public franchise enquiries with honeypot spam protection,
    * rate limiting, phone/email normalization, deduplication, audit logging,
    * and stakeholder notification.

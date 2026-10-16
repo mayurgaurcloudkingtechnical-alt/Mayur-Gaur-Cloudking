@@ -4,6 +4,7 @@ import * as React from "react";
 import { MessageCircle, Phone, X, Bot, Send, Sparkles, User, ArrowRight, HelpCircle, BookOpen } from "lucide-react";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
+import { trackWhatsAppClick } from "@/lib/analytics";
 
 interface ChatMessage {
   id: string;
@@ -268,6 +269,7 @@ export function FloatingWhatsApp() {
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => trackWhatsAppClick("Floating WhatsApp Desk")}
             className="w-full flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow transition-all"
           >
             <MessageCircle className="w-4 h-4" />

@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { api } from "@/lib/trpc/react";
 import { SITE_CONFIG } from "@/lib/constants/site";
+import { trackLeadSubmission, trackWhatsAppClick } from "@/lib/analytics";
 
 interface BosseAcademicViewProps {
   courses?: any[];
@@ -54,9 +55,14 @@ export function BosseAcademicView({ courses = [] }: BosseAcademicViewProps) {
   const [formError, setFormError] = useState<string | null>(null);
 
   const submitEnquiry = api.crm.submitEnquiry.useMutation({
-    onSuccess: () => {
+    onSuccess: (data) => {
       setFormSubmitted(true);
       setFormError(null);
+      trackLeadSubmission({
+        source: "WEBSITE_BOSSE_PAGE",
+        courseOrInterest: `BOSSE ${targetStream}`,
+        leadId: (data as any)?.id,
+      });
     },
     onError: (err: any) => {
       setFormError(err.message || "Failed to submit enquiry. Please call helpline directly.");

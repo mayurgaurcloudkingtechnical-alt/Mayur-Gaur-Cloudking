@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { TRPCReactProvider } from "@/lib/trpc/react";
 
+import { GoogleAnalyticsTracker } from "@/components/common/google-analytics";
+import { GA_MEASUREMENT_ID, GOOGLE_ADS_ID } from "@/lib/analytics";
+
 export const metadata: Metadata = {
   title: "SOFTLAB GLOBAL — IT Education Management Platform",
   description: "Enterprise IT education management, student LMS, faculty portal, admissions CRM, and verification engine.",
@@ -20,10 +23,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Google tag (gtag.js) */}
+        {/* Google tag (gtag.js) — Google Analytics 4 & Google Ads */}
         <script
           async
-          src="https://www.googletagmanager.com/gtag/js?id=AW-18444757013"
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
         />
         <script
           dangerouslySetInnerHTML={{
@@ -32,7 +35,14 @@ export default function RootLayout({
               function gtag(){dataLayer.push(arguments);}
               gtag('js', new Date());
 
-              gtag('config', 'AW-18444757013');
+              // GA4 Measurement for softlabglobal (Stream ID: 16144183114)
+              gtag('config', '${GA_MEASUREMENT_ID}', {
+                page_path: window.location.pathname,
+                send_page_view: true
+              });
+
+              // Google Ads
+              gtag('config', '${GOOGLE_ADS_ID}');
             `,
           }}
         />
@@ -40,6 +50,7 @@ export default function RootLayout({
         <script async src="https://checkout.razorpay.com/v1/checkout.js" />
       </head>
       <body className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900">
+        <GoogleAnalyticsTracker />
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
     </html>

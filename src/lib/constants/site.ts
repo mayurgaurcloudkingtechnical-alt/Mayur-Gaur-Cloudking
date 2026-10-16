@@ -25,6 +25,13 @@ export const SITE_CONFIG = {
     admissionsEmail: "info@softlabglobal.com",
   },
   gstin: "09AFYFS5388G1ZX",
+  analytics: {
+    gaMeasurementId: "G-7F6R0124G6",
+    streamId: "16144183114",
+    streamName: "softlabglobal",
+    streamUrl: "https://www.softlabglobal.com",
+    googleAdsId: "AW-18444757013",
+  },
   businessHours: {
     days: "Monday – Saturday",
     hours: "9:00 AM – 7:00 PM IST",

@@ -22,6 +22,7 @@ import {
   Sparkles,
   ArrowUpRight,
   ShieldCheck,
+  Radio,
 } from "lucide-react";
 import { LeadSource } from "@prisma/client";
 
@@ -149,6 +150,21 @@ export function MarketingIntegrationsView() {
       count: channelCounts[LeadSource.WEBSITE] || 0,
       description: "Standard REST webhook for connecting Zapier, Make.com, Pabbly Connect, Unbounce, or custom landing pages.",
       configInfo: "Accepts JSON: { fullName, phone, email, course, city }",
+    },
+    {
+      id: "ga4",
+      platform: "UNIVERSAL" as const,
+      name: "Google Analytics 4 & Web Traffic Telemetry",
+      icon: <Radio className="h-5 w-5 text-emerald-600 animate-pulse" />,
+      badgeColor: "bg-emerald-100 text-emerald-800 border-emerald-200",
+      path: "/admin/marketing?tab=website-traffic",
+      secretKey: "G-7F6R0124G6",
+      count:
+        (channelCounts[LeadSource.WEBSITE] || 0) +
+        (channelCounts[LeadSource.WEBSITE_CAREER_POPUP] || 0) +
+        (channelCounts[LeadSource.CONTACT_FORM] || 0),
+      description: "Tracks active site visitors, geographic source attribution, page journeys, and real-time lead submissions on softlabglobal.com.",
+      configInfo: "Measurement ID: G-7F6R0124G6 • Stream ID: 16144183114 • Google Ads: AW-18444757013",
     },
   ];
 
