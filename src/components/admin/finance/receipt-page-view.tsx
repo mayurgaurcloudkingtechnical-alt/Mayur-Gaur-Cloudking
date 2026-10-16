@@ -43,7 +43,12 @@ export function ReceiptPageView() {
               discountAmount: res.financials.discountPaise,
               netPayable: res.financials.netPayablePaise,
               amountPaid: res.financials.amountPaidPaise,
-              pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+              pendingAmount:
+                res.financials.pendingAmountPaise !== undefined
+                  ? res.financials.pendingAmountPaise
+                  : Math.max(0, res.financials.netPayablePaise - (res.financials.totalPaidSoFarPaise ?? res.financials.amountPaidPaise)),
+              previousCollections: res.financials.previousCollectionsPaise,
+              totalPaidSoFar: res.financials.totalPaidSoFarPaise,
               amountInWords: res.financials.amountInWords,
               paymentMode: res.payment.paymentMethod,
               transactionReference: res.payment.transactionReference,
@@ -68,6 +73,8 @@ export function ReceiptPageView() {
             const studentFullName = `${fee.student.user.firstName} ${fee.student.user.lastName}`;
             const latestPayment = fee.payments && fee.payments.length > 0 ? fee.payments[0] : null;
             const paid = latestPayment ? latestPayment.amount : fee.paidAmount;
+            const pending = fee.pendingAmount ?? Math.max(0, fee.netPayableAmount - fee.paidAmount);
+            const previousCollections = latestPayment ? Math.max(0, fee.paidAmount - latestPayment.amount) : 0;
 
             setReceiptData({
               receiptNumber: latestPayment?.receiptNumber || `SLG-2026-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -80,7 +87,9 @@ export function ReceiptPageView() {
               discountAmount: fee.discountAmount,
               netPayable: fee.netPayableAmount,
               amountPaid: paid,
-              pendingAmount: Math.max(0, fee.netPayableAmount - paid),
+              pendingAmount: pending,
+              previousCollections,
+              totalPaidSoFar: fee.paidAmount,
               amountInWords: rupeesToWords(Math.floor(paid / 100)),
               paymentMode: latestPayment ? latestPayment.paymentMethod : "Cash",
               transactionReference: latestPayment?.transactionReference || "",

@@ -34,7 +34,12 @@ export function StudentReceiptModal({
         discountAmount: receipt.financials.discountPaise,
         netPayable: receipt.financials.netPayablePaise,
         amountPaid: receipt.financials.amountPaidPaise,
-        pendingAmount: Math.max(0, receipt.financials.netPayablePaise - receipt.financials.amountPaidPaise),
+        pendingAmount:
+          receipt.financials.pendingAmountPaise !== undefined
+            ? receipt.financials.pendingAmountPaise
+            : Math.max(0, receipt.financials.netPayablePaise - (receipt.financials.totalPaidSoFarPaise ?? receipt.financials.amountPaidPaise)),
+        previousCollections: receipt.financials.previousCollectionsPaise,
+        totalPaidSoFar: receipt.financials.totalPaidSoFarPaise,
         amountInWords: receipt.financials.amountInWords,
         paymentMode: receipt.payment.gateway || "Online",
         transactionReference: receipt.payment.transactionReference,

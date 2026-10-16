@@ -20,6 +20,8 @@ export interface DualReceiptData {
   netPayable: number; // in Paise or Rupees
   amountPaid: number; // in Paise or Rupees
   pendingAmount: number; // in Paise or Rupees
+  previousCollections?: number; // in Paise or Rupees (collections prior to this receipt)
+  totalPaidSoFar?: number; // in Paise or Rupees (cumulative total paid including this receipt)
   amountInWords?: string;
   paymentMode?: string;
   transactionReference?: string;
@@ -116,17 +118,30 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   const [totalFees, setTotalFees] = useState<number>(toRupees(data.totalFee || 45000));
   const [totalDiscount, setTotalDiscount] = useState<number>(toRupees(data.discountAmount || 0));
   const [totalPaid, setTotalPaid] = useState<number>(toRupees(data.amountPaid || 10000));
-  const [totalOutstanding, setTotalOutstanding] = useState<number>(
-    toRupees(
-      data.pendingAmount ||
-        Math.max(
+  // Remaining outstanding properly respecting previous collections:
+  const rawPending =
+    data.pendingAmount !== undefined && data.pendingAmount !== null
+      ? toRupees(data.pendingAmount)
+      : Math.max(
           0,
           toRupees(data.totalFee || 45000) -
             toRupees(data.discountAmount || 0) -
             toRupees(data.amountPaid || 10000)
-        )
-    )
-  );
+        );
+
+  const [totalOutstanding, setTotalOutstanding] = useState<number>(rawPending);
+
+  const initialPreviousCollections =
+    data.previousCollections !== undefined && data.previousCollections !== null
+      ? toRupees(data.previousCollections)
+      : Math.max(
+          0,
+          toRupees(data.netPayable || data.totalFee || 45000) -
+            rawPending -
+            toRupees(data.amountPaid || 10000)
+        );
+
+  const [previousCollections] = useState<number>(initialPreviousCollections);
 
   const [paymentMode, setPaymentMode] = useState(
     data.paymentMode ? `${data.paymentMode} ${data.transactionReference || ""}`.trim() : "Cash"
@@ -140,19 +155,19 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
 
   const handleTotalFeesChange = (val: number) => {
     setTotalFees(val);
-    const newPending = Math.max(0, val - totalDiscount - totalPaid);
+    const newPending = Math.max(0, val - totalDiscount - previousCollections - totalPaid);
     setTotalOutstanding(newPending);
   };
 
   const handleDiscountChange = (val: number) => {
     setTotalDiscount(val);
-    const newPending = Math.max(0, totalFees - val - totalPaid);
+    const newPending = Math.max(0, totalFees - val - previousCollections - totalPaid);
     setTotalOutstanding(newPending);
   };
 
   const handlePaidChange = (val: number) => {
     setTotalPaid(val);
-    const newPending = Math.max(0, totalFees - totalDiscount - val);
+    const newPending = Math.max(0, totalFees - totalDiscount - previousCollections - val);
     setTotalOutstanding(newPending);
     setCustomWords(""); // re-trigger auto word generation
   };

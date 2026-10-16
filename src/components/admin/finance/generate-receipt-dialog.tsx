@@ -49,7 +49,12 @@ export function GenerateReceiptDialog({
               discountAmount: res.financials.discountPaise,
               netPayable: res.financials.netPayablePaise,
               amountPaid: res.financials.amountPaidPaise,
-              pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+              pendingAmount:
+                res.financials.pendingAmountPaise !== undefined
+                  ? res.financials.pendingAmountPaise
+                  : Math.max(0, res.financials.netPayablePaise - (res.financials.totalPaidSoFarPaise ?? res.financials.amountPaidPaise)),
+              previousCollections: res.financials.previousCollectionsPaise,
+              totalPaidSoFar: res.financials.totalPaidSoFarPaise,
               amountInWords: res.financials.amountInWords,
               paymentMode: res.payment.paymentMethod,
               transactionReference: res.payment.transactionReference,
@@ -70,7 +75,8 @@ export function GenerateReceiptDialog({
     const discount = fee.discountAmount;
     const netPayable = fee.netPayableAmount;
     const paid = latestPayment ? latestPayment.amount : fee.paidAmount;
-    const pending = Math.max(0, netPayable - paid);
+    const pending = fee.pendingAmount ?? Math.max(0, netPayable - fee.paidAmount);
+    const previousCollections = latestPayment ? Math.max(0, fee.paidAmount - latestPayment.amount) : 0;
 
     setReceiptData({
       receiptNumber: latestPayment?.receiptNumber || `SLG-2026-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -84,6 +90,8 @@ export function GenerateReceiptDialog({
       netPayable,
       amountPaid: paid,
       pendingAmount: pending,
+      previousCollections,
+      totalPaidSoFar: fee.paidAmount,
       amountInWords: rupeesToWords(Math.floor(paid / 100)),
       paymentMode: latestPayment ? latestPayment.paymentMethod : "Cash",
       transactionReference: latestPayment?.transactionReference || "",

@@ -32,6 +32,9 @@ export interface FormattedReceiptData {
     discountPaise: number;
     netPayablePaise: number;
     amountPaidPaise: number;
+    previousCollectionsPaise: number;
+    totalPaidSoFarPaise: number;
+    pendingAmountPaise: number;
     amountInWords: string;
   };
   payment: {
@@ -148,9 +151,108 @@ export class ReceiptService {
       });
     }
 
+    // 1. Resolve feeStructure if not directly loaded on payment
+    let feeStructure = payment.feeStructure;
+    if (!feeStructure) {
+      if (payment.enrollmentId) {
+        feeStructure = await db.feeStructure.findUnique({
+          where: { enrollmentId: payment.enrollmentId },
+          include: { course: true },
+        });
+      } else if (payment.studentId) {
+        feeStructure = await db.feeStructure.findFirst({
+          where: { studentId: payment.studentId },
+          include: { course: true },
+        });
+      } else if (payment.admissionId) {
+        const admission = await db.admissionApplication.findUnique({
+          where: { id: payment.admissionId },
+          select: { convertedStudentProfileId: true },
+        });
+        if (admission?.convertedStudentProfileId) {
+          feeStructure = await db.feeStructure.findFirst({
+            where: { studentId: admission.convertedStudentProfileId },
+            include: { course: true },
+          });
+        }
+      }
+    }
+
+    // 2. Query all successful collections for this student / fee structure / admission to compute previous collections
+    const historyConditions: any[] = [];
+    if (feeStructure?.id) {
+      historyConditions.push({ feeStructureId: feeStructure.id });
+    }
+    if (payment.feeStructureId && payment.feeStructureId !== feeStructure?.id) {
+      historyConditions.push({ feeStructureId: payment.feeStructureId });
+    }
+    if (payment.enrollmentId) {
+      historyConditions.push({ enrollmentId: payment.enrollmentId });
+    }
+    if (payment.studentId) {
+      historyConditions.push({ studentId: payment.studentId });
+    }
+    if (payment.admissionId) {
+      historyConditions.push({ admissionId: payment.admissionId });
+    }
+
+    let allPayments: Array<{
+      id: string;
+      amount: number;
+      paymentDate: Date;
+      createdAt: Date;
+    }> = [];
+
+    if (historyConditions.length > 0) {
+      allPayments = await db.paymentTransaction.findMany({
+        where: {
+          status: "SUCCESS",
+          OR: historyConditions,
+        },
+        orderBy: [
+          { paymentDate: "asc" },
+          { createdAt: "asc" },
+        ],
+        select: {
+          id: true,
+          amount: true,
+          paymentDate: true,
+          createdAt: true,
+        },
+      });
+    }
+
+    // Include current payment in collections if it's SUCCESS and wasn't returned
+    if (payment.status === "SUCCESS" && !allPayments.some((p) => p.id === payment.id)) {
+      allPayments.push({
+        id: payment.id,
+        amount: payment.amount,
+        paymentDate: payment.paymentDate,
+        createdAt: payment.createdAt,
+      });
+      allPayments.sort((a, b) => a.paymentDate.getTime() - b.paymentDate.getTime() || a.createdAt.getTime() - b.createdAt.getTime());
+    }
+
+    // Filter previous collections strictly before this payment transaction
+    const paymentDateVal = (payment.paidAt || payment.paymentDate).getTime();
+    const paymentCreatedVal = payment.createdAt.getTime();
+
+    const previousPayments = allPayments.filter((p) => {
+      if (p.id === payment.id) return false;
+      const pTime = p.paymentDate.getTime();
+      if (pTime < paymentDateVal) return true;
+      if (pTime === paymentDateVal) {
+        return p.createdAt.getTime() < paymentCreatedVal;
+      }
+      return false;
+    });
+
+    const previousCollectionsPaise = previousPayments.reduce((acc, p) => acc + p.amount, 0);
+    const totalPaidSoFarPaise = previousCollectionsPaise + payment.amount;
+
     const course =
       payment.admission?.course ||
-      payment.feeStructure?.course ||
+      feeStructure?.course ||
       payment.enrollment?.course;
 
     const studentName =
@@ -165,10 +267,15 @@ export class ReceiptService {
       payment.student?.user?.phone || payment.admission?.applicantPhone || "";
 
     const totalCourseFee =
-      payment.feeStructure?.totalCourseFee || course?.baseFee || payment.amount;
+      feeStructure?.totalCourseFee ||
+      course?.baseFee ||
+      payment.amount;
 
-    const discount = payment.feeStructure?.discountAmount || 0;
-    const netPayable = payment.feeStructure?.netPayableAmount || payment.amount;
+    const discount = feeStructure?.discountAmount || 0;
+    const netPayable = feeStructure?.netPayableAmount || Math.max(0, totalCourseFee - discount);
+
+    // Remaining outstanding fee properly subtracting all previous collections plus this payment
+    const pendingAmountPaise = Math.max(0, netPayable - totalPaidSoFarPaise);
 
     return {
       company: this.COMPANY_INFO,
@@ -195,11 +302,14 @@ export class ReceiptService {
         discountPaise: discount,
         netPayablePaise: netPayable,
         amountPaidPaise: payment.amount,
+        previousCollectionsPaise,
+        totalPaidSoFarPaise,
+        pendingAmountPaise,
         amountInWords: this.amountInWords(payment.amount),
       },
       payment: {
         id: payment.id,
-        feeStructureId: payment.feeStructureId || undefined,
+        feeStructureId: payment.feeStructureId || feeStructure?.id || undefined,
         gateway: payment.gateway || "RAZORPAY",
         transactionReference: payment.transactionReference,
         gatewayOrderId: payment.gatewayOrderId || undefined,

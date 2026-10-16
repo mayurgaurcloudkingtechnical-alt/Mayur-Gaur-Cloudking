@@ -95,7 +95,12 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
           discountAmount: res.financials.discountPaise,
           netPayable: res.financials.netPayablePaise,
           amountPaid: res.financials.amountPaidPaise,
-          pendingAmount: Math.max(0, res.financials.netPayablePaise - res.financials.amountPaidPaise),
+          pendingAmount:
+            res.financials.pendingAmountPaise !== undefined
+              ? res.financials.pendingAmountPaise
+              : Math.max(0, res.financials.netPayablePaise - (res.financials.totalPaidSoFarPaise ?? res.financials.amountPaidPaise)),
+          previousCollections: res.financials.previousCollectionsPaise,
+          totalPaidSoFar: res.financials.totalPaidSoFarPaise,
           amountInWords: res.financials.amountInWords,
           paymentMode: res.payment.paymentMethod,
           transactionReference: res.payment.transactionReference,
