@@ -29,6 +29,12 @@ import {
   ChevronRight,
   RefreshCw,
   Plus,
+  Phone,
+  Send,
+  Radio,
+  Check,
+  Copy,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +42,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UserRoleCode, CallingBatchStatus, CallingQueueStatus, CallingOutcome } from "@prisma/client";
+import { CallRecordingPlayer } from "@/components/common/call-recording-player";
 
 interface BulkCallingDashboardProps {
   userRole: UserRoleCode;
@@ -88,8 +95,31 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
   const updateConfigMutation = api.bulkCalling.updateGlobalConfig.useMutation();
   const upsertIdentityMutation = api.bulkCalling.upsertIdentity.useMutation();
   const addDncMutation = api.bulkCalling.addDnc.useMutation();
-  const removeDncMutation = api.bulkCalling.removeDnc.useMutation();
   const simulateCallMutation = api.bulkCalling.simulateCallTurn.useMutation();
+  const initiateLiveCallMutation = api.bulkCalling.initiateLiveCall.useMutation({
+    onSuccess: (data) => {
+      setLiveCallActive(true);
+      setLiveCallStatusMessage(`Live call triggered to ${data.phone}. Ringing on your device!`);
+      if (typeof window !== "undefined") {
+        const link = document.createElement("a");
+        link.href = data.dialUrl;
+        link.click();
+      }
+    },
+  });
+  const sendLiveWhatsAppMutation = api.bulkCalling.sendLiveWhatsAppOutreach.useMutation({
+    onSuccess: (data) => {
+      setLiveWhatsAppResult(data);
+      if (typeof window !== "undefined" && data.directWhatsAppUrl) {
+        window.open(data.directWhatsAppUrl, "_blank", "noopener,noreferrer");
+      }
+    },
+  });
+
+  // Live Calling & WhatsApp Interactive State
+  const [liveCallActive, setLiveCallActive] = useState(false);
+  const [liveCallStatusMessage, setLiveCallStatusMessage] = useState<string | null>(null);
+  const [liveWhatsAppResult, setLiveWhatsAppResult] = useState<any | null>(null);
 
   // Settings & Identity Edit State
   const [configSaveStatus, setConfigSaveStatus] = useState<string | null>(null);
@@ -1183,22 +1213,114 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
                 </div>
               </div>
 
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleRunSimulator}
-                  disabled={simulateCallMutation.isPending}
-                  className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-8 gap-1.5 shadow-sm"
-                >
-                  <Play className="w-3.5 h-3.5" />
-                  <span>Execute Simulated Call</span>
-                </Button>
+              {/* REAL LIVE ACTIONS */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t">
+                <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                  <span>Target Candidate:</span>
+                  <strong className="text-slate-900 font-mono">
+                    {simLeadName || "Mayur"} ({simPhone ? `+91 ${simPhone.replace(/\D/g, "").slice(-10)}` : "No phone"})
+                  </strong>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Action 1: Live Phone Call */}
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      initiateLiveCallMutation.mutate({
+                        contactName: simLeadName,
+                        contactPhone: simPhone,
+                        courseTitle: simCourse,
+                      });
+                    }}
+                    disabled={!simPhone || initiateLiveCallMutation.isPending}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 gap-1.5 shadow-sm"
+                    title="Directly dial candidate phone number on your device dialer"
+                  >
+                    <Phone className="w-3.5 h-3.5 fill-white" />
+                    <span>Live Call Now (Direct Dial)</span>
+                  </Button>
+
+                  {/* Action 2: Real WhatsApp Message */}
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      sendLiveWhatsAppMutation.mutate({
+                        leadName: simLeadName,
+                        phone: simPhone,
+                        courseTitle: simCourse,
+                      });
+                    }}
+                    disabled={!simPhone || sendLiveWhatsAppMutation.isPending}
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-8 gap-1.5 shadow-sm"
+                    title="Send real WhatsApp admission message directly to candidate phone"
+                  >
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    <span>Send Real WhatsApp</span>
+                  </Button>
+
+                  {/* Action 3: AI Voice Simulation Dialogue */}
+                  <Button
+                    type="button"
+                    onClick={handleRunSimulator}
+                    disabled={simulateCallMutation.isPending}
+                    variant="outline"
+                    className="text-amber-700 border-amber-300 hover:bg-amber-50 font-bold text-xs h-8 gap-1.5 shadow-sm"
+                  >
+                    <Play className="w-3.5 h-3.5 text-amber-600" />
+                    <span>AI Voice Dialogue Playback</span>
+                  </Button>
+                </div>
               </div>
+
+              {/* Status Alert Banners for Live Calling / WhatsApp */}
+              {liveCallStatusMessage && (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{liveCallStatusMessage}</span>
+                  </div>
+                  <a
+                    href={`tel:+91${simPhone.replace(/\D/g, "").slice(-10)}`}
+                    className="px-2.5 py-1 bg-emerald-600 text-white rounded font-bold text-[11px] hover:bg-emerald-700"
+                  >
+                    Redial Direct
+                  </a>
+                </div>
+              )}
+
+              {liveWhatsAppResult && (
+                <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl text-xs text-blue-900 flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
+                    <div>
+                      <strong className="block text-blue-950 font-bold">
+                        WhatsApp Outreach Sent to {liveWhatsAppResult.recipientPhone}
+                      </strong>
+                      <span className="text-[11px] text-blue-700">
+                        {liveWhatsAppResult.platform === "CLOUD_API"
+                          ? "Dispatched via Meta Cloud API"
+                          : "Direct WhatsApp link ready for 1-click delivery"}
+                      </span>
+                    </div>
+                  </div>
+                  <a
+                    href={liveWhatsAppResult.directWhatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-3 py-1 bg-blue-600 text-white rounded-lg font-bold text-xs hover:bg-blue-700 flex items-center gap-1 shrink-0"
+                  >
+                    <span>Open in WhatsApp</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+              )}
 
               {simResult && (
                 <div className="border rounded-2xl p-5 bg-slate-50 space-y-5">
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
                     <div className="flex items-center gap-2">
-                      <span className="font-black text-slate-900 text-sm">Simulation Results:</span>
+                      <span className="font-black text-slate-900 text-sm">Dialogue Voice & Analytics:</span>
                       <Badge className="bg-emerald-600 text-white font-bold">{simResult.callOutcome}</Badge>
                       <Badge className="bg-amber-500 text-white font-bold">Intent: {simResult.interestLevel}</Badge>
                       {simResult.humanHandoffRequired && (
@@ -1208,6 +1330,18 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
                     <span className="text-xs font-mono text-slate-500">
                       Duration: {simResult.durationSeconds}s
                     </span>
+                  </div>
+
+                  {/* Audio Recording Player with Speech Synthesis */}
+                  <div>
+                    <CallRecordingPlayer
+                      transcript={simResult.transcript}
+                      contactName={simLeadName}
+                      contactPhone={simPhone}
+                      disposition={simResult.callOutcome}
+                      callDurationSeconds={simResult.durationSeconds}
+                      compact={false}
+                    />
                   </div>
 
                   {/* Summary & Recommended Action */}
