@@ -113,19 +113,84 @@ export const callyzerRouter = router({
     }),
 
   /**
-   * Edit Call Log (Notes, Disposition, Follow-up date)
+   * Edit Call Log (All fields editable: Contact Name, Phone, Caller, Type, Status, Duration, Disposition, Notes, Dates)
    */
   updateCallLog: requireRoleProcedure(managerialRoles)
     .input(
       z.object({
         callLogId: z.string(),
+        contactName: z.string().optional(),
+        contactPhone: z.string().optional(),
+        callType: z.enum(["OUTGOING", "INCOMING", "MISSED", "REJECTED"]).optional(),
+        callStatus: z.enum(["CONNECTED", "BUSY", "NO_ANSWER", "FAILED"]).optional(),
+        durationSeconds: z.number().int().min(0).optional(),
         disposition: z.string().optional(),
         notes: z.string().optional(),
-        nextFollowUpDate: z.date().optional(),
+        nextFollowUpDate: z.date().nullable().optional(),
+        userId: z.string().optional(),
+        createdAt: z.date().optional(),
       })
     )
     .mutation(async ({ input }) => {
       return StaffCallyzerService.updateCallLog(input);
+    }),
+
+  /**
+   * Delete a single call log
+   */
+  deleteCallLog: requireRoleProcedure(managerialRoles)
+    .input(z.object({ callLogId: z.string() }))
+    .mutation(async ({ input }) => {
+      return StaffCallyzerService.deleteCallLog(input.callLogId);
+    }),
+
+  /**
+   * Bulk delete call logs
+   */
+  deleteCallLogsBulk: requireRoleProcedure(managerialRoles)
+    .input(z.object({ callLogIds: z.array(z.string()) }))
+    .mutation(async ({ input }) => {
+      return StaffCallyzerService.deleteCallLogsBulk(input.callLogIds);
+    }),
+
+  /**
+   * Create a manual call log / lead calling record
+   */
+  createManualCallLog: requireRoleProcedure(managerialRoles)
+    .input(
+      z.object({
+        userId: z.string().optional(),
+        contactName: z.string().min(1, "Contact name required"),
+        contactPhone: z.string().min(6, "Valid phone number required"),
+        callType: z.enum(["OUTGOING", "INCOMING", "MISSED", "REJECTED"]).default("OUTGOING"),
+        callStatus: z.enum(["CONNECTED", "BUSY", "NO_ANSWER", "FAILED"]).default("CONNECTED"),
+        durationSeconds: z.number().int().min(0).default(0),
+        disposition: z.string().min(1, "Disposition required").default("INTERESTED"),
+        notes: z.string().optional(),
+        nextFollowUpDate: z.date().nullable().optional(),
+        createdAt: z.date().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StaffCallyzerService.createManualCallLog(ctx.user.id, input);
+    }),
+
+  /**
+   * Export all matching call records for Excel / CSV download
+   */
+  exportCallLogs: requireRoleProcedure(managerialRoles)
+    .input(
+      z.object({
+        userId: z.string().optional(),
+        managerId: z.string().optional(),
+        roleCode: z.string().optional(),
+        disposition: z.string().optional(),
+        date: z.string().optional(),
+        search: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return StaffCallyzerService.exportCallLogs(input);
     }),
 
   /**

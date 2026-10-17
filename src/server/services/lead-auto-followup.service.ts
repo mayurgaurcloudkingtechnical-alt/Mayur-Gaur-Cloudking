@@ -261,7 +261,7 @@ export class LeadAutoFollowupService {
               summary: callSim.conversationSummary,
               recommendedAction: callSim.recommendedAction,
               recordingUrl,
-              transcript: callSim.transcript,
+              transcript: callSim.transcript as any,
             },
           },
         });

@@ -95,6 +95,7 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
   const updateConfigMutation = api.bulkCalling.updateGlobalConfig.useMutation();
   const upsertIdentityMutation = api.bulkCalling.upsertIdentity.useMutation();
   const addDncMutation = api.bulkCalling.addDnc.useMutation();
+  const removeDncMutation = api.bulkCalling.removeDnc.useMutation();
   const simulateCallMutation = api.bulkCalling.simulateCallTurn.useMutation();
   const initiateLiveCallMutation = api.bulkCalling.initiateLiveCall.useMutation({
     onSuccess: (data) => {

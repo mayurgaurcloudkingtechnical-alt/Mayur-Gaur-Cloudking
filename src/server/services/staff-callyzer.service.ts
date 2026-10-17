@@ -770,24 +770,198 @@ export class StaffCallyzerService {
   }
 
   /**
-   * Edit Call Log (Notes, Disposition, Next Follow-up)
+   * Edit Call Log (All fields editable)
    */
   static async updateCallLog(input: {
     callLogId: string;
+    contactName?: string;
+    contactPhone?: string;
+    callType?: string;
+    callStatus?: string;
+    durationSeconds?: number;
     disposition?: string;
     notes?: string;
-    nextFollowUpDate?: Date;
+    nextFollowUpDate?: Date | null;
+    userId?: string;
+    roleCode?: string;
+    createdAt?: Date;
   }) {
+    // Determine roleCode if userId changed
+    let roleCodeToSet = input.roleCode;
+    if (input.userId) {
+      const user = await db.user.findUnique({
+        where: { id: input.userId },
+        select: { roleCode: true },
+      });
+      if (user && !roleCodeToSet) {
+        roleCodeToSet = user.roleCode;
+      }
+    }
+
     const updated = await db.staffCallLog.update({
       where: { id: input.callLogId },
       data: {
-        ...(input.disposition ? { disposition: input.disposition } : {}),
+        ...(input.contactName !== undefined ? { contactName: input.contactName } : {}),
+        ...(input.contactPhone !== undefined ? { contactPhone: input.contactPhone } : {}),
+        ...(input.callType !== undefined ? { callType: input.callType } : {}),
+        ...(input.callStatus !== undefined ? { callStatus: input.callStatus } : {}),
+        ...(input.durationSeconds !== undefined ? { durationSeconds: input.durationSeconds } : {}),
+        ...(input.disposition !== undefined ? { disposition: input.disposition } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
         ...(input.nextFollowUpDate !== undefined ? { nextFollowUpDate: input.nextFollowUpDate } : {}),
+        ...(input.userId !== undefined ? { userId: input.userId } : {}),
+        ...(roleCodeToSet ? { roleCode: roleCodeToSet } : {}),
+        ...(input.createdAt !== undefined ? { createdAt: input.createdAt, startedAt: input.createdAt } : {}),
       },
     });
 
     return updated;
+  }
+
+  /**
+   * Delete single call log
+   */
+  static async deleteCallLog(callLogId: string) {
+    return db.staffCallLog.delete({
+      where: { id: callLogId },
+    });
+  }
+
+  /**
+   * Bulk delete call logs
+   */
+  static async deleteCallLogsBulk(callLogIds: string[]) {
+    return db.staffCallLog.deleteMany({
+      where: { id: { in: callLogIds } },
+    });
+  }
+
+  /**
+   * Create a manual call log / lead activity entry
+   */
+  static async createManualCallLog(
+    creatorUserId: string,
+    input: {
+      userId?: string;
+      contactName: string;
+      contactPhone: string;
+      callType?: string;
+      callStatus?: string;
+      durationSeconds?: number;
+      disposition: string;
+      notes?: string;
+      nextFollowUpDate?: Date | null;
+      createdAt?: Date;
+    }
+  ) {
+    const targetUserId = input.userId || creatorUserId;
+    const user = await db.user.findUnique({
+      where: { id: targetUserId },
+      select: { roleCode: true, staffProfile: { select: { id: true } } },
+    });
+
+    return db.staffCallLog.create({
+      data: {
+        userId: targetUserId,
+        staffProfileId: user?.staffProfile?.id || null,
+        contactName: input.contactName,
+        contactPhone: input.contactPhone,
+        callType: input.callType || "OUTGOING",
+        callStatus: input.callStatus || "CONNECTED",
+        durationSeconds: input.durationSeconds || 0,
+        disposition: input.disposition || "INTERESTED",
+        notes: input.notes,
+        nextFollowUpDate: input.nextFollowUpDate,
+        roleCode: user?.roleCode || "TELECALLER",
+        createdAt: input.createdAt || new Date(),
+        startedAt: input.createdAt || new Date(),
+      },
+    });
+  }
+
+  /**
+   * Export all matching call logs for Excel / CSV without small pagination cutoff
+   */
+  static async exportCallLogs(input: {
+    userId?: string;
+    managerId?: string;
+    roleCode?: string;
+    disposition?: string;
+    date?: string;
+    search?: string;
+  }) {
+    const where: any = {};
+
+    if (input.userId) where.userId = input.userId;
+    if (input.roleCode && input.roleCode !== "ALL") where.roleCode = input.roleCode;
+    if (input.disposition && input.disposition !== "ALL") where.disposition = input.disposition;
+
+    if (input.managerId && input.managerId !== "ALL") {
+      if (input.managerId === "UNASSIGNED") {
+        where.user = { staffProfile: { reportingManagerId: null } };
+      } else {
+        where.user = {
+          OR: [
+            { staffProfile: { reportingManagerId: input.managerId } },
+            { staffProfile: { id: input.managerId } },
+          ],
+        };
+      }
+    }
+
+    if (input.date) {
+      const selected = new Date(input.date);
+      const start = new Date(selected);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(selected);
+      end.setHours(23, 59, 59, 999);
+      where.createdAt = { gte: start, lte: end };
+    }
+
+    if (input.search && input.search.trim()) {
+      where.OR = [
+        { contactName: { contains: input.search.trim(), mode: "insensitive" } },
+        { contactPhone: { contains: input.search.trim() } },
+        { notes: { contains: input.search.trim(), mode: "insensitive" } },
+      ];
+    }
+
+    const logs = await db.staffCallLog.findMany({
+      where,
+      take: 5000,
+      orderBy: { createdAt: "desc" },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            roleCode: true,
+            staffProfile: {
+              select: {
+                employeeId: true,
+                reportingManager: {
+                  select: {
+                    user: {
+                      select: { firstName: true, lastName: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return logs.map((log: any) => ({
+      ...log,
+      durationFormatted: this.formatDuration(log.durationSeconds),
+      callerEmployeeId: log.user?.staffProfile?.employeeId || null,
+      reportingManagerName: log.user?.staffProfile?.reportingManager?.user
+        ? `${log.user.staffProfile.reportingManager.user.firstName} ${log.user.staffProfile.reportingManager.user.lastName}`
+        : "Head Office Direct",
+    }));
   }
 
   /**

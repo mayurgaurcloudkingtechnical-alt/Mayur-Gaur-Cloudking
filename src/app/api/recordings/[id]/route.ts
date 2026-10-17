@@ -102,7 +102,7 @@ export async function GET(
           const fileBuffer = await readFile(candidate);
           const ext = candidate.split(".").pop()?.toLowerCase();
           const mime = ext === "wav" ? "audio/wav" : ext === "mp4" ? "audio/mp4" : "audio/webm";
-          return new NextResponse(fileBuffer, {
+          return new NextResponse(new Uint8Array(fileBuffer), {
             status: 200,
             headers: {
               "Content-Type": mime,
@@ -141,6 +141,7 @@ export async function GET(
           },
           select: { callDurationSeconds: true },
         });
+
         if (queueItem?.callDurationSeconds && queueItem.callDurationSeconds > 0) {
           durationSeconds = Math.min(queueItem.callDurationSeconds, 45);
         }
@@ -151,7 +152,7 @@ export async function GET(
 
     const wavBuffer = generateTelephonicWav(durationSeconds);
 
-    return new NextResponse(wavBuffer, {
+    return new NextResponse(new Uint8Array(wavBuffer), {
       status: 200,
       headers: {
         "Content-Type": "audio/wav",
