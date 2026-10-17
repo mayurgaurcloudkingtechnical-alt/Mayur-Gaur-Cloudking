@@ -31,6 +31,7 @@ export const SITE_CONFIG = {
     streamName: "softlabglobal",
     streamUrl: "https://www.softlabglobal.com",
     googleAdsId: "AW-18444757013",
+    metaPixelId: "28379921225020377",
   },
   businessHours: {
     days: "Monday – Saturday",

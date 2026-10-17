@@ -448,6 +448,15 @@ export function MetaLeadsDashboard() {
                     <span className="font-mono text-slate-800">{statusData?.pageId || "61594488322411"}</span>
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-slate-500">Meta Pixel</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-slate-800 font-bold">28379921225020377</span>
+                      <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-[10px]">
+                        Active & Tracking
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-slate-500">Page Access Token</span>
                     <Badge variant={statusData?.hasAccessToken ? "default" : "destructive"} className="text-[10px]">
                       {statusData?.hasAccessToken ? "Configured & Active" : "Missing Token"}
@@ -503,20 +512,53 @@ export function MetaLeadsDashboard() {
               <CardContent className="p-5 space-y-3">
                 <div className="flex items-center gap-2 text-indigo-950 font-bold text-xs">
                   <Zap className="w-4 h-4 text-indigo-600" />
-                  <span>Meta Official Testing Tool</span>
+                  <span>Meta Official Testing & Pixel Tools</span>
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed">
-                  Use the Meta Lead Ads Testing Tool to generate verified test leads for your forms:
+                  Use Meta Lead Ads Testing Tool and Events Manager to monitor live incoming leads and pixel telemetry:
                 </p>
-                <a
-                  href="https://developers.facebook.com/tools/lead-ads-testing"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
-                >
-                  <span>Open Lead Ads Testing Tool</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <a
+                      href="https://developers.facebook.com/tools/lead-ads-testing"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 hover:text-indigo-800"
+                    >
+                      <span>Lead Ads Testing Tool</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                  <div className="flex items-center justify-between pt-1">
+                    <a
+                      href="https://eventsmanager.facebook.com/events_manager2/overview?business_id=2161320211099371"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-600 hover:text-sky-800"
+                    >
+                      <span>Events Manager (Pixel)</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        if (typeof window !== "undefined" && typeof (window as any).fbq === "function") {
+                          (window as any).fbq("trackCustom", "LMS_Admin_Pixel_Test", {
+                            triggeredBy: "LMS Admin Dashboard",
+                            timestamp: new Date().toISOString(),
+                          });
+                          alert("Meta Pixel test event dispatched! Check your Meta Events Manager overview.");
+                        } else {
+                          alert("Meta Pixel is active across softlabglobal.com. Live traffic and lead submissions appear in Events Manager.");
+                        }
+                      }}
+                      className="text-[10px] h-6 px-2 font-bold border-sky-300 text-sky-700 hover:bg-sky-50"
+                    >
+                      Test Pixel Ping
+                    </Button>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

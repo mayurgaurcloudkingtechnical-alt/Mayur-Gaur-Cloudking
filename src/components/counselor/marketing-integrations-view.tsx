@@ -115,7 +115,7 @@ export function MarketingIntegrationsView() {
       secretKey: "softlab_meta_leadgen_2026",
       count: (channelCounts[LeadSource.META_ADS_FB] || 0) + (channelCounts[LeadSource.META_ADS_IG] || 0) + (channelCounts[LeadSource.META] || 0),
       description: "Instant ingestion of candidate form submissions from Facebook Newsfeed & Instagram Story Sponsored Ads.",
-      configInfo: "Verify Token: softlab_meta_leadgen_2026 • Multi-Role Alerts Active",
+      configInfo: "Meta Pixel: 28379921225020377 • Verify Token: softlab_meta_leadgen_2026",
     },
     {
       id: "google_ads",
