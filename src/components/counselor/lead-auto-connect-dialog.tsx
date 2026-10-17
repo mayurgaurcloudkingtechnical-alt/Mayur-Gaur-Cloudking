@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
 } from "lucide-react";
+import { CallRecordingPlayer } from "@/components/common/call-recording-player";
 
 interface LeadAutoConnectDialogProps {
   open: boolean;
@@ -304,9 +305,19 @@ export function LeadAutoConnectDialog({ open, onClose, onComplete }: LeadAutoCon
                           </Badge>
                         )}
                         {r.aiCallCompleted && (
-                          <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                            AI Call: {r.callOutcome || "COMPLETED"}
-                          </Badge>
+                          <>
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
+                              AI Call: {r.callOutcome || "COMPLETED"}
+                            </Badge>
+                            <CallRecordingPlayer
+                              recordingUrl={r.recordingUrl}
+                              transcript={r.transcript}
+                              contactName={r.leadName}
+                              contactPhone={r.phone}
+                              disposition={r.callOutcome}
+                              compact={true}
+                            />
+                          </>
                         )}
                         {r.interestLevel === "HOT" && (
                           <Badge className="text-[10px] bg-rose-500 text-white font-bold">

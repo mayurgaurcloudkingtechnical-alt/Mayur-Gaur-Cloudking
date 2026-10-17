@@ -2,6 +2,7 @@ import { db } from "@/server/db/client";
 import { LeadStatus, CallingOutcome, FollowUpType } from "@prisma/client";
 import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AiCallingAgentService } from "./ai-calling-agent.service";
+import { StaffCallyzerService } from "./staff-callyzer.service";
 
 export interface AutoFollowupBatchInput {
   mode: "WHATSAPP" | "AI_CALLING" | "BOTH";
@@ -24,6 +25,8 @@ export interface AutoFollowupLeadResult {
   callOutcome?: CallingOutcome;
   interestLevel?: string;
   callSummary?: string;
+  recordingUrl?: string;
+  transcript?: any;
   error?: string;
 }
 
@@ -211,11 +214,14 @@ export class LeadAutoFollowupService {
   public static async dispatchAiCallFollowup(params: {
     lead: any;
     courseTitle?: string;
+    actorId?: string;
   }): Promise<{
     success: boolean;
     outcome?: CallingOutcome;
     interestLevel?: string;
     summary?: string;
+    recordingUrl?: string;
+    transcript?: any;
   }> {
     const { lead } = params;
     const course = params.courseTitle || (lead as any).course?.title || "Advanced Software & AI Engineering";
@@ -237,6 +243,9 @@ export class LeadAutoFollowupService {
         simulatedScenario: "INTERESTED_STUDENT",
       });
 
+      const recordingId = `call_${Date.now()}_${lead.id.slice(-6)}`;
+      const recordingUrl = `/api/recordings/${recordingId}`;
+
       if (callSim) {
         // 1. Record call on CustomerTimelineEvent
         await db.customerTimelineEvent.create({
@@ -251,6 +260,8 @@ export class LeadAutoFollowupService {
               durationSeconds: callSim.durationSeconds,
               summary: callSim.conversationSummary,
               recommendedAction: callSim.recommendedAction,
+              recordingUrl,
+              transcript: callSim.transcript,
             },
           },
         });
@@ -259,9 +270,10 @@ export class LeadAutoFollowupService {
         await db.leadActivity.create({
           data: {
             leadId: lead.id,
+            userId: params.actorId || lead.assignedToId || undefined,
             activityType: "AI_VOICE_CALL",
             disposition: callSim.callOutcome,
-            notes: `AI Voice Outreach: ${callSim.conversationSummary}`,
+            notes: `AI Voice Outreach (${callSim.durationSeconds}s): ${callSim.conversationSummary}`,
           },
         });
 
@@ -281,6 +293,27 @@ export class LeadAutoFollowupService {
             temperature: callSim.interestLevel === "HOT" ? "HOT" : (lead.temperature || "WARM"),
           },
         });
+
+        // 4. Log to StaffCallyzerService so Callyzer live tracking & metrics reflect immediately!
+        const callerUserId = params.actorId || lead.assignedToId || lead.assignedCounselorId || lead.assignedTelecallerId;
+        if (callerUserId) {
+          try {
+            await StaffCallyzerService.logCallActivity(callerUserId, {
+              contactName: lead.fullName,
+              contactPhone: lead.phone,
+              callType: "OUTGOING",
+              callStatus: "CONNECTED",
+              disposition: callSim.callOutcome,
+              durationSeconds: callSim.durationSeconds || 120,
+              notes: `[AI Voice Follow-up]: ${callSim.conversationSummary}`,
+              leadId: lead.id,
+              recordingUrl,
+              transcript: callSim.transcript,
+            });
+          } catch (callLogErr: any) {
+            console.warn(`[LeadAutoFollowupService] Failed to log call activity for caller ${callerUserId}:`, callLogErr.message);
+          }
+        }
       }
 
       return {
@@ -288,6 +321,8 @@ export class LeadAutoFollowupService {
         outcome: callSim.callOutcome,
         interestLevel: callSim.interestLevel,
         summary: callSim.conversationSummary,
+        recordingUrl,
+        transcript: callSim.transcript,
       };
     } catch (err: any) {
       console.error(`[LeadAutoFollowupService] AI Calling error for ${lead.phone}:`, err.message);
@@ -351,6 +386,9 @@ export class LeadAutoFollowupService {
       let interestLevel: string | undefined;
       let callSummary: string | undefined;
 
+      let callRecordingUrl: string | undefined;
+      let callTranscript: any | undefined;
+
       // 1. WhatsApp follow-up
       if (input.mode === "WHATSAPP" || input.mode === "BOTH") {
         waSuccess = await this.dispatchWhatsAppFollowup({
@@ -367,11 +405,14 @@ export class LeadAutoFollowupService {
         const callRes = await this.dispatchAiCallFollowup({
           lead,
           courseTitle,
+          actorId: input.actorId,
         });
         aiCallSuccess = callRes.success;
         callOutcome = callRes.outcome;
         interestLevel = callRes.interestLevel;
         callSummary = callRes.summary;
+        callRecordingUrl = callRes.recordingUrl;
+        callTranscript = callRes.transcript;
 
         if (aiCallSuccess) {
           aiCallsCompletedCount++;
@@ -408,6 +449,8 @@ export class LeadAutoFollowupService {
         callOutcome,
         interestLevel,
         callSummary,
+        recordingUrl: callRecordingUrl,
+        transcript: callTranscript,
       });
     }
 

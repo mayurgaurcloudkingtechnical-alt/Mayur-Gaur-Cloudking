@@ -12,6 +12,8 @@ export interface LogCallInput {
   notes?: string;
   nextFollowUpDate?: Date;
   leadId?: string;
+  recordingUrl?: string;
+  transcript?: any;
 }
 
 export interface UpdateLiveStatusInput {
@@ -191,6 +193,8 @@ export class StaffCallyzerService {
         notes: input.notes?.trim() || null,
         nextFollowUpDate: input.nextFollowUpDate || null,
         roleCode: user.roleCode,
+        recordingUrl: input.recordingUrl || null,
+        transcript: input.transcript ? (typeof input.transcript === "string" ? JSON.parse(input.transcript) : input.transcript) : undefined,
       },
     });
 
@@ -399,6 +403,8 @@ export class StaffCallyzerService {
             disposition: true,
             durationSeconds: true,
             notes: true,
+            recordingUrl: true,
+            transcript: true,
             createdAt: true,
           },
           orderBy: { createdAt: "desc" },

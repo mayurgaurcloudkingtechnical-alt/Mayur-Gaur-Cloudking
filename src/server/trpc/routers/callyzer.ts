@@ -84,6 +84,8 @@ export const callyzerRouter = router({
         notes: z.string().optional(),
         nextFollowUpDate: z.date().optional(),
         leadId: z.string().optional(),
+        recordingUrl: z.string().optional(),
+        transcript: z.any().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {

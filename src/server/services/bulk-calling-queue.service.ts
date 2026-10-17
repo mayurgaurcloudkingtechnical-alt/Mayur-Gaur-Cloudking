@@ -8,15 +8,20 @@ import { VoiceProviderFactory } from "./voice-providers/voice-provider.factory";
 import { BulkCallingCrmIntegrationService } from "./bulk-calling-crm-integration.service";
 import { normalizePhone } from "./crm-lead.service";
 import { CallerIdentityService } from "./caller-identity.service";
+import { StaffCallyzerService } from "./staff-callyzer.service";
 
 export class BulkCallingQueueService {
   // In-memory registry of actively executing batch loops to prevent duplicate execution
   private static activeBatchWorkers = new Set<string>();
+  private static forcedBatches = new Set<string>();
 
   /**
    * Validates if current time is within permitted calling hours
    */
-  public static isWithinCallingHours(startTime = "10:00", endTime = "19:00"): boolean {
+  public static isWithinCallingHours(startTime = "10:00", endTime = "19:00", forceOverride = false): boolean {
+    if (forceOverride) return true;
+    if (startTime === "00:00" && endTime === "23:59") return true;
+
     const now = new Date();
     // Convert to Indian Standard Time (IST, UTC+5:30)
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -38,7 +43,7 @@ export class BulkCallingQueueService {
   /**
    * Starts calling a batch
    */
-  public static async startBatch(batchId: string, userId: string): Promise<{ success: boolean; message: string }> {
+  public static async startBatch(batchId: string, userId: string, forceNow: boolean = false): Promise<{ success: boolean; message: string }> {
     const batch = await db.bulkCallingBatch.findUnique({
       where: { id: batchId },
     });
@@ -51,12 +56,16 @@ export class BulkCallingQueueService {
       return { success: true, message: "Batch is already running" };
     }
 
-    // Check calling hours
-    if (!this.isWithinCallingHours(batch.callingHoursStart, batch.callingHoursEnd)) {
+    // Check calling hours (bypassed if forceNow is true or manual override)
+    if (!this.isWithinCallingHours(batch.callingHoursStart, batch.callingHoursEnd, forceNow)) {
       return {
         success: false,
         message: `Current time is outside permitted calling hours (${batch.callingHoursStart} - ${batch.callingHoursEnd} IST). Batch will resume automatically during the next calling window.`,
       };
+    }
+
+    if (forceNow) {
+      this.forcedBatches.add(batchId);
     }
 
     await db.bulkCallingBatch.update({
@@ -177,8 +186,9 @@ export class BulkCallingQueueService {
         break; // Stop loop if status is no longer RUNNING
       }
 
-      // 2. Calling hours check
-      if (!this.isWithinCallingHours(batch.callingHoursStart, batch.callingHoursEnd)) {
+      // 2. Calling hours check (bypassed if forceNow initiated)
+      const isForced = this.forcedBatches.has(batchId);
+      if (!this.isWithinCallingHours(batch.callingHoursStart, batch.callingHoursEnd, isForced)) {
         await db.bulkCallingBatch.update({
           where: { id: batchId },
           data: { status: CallingBatchStatus.PAUSED },
@@ -191,6 +201,7 @@ export class BulkCallingQueueService {
             details: { message: "Calling queue automatically paused outside permitted calling hours" },
           },
         });
+        this.forcedBatches.delete(batchId);
         break;
       }
 
@@ -212,6 +223,7 @@ export class BulkCallingQueueService {
 
       // If no more items in queue, batch is complete!
       if (!nextItem) {
+        this.forcedBatches.delete(batchId);
         await db.bulkCallingBatch.update({
           where: { id: batchId },
           data: {
@@ -312,7 +324,9 @@ export class BulkCallingQueueService {
     if (response.success && response.result) {
       const res = response.result;
 
-      // Update queue item with call outcome and extracted insights
+      const recordingUrl = `/api/recordings/ai_batch_${item.id}_${Date.now()}`;
+
+      // Update queue item with call outcome, extracted insights and recordingUrl
       await db.callingQueueItem.update({
         where: { id: item.id },
         data: {
@@ -333,6 +347,7 @@ export class BulkCallingQueueService {
           transcript: res.transcript as any,
           callDurationSeconds: res.durationSeconds,
           providerCallId: response.providerCallId,
+          recordingUrl,
         },
       });
 
@@ -346,6 +361,23 @@ export class BulkCallingQueueService {
         });
       } catch (crmErr) {
         console.error("[CRM Sync Error]:", crmErr);
+      }
+
+      // Synchronize with StaffCallyzerService call logs and agent metrics
+      try {
+        await StaffCallyzerService.logCallActivity(userId, {
+          contactName: item.name || "Prospective Student",
+          contactPhone: item.phone,
+          callType: "OUTGOING",
+          callStatus: "CONNECTED",
+          disposition: res.callOutcome || "INTERESTED",
+          durationSeconds: res.durationSeconds || 120,
+          notes: `[Bulk AI Calling - Batch: ${batch.name}]: ${res.conversationSummary}`,
+          recordingUrl,
+          transcript: res.transcript,
+        });
+      } catch (callyzerErr) {
+        console.warn("[Bulk Calling Callyzer Sync Error]:", callyzerErr);
       }
 
       // Update metrics on batch

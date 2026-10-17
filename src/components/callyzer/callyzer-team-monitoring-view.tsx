@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CallyzerAppReportView } from "@/components/callyzer/callyzer-app-report-view";
+import { CallRecordingPlayer } from "@/components/common/call-recording-player";
 
 export function CallyzerTeamMonitoringView() {
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
@@ -598,6 +599,7 @@ export function CallyzerTeamMonitoringView() {
                   <th className="p-3">Talk-Time Duration</th>
                   <th className="p-3">Disposition / Outcome</th>
                   <th className="p-3">Notes & Next Follow-up</th>
+                  <th className="p-3">Audio Recording</th>
                   <th className="p-3">Time</th>
                   <th className="p-3 text-right">Action</th>
                 </tr>
@@ -605,7 +607,7 @@ export function CallyzerTeamMonitoringView() {
               <tbody className="divide-y divide-slate-100">
                 {callLogs.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-8 text-center text-slate-400 font-semibold">
+                    <td colSpan={9} className="p-8 text-center text-slate-400 font-semibold">
                       No call records logged for this filter.
                     </td>
                   </tr>
@@ -659,6 +661,17 @@ export function CallyzerTeamMonitoringView() {
                             Follow-up: {new Date(log.nextFollowUpDate).toLocaleDateString()}
                           </p>
                         )}
+                      </td>
+                      <td className="p-3">
+                        <CallRecordingPlayer
+                          recordingUrl={log.recordingUrl}
+                          transcript={log.transcript}
+                          contactName={log.contactName}
+                          contactPhone={log.contactPhone}
+                          callDurationSeconds={log.durationSeconds}
+                          disposition={log.disposition}
+                          compact={true}
+                        />
                       </td>
                       <td className="p-3 text-[11px] text-slate-500">
                         {new Date(log.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -716,7 +729,18 @@ export function CallyzerTeamMonitoringView() {
                     </div>
                     <div className="flex items-center justify-between text-slate-500">
                       <span>Outcome: <strong className="text-slate-800">{c.disposition}</strong></span>
-                      <span>{new Date(c.createdAt).toLocaleTimeString()}</span>
+                      <div className="flex items-center gap-2">
+                        <CallRecordingPlayer
+                          recordingUrl={c.recordingUrl}
+                          transcript={c.transcript}
+                          contactName={c.contactName}
+                          contactPhone={c.contactPhone}
+                          callDurationSeconds={c.durationSeconds}
+                          disposition={c.disposition}
+                          compact={true}
+                        />
+                        <span>{new Date(c.createdAt).toLocaleTimeString()}</span>
+                      </div>
                     </div>
                     {c.notes && <p className="text-[11px] text-slate-600 italic bg-white p-2 rounded border border-slate-100">{c.notes}</p>}
                   </div>

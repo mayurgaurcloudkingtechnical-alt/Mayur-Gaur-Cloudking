@@ -328,9 +328,9 @@ export const bulkCallingRouter = router({
    * 6. Batch Calling Controls (Start, Pause, Resume, Stop)
    */
   startBatch: requireRoleProcedure(BULK_CALLING_ROLES)
-    .input(z.object({ batchId: z.string() }))
+    .input(z.object({ batchId: z.string(), forceNow: z.boolean().optional() }))
     .mutation(async ({ ctx, input }) => {
-      return BulkCallingQueueService.startBatch(input.batchId, ctx.user.id);
+      return BulkCallingQueueService.startBatch(input.batchId, ctx.user.id, input.forceNow ?? true);
     }),
 
   pauseBatch: requireRoleProcedure(BULK_CALLING_ROLES)
