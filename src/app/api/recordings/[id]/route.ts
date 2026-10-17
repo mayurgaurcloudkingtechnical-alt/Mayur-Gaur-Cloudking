@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import { existsSync } from "fs";
+import { join } from "path";
 import { db } from "@/server/db/client";
 
 /**
@@ -85,7 +88,35 @@ export async function GET(
       return new NextResponse("Recording ID required", { status: 400 });
     }
 
-    // Attempt to lookup call log or queue item for actual duration and metadata
+    // 1. Check if a real audio file exists in public/uploads/recordings/
+    const recordingsDir = join(process.cwd(), "public", "uploads", "recordings");
+    if (existsSync(recordingsDir)) {
+      const candidateFiles = [
+        join(recordingsDir, `${recordingId}.webm`),
+        join(recordingsDir, `${recordingId}.wav`),
+        join(recordingsDir, `${recordingId}.mp4`),
+        join(recordingsDir, `${recordingId}`),
+      ];
+      for (const candidate of candidateFiles) {
+        if (existsSync(candidate)) {
+          const fileBuffer = await readFile(candidate);
+          const ext = candidate.split(".").pop()?.toLowerCase();
+          const mime = ext === "wav" ? "audio/wav" : ext === "mp4" ? "audio/mp4" : "audio/webm";
+          return new NextResponse(fileBuffer, {
+            status: 200,
+            headers: {
+              "Content-Type": mime,
+              "Content-Length": fileBuffer.length.toString(),
+              "Content-Disposition": `inline; filename="${recordingId}.${ext}"`,
+              "Accept-Ranges": "bytes",
+              "Cache-Control": "public, max-age=86400",
+            },
+          });
+        }
+      }
+    }
+
+    // 2. Otherwise lookup call log or queue item for actual duration and stream audio
     let durationSeconds = 15;
     try {
       const callLog = await db.staffCallLog.findFirst({

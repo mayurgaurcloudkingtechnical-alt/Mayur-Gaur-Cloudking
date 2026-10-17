@@ -137,9 +137,6 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
         </div>
       </div>
 
-      {/* Callyzer Live Telephony Desk & Active Workstation */}
-      <CallyzerWorkstationWidget />
-
       {/* Alert if follow-ups are due */}
       {dueCount > 0 && (
         <div className="flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-900">

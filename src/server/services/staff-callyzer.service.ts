@@ -604,6 +604,15 @@ export class StaffCallyzerService {
         conversions,
         targetProgressPercent: Math.min(100, Math.round((totalCallsToday / session.dailyTargetCalls) * 100)),
       },
+      user: {
+        id: (session as any).user?.id || userId,
+        fullName: `${(session as any).user?.firstName || ""} ${(session as any).user?.lastName || ""}`.trim() || "Staff Member",
+        phone: (session as any).user?.phone || null,
+        roleCode: (session as any).user?.roleCode,
+        employeeId: (session as any).user?.staffProfile?.employeeId || null,
+        department: (session as any).user?.staffProfile?.department || null,
+        branch: (session as any).user?.staffProfile?.branch || null,
+      },
       todayCalls,
       pendingTasks,
     };
