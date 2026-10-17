@@ -154,4 +154,30 @@ export const callyzerRouter = router({
         },
       });
     }),
+
+  /**
+   * Callyzer Mobile App-Style Summary & Analysis Report
+   * Matches exact Callyzer mobile layout (Summary 8-card grid, Analysis breakdown, WhatsApp export)
+   */
+  getCallyzerSummaryReport: requireRoleProcedure(managerialRoles)
+    .input(
+      z
+        .object({
+          userId: z.string().optional(),
+          preset: z.enum(["TODAY", "YESTERDAY", "LAST_7_DAYS", "THIS_MONTH", "CUSTOM"]).optional(),
+          startDate: z.string().optional(),
+          endDate: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      return StaffCallyzerService.getCallyzerSummaryReport(ctx.user, input);
+    }),
+
+  /**
+   * List staff members (Counselors, Telecallers, Managers) for Callyzer switcher
+   */
+  listStaffForCallyzer: requireRoleProcedure(managerialRoles).query(async ({ ctx }) => {
+    return StaffCallyzerService.getStaffMembersListForCallyzer(ctx.user);
+  }),
 });

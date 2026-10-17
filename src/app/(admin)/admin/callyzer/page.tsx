@@ -13,6 +13,8 @@ export default async function AdminCallyzerPage() {
     UserRoleCode.ADMIN,
     UserRoleCode.MANAGER,
     UserRoleCode.HR,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TELECALLER,
   ]);
 
   return (

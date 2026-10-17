@@ -30,12 +30,13 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CallyzerAppReportView } from "@/components/callyzer/callyzer-app-report-view";
 
 export function CallyzerTeamMonitoringView() {
   const [selectedRole, setSelectedRole] = useState<string>("ALL");
   const [selectedManager, setSelectedManager] = useState<string>("ALL");
   const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState<"live" | "logs">("live");
+  const [activeTab, setActiveTab] = useState<"report" | "live" | "logs">("report");
   const [selectedStaffForLogs, setSelectedStaffForLogs] = useState<any | null>(null);
   const [editingCallLog, setEditingCallLog] = useState<any | null>(null);
   const [editDisposition, setEditDisposition] = useState("");
@@ -331,12 +332,23 @@ export function CallyzerTeamMonitoringView() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-lg">
               <button
+                onClick={() => setActiveTab("report")}
+                className={`px-3 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                  activeTab === "report" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                <span>📊 Calling Summary & Analysis</span>
+                <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-[10px] px-1 py-0">
+                  App Format
+                </Badge>
+              </button>
+              <button
                 onClick={() => setActiveTab("live")}
                 className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
                   activeTab === "live" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Live Team Feed ({staffList.length})
+                🔴 Live Telephony Feed ({staffList.length})
               </button>
               <button
                 onClick={() => setActiveTab("logs")}
@@ -344,7 +356,7 @@ export function CallyzerTeamMonitoringView() {
                   activeTab === "logs" ? "bg-white text-slate-900 shadow-xs" : "text-slate-600 hover:text-slate-900"
                 }`}
               >
-                Call History Logs ({callLogs.length})
+                📋 Call History Logs ({callLogs.length})
               </button>
             </div>
 
@@ -396,6 +408,9 @@ export function CallyzerTeamMonitoringView() {
           </div>
         </CardContent>
       </Card>
+
+      {/* TAB 0: CALLYZER APP FORMAT REPORT (SUMMARY & ANALYSIS) */}
+      {activeTab === "report" && <CallyzerAppReportView />}
 
       {/* TAB 1: LIVE TEAM MONITORING FEED */}
       {activeTab === "live" && (

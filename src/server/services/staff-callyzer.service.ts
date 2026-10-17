@@ -774,4 +774,425 @@ export class StaffCallyzerService {
 
     return updated;
   }
+
+  /**
+   * Formats structured Callyzer calling report for WhatsApp group and direct message
+   */
+  static formatCallyzerWhatsAppReport(data: {
+    staffName: string;
+    employeeId?: string;
+    roleCode?: string;
+    dateLabel: string;
+    totalCalls: number;
+    totalTalkTime: string;
+    incomingCalls: number;
+    incomingTalkTime: string;
+    outgoingCalls: number;
+    outgoingTalkTime: string;
+    missedCalls: number;
+    rejectedCalls: number;
+    neverAttendedCalls: number;
+    notPickupByClient: number;
+    uniqueCalls: number;
+    connectedCalls: number;
+    conversions: number;
+    connectionRate: number;
+    avgDuration: string;
+  }): string {
+    const lines = [
+      `📊 *SOFTLAB GLOBAL — CALLYZER CALLING REPORT* 📞`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `👤 *Staff Member*: ${data.staffName}${data.employeeId ? ` (${data.employeeId})` : ""}`,
+      `💼 *Designation/Role*: ${data.roleCode || "Counseling / Telecalling"}`,
+      `📅 *Reporting Period*: ${data.dateLabel}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `📱 *SUMMARY METRICS*:`,
+      `• 📞 *Total Phone Calls*: ${data.totalCalls} [⏱️ ${data.totalTalkTime}]`,
+      `• 🟢 *Incoming Calls*: ${data.incomingCalls} [⏱️ ${data.incomingTalkTime}]`,
+      `• 🟠 *Outgoing Calls*: ${data.outgoingCalls} [⏱️ ${data.outgoingTalkTime}]`,
+      `• 🔴 *Missed Calls*: ${data.missedCalls}`,
+      `• 🚫 *Rejected Calls*: ${data.rejectedCalls}`,
+      `• 📴 *Never Attended Calls*: ${data.neverAttendedCalls}`,
+      `• 📵 *Not Picked by Client*: ${data.notPickupByClient}`,
+      `• 👥 *Unique Calls / Clients*: ${data.uniqueCalls}`,
+      ``,
+      `🎯 *PERFORMANCE & EFFICIENCY*:`,
+      `• ✅ *Connected Conversations*: ${data.connectedCalls} (${data.connectionRate}% Rate)`,
+      `• ⏱️ *Average Talk Time*: ${data.avgDuration}`,
+      `• 🌟 *Interested / Conversions*: ${data.conversions}`,
+      `━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`,
+      `🌐 *SoftLab Global LMS*: https://softlabglobal.com/admin/callyzer`,
+      `✨ *Daily performance auto-logged by Callyzer Telephony Engine* ✨`,
+    ];
+    return lines.join("\n");
+  }
+
+  /**
+   * Fetches active staff list (Counselors, Telecallers, Managers) for Callyzer reporting switcher
+   */
+  static async getStaffMembersListForCallyzer(actor: { id: string; roleCode: UserRoleCode }) {
+    const roles: UserRoleCode[] = [
+      UserRoleCode.COUNSELOR,
+      UserRoleCode.TELECALLER,
+      UserRoleCode.ADMIN,
+      UserRoleCode.MANAGER,
+      UserRoleCode.DIRECTOR,
+      UserRoleCode.SUPER_ADMIN,
+    ];
+
+    const where: any = {
+      roleCode: { in: roles },
+      status: "ACTIVE",
+    };
+
+    if (actor.roleCode === UserRoleCode.MANAGER) {
+      const myProfile = await db.staffProfile.findUnique({
+        where: { userId: actor.id },
+        select: { id: true },
+      });
+      if (myProfile) {
+        where.OR = [
+          { staffProfile: { reportingManagerId: myProfile.id } },
+          { id: actor.id },
+        ];
+      }
+    }
+
+    const users = await db.user.findMany({
+      where,
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        roleCode: true,
+        phone: true,
+        callingNumber: true,
+        whatsappNumber: true,
+        avatarUrl: true,
+        staffProfile: {
+          select: {
+            employeeId: true,
+            designation: true,
+            department: true,
+          },
+        },
+      },
+      orderBy: [{ firstName: "asc" }],
+    });
+
+    return users.map((u) => ({
+      id: u.id,
+      name: `${u.firstName} ${u.lastName}`,
+      roleCode: u.roleCode,
+      employeeId: u.staffProfile?.employeeId || `SLG-${u.roleCode.slice(0, 3)}-${u.id.slice(0, 4)}`,
+      designation: u.staffProfile?.designation || u.roleCode,
+      department: u.staffProfile?.department || "ADMISSIONS",
+      phone: u.callingNumber || u.whatsappNumber || u.phone || "",
+      whatsappNumber: u.whatsappNumber || u.callingNumber || u.phone || "",
+      avatarUrl: u.avatarUrl,
+    }));
+  }
+
+  /**
+   * Get Callyzer App Format Summary & Analysis Report
+   * Exactly matches the Callyzer mobile application layout:
+   * - Total Phone Calls (count + duration)
+   * - Incoming Calls (count + duration)
+   * - Outgoing Calls (count + duration)
+   * - Missed Calls (count)
+   * - Rejected Calls (count)
+   * - Never Attended Calls (count)
+   * - Not Pickup by Client (count)
+   * - Unique Calls (count)
+   * Plus hourly distribution and disposition breakdown for Analysis tab
+   */
+  static async getCallyzerSummaryReport(
+    actor: { id: string; roleCode: UserRoleCode },
+    input?: {
+      userId?: string;
+      preset?: "TODAY" | "YESTERDAY" | "LAST_7_DAYS" | "THIS_MONTH" | "CUSTOM";
+      startDate?: string;
+      endDate?: string;
+    }
+  ) {
+    const preset = input?.preset || "TODAY";
+    const now = new Date();
+    let start = new Date();
+    let end = new Date();
+
+    if (preset === "TODAY") {
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === "YESTERDAY") {
+      start.setDate(now.getDate() - 1);
+      start.setHours(0, 0, 0, 0);
+      end.setDate(now.getDate() - 1);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === "LAST_7_DAYS") {
+      start.setDate(now.getDate() - 6);
+      start.setHours(0, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === "THIS_MONTH") {
+      start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+      end.setHours(23, 59, 59, 999);
+    } else if (preset === "CUSTOM" && input?.startDate && input?.endDate) {
+      start = new Date(input.startDate);
+      start.setHours(0, 0, 0, 0);
+      end = new Date(input.endDate);
+      end.setHours(23, 59, 59, 999);
+    }
+
+    const formatRangeLabel = (s: Date, e: Date, p: string) => {
+      const opts: Intl.DateTimeFormatOptions = { day: "2-digit", month: "short" };
+      const sDay = s.toLocaleDateString("en-US", opts);
+      const eDay = e.toLocaleDateString("en-US", opts);
+      if (p === "TODAY") {
+        return `${sDay} 12:00 AM - ${sDay} 11:59 PM`;
+      }
+      return `${sDay} 12:00 AM - ${eDay} 11:59 PM`;
+    };
+
+    const dateRangeLabel = formatRangeLabel(start, end, preset);
+
+    const where: any = {
+      createdAt: { gte: start, lte: end },
+    };
+
+    // Determine target user
+    let targetUser: any = null;
+    let isTeamReport = false;
+
+    const isDirectCaller = ([UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER] as UserRoleCode[]).includes(actor.roleCode);
+
+    if (input?.userId && input.userId !== "ALL") {
+      where.userId = input.userId;
+      targetUser = await db.user.findUnique({
+        where: { id: input.userId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          callingNumber: true,
+          whatsappNumber: true,
+          roleCode: true,
+          avatarUrl: true,
+          staffProfile: {
+            select: {
+              employeeId: true,
+              department: true,
+              designation: true,
+            },
+          },
+        },
+      });
+    } else if (isDirectCaller) {
+      // Counselor/Telecaller always defaults to themselves
+      where.userId = actor.id;
+      targetUser = await db.user.findUnique({
+        where: { id: actor.id },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          callingNumber: true,
+          whatsappNumber: true,
+          roleCode: true,
+          avatarUrl: true,
+          staffProfile: {
+            select: {
+              employeeId: true,
+              department: true,
+              designation: true,
+            },
+          },
+        },
+      });
+    } else {
+      isTeamReport = true;
+      if (actor.roleCode === UserRoleCode.MANAGER) {
+        const myProfile = await db.staffProfile.findUnique({
+          where: { userId: actor.id },
+          select: { id: true },
+        });
+        if (myProfile) {
+          where.user = {
+            OR: [
+              { staffProfile: { reportingManagerId: myProfile.id } },
+              { id: actor.id },
+            ],
+          };
+        }
+      }
+    }
+
+    const logs = await db.staffCallLog.findMany({
+      where,
+      select: {
+        id: true,
+        userId: true,
+        contactName: true,
+        contactPhone: true,
+        callType: true,
+        callStatus: true,
+        disposition: true,
+        durationSeconds: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const totalPhoneCalls = logs.length;
+    const totalTalkTimeSeconds = logs.reduce((acc, c) => acc + (c.durationSeconds || 0), 0);
+
+    // Incoming Calls
+    const incomingLogs = logs.filter((c) => c.callType === "INCOMING");
+    const incomingCalls = incomingLogs.length;
+    const incomingTalkTimeSeconds = incomingLogs.reduce((acc, c) => acc + (c.durationSeconds || 0), 0);
+
+    // Outgoing Calls
+    const outgoingLogs = logs.filter((c) => c.callType === "OUTGOING" || !c.callType);
+    const outgoingCalls = outgoingLogs.length;
+    const outgoingTalkTimeSeconds = outgoingLogs.reduce((acc, c) => acc + (c.durationSeconds || 0), 0);
+
+    // Missed Calls
+    const missedCalls = logs.filter(
+      (c) => c.callType === "MISSED" || (c.callType === "INCOMING" && (c.callStatus === "NO_ANSWER" || c.durationSeconds === 0))
+    ).length;
+
+    // Rejected Calls
+    const rejectedCalls = logs.filter(
+      (c) => c.callType === "REJECTED" || (c.callType === "INCOMING" && c.callStatus === "BUSY")
+    ).length;
+
+    // Never Attended Calls
+    const neverAttendedCalls = logs.filter(
+      (c) => c.callType === "INCOMING" && c.durationSeconds === 0
+    ).length;
+
+    // Not Pickup by Client (Outgoing calls where client didn't answer or duration 0)
+    const notPickupByClient = logs.filter(
+      (c) => (c.callType === "OUTGOING" || !c.callType) && (c.durationSeconds === 0 || c.callStatus === "NO_ANSWER" || c.disposition === "BUSY_NO_ANSWER")
+    ).length;
+
+    // Unique Calls (distinct phone numbers)
+    const uniquePhones = new Set(
+      logs.map((c) => c.contactPhone.replace(/\D/g, "").slice(-10)).filter(Boolean)
+    );
+    const uniqueCalls = uniquePhones.size;
+
+    // Connected & Conversions
+    const connectedCalls = logs.filter((c) => c.callStatus === "CONNECTED" || c.durationSeconds > 0).length;
+    const conversions = logs.filter((c) => ["ADMISSION_CONFIRMED", "INTERESTED"].includes(c.disposition)).length;
+    const connectionRate = totalPhoneCalls > 0 ? Math.round((connectedCalls / totalPhoneCalls) * 100) : 0;
+    const avgDurationSeconds = totalPhoneCalls > 0 ? Math.round(totalTalkTimeSeconds / totalPhoneCalls) : 0;
+
+    // Analysis: Hourly Distribution (0–23)
+    const hourlyDistribution = Array.from({ length: 24 }, (_, hour) => {
+      const hourLogs = logs.filter((l) => new Date(l.createdAt).getHours() === hour);
+      return {
+        hour,
+        label: `${hour % 12 === 0 ? 12 : hour % 12} ${hour >= 12 ? "PM" : "AM"}`,
+        calls: hourLogs.length,
+        durationSeconds: hourLogs.reduce((acc, curr) => acc + (curr.durationSeconds || 0), 0),
+        durationFormatted: this.formatDuration(hourLogs.reduce((acc, curr) => acc + (curr.durationSeconds || 0), 0)),
+      };
+    });
+
+    // Analysis: Disposition Breakdown
+    const dispositionCounts: Record<string, number> = {};
+    for (const log of logs) {
+      const disp = log.disposition || "OTHER";
+      dispositionCounts[disp] = (dispositionCounts[disp] || 0) + 1;
+    }
+
+    const staffName = isTeamReport
+      ? "All Staff Members (Team Total)"
+      : targetUser
+      ? `${targetUser.firstName} ${targetUser.lastName}`
+      : `${actor.roleCode} Desk`;
+
+    const staffEmployeeId = targetUser?.staffProfile?.employeeId || null;
+    const staffPhone = targetUser?.callingNumber || targetUser?.whatsappNumber || targetUser?.phone || null;
+
+    // Generate pre-formatted WhatsApp text
+    const whatsappText = this.formatCallyzerWhatsAppReport({
+      staffName,
+      employeeId: staffEmployeeId || undefined,
+      roleCode: targetUser?.roleCode || (isTeamReport ? "All Team" : actor.roleCode),
+      dateLabel: dateRangeLabel,
+      totalCalls: totalPhoneCalls,
+      totalTalkTime: this.formatDuration(totalTalkTimeSeconds),
+      incomingCalls,
+      incomingTalkTime: this.formatDuration(incomingTalkTimeSeconds),
+      outgoingCalls,
+      outgoingTalkTime: this.formatDuration(outgoingTalkTimeSeconds),
+      missedCalls,
+      rejectedCalls,
+      neverAttendedCalls,
+      notPickupByClient,
+      uniqueCalls,
+      connectedCalls,
+      conversions,
+      connectionRate,
+      avgDuration: this.formatDuration(avgDurationSeconds),
+    });
+
+    const whatsappGroupShareUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(whatsappText)}`;
+    const staffCleanPhone = staffPhone ? staffPhone.replace(/\D/g, "").slice(-10) : "";
+    const staffDirectWhatsappUrl = staffCleanPhone
+      ? `https://wa.me/91${staffCleanPhone}?text=${encodeURIComponent(whatsappText)}`
+      : null;
+
+    return {
+      dateRangeLabel,
+      preset,
+      isTeamReport,
+      staffInfo: {
+        userId: targetUser?.id || null,
+        name: staffName,
+        employeeId: staffEmployeeId,
+        roleCode: targetUser?.roleCode || (isTeamReport ? "TEAM" : actor.roleCode),
+        phone: staffPhone,
+        avatarUrl: targetUser?.avatarUrl || null,
+      },
+      summary: {
+        totalPhoneCalls,
+        totalTalkTimeSeconds,
+        totalTalkTimeFormatted: this.formatDuration(totalTalkTimeSeconds),
+        incomingCalls,
+        incomingTalkTimeSeconds,
+        incomingTalkTimeFormatted: this.formatDuration(incomingTalkTimeSeconds),
+        outgoingCalls,
+        outgoingTalkTimeSeconds,
+        outgoingTalkTimeFormatted: this.formatDuration(outgoingTalkTimeSeconds),
+        missedCalls,
+        rejectedCalls,
+        neverAttendedCalls,
+        notPickupByClient,
+        uniqueCalls,
+        connectedCalls,
+        conversions,
+        connectionRate,
+        avgDurationSeconds,
+        avgDurationFormatted: this.formatDuration(avgDurationSeconds),
+      },
+      analysis: {
+        hourlyDistribution,
+        dispositionCounts,
+        recentCallLogs: logs.slice(0, 15).map((l) => ({
+          ...l,
+          durationFormatted: this.formatDuration(l.durationSeconds),
+        })),
+      },
+      whatsapp: {
+        text: whatsappText,
+        groupShareUrl: whatsappGroupShareUrl,
+        staffDirectUrl: staffDirectWhatsappUrl,
+      },
+    };
+  }
 }

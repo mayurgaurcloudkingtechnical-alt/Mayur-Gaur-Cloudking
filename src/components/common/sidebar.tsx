@@ -102,6 +102,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
       case "TELECALLER":
         return [
           { title: "Telecalling Desk", href: "/telecaller/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Callyzer Calling Report", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "App" },
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
@@ -112,6 +113,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
       case "COUNSELOR":
         return [
           { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Callyzer Calling Report", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "App" },
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Service Enquiries", href: "/counselor/services", icon: <Briefcase className="h-4 w-4" /> },
