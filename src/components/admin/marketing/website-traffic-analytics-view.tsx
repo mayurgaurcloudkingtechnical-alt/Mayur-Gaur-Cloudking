@@ -85,6 +85,22 @@ export function WebsiteTrafficAnalyticsView() {
             <Button
               asChild
               size="sm"
+              variant="outline"
+              className="border-slate-700 bg-slate-800/80 hover:bg-slate-800 text-blue-300 font-bold text-xs h-9 gap-2 shadow-lg shadow-blue-950/50"
+            >
+              <a
+                href={ga?.gtmWorkspaceUrl || "https://tagmanager.google.com/#/container/accounts/6383119139/containers/267450807/workspaces/2"}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <span>Open Tag Manager</span>
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </Button>
+
+            <Button
+              asChild
+              size="sm"
               className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs h-9 gap-2 shadow-lg shadow-emerald-950/50"
             >
               <a
@@ -100,7 +116,7 @@ export function WebsiteTrafficAnalyticsView() {
         </div>
       </div>
 
-      {/* 2. GA4 Web Stream Configuration & Verification Diagnostics */}
+      {/* 2. GA4 & GTM Web Stream Configuration & Verification Diagnostics */}
       <Card className="border-slate-200 shadow-sm overflow-hidden">
         <CardHeader className="bg-slate-50/80 border-b border-slate-200/80 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -116,7 +132,7 @@ export function WebsiteTrafficAnalyticsView() {
                   </Badge>
                 </CardTitle>
                 <CardDescription className="text-xs text-slate-500">
-                  Configured in Next.js layout and SPA router listener
+                  Configured in Next.js layout, GTM container, and SPA router listener
                 </CardDescription>
               </div>
             </div>
@@ -135,29 +151,51 @@ export function WebsiteTrafficAnalyticsView() {
         </CardHeader>
 
         <CardContent className="p-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <p className="text-[11px] font-semibold text-slate-500 uppercase">Stream Name</p>
-              <p className="text-sm font-bold text-slate-900">{ga?.streamName || "softlabglobal"}</p>
-              <p className="text-[11px] text-slate-400 font-mono truncate">{ga?.streamUrl || "https://www.softlabglobal.com"}</p>
+              <p className="text-sm font-bold text-slate-900 truncate">{ga?.streamName || "softlabglobal"}</p>
+              <p className="text-[10px] text-slate-400 font-mono truncate">{ga?.streamUrl || "https://www.softlabglobal.com"}</p>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <p className="text-[11px] font-semibold text-slate-500 uppercase">Measurement ID</p>
-              <p className="text-sm font-mono font-extrabold text-emerald-700">{ga?.measurementId || "G-7F6R0124G6"}</p>
-              <p className="text-[11px] text-emerald-600 font-medium">● Data Stream Active</p>
+              <p className="text-sm font-mono font-extrabold text-emerald-700 truncate">{ga?.measurementId || "G-7F6R0124G6"}</p>
+              <p className="text-[10px] text-emerald-600 font-medium">● Data Stream Active</p>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase">Google Tag Manager</p>
+              <p className="text-sm font-mono font-extrabold text-blue-700 truncate">{ga?.gtmContainerId || "GTM-NR7P36ST"}</p>
+              <div className="flex items-center justify-between pt-0.5">
+                <span className="text-[10px] text-blue-600 font-medium">● Container Live</span>
+                <a
+                  href={ga?.gtmWorkspaceUrl || "https://tagmanager.google.com/#/container/accounts/6383119139/containers/267450807/workspaces/2"}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5"
+                >
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <p className="text-[11px] font-semibold text-slate-500 uppercase">Stream ID</p>
-              <p className="text-sm font-mono font-bold text-slate-800">{ga?.streamId || "16144183114"}</p>
-              <p className="text-[11px] text-slate-500">Web Data Stream</p>
+              <p className="text-sm font-mono font-bold text-slate-800 truncate">{ga?.streamId || "16144183114"}</p>
+              <p className="text-[10px] text-slate-500">Web Data Stream</p>
             </div>
 
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
               <p className="text-[11px] font-semibold text-slate-500 uppercase">Google Ads Tag</p>
-              <p className="text-sm font-mono font-bold text-slate-800">{ga?.googleAdsId || "AW-18444757013"}</p>
-              <p className="text-[11px] text-sky-600 font-medium">Linked for Lead Conversion</p>
+              <p className="text-sm font-mono font-bold text-slate-800 truncate">{ga?.googleAdsId || "AW-18444757013"}</p>
+              <p className="text-[10px] text-sky-600 font-medium">Lead Conversion Active</p>
+            </div>
+
+            <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
+              <p className="text-[11px] font-semibold text-slate-500 uppercase">Meta Pixel</p>
+              <p className="text-sm font-mono font-bold text-indigo-700 truncate">{ga?.metaPixelId || "28379921225020377"}</p>
+              <p className="text-[10px] text-indigo-600 font-medium">● Lead Tracking Live</p>
             </div>
           </div>
         </CardContent>

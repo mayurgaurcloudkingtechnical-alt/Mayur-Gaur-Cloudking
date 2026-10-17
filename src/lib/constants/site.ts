@@ -32,6 +32,8 @@ export const SITE_CONFIG = {
     streamUrl: "https://www.softlabglobal.com",
     googleAdsId: "AW-18444757013",
     metaPixelId: "28379921225020377",
+    gtmContainerId: "GTM-NR7P36ST",
+    gtmWorkspaceUrl: "https://tagmanager.google.com/#/container/accounts/6383119139/containers/267450807/workspaces/2",
   },
   businessHours: {
     days: "Monday – Saturday",

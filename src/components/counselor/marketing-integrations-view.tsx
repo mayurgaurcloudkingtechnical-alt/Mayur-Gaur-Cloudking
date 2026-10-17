@@ -127,7 +127,7 @@ export function MarketingIntegrationsView() {
       secretKey: "slg_gads_sec_8923f7c1b4d09e",
       count: (channelCounts[LeadSource.GOOGLE_ADS] || 0) + (channelCounts[LeadSource.GOOGLE_SEARCH] || 0),
       description: "Captures prospective students clicking Google Search lead form extensions and YouTube In-Feed ads.",
-      configInfo: "Multi-Role Alerts: Counselor, Director, Admin & Super Admin",
+      configInfo: "GTM: GTM-NR7P36ST • Ads ID: AW-18444757013",
     },
     {
       id: "whatsapp",

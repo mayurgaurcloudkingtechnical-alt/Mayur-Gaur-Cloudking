@@ -5,11 +5,13 @@
  * Measurement ID: G-7F6R0124G6
  * Google Ads ID: AW-18444757013
  * Meta Pixel ID: 28379921225020377
+ * Google Tag Manager ID: GTM-NR7P36ST
  */
 
 export const GA_MEASUREMENT_ID = "G-7F6R0124G6";
 export const GOOGLE_ADS_ID = "AW-18444757013";
 export const META_PIXEL_ID = "28379921225020377";
+export const GTM_CONTAINER_ID = "GTM-NR7P36ST";
 
 declare global {
   interface Window {

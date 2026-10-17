@@ -3,7 +3,7 @@ import "./globals.css";
 import { TRPCReactProvider } from "@/lib/trpc/react";
 
 import { GoogleAnalyticsTracker } from "@/components/common/google-analytics";
-import { GA_MEASUREMENT_ID, GOOGLE_ADS_ID, META_PIXEL_ID } from "@/lib/analytics";
+import { GA_MEASUREMENT_ID, GOOGLE_ADS_ID, META_PIXEL_ID, GTM_CONTAINER_ID } from "@/lib/analytics";
 
 export const metadata: Metadata = {
   title: "SOFTLAB GLOBAL — IT Education Management Platform",
@@ -23,6 +23,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        {/* Google Tag Manager (GTM-NR7P36ST) */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+              new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+              j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+              'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+              })(window,document,'script','dataLayer','${GTM_CONTAINER_ID}');
+            `,
+          }}
+        />
+
         {/* Google tag (gtag.js) — Google Analytics 4 & Google Ads */}
         <script
           async
@@ -78,6 +91,16 @@ export default function RootLayout({
         <script async src="https://checkout.razorpay.com/v1/checkout.js" />
       </head>
       <body className="min-h-screen bg-slate-50/50 font-sans antialiased text-slate-900">
+        {/* Google Tag Manager (noscript) */}
+        <noscript>
+          <iframe
+            src={`https://www.googletagmanager.com/ns.html?id=${GTM_CONTAINER_ID}`}
+            height="0"
+            width="0"
+            style={{ display: "none", visibility: "hidden" }}
+          />
+        </noscript>
+
         <GoogleAnalyticsTracker />
         <TRPCReactProvider>{children}</TRPCReactProvider>
       </body>
