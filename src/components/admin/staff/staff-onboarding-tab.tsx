@@ -13,15 +13,21 @@ import {
   Search,
   ChevronRight,
   Printer,
+  Edit2,
+  PlusCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/utils";
+import { StaffOnboardingWizard } from "../users/staff-onboarding-wizard";
 
 export function StaffOnboardingTab() {
   const [activeView, setActiveView] = useState<"onboarding" | "offboarding">("onboarding");
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [showWizard, setShowWizard] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<any>(null);
 
+  const utils = api.useUtils();
   const { data: staffList } = api.staffErp.listStaff.useQuery();
 
   // Auto-select first staff member if none selected
@@ -67,28 +73,39 @@ export function StaffOnboardingTab() {
           </p>
         </div>
 
-        {/* View Switcher */}
-        <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+        <div className="flex items-center gap-2">
+          {/* Onboard New Employee Button */}
           <button
-            onClick={() => setActiveView("onboarding")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeView === "onboarding"
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
+            type="button"
+            onClick={() => setShowWizard(true)}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold transition shadow-xs"
           >
-            New Hire Onboarding
+            <PlusCircle className="w-3.5 h-3.5" /> Onboard New Staff
           </button>
-          <button
-            onClick={() => setActiveView("offboarding")}
-            className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
-              activeView === "offboarding"
-                ? "bg-white text-indigo-700 shadow-sm"
-                : "text-slate-600 hover:text-slate-900"
-            }`}
-          >
-            Exit Clearances (Offboarding)
-          </button>
+
+          {/* View Switcher */}
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">
+            <button
+              onClick={() => setActiveView("onboarding")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                activeView === "onboarding"
+                  ? "bg-white text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              New Hire Onboarding
+            </button>
+            <button
+              onClick={() => setActiveView("offboarding")}
+              className={`px-3 py-1.5 rounded-md text-xs font-semibold transition ${
+                activeView === "offboarding"
+                  ? "bg-white text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:text-slate-900"
+              }`}
+            >
+              Exit Clearances (Offboarding)
+            </button>
+          </div>
         </div>
       </div>
 
@@ -132,9 +149,21 @@ export function StaffOnboardingTab() {
             <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6 space-y-6">
               <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-900">
-                    Onboarding Verification: {selectedStaff?.user?.firstName} {selectedStaff?.user?.lastName}
-                  </h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-slate-900">
+                      Onboarding Verification: {selectedStaff?.user?.firstName} {selectedStaff?.user?.lastName}
+                    </h4>
+                    {selectedStaff && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingStaff(selectedStaff)}
+                        className="px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 rounded text-[11px] font-semibold flex items-center gap-1 transition"
+                        title="Edit all personal details, documents, and credentials"
+                      >
+                        <Edit2 className="w-3 h-3" /> Edit Profile & Documents
+                      </button>
+                    )}
+                  </div>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Department: {selectedStaff?.department} • Joined:{" "}
                     {selectedStaff?.joiningDate ? formatDate(selectedStaff.joiningDate) : "—"}
@@ -285,6 +314,21 @@ export function StaffOnboardingTab() {
           )}
         </div>
       </div>
+
+      {(showWizard || Boolean(editingStaff)) && (
+        <StaffOnboardingWizard
+          isOpen={showWizard || Boolean(editingStaff)}
+          initialStaff={editingStaff}
+          onClose={() => {
+            setShowWizard(false);
+            setEditingStaff(null);
+          }}
+          onSuccess={() => {
+            utils.staffErp.listStaff.invalidate();
+            refetchOnboarding();
+          }}
+        />
+      )}
     </div>
   );
 }

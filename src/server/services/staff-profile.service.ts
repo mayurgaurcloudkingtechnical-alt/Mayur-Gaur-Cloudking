@@ -41,11 +41,23 @@ export interface CreateStaffProfileInput {
   reportingManagerId?: string;
 }
 
+export interface StaffDocumentPayload {
+  id?: string;
+  documentType: string;
+  title: string;
+  documentUrl: string;
+  fileName?: string;
+  fileSize?: number;
+  isVerified?: boolean;
+}
+
 export interface UpdateStaffProfileInput {
   firstName?: string;
   lastName?: string;
   email?: string;
   phone?: string;
+  callingNumber?: string;
+  whatsappNumber?: string;
   personalEmail?: string;
   personalPhone?: string;
   department?: StaffDepartment;
@@ -53,13 +65,21 @@ export interface UpdateStaffProfileInput {
   baseSalary?: number; // in integer Paise
   employmentType?: string;
   workLocation?: string;
+  branch?: string;
   residentialAddress?: string;
   profilePhoto?: string;
   bankAccountNumber?: string;
   bankIfsc?: string;
   panNumber?: string;
   reportingManagerId?: string | null;
+  shiftId?: string | null;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  gender?: string;
+  dateOfBirth?: Date;
+  joiningDate?: Date;
   isActive?: boolean;
+  documents?: StaffDocumentPayload[];
 }
 
 export interface ListStaffParams {
@@ -85,6 +105,141 @@ export class StaffProfileService {
       employeeId = `SLG-EMP-${String(sequence).padStart(4, "0")}`;
     }
     return employeeId;
+  }
+
+  /**
+   * Automatically ensures that every institutional user account has an active StaffProfile
+   * and live reporting hierarchy connections.
+   */
+  static async ensureStaffProfilesExist() {
+    try {
+      const usersWithoutProfile = await db.user.findMany({
+        where: {
+          roleCode: { notIn: [UserRoleCode.STUDENT] },
+          staffProfile: null,
+        },
+      });
+
+      if (usersWithoutProfile.length > 0) {
+        for (const user of usersWithoutProfile) {
+          let dept: StaffDepartment = StaffDepartment.COUNSELING;
+          let desig = "Staff Member";
+          let prefix = "EMP";
+          let baseSalary = 3500000;
+
+          switch (user.roleCode) {
+            case UserRoleCode.DIRECTOR:
+              dept = StaffDepartment.MANAGEMENT;
+              desig = "Executive Director & Managing Authority";
+              prefix = "DIR";
+              baseSalary = 10000000;
+              break;
+            case UserRoleCode.SUPER_ADMIN:
+              dept = StaffDepartment.MANAGEMENT;
+              desig = "Director & Chief Administrator";
+              prefix = "DIR";
+              baseSalary = 10000000;
+              break;
+            case UserRoleCode.ADMIN:
+              dept = StaffDepartment.OPERATIONS;
+              desig = "Operations Administrator";
+              prefix = "ADM";
+              baseSalary = 6000000;
+              break;
+            case UserRoleCode.MANAGER:
+              dept = StaffDepartment.OPERATIONS;
+              desig = "Academic & Branch Operations Manager";
+              prefix = "MGR";
+              baseSalary = 5500000;
+              break;
+            case UserRoleCode.HR:
+              dept = StaffDepartment.HR;
+              desig = "Human Resources & Talent Lead";
+              prefix = "HR";
+              baseSalary = 4500000;
+              break;
+            case UserRoleCode.ACCOUNTANT:
+              dept = StaffDepartment.FINANCE;
+              desig = "Senior Accounts & Finance Officer";
+              prefix = "ACC";
+              baseSalary = 4500000;
+              break;
+            case UserRoleCode.TRAINER:
+              dept = StaffDepartment.TRAINING;
+              desig = "Senior Technical Faculty / Lead Trainer";
+              prefix = "TRN";
+              baseSalary = 5000000;
+              break;
+            case UserRoleCode.COUNSELOR:
+              dept = StaffDepartment.COUNSELING;
+              desig = "Senior Academic Counselor";
+              prefix = "CNS";
+              baseSalary = 4000000;
+              break;
+            case UserRoleCode.TELECALLER:
+              dept = StaffDepartment.TELECALLING;
+              desig = "Telecalling & Admissions Executive";
+              prefix = "TEL";
+              baseSalary = 2500000;
+              break;
+          }
+
+          const count = await db.staffProfile.count();
+          const employeeId = `SLG-${prefix}-2026-${String(count + 101).padStart(4, "0")}`;
+
+          await db.staffProfile.create({
+            data: {
+              userId: user.id,
+              employeeId,
+              department: dept,
+              designation: desig,
+              baseSalary,
+              personalEmail: user.email,
+              personalPhone: user.phone || null,
+              workLocation: "PRAYAGRAJ_CAMPUS",
+              branch: "PRAYAGRAJ_MAIN",
+              isActive: true,
+            },
+          });
+        }
+      }
+
+      // Connect standard reporting lines if unlinked
+      const director = await db.staffProfile.findFirst({
+        where: {
+          user: { roleCode: { in: [UserRoleCode.DIRECTOR, UserRoleCode.SUPER_ADMIN] } },
+          isActive: true,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      const headCounselor = await db.staffProfile.findFirst({
+        where: {
+          user: { email: "shikha.verma@softlabglobal.com" },
+          isActive: true,
+        },
+      });
+
+      if (director && headCounselor && !headCounselor.reportingManagerId) {
+        await db.staffProfile.update({
+          where: { id: headCounselor.id },
+          data: { reportingManagerId: director.id },
+        });
+      }
+
+      if (headCounselor) {
+        await db.staffProfile.updateMany({
+          where: {
+            department: { in: [StaffDepartment.COUNSELING, StaffDepartment.TELECALLING] },
+            id: { notIn: [headCounselor.id, ...(director ? [director.id] : [])] },
+            reportingManagerId: null,
+          },
+          data: { reportingManagerId: headCounselor.id },
+        });
+      }
+    } catch (err) {
+      console.error("[StaffProfileService] ensureStaffProfilesExist notice:", err);
+    }
   }
 
   /**
@@ -401,6 +556,8 @@ export class StaffProfileService {
       if (input.lastName !== undefined) userData.lastName = input.lastName.trim();
       if (input.email !== undefined) userData.email = input.email.trim().toLowerCase();
       if (input.phone !== undefined) userData.phone = input.phone.trim();
+      if (input.callingNumber !== undefined) userData.callingNumber = input.callingNumber.trim() || null;
+      if (input.whatsappNumber !== undefined) userData.whatsappNumber = input.whatsappNumber.trim() || null;
       if (input.profilePhoto !== undefined) userData.avatarUrl = input.profilePhoto.trim();
 
       if (Object.keys(userData).length > 0) {
@@ -410,7 +567,51 @@ export class StaffProfileService {
         });
       }
 
-      // 2. Update staff profile
+      // 2. Synchronize staff documents if provided
+      if (input.documents !== undefined) {
+        const providedIds = input.documents
+          .map((d) => d.id)
+          .filter((id): id is string => Boolean(id));
+
+        // Delete documents removed in this edit
+        await tx.staffDocument.deleteMany({
+          where: {
+            staffId,
+            ...(providedIds.length > 0 ? { id: { notIn: providedIds } } : {}),
+          },
+        });
+
+        // Insert new documents or update existing
+        for (const doc of input.documents) {
+          if (doc.id) {
+            await tx.staffDocument.update({
+              where: { id: doc.id },
+              data: {
+                title: doc.title.trim(),
+                documentType: doc.documentType.trim(),
+                documentUrl: doc.documentUrl.trim(),
+                fileName: doc.fileName || null,
+                fileSize: doc.fileSize || null,
+                isVerified: doc.isVerified ?? false,
+              },
+            });
+          } else if (doc.documentUrl) {
+            await tx.staffDocument.create({
+              data: {
+                staffId,
+                title: doc.title.trim(),
+                documentType: doc.documentType.trim(),
+                documentUrl: doc.documentUrl.trim(),
+                fileName: doc.fileName || null,
+                fileSize: doc.fileSize || null,
+                isVerified: doc.isVerified ?? false,
+              },
+            });
+          }
+        }
+      }
+
+      // 3. Update staff profile
       return tx.staffProfile.update({
         where: { id: staffId },
         data: {
@@ -419,6 +620,7 @@ export class StaffProfileService {
           baseSalary: input.baseSalary ?? undefined,
           employmentType: input.employmentType?.trim() ?? undefined,
           workLocation: input.workLocation?.trim() ?? undefined,
+          branch: input.branch?.trim() ?? undefined,
           residentialAddress: input.residentialAddress?.trim() ?? undefined,
           personalEmail: input.personalEmail !== undefined ? input.personalEmail.trim().toLowerCase() || null : undefined,
           personalPhone: input.personalPhone !== undefined ? input.personalPhone.trim() || null : undefined,
@@ -427,6 +629,12 @@ export class StaffProfileService {
           bankIfsc: input.bankIfsc !== undefined ? input.bankIfsc.trim().toUpperCase() || null : undefined,
           panNumber: input.panNumber !== undefined ? input.panNumber.trim().toUpperCase() || null : undefined,
           reportingManagerId: input.reportingManagerId !== undefined ? (input.reportingManagerId || null) : undefined,
+          shiftId: input.shiftId !== undefined ? (input.shiftId || null) : undefined,
+          emergencyContactName: input.emergencyContactName !== undefined ? input.emergencyContactName.trim() || null : undefined,
+          emergencyContactPhone: input.emergencyContactPhone !== undefined ? input.emergencyContactPhone.trim() || null : undefined,
+          gender: input.gender ?? undefined,
+          dateOfBirth: input.dateOfBirth ?? undefined,
+          joiningDate: input.joiningDate ?? undefined,
           isActive: input.isActive ?? undefined,
         },
         include: {
@@ -437,10 +645,30 @@ export class StaffProfileService {
               firstName: true,
               lastName: true,
               phone: true,
+              callingNumber: true,
+              whatsappNumber: true,
               avatarUrl: true,
               roleCode: true,
               status: true,
             },
+          },
+          reportingManager: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  phone: true,
+                  roleCode: true,
+                },
+              },
+            },
+          },
+          shift: true,
+          documents: {
+            orderBy: { uploadedAt: "desc" },
           },
         },
       });
@@ -541,9 +769,16 @@ export class StaffProfileService {
   }
 
   /**
-   * Fetches staff profile by staff primary key
+   * Fetches staff profile with all relational data including documents, reporting manager, shift, and onboarding
    */
   static async getStaffProfileById(staffId: string) {
+    return this.getStaffFullProfile(staffId);
+  }
+
+  /**
+   * Fetches comprehensive staff profile for admin/director viewing and editing
+   */
+  static async getStaffFullProfile(staffId: string) {
     const profile = await db.staffProfile.findUnique({
       where: { id: staffId },
       include: {
@@ -556,9 +791,31 @@ export class StaffProfileService {
             phone: true,
             callingNumber: true,
             whatsappNumber: true,
+            avatarUrl: true,
             roleCode: true,
+            status: true,
+            createdAt: true,
           },
         },
+        reportingManager: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                roleCode: true,
+              },
+            },
+          },
+        },
+        shift: true,
+        documents: {
+          orderBy: { uploadedAt: "desc" },
+        },
+        onboardingChecklist: true,
       },
     });
 
@@ -575,6 +832,7 @@ export class StaffProfileService {
    * Fetches staff profile by associated User ID
    */
   static async getStaffProfileByUserId(userId: string) {
+    await this.ensureStaffProfilesExist();
     return db.staffProfile.findUnique({
       where: { userId },
       include: {
@@ -590,14 +848,42 @@ export class StaffProfileService {
             roleCode: true,
           },
         },
+        reportingManager: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                phone: true,
+                roleCode: true,
+              },
+            },
+          },
+        },
+        shift: true,
+        documents: {
+          orderBy: { uploadedAt: "desc" },
+        },
+        onboardingChecklist: true,
       },
     });
+  }
+
+  /**
+   * Returns current authenticated user's self profile with all credentials and documents
+   */
+  static async getMyStaffProfile(userId: string) {
+    await this.ensureStaffProfilesExist();
+    return this.getStaffProfileByUserId(userId);
   }
 
   /**
    * Lists staff members with departmental and status filtering
    */
   static async listStaffProfiles(params: ListStaffParams = {}) {
+    await this.ensureStaffProfilesExist();
     const { department, reportingManagerId, isActive, search, page = 1, limit = 50 } = params;
     const skip = (page - 1) * limit;
 
@@ -675,6 +961,7 @@ export class StaffProfileService {
    * Fetches all potential managers and directors for reporting manager dropdowns
    */
   static async listPotentialReportingManagers() {
+    await this.ensureStaffProfilesExist();
     return db.staffProfile.findMany({
       where: {
         isActive: true,

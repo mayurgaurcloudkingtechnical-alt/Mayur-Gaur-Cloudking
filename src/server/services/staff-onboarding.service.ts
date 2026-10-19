@@ -41,9 +41,11 @@ export interface OnboardEmployeeInput {
   bankIfsc?: string;
   panNumber?: string;
   documents?: {
-    documentType: string; // RESUME, OFFER_LETTER, APPOINTMENT_LETTER, AADHAAR, PAN, CERTIFICATE, POLICY_ACK
+    documentType: string;
     title: string;
     documentUrl: string;
+    fileName?: string;
+    fileSize?: number;
   }[];
 
   // Step 3: System Account & Access
@@ -278,6 +280,8 @@ export class StaffOnboardingService {
                 title: doc.title.trim(),
                 documentType: doc.documentType.trim(),
                 documentUrl: doc.documentUrl.trim(),
+                fileName: doc.fileName || null,
+                fileSize: doc.fileSize || null,
                 isVerified: false,
               },
             });

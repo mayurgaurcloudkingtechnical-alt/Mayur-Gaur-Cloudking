@@ -186,6 +186,12 @@ export const staffErpRouter = router({
       return StaffProfileService.createStaffProfile(asAuthUser(ctx.user), input);
     }),
 
+  getFullStaffProfile: requireRoleProcedure(adminHRRoles)
+    .input(z.object({ staffId: z.string() }))
+    .query(async ({ input }) => {
+      return StaffProfileService.getStaffFullProfile(input.staffId);
+    }),
+
   updateStaffProfile: requireRoleProcedure(adminHRRoles)
     .input(
       z.object({
@@ -194,6 +200,8 @@ export const staffErpRouter = router({
         lastName: z.string().min(1).optional(),
         email: z.string().email().optional(),
         phone: z.string().optional(),
+        callingNumber: z.string().optional(),
+        whatsappNumber: z.string().optional(),
         personalEmail: z.string().email().optional(),
         personalPhone: z.string().optional(),
         department: z.nativeEnum(StaffDepartment).optional(),
@@ -201,13 +209,33 @@ export const staffErpRouter = router({
         baseSalary: z.number().int().positive().optional(),
         employmentType: z.string().optional(),
         workLocation: z.string().optional(),
+        branch: z.string().optional(),
         residentialAddress: z.string().optional(),
         profilePhoto: z.string().optional(),
         bankAccountNumber: z.string().optional(),
         bankIfsc: z.string().optional(),
         panNumber: z.string().optional(),
         reportingManagerId: z.string().nullable().optional(),
+        shiftId: z.string().nullable().optional(),
+        emergencyContactName: z.string().optional(),
+        emergencyContactPhone: z.string().optional(),
+        gender: z.string().optional(),
+        dateOfBirth: z.date().optional(),
+        joiningDate: z.date().optional(),
         isActive: z.boolean().optional(),
+        documents: z
+          .array(
+            z.object({
+              id: z.string().optional(),
+              documentType: z.string(),
+              title: z.string(),
+              documentUrl: z.string(),
+              fileName: z.string().optional(),
+              fileSize: z.number().optional(),
+              isVerified: z.boolean().optional(),
+            })
+          )
+          .optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -954,6 +982,8 @@ export const staffErpRouter = router({
               documentType: z.string(),
               title: z.string(),
               documentUrl: z.string(),
+              fileName: z.string().optional(),
+              fileSize: z.number().optional(),
             })
           )
           .optional(),

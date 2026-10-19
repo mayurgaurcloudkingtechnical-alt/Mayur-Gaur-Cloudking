@@ -45,6 +45,7 @@ import { StaffRecruitmentTab } from "./staff-recruitment-tab";
 import { StaffOnboardingTab } from "./staff-onboarding-tab";
 import { StaffLettersTab } from "./staff-letters-tab";
 import { StaffIdCardModal } from "./staff-id-card-modal";
+import { StaffOnboardingWizard } from "../users/staff-onboarding-wizard";
 import { CallyzerTeamMonitoringView } from "@/components/callyzer/callyzer-team-monitoring-view";
 
 export function AdminStaffView() {
@@ -640,11 +641,24 @@ export function AdminStaffView() {
                   staffData.items.map((staff) => {
                     const att = attendanceSummary?.[staff.id];
                     return (
-                      <tr key={staff.id} className="hover:bg-slate-50">
-                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">{staff.employeeId}</td>
-                        <td className="py-3.5 px-4">
-                          <p className="font-bold text-slate-900">{staff.user.firstName} {staff.user.lastName}</p>
-                          <p className="text-xs text-slate-400">{staff.user.email}</p>
+                      <tr key={staff.id} className="hover:bg-slate-50 transition group">
+                        <td
+                          onClick={() => setSelectedStaffForEdit(staff)}
+                          className="py-3.5 px-4 font-mono font-bold text-slate-900 group-hover:text-indigo-600 cursor-pointer"
+                          title="Click to view & edit complete profile and documents"
+                        >
+                          {staff.employeeId}
+                        </td>
+                        <td
+                          onClick={() => setSelectedStaffForEdit(staff)}
+                          className="py-3.5 px-4 cursor-pointer"
+                          title="Click to view & edit complete profile and documents"
+                        >
+                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
+                            {staff.user.firstName} {staff.user.lastName}
+                            <Edit2 className="w-3 h-3 text-slate-300 group-hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition" />
+                          </p>
+                          <p className="text-xs text-slate-400 font-mono">{staff.user.email}</p>
                         </td>
                         <td className="py-3.5 px-4">
                           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700">
@@ -1327,236 +1341,17 @@ export function AdminStaffView() {
       {/* MODAL: ONBOARD STAFF MEMBER (PHASE 6 INSTANT LMS LOGIN) */}
       {/* ========================================================================= */}
       {showAddStaffModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-xl w-full p-6 space-y-4 shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 text-lg">Onboard New Staff Member</h3>
-                <p className="text-xs text-slate-500">Automatically creates staff record, User account, and LMS credentials.</p>
-              </div>
-              <button onClick={() => setShowAddStaffModal(false)}>
-                <X className="w-5 h-5 text-slate-400" />
-              </button>
-            </div>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                createStaffAccountMutation.mutate({
-                  firstName: staffForm.firstName.trim(),
-                  lastName: staffForm.lastName.trim(),
-                  email: staffForm.email.trim().toLowerCase(),
-                  phone: staffForm.phone.trim() || undefined,
-                  roleCode: staffForm.roleCode,
-                  department: staffForm.department,
-                  designation: staffForm.designation.trim(),
-                  baseSalary: Math.round(Number(staffForm.baseSalaryRupees) * 100), // convert to paise
-                  password: staffForm.password.trim() || undefined,
-                  bankAccountNumber: staffForm.bankAccountNumber || undefined,
-                  bankIfsc: staffForm.bankIfsc || undefined,
-                  panNumber: staffForm.panNumber || undefined,
-                  callingNumber: staffForm.callingNumber.trim() || staffForm.phone.trim() || undefined,
-                  whatsappNumber: staffForm.whatsappNumber.trim() || staffForm.phone.trim() || undefined,
-                  reportingManagerId: staffForm.reportingManagerId || undefined,
-                });
-              }}
-              className="space-y-3 text-sm"
-            >
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Mayur"
-                    value={staffForm.firstName}
-                    onChange={(e) => setStaffForm({ ...staffForm, firstName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Gaur"
-                    value={staffForm.lastName}
-                    onChange={(e) => setStaffForm({ ...staffForm, lastName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Official / Login Email *</label>
-                  <input
-                    required
-                    type="email"
-                    placeholder="staff@softlabglobal.com"
-                    value={staffForm.email}
-                    onChange={(e) => setStaffForm({ ...staffForm, email: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Contact Phone</label>
-                  <input
-                    type="text"
-                    placeholder="10-digit number"
-                    value={staffForm.phone}
-                    onChange={(e) => {
-                      const newPhone = e.target.value;
-                      setStaffForm((prev) => ({
-                        ...prev,
-                        phone: newPhone,
-                        callingNumber: prev.callingNumber === prev.phone || !prev.callingNumber ? newPhone : prev.callingNumber,
-                        whatsappNumber: prev.whatsappNumber === prev.phone || !prev.whatsappNumber ? newPhone : prev.whatsappNumber,
-                      }));
-                    }}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                </div>
-              </div>
-
-              {/* Assigned Calling & WhatsApp Lines */}
-              <div className="grid grid-cols-2 gap-3 bg-blue-50/70 p-3 rounded-lg border border-blue-200">
-                <div>
-                  <label className="block text-xs font-bold text-blue-900 mb-1">
-                    Assigned Calling Line
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 9196596975"
-                    value={staffForm.callingNumber}
-                    onChange={(e) => setStaffForm({ ...staffForm, callingNumber: e.target.value })}
-                    className="w-full border border-blue-300 bg-white rounded-lg px-3 py-1.5 text-xs font-mono"
-                  />
-                  <p className="text-[10px] text-blue-700 mt-0.5">Used for LMS click-to-call & CRM caller ID</p>
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-blue-900 mb-1">
-                    Assigned WhatsApp Number
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 9196596975"
-                    value={staffForm.whatsappNumber}
-                    onChange={(e) => setStaffForm({ ...staffForm, whatsappNumber: e.target.value })}
-                    className="w-full border border-blue-300 bg-white rounded-lg px-3 py-1.5 text-xs font-mono"
-                  />
-                  <p className="text-[10px] text-blue-700 mt-0.5">Used for LMS 1-click WhatsApp outreach</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">System Role *</label>
-                  <select
-                    value={staffForm.roleCode}
-                    onChange={(e) => setStaffForm({ ...staffForm, roleCode: e.target.value as any })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  >
-                    <option value={UserRoleCode.TRAINER}>TRAINER / FACULTY</option>
-                    <option value={UserRoleCode.COUNSELOR}>COUNSELOR</option>
-                    <option value={UserRoleCode.TELECALLER}>TELECALLER</option>
-                    <option value={UserRoleCode.HR}>HR MANAGER</option>
-                    <option value={UserRoleCode.ACCOUNTANT}>ACCOUNTANT</option>
-                    <option value={UserRoleCode.PLACEMENT_OFFICER}>PLACEMENT OFFICER</option>
-                    <option value={UserRoleCode.ADMIN}>ADMINISTRATOR</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Department *</label>
-                  <select
-                    value={staffForm.department}
-                    onChange={(e) => setStaffForm({ ...staffForm, department: e.target.value as any })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  >
-                    {Object.values(StaffDepartment).map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Designation Title *</label>
-                  <input
-                    required
-                    type="text"
-                    placeholder="e.g. Senior Faculty & Trainer"
-                    value={staffForm.designation}
-                    onChange={(e) => setStaffForm({ ...staffForm, designation: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 mb-1">Monthly Base Salary (₹) *</label>
-                  <input
-                    required
-                    type="number"
-                    value={staffForm.baseSalaryRupees}
-                    onChange={(e) => setStaffForm({ ...staffForm, baseSalaryRupees: Number(e.target.value) })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Reporting Manager / Direct Supervisor
-                </label>
-                <select
-                  value={staffForm.reportingManagerId}
-                  onChange={(e) => setStaffForm({ ...staffForm, reportingManagerId: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                >
-                  <option value="">-- No Direct Manager (Reports to Head Office) --</option>
-                  {reportingManagers.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.user.firstName} {m.user.lastName} ({m.employeeId} - {m.designation})
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  Establishes supervisor hierarchy for live tracking, approvals, and daily reports
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Custom Password (Optional - leave blank to auto-generate secure temporary password)
-                </label>
-                <input
-                  type="password"
-                  placeholder="Leave empty for auto-generated password"
-                  value={staffForm.password}
-                  onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
-                  className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowAddStaffModal(false)}
-                  className="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createStaffAccountMutation.isPending}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 shadow-sm"
-                >
-                  {createStaffAccountMutation.isPending ? "Creating Account..." : "Create Staff & Generate LMS Login"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <StaffOnboardingWizard
+          isOpen={showAddStaffModal}
+          onClose={() => setShowAddStaffModal(false)}
+          onSuccess={() => {
+            refetchStaff();
+            refetchMetrics();
+          }}
+        />
       )}
+
+
 
       {/* ========================================================================= */}
       {/* MODAL: STAFF CREDENTIALS DISPLAY (PHASE 6) */}
@@ -2240,205 +2035,18 @@ WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentia
       {/* MODAL: EDIT STAFF PROFILE & CREDENTIALS */}
       {/* ========================================================================= */}
       {selectedStaffForEdit && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200 my-8">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="font-bold text-slate-900 text-lg flex items-center gap-2">
-                  <Edit2 className="w-5 h-5 text-blue-600" /> Edit Staff Profile & Access
-                </h3>
-                <p className="text-xs text-slate-500 font-mono">
-                  Employee ID: {selectedStaffForEdit.employeeId}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedStaffForEdit(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                updateStaffMutation.mutate({
-                  staffId: selectedStaffForEdit.id,
-                  firstName: editForm.firstName,
-                  lastName: editForm.lastName,
-                  email: editForm.email,
-                  phone: editForm.phone,
-                  personalEmail: editForm.personalEmail || undefined,
-                  personalPhone: editForm.personalPhone || undefined,
-                  department: editForm.department,
-                  designation: editForm.designation,
-                  baseSalary: Number(editForm.baseSalary),
-                  employmentType: editForm.employmentType,
-                  workLocation: editForm.workLocation,
-                  residentialAddress: editForm.residentialAddress || undefined,
-                  profilePhoto: editForm.profilePhoto || undefined,
-                  reportingManagerId: editForm.reportingManagerId || null,
-                  isActive: editForm.isActive,
-                });
-              }}
-              className="space-y-4 text-xs"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">First Name *</label>
-                  <input
-                    required
-                    type="text"
-                    value={editForm.firstName}
-                    onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Last Name *</label>
-                  <input
-                    required
-                    type="text"
-                    value={editForm.lastName}
-                    onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Official Email *</label>
-                  <input
-                    required
-                    type="email"
-                    value={editForm.email}
-                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Contact Phone *</label>
-                  <input
-                    required
-                    type="text"
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Department *</label>
-                  <select
-                    value={editForm.department}
-                    onChange={(e) => setEditForm({ ...editForm, department: e.target.value as StaffDepartment })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    {Object.values(StaffDepartment).map((d) => (
-                      <option key={d} value={d}>
-                        {d}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Designation *</label>
-                  <input
-                    required
-                    type="text"
-                    value={editForm.designation}
-                    onChange={(e) => setEditForm({ ...editForm, designation: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Base Monthly Salary (in INR) *</label>
-                  <input
-                    required
-                    type="number"
-                    value={editForm.baseSalary / 100}
-                    onChange={(e) => setEditForm({ ...editForm, baseSalary: Math.round(Number(e.target.value) * 100) })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm font-bold focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block font-semibold text-slate-700 mb-1">Work Location</label>
-                  <input
-                    type="text"
-                    value={editForm.workLocation}
-                    onChange={(e) => setEditForm({ ...editForm, workLocation: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">Profile Photo (URL or Base64)</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={editForm.profilePhoto}
-                    onChange={(e) => setEditForm({ ...editForm, profilePhoto: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  />
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label className="block font-semibold text-slate-700 mb-1">
-                    Reporting Manager / Direct Supervisor
-                  </label>
-                  <select
-                    value={editForm.reportingManagerId}
-                    onChange={(e) => setEditForm({ ...editForm, reportingManagerId: e.target.value })}
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    <option value="">-- No Direct Manager (Reports to Head Office) --</option>
-                    {reportingManagers
-                      .filter((m: any) => m.id !== selectedStaffForEdit.id)
-                      .map((m: any) => (
-                        <option key={m.id} value={m.id}>
-                          {m.user.firstName} {m.user.lastName} ({m.employeeId} - {m.designation})
-                        </option>
-                      ))}
-                  </select>
-                  <p className="text-[10px] text-slate-500 mt-1">
-                    Changes supervisor hierarchy for live call tracking, daily approvals, and departmental oversight
-                  </p>
-                </div>
-
-                <div className="sm:col-span-2 flex items-center justify-between p-3 bg-slate-50 border border-slate-200 rounded-xl">
-                  <div>
-                    <p className="font-bold text-slate-800 text-sm">Active Account Status</p>
-                    <p className="text-slate-500 text-[11px]">Allow employee login and daily attendance punches</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={editForm.isActive}
-                    onChange={(e) => setEditForm({ ...editForm, isActive: e.target.checked })}
-                    className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <button
-                  type="button"
-                  onClick={() => setSelectedStaffForEdit(null)}
-                  className="px-4 py-2 border rounded-lg text-slate-600 hover:bg-slate-50 font-medium"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={updateStaffMutation.isPending}
-                  className="px-5 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 transition shadow-sm"
-                >
-                  {updateStaffMutation.isPending ? "Updating..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <StaffOnboardingWizard
+          isOpen={Boolean(selectedStaffForEdit)}
+          initialStaff={selectedStaffForEdit}
+          onClose={() => setSelectedStaffForEdit(null)}
+          onSuccess={() => {
+            refetchStaff();
+            refetchMetrics();
+          }}
+        />
       )}
+
+
 
       {/* ========================================================================= */}
       {/* MODAL: DELETE / REMOVE STAFF CONFIRMATION */}

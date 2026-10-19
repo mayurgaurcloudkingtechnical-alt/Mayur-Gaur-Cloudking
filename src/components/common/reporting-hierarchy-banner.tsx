@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { api } from "@/lib/trpc/react";
 import {
   ShieldAlert,
@@ -14,10 +14,13 @@ import {
   Users,
   Briefcase,
   Layers,
+  User,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StaffSelfProfileModal } from "./staff-self-profile-modal";
 
 export function ReportingHierarchyBanner() {
+  const [showSelfProfileModal, setShowSelfProfileModal] = useState(false);
   const { data: hierarchy, isLoading } = api.crm.getMyReportingHierarchy.useQuery(undefined, {
     staleTime: 60000,
   });
@@ -49,13 +52,16 @@ export function ReportingHierarchyBanner() {
                 {user.roleCode} • ACTIVE
               </Badge>
             </div>
-            <p className="text-xs text-blue-200 font-medium">{user.designation}</p>
-            <p className="text-[11px] text-slate-400 mt-0.5 flex items-center gap-1.5">
-              <Building2 className="w-3 h-3 text-slate-400" />
-              <span>Dept: <strong className="text-slate-300">{user.department}</strong></span>
-              <span>•</span>
-              <span>Branch: <strong className="text-slate-300">Prayagraj Main Campus</strong></span>
-            </p>
+            <div className="flex items-center gap-2 mt-2">
+              <button
+                type="button"
+                onClick={() => setShowSelfProfileModal(true)}
+                className="px-2.5 py-1 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-500 hover:to-teal-500 text-slate-950 font-bold rounded-lg text-xs shadow-sm flex items-center gap-1.5 transition cursor-pointer"
+                title="Click to view your credentials, employment details, and uploaded documents"
+              >
+                <User className="w-3.5 h-3.5" /> View My Profile & Documents
+              </button>
+            </div>
           </div>
         </div>
 
@@ -151,6 +157,13 @@ export function ReportingHierarchyBanner() {
           })}
         </div>
       </div>
+
+      {showSelfProfileModal && (
+        <StaffSelfProfileModal
+          isOpen={showSelfProfileModal}
+          onClose={() => setShowSelfProfileModal(false)}
+        />
+      )}
     </div>
   );
 }
