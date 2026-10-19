@@ -52,6 +52,13 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
 
   const { data: authUser } = api.auth.me.useQuery();
   const isSuperAdmin = authUser?.roleCode === "SUPER_ADMIN";
+  const canDelete =
+    isSuperAdmin ||
+    authUser?.roleCode === "ADMIN" ||
+    authUser?.roleCode === "DIRECTOR" ||
+    authUser?.roleCode === "COUNSELOR" ||
+    authUser?.roleCode === "ACCOUNTANT" ||
+    authUser?.roleCode === "MANAGER";
 
   const utils = api.useUtils();
   const deletePaymentMutation = api.finance.deletePayment.useMutation();
@@ -386,8 +393,8 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
                           <span className="hidden sm:inline">Edit</span>
                         </Button>
 
-                        {/* Super Admin Delete Payment / Receipt Button */}
-                        {isSuperAdmin && (
+                        {/* Delete Payment / Receipt Button */}
+                        {canDelete && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -400,7 +407,7 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
                               })
                             }
                             className="h-7 px-2 text-xs border-rose-300 text-rose-700 hover:bg-rose-50 font-medium inline-flex items-center gap-1"
-                            title="Permanently delete payment transaction and recalculate student balance (Super Admin Only)"
+                            title="Permanently delete payment transaction and recalculate student balance"
                           >
                             <Trash2 className="h-3 w-3 text-rose-600" />
                             <span className="hidden sm:inline">Delete</span>

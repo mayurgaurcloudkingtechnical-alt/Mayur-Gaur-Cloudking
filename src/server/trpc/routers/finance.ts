@@ -227,10 +227,11 @@ export const financeRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      if (ctx.user.roleCode !== "SUPER_ADMIN") {
+      const allowedRoles = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "ACCOUNTANT", "COUNSELOR", "MANAGER"];
+      if (!allowedRoles.includes(ctx.user.roleCode)) {
         throw new TRPCError({
           code: "FORBIDDEN",
-          message: "Only Super Admin is authorized to delete payment transactions and receipts.",
+          message: "You lack permission to delete payment transactions.",
         });
       }
       return PaymentService.deletePayment(asAuthUser(ctx.user), input.paymentId);

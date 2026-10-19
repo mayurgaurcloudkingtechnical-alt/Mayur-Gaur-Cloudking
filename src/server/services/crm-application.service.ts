@@ -8,6 +8,7 @@ import {
   LeadSource,
   UserRoleCode,
   PaymentMethod,
+  PaymentTransactionStatus,
   EnrollmentStatus,
   FeePaymentStatus,
   InstallmentStatus,
@@ -1289,13 +1290,14 @@ export class CrmApplicationService {
         });
       }
 
-      // Synchronize FeeStructure and FeeInstallments if financial terms were updated
+      // Synchronize FeeStructure, PaymentTransaction and FeeInstallments if financial terms were updated
       if (
         input.totalCourseFee !== undefined ||
         input.discountAmount !== undefined ||
         input.paymentPlan !== undefined ||
         input.installments !== undefined ||
-        input.finalFee !== undefined
+        input.finalFee !== undefined ||
+        input.paidAmount !== undefined
       ) {
         const existingFee = await db.feeStructure.findFirst({
           where: { studentId: app.convertedStudentProfileId },
@@ -1303,6 +1305,53 @@ export class CrmApplicationService {
         });
 
         if (existingFee) {
+          // 1. If paidAmount was specified, update or create the admission down payment transaction
+          if (input.paidAmount !== undefined) {
+            const initialPayment = await db.paymentTransaction.findFirst({
+              where: {
+                studentId: app.convertedStudentProfileId,
+              },
+              orderBy: { createdAt: "asc" },
+            });
+
+            if (initialPayment) {
+              await db.paymentTransaction.update({
+                where: { id: initialPayment.id },
+                data: {
+                  amount: Math.floor(input.paidAmount),
+                  remarks: input.remarks || initialPayment.remarks,
+                },
+              });
+            } else if (input.paidAmount > 0) {
+              const year = new Date().getFullYear();
+              const rand = Math.floor(1000 + Math.random() * 9000);
+              await db.paymentTransaction.create({
+                data: {
+                  admissionId: app.id,
+                  studentId: app.convertedStudentProfileId,
+                  feeStructureId: existingFee.id,
+                  amount: Math.floor(input.paidAmount),
+                  paymentMethod: PaymentMethod.CASH,
+                  status: PaymentTransactionStatus.SUCCESS,
+                  transactionReference: `PAY-${year}-${rand}`,
+                  receiptNumber: `SLG-REC-${year}-${rand}`,
+                  paymentDate: new Date(),
+                  paidAt: new Date(),
+                  remarks: input.remarks || "Admission Down-Payment",
+                },
+              });
+            }
+          }
+
+          // 2. Calculate accurate totalPaid across all recorded successful payments
+          const allPayments = await db.paymentTransaction.findMany({
+            where: {
+              studentId: app.convertedStudentProfileId,
+              status: PaymentTransactionStatus.SUCCESS,
+            },
+          });
+          const totalPaid = allPayments.reduce((acc, p) => acc + p.amount, 0);
+
           const totalFee =
             input.totalCourseFee !== undefined
               ? Math.floor(input.totalCourseFee)
@@ -1312,7 +1361,7 @@ export class CrmApplicationService {
               ? Math.floor(input.discountAmount)
               : existingFee.discountAmount;
           const netPayable = Math.max(0, totalFee - discountAmt);
-          const newPending = Math.max(0, netPayable - existingFee.paidAmount);
+          const newPending = Math.max(0, netPayable - totalPaid);
 
           await db.feeStructure.update({
             where: { id: existingFee.id },
@@ -1320,11 +1369,12 @@ export class CrmApplicationService {
               totalCourseFee: totalFee,
               discountAmount: discountAmt,
               netPayableAmount: netPayable,
+              paidAmount: totalPaid,
               pendingAmount: newPending,
               paymentStatus:
                 newPending === 0
                   ? FeePaymentStatus.PAID
-                  : existingFee.paidAmount > 0
+                  : totalPaid > 0
                   ? FeePaymentStatus.PARTIAL
                   : FeePaymentStatus.PENDING,
               remarks: input.remarks || existingFee.remarks,

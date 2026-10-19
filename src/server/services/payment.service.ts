@@ -470,10 +470,11 @@ export class PaymentService {
    * Automatically recalculates the associated fee structure and sequential installments if applicable.
    */
   static async deletePayment(user: AuthenticatedUser, paymentId: string) {
-    if (user.roleCode !== "SUPER_ADMIN") {
+    const allowedDeleteRoles = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "ACCOUNTANT", "COUNSELOR", "MANAGER"];
+    if (!allowedDeleteRoles.includes(user.roleCode)) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "Only Super Admin is authorized to delete payment transactions and receipts.",
+        message: "You lack permission to delete payment transactions.",
       });
     }
 

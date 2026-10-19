@@ -347,6 +347,10 @@ export function EditApplicationDialog({
       setErrorMsg(null);
       utils.crm.listApplications.invalidate();
       utils.crm.getApplicationDetails.invalidate();
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      utils.finance.listPayments.invalidate();
+      utils.crm.getAdmissionReceipt.invalidate();
       onOpenChange(false);
       if (onSuccess) onSuccess();
     },
@@ -429,6 +433,7 @@ export function EditApplicationDialog({
       discountValue: discountValue > 0 ? discountValue : undefined,
       discountAmount: discountAmountInr > 0 ? discountAmountInr * 100 : undefined,
       finalFee: finalFeeInr * 100,
+      paidAmount: Math.round(paidAmountInr * 100),
       paymentPlan,
       installmentCount: paymentPlan === "EMI" ? installmentCount : undefined,
       installments:

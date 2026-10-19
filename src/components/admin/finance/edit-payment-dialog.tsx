@@ -56,9 +56,14 @@ export function EditPaymentDialog({
     }
   }, [payment]);
 
+  const utils = api.useUtils();
   const mutation = api.finance.updatePayment.useMutation({
     onSuccess: () => {
       setErrorMessage(null);
+      utils.finance.listPayments.invalidate();
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      utils.crm.listApplications.invalidate();
       onOpenChange(false);
       onSuccess();
     },

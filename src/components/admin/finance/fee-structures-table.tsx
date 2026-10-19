@@ -13,6 +13,13 @@ import { formatPaiseToRupees, formatDate } from "@/lib/utils";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 import { EditFeeStructureDialog } from "./edit-fee-structure-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
+import {
+  Dialog,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { IndianRupee, Search, CreditCard, Download, Edit, Printer, Loader2, X, Filter, Trash2 } from "lucide-react";
 
 interface FeeStructuresTableProps {
@@ -42,6 +49,17 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
   // State for viewing receipt
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
   const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
+
+  // State for multi-receipt selection dialog (down payment + every EMI installment)
+  const [receiptSelectionStudent, setReceiptSelectionStudent] = useState<{
+    studentName: string;
+    studentId: string;
+    courseTitle: string;
+    totalFee: number;
+    paidAmount: number;
+    pendingAmount: number;
+    payments: Array<any>;
+  } | null>(null);
 
   const utils = api.useUtils();
   const { data, isLoading } = api.finance.listFeeStructures.useQuery({
@@ -310,21 +328,43 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Print Receipt button (if student has paid payments) */}
-                        {latestPayment && (
+                        {fee.payments && fee.payments.length === 1 && (
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => handleOpenReceipt(latestPayment.id)}
-                            disabled={loadingReceiptId === latestPayment.id}
+                            onClick={() => handleOpenReceipt(fee.payments[0].id)}
+                            disabled={loadingReceiptId === fee.payments[0].id}
                             className="h-7 px-2 text-xs border-slate-300 text-blue-700 hover:bg-blue-50 font-medium inline-flex items-center gap-1"
-                            title={`View & Print Official Receipt (${latestPayment.receiptNumber || "SLG-REC"})`}
+                            title={`View & Print Official Receipt (${fee.payments[0].receiptNumber || "SLG-REC"})`}
                           >
-                            {loadingReceiptId === latestPayment.id ? (
+                            {loadingReceiptId === fee.payments[0].id ? (
                               <Loader2 className="h-3 w-3 animate-spin" />
                             ) : (
                               <Printer className="h-3 w-3" />
                             )}
                             <span className="hidden sm:inline">Receipt</span>
+                          </Button>
+                        )}
+                        {fee.payments && fee.payments.length > 1 && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              setReceiptSelectionStudent({
+                                studentName: studentFullName,
+                                studentId: fee.student.studentId,
+                                courseTitle: fee.course.title,
+                                totalFee: fee.totalCourseFee,
+                                paidAmount: fee.paidAmount,
+                                pendingAmount: fee.pendingAmount,
+                                payments: fee.payments,
+                              })
+                            }
+                            className="h-7 px-2 text-xs border-blue-400 bg-blue-50/70 text-blue-800 hover:bg-blue-100 font-semibold inline-flex items-center gap-1.5 shadow-2xs"
+                            title={`View & print all ${fee.payments.length} transactions (Down Payment & EMI installments)`}
+                          >
+                            <Printer className="h-3.5 w-3.5 text-blue-700" />
+                            <span>Receipts ({fee.payments.length})</span>
                           </Button>
                         )}
 
@@ -417,6 +457,8 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
           onSuccess={() => {
             utils.finance.listFeeStructures.invalidate();
             utils.finance.getOverviewMetrics.invalidate();
+            utils.finance.listPayments.invalidate();
+            utils.crm.listApplications.invalidate();
           }}
         />
       )}
@@ -430,9 +472,106 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
           onSuccess={() => {
             utils.finance.listFeeStructures.invalidate();
             utils.finance.getOverviewMetrics.invalidate();
+            utils.finance.listPayments.invalidate();
+            utils.crm.listApplications.invalidate();
             setEditingFee(null);
           }}
         />
+      )}
+
+      {/* Multi-Receipt Selection Dialog for Every Transaction */}
+      {receiptSelectionStudent && (
+        <Dialog
+          open={!!receiptSelectionStudent}
+          onOpenChange={(open) => !open && setReceiptSelectionStudent(null)}
+        >
+          <div className="space-y-4 max-h-[85vh] overflow-y-auto p-1 text-xs">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <Printer className="h-5 w-5 text-blue-600" />
+                  <span>All Transaction Receipts ({receiptSelectionStudent.payments.length})</span>
+                </DialogTitle>
+                <Badge className="bg-emerald-100 text-emerald-800 font-bold border border-emerald-300">
+                  Total Paid: {formatPaiseToRupees(receiptSelectionStudent.paidAmount)}
+                </Badge>
+              </div>
+              <DialogDescription className="text-xs text-slate-500">
+                Candidate: <strong className="text-slate-800">{receiptSelectionStudent.studentName}</strong> ({receiptSelectionStudent.studentId}) • {receiptSelectionStudent.courseTitle}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="rounded-lg border border-slate-200 divide-y divide-slate-100 bg-white shadow-xs">
+              {receiptSelectionStudent.payments.map((p, idx) => {
+                const isDownPayment = idx === receiptSelectionStudent.payments.length - 1;
+                return (
+                  <div key={p.id} className="p-3 flex items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 text-sm">
+                          {formatPaiseToRupees(p.amount)}
+                        </span>
+                        <Badge variant="outline" className="text-[10px] font-semibold uppercase bg-slate-50">
+                          {p.paymentMethod}
+                        </Badge>
+                        {isDownPayment ? (
+                          <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[9px] font-semibold">
+                            Down Payment
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-[9px] font-semibold">
+                            Installment / EMI #{receiptSelectionStudent.payments.length - idx}
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-[11px] text-slate-500 flex items-center gap-2 font-mono">
+                        <span>Receipt: <strong>{p.receiptNumber || p.transactionReference || "SLG-REC"}</strong></span>
+                        {p.paymentDate && (
+                          <span>• {new Date(p.paymentDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}</span>
+                        )}
+                      </div>
+                      {p.remarks && (
+                        <p className="text-[10px] text-slate-400 italic">Notes: {p.remarks}</p>
+                      )}
+                    </div>
+
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        setReceiptSelectionStudent(null);
+                        handleOpenReceipt(p.id);
+                      }}
+                      disabled={loadingReceiptId === p.id}
+                      className="h-8 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold inline-flex items-center gap-1.5 shadow-xs shrink-0"
+                    >
+                      {loadingReceiptId === p.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Printer className="h-3.5 w-3.5" />
+                      )}
+                      <span>Print Receipt</span>
+                    </Button>
+                  </div>
+                );
+              })}
+            </div>
+
+            <DialogFooter className="pt-2 flex justify-between sm:justify-between items-center border-t border-slate-100">
+              <span className="text-[11px] text-slate-400">
+                Official SoftLab Global Dual-Copy Print Format
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setReceiptSelectionStudent(null)}
+                className="text-xs"
+              >
+                Close
+              </Button>
+            </DialogFooter>
+          </div>
+        </Dialog>
       )}
 
       {/* Printable Dual Fee Receipt Viewer Modal */}

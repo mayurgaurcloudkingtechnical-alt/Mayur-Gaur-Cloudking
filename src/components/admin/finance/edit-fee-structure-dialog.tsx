@@ -76,9 +76,14 @@ export function EditFeeStructureDialog({
   const paidRupees = feeStructure ? Math.floor(feeStructure.paidAmount / 100) : 0;
   const newPendingRupees = Math.max(0, numNetPayable - paidRupees);
 
+  const utils = api.useUtils();
   const mutation = api.finance.updateFeeStructure.useMutation({
     onSuccess: () => {
       setErrorMessage(null);
+      utils.finance.listFeeStructures.invalidate();
+      utils.finance.getOverviewMetrics.invalidate();
+      utils.finance.listPayments.invalidate();
+      utils.crm.listApplications.invalidate();
       onOpenChange(false);
       onSuccess();
     },
