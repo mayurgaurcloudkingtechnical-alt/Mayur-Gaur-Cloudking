@@ -1,5 +1,5 @@
 import { db } from "@/server/db/client";
-import { StaffDepartment, UserRoleCode, Prisma } from "@prisma/client";
+import { StaffDepartment, UserRoleCode, UserStatus, Prisma } from "@prisma/client";
 import { AuditService } from "@/server/services/audit.service";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 import { TRPCError } from "@trpc/server";
@@ -113,9 +113,20 @@ export class StaffProfileService {
    */
   static async ensureStaffProfilesExist() {
     try {
+      // 1. Remove any dangling staff profiles belonging to deleted or non-active users
+      await db.staffProfile.deleteMany({
+        where: {
+          user: {
+            status: { not: UserStatus.ACTIVE },
+          },
+        },
+      });
+
+      // 2. Only consider ACTIVE institutional users that lack a staff profile
       const usersWithoutProfile = await db.user.findMany({
         where: {
           roleCode: { notIn: [UserRoleCode.STUDENT] },
+          status: UserStatus.ACTIVE,
           staffProfile: null,
         },
       });
@@ -746,11 +757,53 @@ export class StaffProfileService {
       await tx.staffPerformanceReview.deleteMany({ where: { staffId } });
       await tx.staffAsset.deleteMany({ where: { assignedStaffId: staffId } });
 
-      // 7. Delete staff profile
+      // 7. Reassign/nullify reporting manager for subordinates
+      await tx.staffProfile.updateMany({
+        where: { reportingManagerId: staffId },
+        data: { reportingManagerId: null },
+      });
+
+      // 8. Delete staff profile
       await tx.staffProfile.delete({ where: { id: staffId } });
 
-      // 8. Delete user account
-      await tx.user.delete({ where: { id: staff.userId } });
+      // 9. Reassign or nullify foreign key references to staff.userId to prevent Postgres RESTRICT errors
+      // Reassign marked student attendance records to the current actor/admin
+      await tx.attendanceRecord.updateMany({
+        where: { markedById: staff.userId },
+        data: { markedById: actor.id },
+      });
+
+      // Unassign leads
+      await tx.lead.updateMany({
+        where: { assignedCounselorId: staff.userId },
+        data: { assignedCounselorId: null },
+      });
+      await tx.lead.updateMany({
+        where: { assignedTelecallerId: staff.userId },
+        data: { assignedTelecallerId: null },
+      });
+      await tx.lead.updateMany({
+        where: { assignedToId: staff.userId },
+        data: { assignedToId: null },
+      });
+
+      // Delete trainer profile if exists
+      await tx.trainerProfile.deleteMany({
+        where: { userId: staff.userId },
+      });
+
+      // Mark user account as DELETED so they cannot login or appear in any active lists
+      await tx.user.update({
+        where: { id: staff.userId },
+        data: { status: UserStatus.DELETED, deletedAt: new Date() },
+      });
+
+      // Attempt hard deletion of user if clean
+      try {
+        await tx.user.delete({ where: { id: staff.userId } });
+      } catch {
+        // Preserved as status: DELETED due to historical audit/ledger constraints
+      }
     });
 
     await AuditService.log({
@@ -890,6 +943,9 @@ export class StaffProfileService {
     const where: Prisma.StaffProfileWhereInput = {
       department: department ?? undefined,
       isActive: isActive !== undefined ? isActive : undefined,
+      user: {
+        status: UserStatus.ACTIVE,
+      },
       ...(reportingManagerId && reportingManagerId !== "ALL"
         ? {
             reportingManagerId: reportingManagerId === "UNASSIGNED" ? null : reportingManagerId,
@@ -965,6 +1021,9 @@ export class StaffProfileService {
     return db.staffProfile.findMany({
       where: {
         isActive: true,
+        user: {
+          status: UserStatus.ACTIVE,
+        },
       },
       select: {
         id: true,
@@ -993,11 +1052,24 @@ export class StaffProfileService {
    */
   static async getStaffMetrics() {
     const [totalActive, totalInactive, deptCounts] = await Promise.all([
-      db.staffProfile.count({ where: { isActive: true } }),
-      db.staffProfile.count({ where: { isActive: false } }),
+      db.staffProfile.count({
+        where: {
+          isActive: true,
+          user: { status: UserStatus.ACTIVE },
+        },
+      }),
+      db.staffProfile.count({
+        where: {
+          isActive: false,
+          user: { status: UserStatus.ACTIVE },
+        },
+      }),
       db.staffProfile.groupBy({
         by: ["department"],
-        where: { isActive: true },
+        where: {
+          isActive: true,
+          user: { status: UserStatus.ACTIVE },
+        },
         _count: { _all: true },
       }),
     ]);
