@@ -60,7 +60,7 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
       "SoftLab Global is a leading IT training and corporate services company, committed to skill development, live projects, placements and building future-ready professionals.",
     officeAddress:
       initialData.officeAddress ||
-      "SoftLab Global, 1st Floor, Corporate Tower, Near Civil Lines, Prayagraj, Uttar Pradesh - 211002, India.",
+      "SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011",
     officePhone: initialData.officePhone || "+91 9196596975",
     officeEmail: initialData.officeEmail || "info@softlabglobal.com",
     websiteUrl: initialData.websiteUrl || "www.softlabglobal.com",
@@ -70,7 +70,7 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
       "3. Loss of this card must be reported immediately to HR.",
       "4. This card is the property of SoftLab Global and must be returned on exit.",
     ],
-    signatoryTitle: initialData.signatoryTitle || "Authorised Signatory / SoftLab Global",
+    signatoryTitle: initialData.signatoryTitle || "Authorised Signatory / Director, SoftLab Global",
   });
 
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
@@ -401,10 +401,12 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
                     <div className="relative pt-6 px-4 bg-gradient-to-b from-white via-white to-transparent z-10">
                       {/* Logo & Tagline */}
                       <div className="flex items-center justify-center gap-2 pt-2">
-                        {/* Stylized SG emblem */}
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-emerald-500 to-blue-600 flex items-center justify-center text-white font-black text-base shadow-sm border border-white">
-                          SG
-                        </div>
+                        {/* Official 3D SoftLab Global Logo */}
+                        <img
+                          src="/images/softlab-global-logo-3d.jpg"
+                          alt="SoftLab Global"
+                          className="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200"
+                        />
                         <div className="leading-tight text-center">
                           <h1 className="text-lg font-black tracking-tight text-[#0A2540]">
                             <span className="text-[#059669]">SOFTLAB </span>GLOBAL
@@ -592,9 +594,11 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
                     {/* Top Logo */}
                     <div className="pt-6 px-4 bg-gradient-to-b from-white via-white to-transparent">
                       <div className="flex items-center justify-center gap-2 pt-2">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-500 to-blue-600 flex items-center justify-center text-white font-black text-sm shadow-sm">
-                          SG
-                        </div>
+                        <img
+                          src="/images/softlab-global-logo-3d.jpg"
+                          alt="SoftLab Global"
+                          className="w-9 h-9 rounded-full object-cover shadow-sm border border-slate-200"
+                        />
                         <div className="leading-tight text-center">
                           <h1 className="text-base font-black tracking-tight text-[#0A2540]">
                             <span className="text-[#059669]">SOFTLAB </span>GLOBAL
@@ -678,12 +682,12 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
                         </div>
                         <div className="text-right">
                           <div className="font-serif italic text-sm text-slate-800 font-bold border-b border-slate-400 pb-0.5 px-2">
-                            Mayur Gaur
+                            Director Signature
                           </div>
                           <p className="text-[7.5px] font-bold text-slate-800 mt-0.5">
                             Authorised Signatory
                           </p>
-                          <p className="text-[6.5px] font-semibold text-slate-500">SoftLab Global</p>
+                          <p className="text-[6.5px] font-semibold text-slate-500">Director, SoftLab Global</p>
                         </div>
                       </div>
                     </div>

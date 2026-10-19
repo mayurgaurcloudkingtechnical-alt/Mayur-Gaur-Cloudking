@@ -720,7 +720,7 @@ export const bulkCallingRouter = router({
           `🎁 *Special Demo Session Invitation:*`,
           `Hum aapko is week hamare Civil Lines campus me *Free Academic Demo Class & Counseling Session* ke liye invite kar rahe hain!`,
           ``,
-          `🏢 *Campus Address:* SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP`,
+          `🏢 *Campus Address:* SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011`,
           `📞 *Direct Helpline:* +91 ${counselorPhone}`,
           ``,
           `Aap demo class attend karna chahte hain? Please reply *"YES"* to confirm your demo seat! 🚀`,

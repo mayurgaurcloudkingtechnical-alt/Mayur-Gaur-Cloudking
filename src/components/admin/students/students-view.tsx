@@ -59,7 +59,7 @@ export function StudentsView() {
   const [histGender, setHistGender] = useState("MALE");
   const [histCity, setHistCity] = useState("Prayagraj");
   const [histState, setHistState] = useState("Uttar Pradesh");
-  const [histPincode, setHistPincode] = useState("211001");
+  const [histPincode, setHistPincode] = useState("211011");
   const [histHighestDegree, setHistHighestDegree] = useState("B.Tech / Graduate");
   const [histGuardianName, setHistGuardianName] = useState("");
   const [histGuardianPhone, setHistGuardianPhone] = useState("");

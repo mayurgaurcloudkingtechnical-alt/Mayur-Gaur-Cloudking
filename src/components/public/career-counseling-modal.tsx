@@ -214,7 +214,7 @@ export function CareerCounselingModal({
               </div>
               <p className="text-sm font-extrabold text-emerald-800">{SITE_CONFIG.contact.phone}</p>
               <p className="text-[11px] text-emerald-700">
-                211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001
+                4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011
               </p>
             </div>
 

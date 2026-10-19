@@ -148,7 +148,7 @@ export class LeadAutoFollowupService {
       `We are inviting you for a *Free 1-on-1 Academic Demo & Career Counseling Session* this week!`,
       ``,
       `🏢 *Campus Address*:`,
-      `SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP 211001`,
+      `SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011`,
       ``,
       `📞 *Connect Directly with Your Counselor*:`,
       `• Counselor: *${counselorName}*`,

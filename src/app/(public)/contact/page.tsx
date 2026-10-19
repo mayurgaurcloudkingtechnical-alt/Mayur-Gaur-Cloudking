@@ -180,7 +180,7 @@ export default function ContactPage({
                   <p className="font-bold text-white">{SITE_CONFIG.name}</p>
                   <p>{SITE_CONFIG.address.line1}</p>
                   <p>{SITE_CONFIG.address.city}, {SITE_CONFIG.address.state} — {SITE_CONFIG.address.pincode}</p>
-                  <p className="text-slate-500 pt-1">Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj</p>
+                  <p className="text-slate-500 pt-1">Campus: 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011</p>
                 </address>
 
                 <div className="pt-2 flex flex-wrap gap-3">

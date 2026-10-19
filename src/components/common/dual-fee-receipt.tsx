@@ -66,7 +66,7 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   };
 
   const defaultAddress =
-    "Address: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001";
+    "Address: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011";
   const defaultGst = "09AFYFS5388G1ZX";
 
   const sanitizedAddress =

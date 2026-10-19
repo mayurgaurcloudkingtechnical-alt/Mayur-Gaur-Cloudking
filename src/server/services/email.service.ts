@@ -346,7 +346,7 @@ export class EmailService {
         </p>
         
         <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px;">
-          SOFTLAB GLOBAL Admissions Directorate • 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001
+          SOFTLAB GLOBAL Admissions Directorate • 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011
         </p>
       </div>
     `;
@@ -423,7 +423,7 @@ export class EmailService {
     counselorName?: string | null;
     counselorPhone?: string | null;
   }) {
-    const center = params.center || "SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001";
+    const center = params.center || "SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011";
     const subject = `Official Admission Confirmation & LMS Credentials — SOFTLAB GLOBAL (${params.studentId})`;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
@@ -484,7 +484,7 @@ export class EmailService {
         </div>
 
         <p style="font-size: 12px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 16px; margin-top: 24px; text-align: center;">
-          SOFTLAB GLOBAL Admissions Directorate • 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001<br/>
+          SOFTLAB GLOBAL Admissions Directorate • 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011<br/>
           Official Email: info@softlabglobal.com | Records Desk: softlabglobal9@gmail.com
         </p>
       </div>

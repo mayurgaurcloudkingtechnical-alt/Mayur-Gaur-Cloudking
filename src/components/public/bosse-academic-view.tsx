@@ -769,7 +769,7 @@ export function BosseAcademicView({ courses = [] }: BosseAcademicViewProps) {
               </Button>
 
               <p className="text-[11px] text-slate-500 text-center">
-                Official Campus: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj. Helpline: +91 9196596975
+                Official Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011. Helpline: +91 9196596975
               </p>
             </form>
           )}

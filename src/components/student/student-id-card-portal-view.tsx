@@ -66,6 +66,8 @@ export function StudentIdCardPortalView() {
               validUntil: latestEnrollment?.batch?.endDate ? new Date(latestEnrollment.batch.endDate) : new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
               photoUrl: (student as any).photoUrl || student.user.avatarUrl || null,
               emergencyPhone: student.guardianPhone || student.alternatePhone || student.user.phone || undefined,
+              phone: student.user.phone || undefined,
+              email: student.user.email || undefined,
               bloodGroup: "O+",
             }}
           />

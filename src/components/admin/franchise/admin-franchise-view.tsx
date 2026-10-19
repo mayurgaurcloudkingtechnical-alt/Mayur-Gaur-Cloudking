@@ -378,7 +378,7 @@ export function AdminFranchiseView() {
     setCenterAddress(lead.franchisePreferredLocation || lead.city || "Commercial Hub");
     setCenterCity(lead.city || "Prayagraj");
     setCenterState(lead.franchiseState || "Uttar Pradesh");
-    setCenterPincode("211001");
+    setCenterPincode("211011");
     setPackageType(FranchisePackageType.STANDARD_ATC);
     setPackageName("Authorized Training Center (ATC) License");
     setTotalAmountRupees("500000");

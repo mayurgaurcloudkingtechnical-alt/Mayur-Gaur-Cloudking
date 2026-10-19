@@ -1242,6 +1242,8 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
               admissionDate: (student as any).admissionDate || student.createdAt,
               center: (student as any).center || "SOFTLAB GLOBAL Campus, Prayagraj",
               emergencyPhone: student.guardianPhone || student.user.phone || undefined,
+              phone: student.user.phone || undefined,
+              email: student.user.email || undefined,
               educationProvider: (student as any).educationProvider || undefined,
               universityName: (student as any).universityName || undefined,
               universityProgram: (student as any).universityProgram || undefined,

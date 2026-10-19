@@ -210,7 +210,7 @@ export function StudentEnquiryDialog({
     emailId: "",
     city: "Prayagraj",
     state: "Uttar Pradesh",
-    pinCode: "211001",
+    pinCode: "211011",
     currentAddress: "",
 
     qualifications: {

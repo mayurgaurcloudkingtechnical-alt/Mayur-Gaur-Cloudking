@@ -108,7 +108,7 @@ export function DirectAdmissionDialog({
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("Prayagraj");
   const [state, setState] = useState("Uttar Pradesh");
-  const [pincode, setPincode] = useState("211001");
+  const [pincode, setPincode] = useState("211011");
 
   // Academic
   const [highestQualification, setHighestQualification] = useState("B.Tech / Graduate");
@@ -631,7 +631,7 @@ SoftLab LMS: https://softlabglobal.com/login
 DPGU Student Portal: https://student.dpguindia.com/Default.aspx
 Login Email: ${createdResult.credentials.email}
 Temporary Password: ${createdResult.credentials.temporaryPassword}
-Advisory Center: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`
+Advisory Center: 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011`
       : `SOFTLAB GLOBAL — STUDENT LMS LOGIN CREDENTIALS
 Student Name: ${createdResult.credentials.fullName}
 Student ID: ${createdResult.credentials.studentId}
@@ -639,7 +639,7 @@ Admission No: ${createdResult.credentials.admissionNumber}
 Portal URL: https://softlabglobal.com/login
 Login Email: ${createdResult.credentials.email}
 Temporary Password: ${createdResult.credentials.temporaryPassword}
-Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`;
+Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011`;
 
     navigator.clipboard.writeText(credText);
     setCopiedCredentials(true);
@@ -882,6 +882,8 @@ Campus: 211/C/59, M.G. Marg, Civil Lines, Prayagraj – 211001`;
                     universityName: createdResult.isUniversity ? (createdResult.universityName || "Dr. Preeti Global University") : undefined,
                     universityProgram: createdResult.isUniversity ? (createdResult.universityProgram || selectedCourse?.title) : undefined,
                     photoUrl: photoUrl || null,
+                    phone: applicantPhone || undefined,
+                    email: createdResult.credentials.email || applicantEmail || undefined,
                     validUntil: new Date(new Date().setFullYear(new Date().getFullYear() + 1)),
                   });
                 }}

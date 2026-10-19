@@ -297,7 +297,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
               <span className="text-[#0284c7]">LAB</span>
               <span className="text-[#0284c7] font-black tracking-widest text-[9px]">GLOBAL</span>
             </p>
-            <p className="mt-0.5">Prayagraj, UP 211001</p>
+            <p className="mt-0.5">Civil Lines, Prayagraj - 211011</p>
             <p className="mt-0.5 font-mono text-[10px]">v0.1.0 • Day 1 Foundation</p>
           </div>
         </div>

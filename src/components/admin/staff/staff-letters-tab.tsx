@@ -168,7 +168,7 @@ export function StaffLettersTab() {
                   Center for Excellence in Advanced Software & Technology Education
                 </p>
                 <p className="text-[11px] text-slate-400 font-sans">
-                  211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP – 211001 • info@softlabglobal.com
+                  4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, UP – 211011 • info@softlabglobal.com
                 </p>
               </div>
               <div className="text-right font-sans">

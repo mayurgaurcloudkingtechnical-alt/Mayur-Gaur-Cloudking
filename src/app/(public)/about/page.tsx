@@ -212,7 +212,7 @@ export default function AboutPage() {
               </div>
               <h3 className="text-xl sm:text-2xl font-bold text-white">Visit Our Campus in Civil Lines</h3>
               <p className="text-xs sm:text-sm text-slate-400 max-w-xl leading-relaxed">
-                Experience our workstation labs and consult directly with our academic faculty. Located at 211/C/59, M.G. Marg, Civil Lines, Prayagraj - 211001.
+                Experience our workstation labs and consult directly with our academic faculty. Located at 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj - 211011.
               </p>
             </div>
 

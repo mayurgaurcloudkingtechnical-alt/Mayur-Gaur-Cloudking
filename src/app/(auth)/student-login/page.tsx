@@ -183,7 +183,7 @@ export default function StudentLoginPage() {
         </React.Suspense>
 
         <p className="mt-8 text-center text-[11px] text-slate-500 leading-relaxed">
-          Civil Lines Campus: SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, UP 211001
+          Civil Lines Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011
           <br />
           Student Desk Helpline: +91 9196596975 / +91 9196596979 | Email: info@softlabglobal.com
         </p>

@@ -54,7 +54,7 @@ export class ReceiptService {
   static readonly COMPANY_INFO = {
     name: "SOFTLAB GLOBAL",
     tagline: "Center for Excellence • Software Development, Cloud & AI",
-    address: "SoftLab Global, 211/C/59, M.G. Marg, Civil Lines, Prayagraj, Uttar Pradesh - 211001",
+    address: "SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011",
     gstin: "09AFYFS5388G1ZX",
     email: "info@softlabglobal.com",
     phone: "+91 9196596975 / +91 9196596979",
