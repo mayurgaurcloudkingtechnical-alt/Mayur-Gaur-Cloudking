@@ -262,6 +262,22 @@ export class PaymentService {
         throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to payment history." });
       }
 
+      const isCompanyFinanceAdmin =
+        user.roleCode === "SUPER_ADMIN" ||
+        user.roleCode === "DIRECTOR" ||
+        user.roleCode === "ADMIN" ||
+        user.roleCode === "ACCOUNTANT" ||
+        user.roleCode === "MANAGER";
+
+      if (!isCompanyFinanceAdmin) {
+        where.OR = [
+          { receivedById: user.id },
+          { admission: { counselorId: user.id } },
+          { student: { convertedApplication: { counselorId: user.id } } },
+          { feeStructure: { student: { convertedApplication: { counselorId: user.id } } } },
+        ];
+      }
+
       if (input.feeStructureId) where.feeStructureId = input.feeStructureId;
       if (input.studentId) where.studentId = input.studentId;
       if (input.paymentMethod) where.paymentMethod = input.paymentMethod;

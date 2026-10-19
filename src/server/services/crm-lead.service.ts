@@ -137,7 +137,6 @@ export function canReadAllLeads(user: AuthenticatedUser): boolean {
     user.roleCode === UserRoleCode.DIRECTOR ||
     user.roleCode === UserRoleCode.ADMIN ||
     user.roleCode === UserRoleCode.MANAGER ||
-    user.roleCode === UserRoleCode.COUNSELOR ||
     hasPermission(user.permissions, "leads:read_all")
   );
 }
@@ -277,23 +276,23 @@ export class CrmLeadService {
     const andConditions: Prisma.LeadWhereInput[] = [];
 
     if (user.roleCode === UserRoleCode.TELECALLER) {
-      // Telecallers have full visibility over all Meta leads (FB, IG, etc.), plus assigned or unassigned leads
+      // Telecallers only see leads assigned to them or created by them
       andConditions.push({
         OR: [
-          { source: { in: META_SOURCES } },
           { assignedToId: user.id },
           { assignedCounselorId: user.id },
           { assignedTelecallerId: user.id },
-          { assignedToId: null },
+          { createdById: user.id },
         ],
       });
     } else if (!hasReadAll) {
+      // Counselors only see leads assigned to them or created by them (new counselors get a blank/clean CRM)
       andConditions.push({
         OR: [
           { assignedToId: user.id },
           { assignedCounselorId: user.id },
           { assignedTelecallerId: user.id },
-          { assignedToId: null },
+          { createdById: user.id },
         ],
       });
     } else if (input.assignedToId) {

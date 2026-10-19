@@ -55,10 +55,17 @@ export function FinanceOverviewView() {
   return (
     <div className="space-y-6">
       {/* Top Header & Academic Year Filter matching Image 8 */}
+      {/* Top Header & Academic Year Filter */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 rounded border border-slate-200 shadow-sm">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Fees Dashboard</h1>
-          <p className="text-xs text-slate-500">Real-time tuition billing, collections telemetry, and outstanding dues tracking</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+            {(metrics as any)?.isRestrictedView ? "My Admissions & Fee Collection Desk" : "Fees Dashboard"}
+          </h1>
+          <p className="text-xs text-slate-500">
+            {(metrics as any)?.isRestrictedView
+              ? "Track payments collected from your candidates, record installment EMIs, and generate receipts"
+              : "Real-time tuition billing, collections telemetry, and outstanding dues tracking"}
+          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -93,28 +100,47 @@ export function FinanceOverviewView() {
         </div>
       </div>
 
-      {/* 5 KPI Cards: Total Business, Fees Collected, Fees Pending, Overdue Fees, Collection Rate */}
+      {/* 5 KPI Cards: Total Business / My Admissions, Fees Collected / My Collection, Fees Pending, Overdue Fees, Collection Rate */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {/* Card 1: Total Business (Committed Fees) */}
-        <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Business</span>
-            <span className="p-2 rounded bg-purple-50 text-purple-600">
-              <Briefcase className="h-4 w-4" />
-            </span>
+        {/* Card 1: Total Business (Committed Fees) OR My Admissions */}
+        {(metrics as any)?.isRestrictedView ? (
+          <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">My Admissions</span>
+              <span className="p-2 rounded bg-purple-50 text-purple-600">
+                <Briefcase className="h-4 w-4" />
+              </span>
+            </div>
+            <div className="mt-2 text-2xl font-bold text-purple-900">
+              {isLoading ? "..." : metrics?.totalEnrolledFees || 0}
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+              <span>Your active admitted candidates</span>
+            </div>
           </div>
-          <div className="mt-2 text-2xl font-bold text-purple-900">
-            {isLoading ? "..." : formatPaiseToRupees(totalBusiness)}
+        ) : (
+          <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Business</span>
+              <span className="p-2 rounded bg-purple-50 text-purple-600">
+                <Briefcase className="h-4 w-4" />
+              </span>
+            </div>
+            <div className="mt-2 text-2xl font-bold text-purple-900">
+              {isLoading ? "..." : formatPaiseToRupees(totalBusiness)}
+            </div>
+            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+              <span>{metrics?.totalEnrolledFees || 0} active enrollment contracts</span>
+            </div>
           </div>
-          <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
-            <span>{metrics?.totalEnrolledFees || 0} active enrollment contracts</span>
-          </div>
-        </div>
+        )}
 
-        {/* Card 2: Fees Collected */}
+        {/* Card 2: Fees Collected / My Collections */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Collected</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {(metrics as any)?.isRestrictedView ? "My Collections" : "Fees Collected"}
+            </span>
             <span className="p-2 rounded bg-emerald-50 text-emerald-600">
               <IndianRupee className="h-4 w-4" />
             </span>
@@ -124,14 +150,16 @@ export function FinanceOverviewView() {
           </div>
           <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
             <TrendingUp className="h-3.5 w-3.5" />
-            <span>+14.2% from prior period</span>
+            <span>{(metrics as any)?.isRestrictedView ? "Collected by your counseling desk" : "+14.2% from prior period"}</span>
           </div>
         </div>
 
-        {/* Card 3: Fees Pending */}
+        {/* Card 3: Fees Pending / My Pending Collections */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Fees Pending</span>
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+              {(metrics as any)?.isRestrictedView ? "My Pending Dues" : "Fees Pending"}
+            </span>
             <span className="p-2 rounded bg-amber-50 text-amber-600">
               <Clock className="h-4 w-4" />
             </span>
@@ -140,7 +168,9 @@ export function FinanceOverviewView() {
             {isLoading ? "..." : formatPaiseToRupees(totalOutstanding)}
           </div>
           <p className="mt-2 text-xs text-slate-500">
-            {metrics?.partialCount || 0} active installment plans
+            {(metrics as any)?.isRestrictedView
+              ? "Dues remaining on your admissions"
+              : `${metrics?.partialCount || 0} active installment plans`}
           </p>
         </div>
 

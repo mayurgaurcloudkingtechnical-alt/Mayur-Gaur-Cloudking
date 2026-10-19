@@ -12,6 +12,8 @@ import { CreateLeadDialog } from "./create-lead-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
 import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
+import { ReportingHierarchyBanner } from "@/components/common/reporting-hierarchy-banner";
+import { formatPaiseToRupees } from "@/lib/utils";
 
 interface CounselorDashboardViewProps {
   maxDiscount: number;
@@ -78,6 +80,9 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
 
   return (
     <div className="space-y-6">
+      {/* Official Reporting Hierarchy & Chain of Command */}
+      <ReportingHierarchyBanner />
+
       {/* Callyzer Live Telephony Desk & Target Tracker */}
       <CallyzerWorkstationWidget />
 
@@ -155,11 +160,11 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
         </div>
       )}
 
-      {/* Metric Cards Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Metric Cards Grid: Scoped to Personal Queue & Collections */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-slate-200 bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500">Pipeline Inquiries</CardTitle>
+            <CardTitle className="text-xs font-semibold text-slate-500">My Assigned Leads</CardTitle>
             <Users className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -187,7 +192,7 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
 
         <Card className="border-slate-200 bg-white">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-500">Admissions Closed</CardTitle>
+            <CardTitle className="text-xs font-semibold text-slate-500">My Admissions Closed</CardTitle>
             <UserPlus className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
@@ -195,8 +200,21 @@ export function CounselorDashboardView({ maxDiscount, roleCode }: CounselorDashb
               {isLoadingStats ? "..." : stats?.admittedCount ?? 0}
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              {stats?.totalApps ?? 0} applications submitted
+              {stats?.totalApps ?? 0} candidates enrolled
             </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-slate-200 bg-white">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-semibold text-slate-500">My Collections</CardTitle>
+            <IndianRupee className="h-4 w-4 text-emerald-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-emerald-700">
+              {isLoadingStats ? "..." : formatPaiseToRupees((stats as any)?.myCollection || 0)}
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Personal collected fees</p>
           </CardContent>
         </Card>
 

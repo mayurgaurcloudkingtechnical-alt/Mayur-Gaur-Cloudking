@@ -243,6 +243,20 @@ export class FeeStructureService {
       status: FeeStructureStatus.ACTIVE,
     };
 
+    const isCompanyFinanceAdmin =
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "MANAGER";
+
+    if (!isCompanyFinanceAdmin && user.roleCode !== "STUDENT") {
+      where.OR = [
+        { student: { convertedApplication: { counselorId: user.id } } },
+        { student: { convertedApplication: { lead: { assignedToId: user.id } } } },
+      ];
+    }
+
     if (input.paymentStatus) where.paymentStatus = input.paymentStatus;
     if (input.courseId) where.courseId = input.courseId;
     if (input.batchId) where.batchId = input.batchId;
@@ -450,6 +464,95 @@ export class FeeStructureService {
 
     const now = new Date();
 
+    const isCompanyFinanceAdmin =
+      user.roleCode === "SUPER_ADMIN" ||
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "MANAGER";
+
+    if (!isCompanyFinanceAdmin) {
+      // Counselors and non-admin staff: ONLY see their own collections and dues.
+      // Total company revenue / company total turnover is strictly protected and hidden.
+      const feeWhere: Prisma.FeeStructureWhereInput = {
+        status: FeeStructureStatus.ACTIVE,
+        OR: [
+          { student: { convertedApplication: { counselorId: user.id } } },
+          { student: { convertedApplication: { lead: { assignedToId: user.id } } } },
+        ],
+      };
+
+      const paymentWhere: Prisma.PaymentTransactionWhereInput = {
+        status: "SUCCESS",
+        OR: [
+          { receivedById: user.id },
+          { admission: { counselorId: user.id } },
+          { student: { convertedApplication: { counselorId: user.id } } },
+          { feeStructure: { student: { convertedApplication: { counselorId: user.id } } } },
+        ],
+      };
+
+      const [myFeeAggr, myPaymentAggr, recentPayments, pendingStudents] = await Promise.all([
+        db.feeStructure.aggregate({
+          where: feeWhere,
+          _sum: {
+            totalCourseFee: true,
+            discountAmount: true,
+            netPayableAmount: true,
+            paidAmount: true,
+            pendingAmount: true,
+          },
+          _count: { id: true },
+        }),
+        db.paymentTransaction.aggregate({
+          where: paymentWhere,
+          _sum: { amount: true },
+          _count: { id: true },
+        }),
+        db.paymentTransaction.findMany({
+          where: paymentWhere,
+          take: 6,
+          orderBy: { paymentDate: "desc" },
+          include: {
+            student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+            feeStructure: { include: { course: { select: { title: true } } } },
+          },
+        }),
+        db.feeStructure.findMany({
+          where: { ...feeWhere, pendingAmount: { gt: 0 } },
+          take: 6,
+          orderBy: { pendingAmount: "desc" },
+          include: {
+            student: { include: { user: { select: { firstName: true, lastName: true, email: true } } } },
+            course: { select: { title: true } },
+            batch: { select: { name: true, code: true } },
+          },
+        }),
+      ]);
+
+      const myCollected = myPaymentAggr._sum.amount || 0;
+      const myReceivable = myFeeAggr._sum.netPayableAmount || 0;
+      const myOutstanding = myFeeAggr._sum.pendingAmount || 0;
+      const collectionRate = myReceivable > 0 ? Math.round((myCollected / myReceivable) * 100) : 100;
+
+      return {
+        isRestrictedView: true,
+        totalBusiness: 0, // Total company revenue hidden
+        totalDiscount: myFeeAggr._sum.discountAmount || 0,
+        totalReceivable: myReceivable,
+        totalCollected: myCollected, // Only counselor's own collections!
+        myCollection: myCollected,
+        totalOutstanding: myOutstanding,
+        overdueAmount: 0,
+        collectionRate,
+        totalEnrolledFees: myFeeAggr._count.id,
+        partialCount: 0,
+        recentPayments,
+        pendingStudents,
+      };
+    }
+
+    // Company Finance Admins (Super Admin, Director, Admin, Accountant, Manager)
     const [aggregates, overdueInstallments, partialCount, recentPayments, pendingStudents] = await Promise.all([
       db.feeStructure.aggregate({
         where: { status: FeeStructureStatus.ACTIVE },
@@ -506,10 +609,12 @@ export class FeeStructureService {
     const collectionRate = totalReceivable > 0 ? Math.round((totalCollected / totalReceivable) * 100) : 100;
 
     return {
+      isRestrictedView: false,
       totalBusiness,
       totalDiscount,
       totalReceivable,
       totalCollected,
+      myCollection: totalCollected,
       totalOutstanding,
       overdueAmount,
       collectionRate,

@@ -29,6 +29,7 @@ import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
 import { LeadAutoConnectDialog } from "../counselor/lead-auto-connect-dialog";
 import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
+import { ReportingHierarchyBanner } from "@/components/common/reporting-hierarchy-banner";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -142,6 +143,9 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
 
   return (
     <div className="space-y-6">
+      {/* Official Reporting Hierarchy & Chain of Command */}
+      <ReportingHierarchyBanner />
+
       {/* Callyzer Live Telephony Desk & Active Dialer */}
       <CallyzerWorkstationWidget />
 

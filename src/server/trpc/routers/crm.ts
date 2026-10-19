@@ -161,22 +161,13 @@ export const crmRouter = router({
     let whereLead: any = {};
     if (hasReadAll) {
       whereLead = {};
-    } else if (authUser.roleCode === UserRoleCode.TELECALLER) {
-      whereLead = {
-        OR: [
-          { source: { in: META_SOURCES } },
-          { assignedToId: ctx.user.id },
-          { assignedCounselorId: ctx.user.id },
-          { assignedTelecallerId: ctx.user.id },
-          { assignedToId: null },
-        ],
-      };
     } else {
       whereLead = {
         OR: [
           { assignedToId: ctx.user.id },
           { assignedCounselorId: ctx.user.id },
-          { assignedToId: null },
+          { assignedTelecallerId: ctx.user.id },
+          { createdById: ctx.user.id },
         ],
       };
     }
@@ -184,7 +175,7 @@ export const crmRouter = router({
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
 
-    const [totalLeads, newLeads, dueToday, totalApps, admittedCount] = await Promise.all([
+    const [totalLeads, newLeads, dueToday, totalApps, admittedCount, personalPayments] = await Promise.all([
       db.lead.count({ where: whereLead }),
       db.lead.count({ where: { ...whereLead, status: LeadStatus.NEW } }),
       db.lead.count({
@@ -198,7 +189,21 @@ export const crmRouter = router({
         where: hasReadAll ? {} : { counselorId: ctx.user.id },
       }),
       db.lead.count({ where: { ...whereLead, status: LeadStatus.ADMITTED } }),
+      db.paymentTransaction.aggregate({
+        where: {
+          status: "SUCCESS",
+          OR: [
+            { receivedById: ctx.user.id },
+            { admission: { counselorId: ctx.user.id } },
+            { student: { convertedApplication: { counselorId: ctx.user.id } } },
+            { feeStructure: { student: { convertedApplication: { counselorId: ctx.user.id } } } },
+          ],
+        },
+        _sum: { amount: true },
+      }),
     ]);
+
+    const myCollection = personalPayments?._sum?.amount ?? 0;
 
     return {
       totalLeads,
@@ -206,6 +211,8 @@ export const crmRouter = router({
       dueToday,
       totalApps,
       admittedCount,
+      myCollection, // Personal fee collection in Paise
+      isPersonalScoped: !hasReadAll,
     };
   }),
 
@@ -1315,6 +1322,161 @@ export const crmRouter = router({
       whatsappNumber: officialWhatsapp,
       cleanCallingNumber: officialCalling.replace(/\D/g, ""),
       cleanWhatsappNumber: officialWhatsapp.replace(/\D/g, ""),
+    };
+  }),
+
+  /**
+   * Returns current user's organizational reporting manager and full starting-to-end hierarchy.
+   */
+  getMyReportingHierarchy: protectedProcedure.query(async ({ ctx }) => {
+    const user = await db.user.findUnique({
+      where: { id: ctx.user.id },
+      include: {
+        staffProfile: {
+          include: {
+            reportingManager: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    roleCode: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const roleCode = user?.roleCode || ctx.user.roleCode;
+    const staff = user?.staffProfile;
+    const directManager = staff?.reportingManager?.user;
+
+    // Define standard reporting line based on SoftLab Global hierarchy
+    let defaultManagerTitle = "Operations Head / Academic Manager";
+    let defaultManagerName = "Branch Manager";
+    let defaultManagerRole = "MANAGER";
+    let department = staff?.department ? String(staff.department) : "Counseling & Admissions";
+    let userDesignation = staff?.designation || "Counselor (Admissions Desk)";
+    let tierLevel = 2; // Default for Counselor
+
+    switch (roleCode) {
+      case UserRoleCode.TELECALLER:
+        userDesignation = staff?.designation || "Telecaller / Outreach Executive";
+        department = staff?.department ? String(staff.department) : "Telecalling & Lead Desk";
+        defaultManagerTitle = "Senior Admissions Counselor & Telecalling Lead";
+        defaultManagerName = "Team Lead (Counseling & Calling)";
+        defaultManagerRole = "COUNSELOR";
+        tierLevel = 1;
+        break;
+      case UserRoleCode.COUNSELOR:
+        userDesignation = staff?.designation || "Academic Counselor & Admissions Specialist";
+        department = staff?.department ? String(staff.department) : "Counseling & Admissions Desk";
+        defaultManagerTitle = "Operations Head / Academic Manager";
+        defaultManagerName = "Campus Operations Manager";
+        defaultManagerRole = "MANAGER";
+        tierLevel = 2;
+        break;
+      case UserRoleCode.MANAGER:
+      case UserRoleCode.ADMIN:
+        userDesignation = staff?.designation || "Branch & Academic Operations Head";
+        department = staff?.department ? String(staff.department) : "Operations & Administration";
+        defaultManagerTitle = "Director & Managing Head";
+        defaultManagerName = "Director, SoftLab Global";
+        defaultManagerRole = "DIRECTOR";
+        tierLevel = 4;
+        break;
+      case UserRoleCode.SUPER_ADMIN:
+      case UserRoleCode.DIRECTOR:
+        userDesignation = "Executive Director & Managing Authority";
+        department = "Executive Management";
+        defaultManagerTitle = "Board of Directors / Institutional Governance";
+        defaultManagerName = "Director, SoftLab Global";
+        defaultManagerRole = "DIRECTOR";
+        tierLevel = 5;
+        break;
+      default:
+        userDesignation = staff?.designation || `${roleCode} Executive`;
+        defaultManagerTitle = "Operations Head / Manager";
+        defaultManagerName = "Department Lead";
+        defaultManagerRole = "MANAGER";
+        tierLevel = 2;
+        break;
+    }
+
+    const managerDisplayName = directManager
+      ? `${directManager.firstName} ${directManager.lastName}`.trim()
+      : defaultManagerName;
+
+    const managerTitle = staff?.reportingManager?.designation || defaultManagerTitle;
+    const managerEmail = directManager?.email || "director@softlabglobal.com";
+    const managerPhone = directManager?.phone || "+91 9196596975";
+
+    const hierarchySteps = [
+      {
+        level: 1,
+        title: "Telecalling & Outreach Desk",
+        role: "TELECALLER",
+        description: "Meta ads outreach, cold calling & initial lead qualification",
+        isCurrent: tierLevel === 1,
+        isReportingTo: tierLevel === 0,
+      },
+      {
+        level: 2,
+        title: "Counseling & Admissions Desk",
+        role: "COUNSELOR",
+        description: "One-on-one student counseling, course matching & admissions",
+        isCurrent: tierLevel === 2,
+        isReportingTo: tierLevel === 1,
+      },
+      {
+        level: 3,
+        title: "Senior Counselor / Team Lead",
+        role: "SENIOR_LEAD",
+        description: "Conversion review, discount escalations & desk leadership",
+        isCurrent: false,
+        isReportingTo: tierLevel === 2 && !directManager,
+      },
+      {
+        level: 4,
+        title: "Academic & Branch Manager",
+        role: "MANAGER",
+        description: "Center operations, daily batch audit & target governance",
+        isCurrent: tierLevel === 4,
+        isReportingTo: tierLevel === 2 || tierLevel === 3,
+      },
+      {
+        level: 5,
+        title: "Director / Super Admin",
+        role: "DIRECTOR",
+        description: "Executive institutional leadership, policy & final approval",
+        isCurrent: tierLevel === 5,
+        isReportingTo: tierLevel === 4,
+      },
+    ];
+
+    return {
+      user: {
+        id: ctx.user.id,
+        name: `${ctx.user.firstName} ${ctx.user.lastName}`.trim(),
+        roleCode,
+        designation: userDesignation,
+        department,
+        tierLevel,
+      },
+      manager: {
+        name: managerDisplayName,
+        designation: managerTitle,
+        email: managerEmail,
+        phone: managerPhone,
+        roleCode: directManager?.roleCode || defaultManagerRole,
+      },
+      hierarchySteps,
     };
   }),
 
