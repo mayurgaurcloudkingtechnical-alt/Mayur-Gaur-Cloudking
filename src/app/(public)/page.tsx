@@ -42,11 +42,12 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  // Query authentic published courses from database
+  // Query authentic published SoftLab Global (SLG) courses from database
   const courses = await db.course.findMany({
     where: {
       status: ContentStatus.PUBLISHED,
       deletedAt: null,
+      providerType: "SOFTLAB",
       NOT: {
         title: {
           startsWith: "Hardening Test",

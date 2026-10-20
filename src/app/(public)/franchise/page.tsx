@@ -55,6 +55,7 @@ export default async function FranchisePage() {
     where: {
       status: "PUBLISHED",
       deletedAt: null,
+      providerType: "SOFTLAB",
     },
     select: {
       id: true,

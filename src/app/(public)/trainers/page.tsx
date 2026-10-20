@@ -21,6 +21,7 @@ export default async function TrainersPage() {
   const dbCourses = await db.course.findMany({
     where: {
       deletedAt: null,
+      providerType: "SOFTLAB",
       status: { in: [ContentStatus.PUBLISHED, ContentStatus.DRAFT] },
     },
     orderBy: {
