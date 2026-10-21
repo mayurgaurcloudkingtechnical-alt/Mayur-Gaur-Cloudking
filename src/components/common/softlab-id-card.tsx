@@ -292,6 +292,7 @@ export function SoftlabIdCardBack({
     "3. Loss of this card must be reported immediately to HR.",
     "4. This card is the property of SoftLab Global and must be returned on exit.",
   ],
+  signatoryName = "HARSH SHUKLA",
   signatoryTitle = "Authorised Signatory",
   signatoryOrg = "SoftLab Global",
 }: {
@@ -305,6 +306,7 @@ export function SoftlabIdCardBack({
   websiteUrl?: string;
   locationUrl?: string;
   terms?: string[];
+  signatoryName?: string;
   signatoryTitle?: string;
   signatoryOrg?: string;
 }) {
@@ -475,7 +477,7 @@ export function SoftlabIdCardBack({
             {/* Authorised Signatory */}
             <div className="text-right shrink-0">
               <div className="font-serif italic text-base text-slate-900 font-bold border-b border-slate-700 pb-0.5 px-2">
-                ✍️ Mayur Gaur
+                ✍️ {signatoryName}
               </div>
               <p className="text-[7.2px] font-black text-[#071630] uppercase tracking-wide mt-0.5">
                 {signatoryTitle}

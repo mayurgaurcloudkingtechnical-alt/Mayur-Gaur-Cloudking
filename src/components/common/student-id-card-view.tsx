@@ -37,6 +37,9 @@ export interface StudentIdCardData {
   universityProgram?: string;
   email?: string;
   phone?: string;
+  signatoryName?: string;
+  signatoryTitle?: string;
+  signatoryOrg?: string;
 }
 
 interface StudentIdCardViewProps {
@@ -48,6 +51,18 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
   const [studentQrUrl, setStudentQrUrl] = useState<string>("");
   const [locationQrUrl, setLocationQrUrl] = useState<string>("");
   const [activeSide, setActiveSide] = useState<"both" | "front" | "back">("both");
+
+  // Editable signatory state with default "HARSH SHUKLA"
+  const [signatoryName, setSignatoryName] = useState<string>(
+    data.signatoryName || "HARSH SHUKLA"
+  );
+  const [signatoryTitle, setSignatoryTitle] = useState<string>(
+    data.signatoryTitle || "Authorised Signatory"
+  );
+  const [signatoryOrg, setSignatoryOrg] = useState<string>(
+    data.signatoryOrg || "SoftLab Global"
+  );
+  const [showSignatoryEditor, setShowSignatoryEditor] = useState<boolean>(false);
 
   const isUniversity =
     data.educationProvider === "Dr. Preeti Global University" || !!data.universityName;
@@ -241,6 +256,15 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
 
           <Button
             size="sm"
+            variant="outline"
+            onClick={() => setShowSignatoryEditor((prev) => !prev)}
+            className="text-xs h-9 border-slate-700 hover:bg-slate-800 text-slate-200"
+          >
+            ✍️ Signatory: <strong className="ml-1 text-emerald-400">{signatoryName}</strong>
+          </Button>
+
+          <Button
+            size="sm"
             onClick={handlePrintIdCard}
             className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 font-bold text-xs h-9 shadow"
           >
@@ -260,6 +284,58 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
           )}
         </div>
       </div>
+
+      {/* Optional Live Authorised Signatory Editor Toolbar */}
+      {showSignatoryEditor && (
+        <div className="bg-slate-900/90 text-white p-3.5 rounded-xl border border-emerald-500/30 print:hidden space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+              Change Authorised Signatory for this ID Card
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowSignatoryEditor(false)}
+              className="text-[11px] text-slate-400 hover:text-white"
+            >
+              Done ✕
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div>
+              <label className="text-[11px] text-slate-300 block mb-1">
+                Signatory Name (Default: HARSH SHUKLA)
+              </label>
+              <input
+                type="text"
+                value={signatoryName}
+                onChange={(e) => setSignatoryName(e.target.value)}
+                placeholder="HARSH SHUKLA"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white font-bold focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-300 block mb-1">Signatory Title</label>
+              <input
+                type="text"
+                value={signatoryTitle}
+                onChange={(e) => setSignatoryTitle(e.target.value)}
+                placeholder="Authorised Signatory"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white focus:border-emerald-500"
+              />
+            </div>
+            <div>
+              <label className="text-[11px] text-slate-300 block mb-1">Organisation / Unit</label>
+              <input
+                type="text"
+                value={signatoryOrg}
+                onChange={(e) => setSignatoryOrg(e.target.value)}
+                placeholder="SoftLab Global"
+                className="w-full px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-white focus:border-emerald-500"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Scoped CSS to ensure print only shows the ID cards when browser prints page */}
       <style>{`
@@ -334,8 +410,9 @@ export function StudentIdCardView({ data, onClose }: StudentIdCardViewProps) {
                 "3. Loss of this card must be immediately reported to campus reception desk.",
                 "4. Valid for campus Wi-Fi, computer labs, LMS access, and placement drives.",
               ]}
-              signatoryTitle="Authorised Signatory"
-              signatoryOrg="Director, SoftLab Global"
+              signatoryName={signatoryName || "HARSH SHUKLA"}
+              signatoryTitle={signatoryTitle || "Authorised Signatory"}
+              signatoryOrg={signatoryOrg || "SoftLab Global"}
             />
           </div>
         )}

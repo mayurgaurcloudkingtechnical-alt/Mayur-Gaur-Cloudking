@@ -40,7 +40,9 @@ export interface StaffIdCardData {
   officeEmail?: string;
   websiteUrl?: string;
   terms?: string[];
+  signatoryName?: string;
   signatoryTitle?: string;
+  signatoryOrg?: string;
 }
 
 interface StaffIdCardModalProps {
@@ -74,7 +76,9 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
       "3. Loss of this card must be reported immediately to HR.",
       "4. This card is the property of SoftLab Global and must be returned on exit.",
     ],
-    signatoryTitle: initialData.signatoryTitle || "Authorised Signatory / Director, SoftLab Global",
+    signatoryName: initialData.signatoryName || "HARSH SHUKLA",
+    signatoryTitle: initialData.signatoryTitle || "Authorised Signatory",
+    signatoryOrg: initialData.signatoryOrg || "SoftLab Global",
   });
 
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
@@ -337,14 +341,48 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
                     />
                   </div>
                 </div>
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-600 block mb-1">Signatory Title</label>
-                  <input
-                    type="text"
-                    value={formData.signatoryTitle}
-                    onChange={(e) => setFormData({ ...formData, signatoryTitle: e.target.value })}
-                    className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg"
-                  />
+                <div className="pt-2 border-t border-slate-200 space-y-2">
+                  <span className="text-[11px] font-bold text-slate-700 block uppercase tracking-wider">
+                    Authorised Signatory Settings
+                  </span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                        Signatory Name (Signing Authority)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.signatoryName || "HARSH SHUKLA"}
+                        onChange={(e) => setFormData({ ...formData, signatoryName: e.target.value })}
+                        placeholder="e.g. HARSH SHUKLA"
+                        className="w-full px-3 py-1.5 text-xs font-bold border border-slate-300 rounded-lg bg-emerald-50/50 text-emerald-950 focus:border-emerald-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                        Signatory Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.signatoryTitle || "Authorised Signatory"}
+                        onChange={(e) => setFormData({ ...formData, signatoryTitle: e.target.value })}
+                        placeholder="Authorised Signatory"
+                        className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-semibold text-slate-600 block mb-1">
+                      Signatory Organisation / Branch
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.signatoryOrg || "SoftLab Global"}
+                      onChange={(e) => setFormData({ ...formData, signatoryOrg: e.target.value })}
+                      placeholder="SoftLab Global"
+                      className="w-full px-3 py-1.5 text-xs border border-slate-300 rounded-lg"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -423,8 +461,9 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
                     officeEmail={formData.officeEmail}
                     websiteUrl={formData.websiteUrl}
                     terms={formData.terms}
-                    signatoryTitle="Authorised Signatory"
-                    signatoryOrg="SoftLab Global"
+                    signatoryName={formData.signatoryName || "HARSH SHUKLA"}
+                    signatoryTitle={formData.signatoryTitle || "Authorised Signatory"}
+                    signatoryOrg={formData.signatoryOrg || "SoftLab Global"}
                   />
                 </div>
               )}
