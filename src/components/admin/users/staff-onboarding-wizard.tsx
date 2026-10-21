@@ -402,6 +402,15 @@ export function StaffOnboardingWizard({
       utils.admin.listUsers.invalidate();
       if (onSuccess) onSuccess();
       setOnboardSuccessData(data);
+
+      // Auto-launch WhatsApp chat with the staff member containing their credentials immediately!
+      const targetPhone = (phone || whatsappNumber || "").replace(/\D/g, "");
+      if (targetPhone.length >= 10) {
+        const fullWaPhone = targetPhone.length === 10 ? `91${targetPhone}` : targetPhone;
+        const msg = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${firstName} ${lastName}*,\n\nWelcome to the SoftLab Global team as *${designation}* (${department})!\n\n🔑 *YOUR OFFICIAL LOGIN CREDENTIALS*:\n• Employee ID: ${data?.employeeId || employeeId}\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: ${officialEmail || personalEmail}\n• Temporary Password: ${password}\n\n📌 Please sign in and complete your onboarding checklist.\n\nWarm regards,\n*HR Operations, SOFTLAB GLOBAL*\n🌐 www.softlabglobal.com`;
+        const waUrl = `https://api.whatsapp.com/send?phone=${fullWaPhone}&text=${encodeURIComponent(msg)}`;
+        window.open(waUrl, "_blank");
+      }
     },
     onError: (err) => {
       setErrorMsg(err.message || "Failed to complete onboarding.");

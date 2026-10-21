@@ -471,12 +471,21 @@ export function DirectAdmissionDialog({
 
       setCreatedResult(res);
 
-      // Auto-Broadcast: Jaise hi submit/done ho, turant WhatsApp window auto-open ho to post directly into Sales Group!
+      // Auto-Dispatch 1: Send credentials directly to the student's personal WhatsApp number
+      const studPhone = (res.credentials?.phone || applicantPhone || whatsappNumber || "").replace(/\D/g, "");
+      if (studPhone.length >= 10) {
+        const fullStudPhone = studPhone.length === 10 ? `91${studPhone}` : studPhone;
+        const studentMsg = `🎓 *OFFICIAL ADMISSION CONFIRMED — SOFTLAB GLOBAL* 🚀\n\nDear *${res.credentials?.fullName || applicantName}*,\nCongratulations on your confirmed admission!\n\n📋 *ADMISSION DETAILS*:\n• Student ID: *${res.credentials?.studentId}*\n• Admission No: *${res.credentials?.admissionNumber}*\n• Program: *${res.universityProgram || selectedCourse?.title || "Professional Program"}*\n\n🔑 *STUDENT LMS PORTAL LOGIN CREDENTIALS*:\n• Portal: https://softlabglobal.com/login\n• Username: *${res.credentials?.email || applicantEmail}*\n• Temporary Password: *${res.credentials?.temporaryPassword}*\n\n📞 Admissions Helpline: +91 9196596979\n🌐 www.softlabglobal.com`;
+        const studentWaUrl = `https://api.whatsapp.com/send?phone=${fullStudPhone}&text=${encodeURIComponent(studentMsg)}`;
+        window.open(studentWaUrl, "_blank");
+      }
+
+      // Auto-Dispatch 2: Also open WhatsApp sales group broadcast window
       if (res.salesGroupBroadcastUrl) {
-        window.open(res.salesGroupBroadcastUrl, "_blank");
+        setTimeout(() => window.open(res.salesGroupBroadcastUrl, "_blank"), 500);
       } else if (res.salesGroupMessage) {
         const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(res.salesGroupMessage)}`;
-        window.open(url, "_blank");
+        setTimeout(() => window.open(url, "_blank"), 500);
       }
 
       if (onSuccess) onSuccess(res.application.id);
