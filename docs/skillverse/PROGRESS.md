@@ -36,11 +36,15 @@
   - Updated official admissions & support number to `+91 91965 96975` across `SKILLVERSE_BRAND` constants, header, top bar, dynamic contact page, footer, and floating quick-contact widget.
   - Aligned website theme with logo visual palette (vibrant leaf green `#16A34A` / `#22C55E`, royal sapphire blue `#0052CC`, electric blue `#0077FF`, and logo signature blue-to-green gradient pill banner).
   - All 13/13 E2E test suites passed cleanly with real database persistence.
-- **Unified Admissions CRM & Staff Portal Upgrade**:
-  - Integrated dedicated staff profile bar with User avatar, role code, email, and prominent **Logout option** (`signOut`).
+- **Unified Admissions CRM & Staff Portal Upgrade (`7d32301`)**:
+  - Wrapped `SessionProvider` inside `TRPCReactProvider` in `src/lib/trpc/react.tsx` to resolve NextAuth static prerender error across all 128 routes.
+  - Successfully deployed to Vercel production (`Vercel – softlabglobal: success`).
+  - Integrated dedicated staff profile badge with User Avatar, Name, Role badge (`SUPER_ADMIN` / `FACULTY` / `COUNSELOR`), and prominent **Logout / Sign Out** button in both the main navbar header and the top portal session bar.
+  - When unauthenticated, displays prominent **"Staff Login"** leading directly to `/login?callbackUrl=/skillverse/staff-login`.
   - Added dual view modes: **Structured Table View** and **11-Stage Kanban Pipeline Board** matching SoftLab Global CRM.
   - Added **"+ Add New Lead"** modal for recording walk-ins, phone-ins, and direct counseling enquiries.
   - Added multi-filtering by stage, grade (Classes 8–12), source, and real-time instant search.
   - Added single-click communications: **Direct Call** (`tel:+91...`), **Instant WhatsApp** with pre-filled personalized templates, and email compose.
   - Added **Lead Detail & Follow-up Timeline Drawer** with historical notes log, next follow-up scheduler, stage updater, and direct one-click student enrollment.
   - Added **Export to CSV** functionality for filtered leads.
+  - Verified live on `https://skillverse.softlabglobal.com/skillverse/staff-login` (HTTP 200, `PRERENDER Age: 0`).
