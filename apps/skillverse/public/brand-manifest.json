@@ -4,13 +4,17 @@
   "tagline": "Your World of Future Skills.",
   "supportingLine": "From Class 8 to 12 | School Foundation to IIT-JEE and Beyond",
   "targetHostname": "https://skillverse.softlabglobal.com",
-  "logoAsset": "/images/logo.png",
+  "logoAsset": "/images/skillverse-logo.png",
+  "contactPhone": "+91 91965 96975",
+  "contactWhatsapp": "+91 91965 96975",
   "theme": {
     "background": "#FFFFFF",
     "navy": "#071630",
     "royalBlue": "#0052CC",
     "electricBlue": "#0077FF",
     "cyanAccent": "#00B4D8",
+    "leafGreen": "#16A34A",
+    "vibrantGreen": "#22C55E",
     "limeGreen": "#65A30D",
     "deepGreen": "#15803D"
   }

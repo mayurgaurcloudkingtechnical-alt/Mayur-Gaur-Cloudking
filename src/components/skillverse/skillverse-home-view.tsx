@@ -79,22 +79,34 @@ export function SkillverseHomeView({
   return (
     <div className="space-y-20 pb-20">
       {/* 1. PREMIUM HERO SECTION */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#071630] via-[#0B2247] to-[#0E336B] text-white pt-14 pb-20 border-b border-blue-900">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#071630] via-[#09224A] to-[#0A369D] text-white pt-14 pb-20 border-b border-blue-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-7 space-y-6">
-              <div className="inline-flex flex-wrap items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-cyan-400/30 text-xs font-bold">
-                <span className="text-lime-400 uppercase tracking-wider">SLG SKILLVERSE</span>
+              <div className="inline-flex flex-wrap items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 border border-cyan-400/40 text-xs font-bold shadow-sm">
+                <span className="text-[#22C55E] uppercase tracking-wider font-extrabold">SLG SKILLVERSE</span>
                 <span className="text-slate-400">•</span>
                 <span className="text-cyan-300">{SKILLVERSE_BRAND.tagline}</span>
+                <span className="text-slate-400">•</span>
+                <a
+                  href="tel:+919196596975"
+                  className="text-emerald-300 hover:text-white underline inline-flex items-center gap-1 font-bold"
+                >
+                  📞 +91-9196596975
+                </a>
               </div>
 
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-[1.1]">
                 Build Strong Foundations.{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 via-lime-300 to-emerald-300">
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00B4D8] via-emerald-300 to-[#22C55E]">
                   Become Future Ready.
                 </span>
               </h1>
+
+              {/* Logo Signature Pill Banner */}
+              <div className="inline-block px-4 py-2 rounded-full bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] text-white text-xs sm:text-sm font-black uppercase tracking-wider shadow-md">
+                From Class 8 to 12 | School Foundation to IIT-JEE & Beyond
+              </div>
 
               <p className="text-base sm:text-lg text-slate-200 leading-relaxed max-w-2xl">
                 {cms.heroSubheadline}
@@ -103,13 +115,13 @@ export function SkillverseHomeView({
               <div className="flex flex-wrap items-center gap-3.5 pt-2">
                 <Link
                   href="/skillverse/courses"
-                  className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl bg-gradient-to-r from-[#0066FF] to-[#00B4D8] hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
+                  className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:brightness-110 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition-all"
                 >
                   Explore Courses <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
                   href="/skillverse/free-demo-class"
-                  className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl bg-gradient-to-r from-[#15803D] to-[#65A30D] hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-emerald-700/30 transition-all"
+                  className="inline-flex items-center gap-2 px-7 py-4 rounded-2xl bg-gradient-to-r from-[#16A34A] to-[#22C55E] hover:brightness-110 text-white font-bold text-sm shadow-lg shadow-emerald-700/30 transition-all"
                 >
                   Book a Free Demo
                 </Link>
@@ -123,7 +135,7 @@ export function SkillverseHomeView({
 
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-white/10 text-xs">
                 <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
-                  <span className="text-lime-400 font-black text-base block">Classes 8–12</span>
+                  <span className="text-[#22C55E] font-black text-base block">Classes 8–12</span>
                   <span className="text-slate-300">CBSE, ICSE/ISC & State</span>
                 </div>
                 <div className="bg-white/5 rounded-2xl p-3 border border-white/10">
@@ -141,28 +153,34 @@ export function SkillverseHomeView({
               </div>
             </div>
 
-            {/* Right Hero Brand Card */}
+            {/* Right Hero Brand Card Featuring 3D Logo Lockup */}
             <div className="lg:col-span-5">
-              <div className="bg-white rounded-3xl p-6 sm:p-8 text-slate-900 shadow-2xl border-2 border-cyan-400/40 space-y-5">
-                <div className="flex items-center gap-4 pb-4 border-b border-slate-100">
-                  <img
-                    src={SKILLVERSE_BRAND.logoPath}
-                    alt="SoftLab Global SLG Skillverse"
-                    className="w-16 h-16 object-contain rounded-2xl border border-slate-200 p-1"
-                  />
+              <div className="bg-white rounded-3xl p-6 sm:p-7 text-slate-900 shadow-2xl border-2 border-cyan-400/50 space-y-5">
+                <div className="text-center pb-4 border-b border-slate-100 space-y-3">
+                  <div className="w-28 h-28 sm:w-32 sm:h-32 mx-auto rounded-3xl bg-white border border-slate-200/90 p-2 shadow-md flex items-center justify-center">
+                    <img
+                      src={SKILLVERSE_BRAND.logoPath}
+                      alt="SLG Skillverse Official Logo"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-700 block">
+                    <div className="flex items-center justify-center gap-1.5 text-2xl font-black">
+                      <span className="text-[#16A34A]">SLG</span>
+                      <span className="text-[#0052CC]">SKILL</span>
+                      <span className="text-[#16A34A]">VERSE</span>
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500 block">
                       Powered by SoftLab Global
                     </span>
-                    <h2 className="text-2xl font-black text-[#071630]">SLG SKILLVERSE</h2>
-                    <p className="text-xs font-semibold text-blue-700">
-                      {SKILLVERSE_BRAND.supportingLine}
-                    </p>
+                    <div className="mt-2 py-1 px-3 rounded-full bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] text-white text-[10px] font-black uppercase tracking-wider inline-block">
+                      From 8th to 12th | School Foundation to IIT-JEE & Beyond
+                    </div>
                   </div>
                 </div>
 
-                <div className="space-y-3 text-xs">
-                  <div className="p-3.5 rounded-2xl bg-blue-50/80 border border-blue-100 flex items-start gap-3">
+                <div className="space-y-2.5 text-xs">
+                  <div className="p-3 rounded-2xl bg-blue-50/90 border border-blue-100 flex items-start gap-3">
                     <GraduationCap className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-bold text-slate-900">
@@ -174,7 +192,7 @@ export function SkillverseHomeView({
                       </p>
                     </div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-100 flex items-start gap-3">
+                  <div className="p-3 rounded-2xl bg-emerald-50/90 border border-emerald-100 flex items-start gap-3">
                     <Cpu className="w-5 h-5 text-emerald-700 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-bold text-slate-900">
@@ -186,15 +204,21 @@ export function SkillverseHomeView({
                       </p>
                     </div>
                   </div>
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
+                  <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200 flex items-start gap-3">
                     <ShieldCheck className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-bold text-slate-900">
-                        Dedicated Student & Parent Portals
+                        Admissions & Counseling Helpline
                       </p>
-                      <p className="text-slate-600 mt-0.5">
-                        Live attendance, timetable, assessment reports, transparent fee receipts &
-                        PTM scheduling.
+                      <p className="text-slate-700 mt-0.5">
+                        Direct Desk:{" "}
+                        <a
+                          href="tel:+919196596975"
+                          className="font-black text-[#0052CC] hover:underline"
+                        >
+                          +91 91965 96975
+                        </a>{" "}
+                        (Call & WhatsApp)
                       </p>
                     </div>
                   </div>
@@ -209,7 +233,7 @@ export function SkillverseHomeView({
                   </Link>
                   <Link
                     href="/skillverse/admissions"
-                    className="px-4 py-2.5 rounded-xl bg-[#071630] hover:bg-slate-800 text-white text-xs font-bold"
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#0052CC] to-[#0077FF] hover:brightness-110 text-white text-xs font-bold shadow-sm"
                   >
                     Apply for Admission
                   </Link>

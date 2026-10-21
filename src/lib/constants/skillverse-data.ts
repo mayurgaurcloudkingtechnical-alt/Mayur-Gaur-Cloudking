@@ -12,12 +12,14 @@ export const SKILLVERSE_BRAND = {
   subdomainUrl: "https://skillverse.softlabglobal.com",
   mainWebsiteUrl: "https://www.softlabglobal.com",
   lmsUrl: "https://lms.softlabglobal.com",
-  logoPath: "/images/logo.png",
+  logoPath: "/images/skillverse-logo.png",
   colors: {
     navy: "#071630",
     royalBlue: "#0052CC",
     electricBlue: "#0077FF",
     cyanAccent: "#00B4D8",
+    leafGreen: "#16A34A",
+    vibrantGreen: "#22C55E",
     limeGreen: "#65A30D",
     deepGreen: "#15803D",
     surfaceWhite: "#FFFFFF",
@@ -26,8 +28,10 @@ export const SKILLVERSE_BRAND = {
   defaultContact: {
     address:
       "SoftLab Global — Skillverse Academic Wing, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011",
-    phone: "+91 73808 63063",
-    whatsapp: "+91 73808 63063",
+    phone: "+91 91965 96975",
+    phoneRaw: "+919196596975",
+    whatsapp: "+91 91965 96975",
+    whatsappUrl: "https://wa.me/919196596975",
     email: "admissions@softlabglobal.com",
     supportHours: "Monday – Saturday: 9:00 AM to 7:00 PM IST",
   },

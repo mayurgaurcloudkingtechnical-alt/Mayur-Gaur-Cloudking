@@ -21,6 +21,7 @@ import {
   Lock,
   ArrowRight,
   Globe,
+  MessageCircle,
 } from "lucide-react";
 
 const ACADEMIC_LINKS = [
@@ -79,13 +80,19 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
       {/* Top Announcement & Trust Bar */}
       <div className="bg-[#071630] text-white text-xs border-b border-blue-900/60">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-2 text-center sm:text-left">
-            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-lime-500/20 border border-lime-400/40 text-lime-300 font-bold text-[10px] uppercase tracking-wider">
-              <Sparkles className="w-3 h-3" /> Powered by SoftLab Global
+          <div className="flex items-center gap-2 text-center sm:text-left flex-wrap justify-center sm:justify-start">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-600/30 to-emerald-500/30 border border-emerald-400/40 text-emerald-300 font-bold text-[10px] uppercase tracking-wider">
+              <Sparkles className="w-3 h-3 text-emerald-400" /> Powered by SoftLab Global
             </span>
-            <span className="text-slate-200 font-medium">
+            <span className="text-slate-200 font-medium hidden md:inline">
               {SKILLVERSE_BRAND.supportingLine}
             </span>
+            <a
+              href="tel:+919196596975"
+              className="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-bold ml-1 transition-colors"
+            >
+              <PhoneCall className="w-3 h-3" /> +91-9196596975
+            </a>
           </div>
           <div className="flex items-center gap-4 text-[11px] font-semibold">
             <Link
@@ -117,24 +124,27 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
           {/* Brand Logo Lockup */}
           <Link href="/skillverse" className="flex items-center gap-3 group shrink-0">
-            <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 p-1 shadow-xs flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/90 p-0.5 shadow-sm flex items-center justify-center overflow-hidden shrink-0 group-hover:border-emerald-400 transition-colors">
               <img
                 src={SKILLVERSE_BRAND.logoPath}
-                alt="SoftLab Global Crest"
+                alt="SLG Skillverse — Powered by SoftLab Global"
                 className="w-full h-full object-contain"
               />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-lg sm:text-xl font-black tracking-tight text-[#15803D]">
+              <div className="flex items-center gap-1 leading-none">
+                <span className="text-lg sm:text-xl font-black tracking-tight text-[#16A34A]">
                   SLG
                 </span>
                 <span className="text-lg sm:text-xl font-black tracking-tight text-[#0052CC]">
-                  SKILLVERSE
+                  SKILL
+                </span>
+                <span className="text-lg sm:text-xl font-black tracking-tight text-[#16A34A]">
+                  VERSE
                 </span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                Your World of Future Skills
+              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">
+                Powered by SoftLab Global
               </p>
             </div>
           </Link>
@@ -252,6 +262,16 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
 
           {/* Search & Primary CTAs */}
           <div className="hidden xl:flex items-center gap-2.5">
+            <a
+              href="https://wa.me/919196596975"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50 hover:bg-emerald-100 text-[#15803D] text-xs font-bold transition-all shadow-2xs"
+              title="Chat on WhatsApp +91-9196596975"
+            >
+              <MessageCircle className="w-3.5 h-3.5 text-[#16A34A]" />
+              <span>+91 91965 96975</span>
+            </a>
             <form onSubmit={handleSearch} className="relative">
               <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
               <input
@@ -264,7 +284,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             </form>
             <Link
               href="/skillverse/free-demo-class"
-              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#15803D] to-[#65A30D] hover:opacity-95 text-white font-bold text-xs shadow-sm transition-all"
+              className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-sm transition-all"
             >
               Book a Free Demo
             </Link>
@@ -284,6 +304,24 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-5 space-y-5 max-h-[82vh] overflow-y-auto">
+            {/* Direct Mobile Quick Contact Buttons */}
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold">
+              <a
+                href="tel:+919196596975"
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#0052CC] to-[#0077FF] text-white shadow-xs"
+              >
+                <PhoneCall className="w-4 h-4" /> Call +91 91965 96975
+              </a>
+              <a
+                href="https://wa.me/919196596975"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl bg-gradient-to-r from-[#16A34A] to-[#22C55E] text-white shadow-xs"
+              >
+                <MessageCircle className="w-4 h-4" /> WhatsApp
+              </a>
+            </div>
+
             <form onSubmit={handleSearch} className="flex gap-2">
               <input
                 type="search"
@@ -294,7 +332,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               />
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                className="px-4 py-2 rounded-xl bg-[#0052CC] text-white text-xs font-bold"
               >
                 Search
               </button>
@@ -371,14 +409,14 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/free-demo-class"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 rounded-xl bg-[#15803D] text-white text-center text-xs font-bold"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#16A34A] to-[#22C55E] text-white text-center text-xs font-bold shadow-xs"
               >
                 Book a Free Demo Class
               </Link>
               <Link
                 href="/skillverse/student-assessment"
                 onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 rounded-xl bg-[#0052CC] text-white text-center text-xs font-bold"
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#0052CC] to-[#0077FF] text-white text-center text-xs font-bold shadow-xs"
               >
                 Take Free Diagnostic Assessment
               </Link>
@@ -397,7 +435,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             {/* Column 1: Brand Identity */}
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-2xl bg-white p-1 flex items-center justify-center">
+                <div className="w-14 h-14 rounded-2xl bg-white p-1 flex items-center justify-center border border-white/20 shadow-sm shrink-0">
                   <img
                     src={SKILLVERSE_BRAND.logoPath}
                     alt="SLG Skillverse"
@@ -405,8 +443,10 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                   />
                 </div>
                 <div>
-                  <div className="text-lg font-black text-white tracking-tight">
-                    <span className="text-lime-400">SLG</span> SKILLVERSE
+                  <div className="text-lg font-black text-white tracking-tight flex items-center gap-1">
+                    <span className="text-[#22C55E]">SLG</span>
+                    <span>SKILL</span>
+                    <span className="text-[#22C55E]">VERSE</span>
                   </div>
                   <div className="text-[11px] font-semibold text-cyan-300">
                     Powered by SoftLab Global
@@ -419,13 +459,40 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                 excellence, competitive entrance foundations, and hands-on AI, Coding, and
                 Future-Ready skills.
               </p>
-              <div className="text-xs text-slate-400 space-y-1">
+              <div className="text-xs text-slate-400 space-y-1.5">
                 <p>{SKILLVERSE_BRAND.defaultContact.address}</p>
-                <p>
-                  Phone:{" "}
-                  <strong className="text-white">{SKILLVERSE_BRAND.defaultContact.phone}</strong> |
-                  Email:{" "}
-                  <strong className="text-white">{SKILLVERSE_BRAND.defaultContact.email}</strong>
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span>
+                    Phone:{" "}
+                    <a
+                      href="tel:+919196596975"
+                      className="text-white hover:text-emerald-300 font-bold underline transition-colors"
+                    >
+                      +91 91965 96975
+                    </a>
+                  </span>
+                  <span className="text-slate-600">|</span>
+                  <span>
+                    WhatsApp:{" "}
+                    <a
+                      href="https://wa.me/919196596975"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-emerald-400 hover:text-white font-bold underline transition-colors"
+                    >
+                      +91 91965 96975
+                    </a>
+                  </span>
+                  <span className="text-slate-600">|</span>
+                  <span>
+                    Email:{" "}
+                    <a
+                      href="mailto:admissions@softlabglobal.com"
+                      className="text-white hover:underline font-bold"
+                    >
+                      {SKILLVERSE_BRAND.defaultContact.email}
+                    </a>
+                  </span>
                 </p>
               </div>
             </div>
@@ -529,6 +596,33 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </footer>
+
+      {/* Floating Quick Contact Widget (Bottom Right) */}
+      <aside
+        aria-label="Quick Contact and Admissions Help"
+        className="fixed bottom-5 right-5 z-50 flex flex-col items-end gap-2"
+      >
+        <a
+          href="https://wa.me/919196596975"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#16A34A] to-[#22C55E] text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all text-xs font-extrabold border border-emerald-300/40"
+          title="Chat on WhatsApp (+91-9196596975)"
+        >
+          <MessageCircle className="w-4 h-4" />
+          <span className="hidden sm:inline">WhatsApp (+91 91965 96975)</span>
+          <span className="sm:hidden">WhatsApp</span>
+        </a>
+        <a
+          href="tel:+919196596975"
+          className="group inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#0052CC] text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all text-xs font-bold border border-blue-400/30"
+          title="Call Admissions Desk (+91-9196596975)"
+        >
+          <PhoneCall className="w-3.5 h-3.5" />
+          <span className="hidden sm:inline">Call +91 91965 96975</span>
+          <span className="sm:hidden">Call</span>
+        </a>
+      </aside>
     </div>
   );
 }

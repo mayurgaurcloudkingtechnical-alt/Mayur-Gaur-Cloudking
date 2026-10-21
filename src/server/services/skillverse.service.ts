@@ -1689,7 +1689,9 @@ export class SkillverseService {
       autoAwardedMarks,
       totalMaxMarks,
       hasDescriptivePending,
-      overallStatus: hasDescriptivePending ? "PENDING_TEACHER_REVIEW" : "COMPLETED",
+      overallStatus: hasDescriptivePending
+        ? ("PENDING_TEACHER_REVIEW" as const)
+        : ("COMPLETED" as const),
       itemResults,
     };
   }
