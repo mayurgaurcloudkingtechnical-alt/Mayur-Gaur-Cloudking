@@ -1015,6 +1015,170 @@ export class SkillverseService {
     return cert;
   }
 
+  /**
+   * Admin Course Catalogue CRUD (Create / Edit / Publish / Archive without code changes)
+   */
+  static async upsertCourse(input: {
+    course: SkillverseCourseItem;
+    actorName: string;
+  }) {
+    const config = await this.getCatalogAndConfig();
+    const existingIdx = config.courses.findIndex(
+      (c) => c.id === input.course.id || c.slug === input.course.slug
+    );
+    const updatedCourses = [...config.courses];
+    if (existingIdx >= 0) {
+      updatedCourses[existingIdx] = input.course;
+    } else {
+      updatedCourses.unshift(input.course);
+    }
+
+    try {
+      await db.systemSetting.upsert({
+        where: { key: KEYS.COURSES },
+        update: { value: updatedCourses as any, updatedBy: input.actorName },
+        create: {
+          key: KEYS.COURSES,
+          category: CATEGORIES.CONFIG,
+          value: updatedCourses as any,
+          isSecret: false,
+          updatedBy: input.actorName,
+        },
+      });
+    } catch {
+      // Fallback in offline environments
+    }
+
+    await this.logAudit({
+      action: existingIdx >= 0 ? "COURSE_UPDATED" : "COURSE_CREATED",
+      actor: input.actorName,
+      target: input.course.code,
+      details: `${input.course.title} (${input.course.status}) — ₹${input.course.priceInr}`,
+    });
+
+    return input.course;
+  }
+
+  /**
+   * Admin Package Pricing & Inclusions CRUD
+   */
+  static async upsertPackage(input: {
+    pkg: SkillverseAcademicPackage;
+    actorName: string;
+  }) {
+    const config = await this.getCatalogAndConfig();
+    const idx = config.packages.findIndex((p) => p.id === input.pkg.id);
+    const updatedPackages = [...config.packages];
+    if (idx >= 0) {
+      updatedPackages[idx] = input.pkg;
+    } else {
+      updatedPackages.push(input.pkg);
+    }
+
+    try {
+      await db.systemSetting.upsert({
+        where: { key: KEYS.PACKAGES },
+        update: { value: updatedPackages as any, updatedBy: input.actorName },
+        create: {
+          key: KEYS.PACKAGES,
+          category: CATEGORIES.CONFIG,
+          value: updatedPackages as any,
+          isSecret: false,
+          updatedBy: input.actorName,
+        },
+      });
+    } catch {
+      // Fallback in offline environments
+    }
+
+    await this.logAudit({
+      action: "PACKAGE_UPDATED",
+      actor: input.actorName,
+      target: input.pkg.code,
+      details: `${input.pkg.name} — ₹${input.pkg.monthlyPriceInr}/mo`,
+    });
+
+    return input.pkg;
+  }
+
+  /**
+   * LMS Multi-Type Quiz Evaluation Engine (MCQ, MSQ, and Descriptive)
+   */
+  static evaluateQuizSubmissionPure(params: {
+    questions: {
+      id: string;
+      type: "MCQ" | "MSQ" | "DESCRIPTIVE";
+      prompt: string;
+      marks: number;
+      correctOptionIndex?: number;
+      correctOptionIndices?: number[];
+    }[];
+    responses: {
+      questionId: string;
+      selectedOptionIndex?: number;
+      selectedOptionIndices?: number[];
+      descriptiveAnswer?: string;
+    }[];
+  }) {
+    let autoAwardedMarks = 0;
+    let totalMaxMarks = 0;
+    let hasDescriptivePending = false;
+
+    const itemResults = params.questions.map((q) => {
+      totalMaxMarks += q.marks;
+      const resp = params.responses.find((r) => r.questionId === q.id);
+
+      if (q.type === "MCQ") {
+        const isCorrect =
+          resp?.selectedOptionIndex !== undefined &&
+          resp.selectedOptionIndex === q.correctOptionIndex;
+        const awarded = isCorrect ? q.marks : 0;
+        autoAwardedMarks += awarded;
+        return {
+          questionId: q.id,
+          type: q.type,
+          awardedMarks: awarded,
+          maxMarks: q.marks,
+          status: "AUTO_EVALUATED" as const,
+        };
+      }
+
+      if (q.type === "MSQ") {
+        const expected = [...(q.correctOptionIndices || [])].sort().join(",");
+        const actual = [...(resp?.selectedOptionIndices || [])].sort().join(",");
+        const isCorrect = expected.length > 0 && expected === actual;
+        const awarded = isCorrect ? q.marks : 0;
+        autoAwardedMarks += awarded;
+        return {
+          questionId: q.id,
+          type: q.type,
+          awardedMarks: awarded,
+          maxMarks: q.marks,
+          status: "AUTO_EVALUATED" as const,
+        };
+      }
+
+      // DESCRIPTIVE question requires teacher evaluation
+      hasDescriptivePending = true;
+      return {
+        questionId: q.id,
+        type: q.type,
+        awardedMarks: 0,
+        maxMarks: q.marks,
+        descriptiveAnswer: resp?.descriptiveAnswer || "",
+        status: "PENDING_TEACHER_EVALUATION" as const,
+      };
+    });
+
+    return {
+      autoAwardedMarks,
+      totalMaxMarks,
+      hasDescriptivePending,
+      overallStatus: hasDescriptivePending ? "PENDING_TEACHER_REVIEW" : "COMPLETED",
+      itemResults,
+    };
+  }
+
   static async recordAnalyticsEvent(event: {
     eventType:
       | "COURSE_PAGE_VIEW"

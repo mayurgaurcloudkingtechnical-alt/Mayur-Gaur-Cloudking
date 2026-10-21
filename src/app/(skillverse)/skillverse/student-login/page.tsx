@@ -24,6 +24,18 @@ export default function SkillverseStudentPortalPage() {
   const [portalData, setPortalData] = useState<any | null>(null);
   const [paymentMessage, setPaymentMessage] = useState<string | null>(null);
 
+  // Interactive Multi-Type Quiz Runner (MCQ + MSQ + Descriptive)
+  const [mcqChoice, setMcqChoice] = useState<number>(1);
+  const [msqChoices, setMsqChoices] = useState<number[]>([0, 2]);
+  const [descriptiveAnswer, setDescriptiveAnswer] = useState<string>("");
+  const [quizResult, setQuizResult] = useState<any | null>(null);
+
+  const quizMutation = trpc.skillverse.evaluateQuizAttempt.useMutation({
+    onSuccess: (res) => {
+      setQuizResult(res);
+    },
+  });
+
   const loginMutation = trpc.skillverse.getStudentPortalData.useMutation({
     onSuccess: (data) => {
       setErrorMsg(null);
@@ -220,6 +232,147 @@ export default function SkillverseStudentPortalPage() {
               </div>
             </div>
           ))}
+
+          {/* Online Quiz & Multi-Type Assessment Runner (MCQ + MSQ + Descriptive) */}
+          <div className="p-5 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-4 text-xs">
+            <div className="flex items-center justify-between">
+              <h3 className="font-extrabold text-sm text-slate-900 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-blue-600" /> Online Unit Quiz & Assessment Runner
+                (MCQ + Multi-Select + Descriptive)
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full bg-blue-100 text-blue-800 font-bold text-[11px]">
+                Max: 15 Marks
+              </span>
+            </div>
+
+            <div className="space-y-3 bg-white p-4 rounded-xl border border-slate-200">
+              <div>
+                <p className="font-bold text-slate-800">
+                  Q1 (Single-Choice MCQ — 5 Marks): If 3x − 7 = 11, what is the value of 2x + 5?
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {["11", "17", "19", "23"].map((opt, idx) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => setMcqChoice(idx)}
+                      className={`py-2 px-3 rounded-lg border font-bold ${
+                        mcqChoice === idx
+                          ? "bg-blue-600 text-white border-blue-600"
+                          : "bg-slate-50 text-slate-700 border-slate-200"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100">
+                <p className="font-bold text-slate-800">
+                  Q2 (Multiple-Select MSQ — 5 Marks): Select ALL statements that are true about
+                  Python lists and data types:
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                  {[
+                    "Lists in Python are mutable sequences",
+                    "Tuples can be modified in-place using append()",
+                    "Indexing in Python starts at 0",
+                    "Dictionaries only allow integer keys",
+                  ].map((opt, idx) => {
+                    const active = msqChoices.includes(idx);
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() =>
+                          setMsqChoices((prev) =>
+                            prev.includes(idx) ? prev.filter((x) => x !== idx) : [...prev, idx]
+                          )
+                        }
+                        className={`py-2 px-3 rounded-lg border text-left font-semibold ${
+                          active
+                            ? "bg-emerald-700 text-white border-emerald-700"
+                            : "bg-slate-50 text-slate-700 border-slate-200"
+                        }`}
+                      >
+                        {active ? "✓ " : "○ "}
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100">
+                <label className="block font-bold text-slate-800 mb-1">
+                  Q3 (Descriptive Response — 5 Marks, Faculty Graded): Explain Ohm&apos;s Law and write
+                  one real-world application in robotics circuits.
+                </label>
+                <textarea
+                  rows={2}
+                  value={descriptiveAnswer}
+                  onChange={(e) => setDescriptiveAnswer(e.target.value)}
+                  placeholder="Write your step-by-step explanation here..."
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300"
+                />
+              </div>
+
+              <button
+                type="button"
+                disabled={quizMutation.isPending}
+                onClick={() =>
+                  quizMutation.mutate({
+                    enrollmentCode: student.enrollmentCode,
+                    quizTitle: "Unit 1 Integrated STEM & Coding Quiz",
+                    questions: [
+                      {
+                        id: "q1",
+                        type: "MCQ",
+                        prompt: "If 3x - 7 = 11, what is 2x + 5?",
+                        correctOptionIndex: 1,
+                        marks: 5,
+                      },
+                      {
+                        id: "q2",
+                        type: "MSQ",
+                        prompt: "Select all true Python statements",
+                        correctOptionIndices: [0, 2],
+                        marks: 5,
+                      },
+                      {
+                        id: "q3",
+                        type: "DESCRIPTIVE",
+                        prompt: "Explain Ohm's Law",
+                        marks: 5,
+                      },
+                    ],
+                    responses: [
+                      { questionId: "q1", selectedOptionIndex: mcqChoice },
+                      { questionId: "q2", selectedOptionIndices: msqChoices },
+                      { questionId: "q3", descriptiveAnswer },
+                    ],
+                  })
+                }
+                className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold"
+              >
+                {quizMutation.isPending ? "Submitting Quiz..." : "Submit Quiz for Evaluation"}
+              </button>
+
+              {quizResult && (
+                <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-950 space-y-1">
+                  <div className="font-extrabold">
+                    Auto-Graded Objective Score: {quizResult.autoAwardedMarks} / 10 Marks (Total
+                    Quiz Max: {quizResult.totalMaxMarks})
+                  </div>
+                  <div className="text-[11px] font-semibold">
+                    Status: {quizResult.overallStatus} (Descriptive Faculty Review Pending:{" "}
+                    {quizResult.hasDescriptivePending ? "Yes (5 Marks)" : "No"})
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Attendance, Assignments & Invoices */}

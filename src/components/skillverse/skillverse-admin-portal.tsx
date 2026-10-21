@@ -104,7 +104,29 @@ export function SkillverseAdminPortal() {
     },
   });
 
+  const upsertCourseMutation = trpc.skillverse.upsertCourse.useMutation({
+    onSuccess: () => {
+      utils.skillverse.getCatalogueConfig.invalidate();
+      setToastMsg("Course configuration updated without code changes.");
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  const upsertPackageMutation = trpc.skillverse.upsertPackage.useMutation({
+    onSuccess: () => {
+      utils.skillverse.getCatalogueConfig.invalidate();
+      setToastMsg("Package pricing updated.");
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
   const [cmsDraft, setCmsDraft] = useState<any | null>(null);
+  const [courseSlugEdit, setCourseSlugEdit] = useState("python-programming-foundation");
+  const [courseTitleEdit, setCourseTitleEdit] = useState("Python Programming Foundation");
+  const [courseFeeEdit, setCourseFeeEdit] = useState(1499);
+  const [courseStatusEdit, setCourseStatusEdit] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("PUBLISHED");
+  const [pkgIdEdit, setPkgIdEdit] = useState("PKG-1-STARTER");
+  const [pkgFeeEdit, setPkgFeeEdit] = useState(1499);
 
   if (isLoading) {
     return (
@@ -668,6 +690,112 @@ export function SkillverseAdminPortal() {
                 onChange={(e) => setCmsDraft({ ...currentCms, contactAddress: e.target.value })}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300"
               />
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <h3 className="font-extrabold text-slate-900">
+                Course Catalogue Manager (No-Code Price & Status Control)
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Course Slug</label>
+                  <input
+                    type="text"
+                    value={courseSlugEdit}
+                    onChange={(e) => setCourseSlugEdit(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Status</label>
+                  <select
+                    value={courseStatusEdit}
+                    onChange={(e) => setCourseStatusEdit(e.target.value as any)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                  >
+                    <option value="PUBLISHED">PUBLISHED</option>
+                    <option value="DRAFT">DRAFT</option>
+                    <option value="ARCHIVED">ARCHIVED</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Course Title</label>
+                  <input
+                    type="text"
+                    value={courseTitleEdit}
+                    onChange={(e) => setCourseTitleEdit(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Monthly Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={courseFeeEdit}
+                    onChange={(e) => setCourseFeeEdit(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  upsertCourseMutation.mutate({
+                    slug: courseSlugEdit,
+                    title: courseTitleEdit,
+                    monthlyFeeInr: courseFeeEdit,
+                    status: courseStatusEdit,
+                  })
+                }
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-blue-700 text-white font-bold"
+              >
+                Update / Publish Course
+              </button>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+              <h3 className="font-extrabold text-slate-900">
+                Monthly Package Fee Manager (Classes 8–12)
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Package ID</label>
+                  <select
+                    value={pkgIdEdit}
+                    onChange={(e) => setPkgIdEdit(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  >
+                    <option value="PKG-1-STARTER">PKG-1-STARTER (₹1,499/mo)</option>
+                    <option value="PKG-2-EXCELLENCE">PKG-2-EXCELLENCE (₹2,499/mo)</option>
+                    <option value="PKG-3-FUTUREREADY">PKG-3-FUTUREREADY (₹3,499/mo)</option>
+                    <option value="PKG-4-SENIOR-ACADEMIC">PKG-4-SENIOR-ACADEMIC (₹2,999/mo)</option>
+                    <option value="PKG-5-SENIOR-FUTUREREADY">PKG-5-SENIOR-FUTUREREADY (₹3,999/mo)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Monthly Fee (₹)</label>
+                  <input
+                    type="number"
+                    value={pkgFeeEdit}
+                    onChange={(e) => setPkgFeeEdit(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() =>
+                  upsertPackageMutation.mutate({
+                    id: pkgIdEdit,
+                    monthlyFeeInr: pkgFeeEdit,
+                  })
+                }
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-blue-700 text-white font-bold"
+              >
+                Update Package Monthly Fee
+              </button>
             </div>
           </div>
         </div>

@@ -1,0 +1,17 @@
+{
+  "brandName": "SLG SKILLVERSE",
+  "parentBrand": "SoftLab Global",
+  "tagline": "Your World of Future Skills.",
+  "supportingLine": "From Class 8 to 12 | School Foundation to IIT-JEE and Beyond",
+  "targetHostname": "https://skillverse.softlabglobal.com",
+  "logoAsset": "/images/logo.png",
+  "theme": {
+    "background": "#FFFFFF",
+    "navy": "#071630",
+    "royalBlue": "#0052CC",
+    "electricBlue": "#0077FF",
+    "cyanAccent": "#00B4D8",
+    "limeGreen": "#65A30D",
+    "deepGreen": "#15803D"
+  }
+}

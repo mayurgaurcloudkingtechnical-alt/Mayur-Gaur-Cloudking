@@ -1,0 +1,17 @@
+{
+  "name": "@softlab/skillverse",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SLG SKILLVERSE — Powered by SoftLab Global | Isolated Education Platform Workspace",
+  "scripts": {
+    "test": "npx tsx tests/verify-skillverse.ts",
+    "verify": "npx tsx tests/verify-skillverse.ts",
+    "typecheck": "npx tsc --noEmit -p ../../tsconfig.json"
+  },
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.451.0",
+    "zod": "^3.23.8"
+  }
+}

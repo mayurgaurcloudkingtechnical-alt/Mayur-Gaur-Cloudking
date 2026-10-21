@@ -399,4 +399,98 @@ export const skillverseRouter = router({
 
       return cert;
     }),
+
+  upsertCourse: protectedProcedure
+    .input(
+      z.object({
+        slug: z.string().min(3),
+        title: z.string().min(3),
+        monthlyFeeInr: z.number().min(0).optional(),
+        oneTimeFeeInr: z.number().min(0).nullable().optional(),
+        status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
+        shortSummary: z.string().optional(),
+        batchTiming: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.upsertCourse({
+        course: input as any,
+        actorName: actor.name,
+      });
+    }),
+
+  upsertPackage: protectedProcedure
+    .input(
+      z.object({
+        id: z.string().min(2),
+        monthlyFeeInr: z.number().min(0).optional(),
+        name: z.string().optional(),
+        subjectsSummary: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ADMIN_FINANCE_ROLES);
+      return SkillverseService.upsertPackage({
+        pkg: input as any,
+        actorName: actor.name,
+      });
+    }),
+
+  evaluateQuizAttempt: publicProcedure
+    .input(
+      z.object({
+        enrollmentCode: z.string().optional(),
+        quizTitle: z.string(),
+        questions: z.array(
+          z.object({
+            id: z.string(),
+            type: z.enum(["MCQ", "MSQ", "DESCRIPTIVE"]),
+            prompt: z.string(),
+            marks: z.number(),
+            correctOptionIndex: z.number().optional(),
+            correctOptionIndices: z.array(z.number()).optional(),
+          })
+        ),
+        responses: z.array(
+          z.object({
+            questionId: z.string(),
+            selectedOptionIndex: z.number().optional(),
+            selectedOptionIndices: z.array(z.number()).optional(),
+            descriptiveAnswer: z.string().optional(),
+          })
+        ),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const evaluation = SkillverseService.evaluateQuizSubmissionPure({
+        questions: input.questions,
+        responses: input.responses,
+      });
+
+      if (input.enrollmentCode) {
+        const key = `SV_STU_${input.enrollmentCode.trim().toUpperCase()}`;
+        const row = await db.systemSetting.findUnique({ where: { key } });
+        if (row) {
+          const student = row.value as unknown as SkillverseStudentProfileRecord;
+          student.assessmentScores.unshift({
+            testTitle: input.quizTitle,
+            subject: "Online Quiz & Descriptive Assessment",
+            date: new Date().toISOString().slice(0, 10),
+            marksObtained: evaluation.autoAwardedMarks,
+            maxMarks: evaluation.totalMaxMarks,
+            teacherRemark:
+              evaluation.overallStatus === "PENDING_TEACHER_REVIEW"
+                ? "Auto-graded objective items completed; descriptive answers queued for faculty grading."
+                : "Auto-graded online assessment completed.",
+          });
+          await db.systemSetting.update({
+            where: { key },
+            data: { value: student as any },
+          });
+        }
+      }
+
+      return evaluation;
+    }),
 });
