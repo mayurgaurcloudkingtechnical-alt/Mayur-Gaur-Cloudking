@@ -114,67 +114,83 @@ export class WhatsAppBusinessService {
     const activeToken = config.accessToken || this.token;
     const activePhoneId = config.phoneNumberId || this.phoneNumberId;
 
-    if (activeToken && activePhoneId) {
-      try {
-        let payload: any = {
+    if (!activeToken || !activePhoneId) {
+      const error =
+        "WhatsApp Cloud API not configured (missing WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID). Message NOT sent.";
+      console.error(`[WhatsAppBusinessService] ${error} to=${normalizedPhone}`);
+      return { success: false, messageId: "NOT_CONFIGURED", platform: "SIMULATED", error };
+    }
+
+    const post = async (payload: any) => {
+      const response = await fetch(`https://graph.facebook.com/v20.0/${activePhoneId}/messages`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${activeToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           messaging_product: "whatsapp",
           recipient_type: "individual",
           to: normalizedPhone,
-        };
+          ...payload,
+        }),
+      });
+      const data: any = await response.json().catch(() => ({}));
+      return { ok: response.ok && !!data.messages?.[0]?.id, data };
+    };
 
-        if (options.templateName) {
-          payload.type = "template";
-          payload.template = {
+    try {
+      let payload: any;
+      if (options.templateName) {
+        payload = {
+          type: "template",
+          template: {
             name: options.templateName,
             language: { code: options.templateLanguage || "en_US" },
             components: options.components || [],
-          };
-        } else if (options.mediaUrl) {
-          payload.type = "document";
-          payload.document = {
-            link: options.mediaUrl,
-            caption: options.mediaCaption || options.text || "",
-          };
-        } else {
-          payload.type = "text";
-          payload.text = { body: options.text || "" };
-        }
-
-        const response = await fetch(
-          `https://graph.facebook.com/v20.0/${activePhoneId}/messages`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${activeToken}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(payload),
-          }
-        );
-
-        const data = await response.json();
-        if (response.ok && data.messages?.[0]?.id) {
-          return {
-            success: true,
-            messageId: data.messages[0].id,
-            platform: "CLOUD_API",
-          };
-        } else {
-          console.warn("WhatsApp Cloud API responded with non-ok status:", data);
-          // Fallback to simulator ID in dev/sandbox
-        }
-      } catch (err: any) {
-        console.error("WhatsApp API dispatch error:", err.message);
+          },
+        };
+      } else if (options.mediaUrl) {
+        payload = {
+          type: "document",
+          document: { link: options.mediaUrl, caption: options.mediaCaption || options.text || "" },
+        };
+      } else {
+        payload = { type: "text", text: { body: options.text || "" } };
       }
-    }
 
-    // Production-ready simulated fallback (generates valid WhatsApp WAMID)
-    const simulatedMsgId = `wamid.HBgMOTE5${Date.now()}${Math.random().toString(36).slice(2, 8).toUpperCase()}`;
-    return {
-      success: true,
-      messageId: simulatedMsgId,
-      platform: "SIMULATED",
-    };
+      let result = await post(payload);
+
+      // Business-initiated messages outside the 24h customer-service window must use an
+      // approved template. Fall back automatically to the configured notification template.
+      const fallbackTemplate = process.env.WHATSAPP_NOTIFICATION_TEMPLATE?.trim();
+      if (!result.ok && !options.templateName && fallbackTemplate) {
+        const flat = (options.text || options.mediaCaption || "")
+          .replace(/[\r\n\t]+/g, " | ")
+          .replace(/ {4,}/g, "   ")
+          .slice(0, 1000);
+        const fallback = await post({
+          type: "template",
+          template: {
+            name: fallbackTemplate,
+            language: { code: process.env.WHATSAPP_NOTIFICATION_TEMPLATE_LANG?.trim() || "en" },
+            components: [{ type: "body", parameters: [{ type: "text", text: flat || "-" }] }],
+          },
+        });
+        if (fallback.ok) result = fallback;
+        else console.warn("[WhatsAppBusinessService] Template fallback failed:", JSON.stringify(fallback.data));
+      }
+
+      if (result.ok) {
+        return { success: true, messageId: result.data.messages[0].id, platform: "CLOUD_API" };
+      }
+      const error = result.data?.error?.message || JSON.stringify(result.data);
+      console.error(`[WhatsAppBusinessService] Meta API rejected message to ${normalizedPhone}: ${error}`);
+      return { success: false, messageId: "FAILED", platform: "CLOUD_API", error };
+    } catch (err: any) {
+      console.error("WhatsApp API dispatch error:", err.message);
+      return { success: false, messageId: "FAILED", platform: "CLOUD_API", error: err.message };
+    }
   }
 
   /**
@@ -238,7 +254,11 @@ export class WhatsAppBusinessService {
       };
     }
 
-    if (this.token && this.phoneNumberId && options.buttons && options.buttons.length > 0) {
+    const cfg = await WhatsAppBusinessConfigService.getConfig();
+    const iaToken = cfg.accessToken || this.token;
+    const iaPhoneId = cfg.phoneNumberId || this.phoneNumberId;
+
+    if (iaToken && iaPhoneId && options.buttons && options.buttons.length > 0) {
       try {
         const payload = {
           messaging_product: "whatsapp",
@@ -258,11 +278,11 @@ export class WhatsAppBusinessService {
         };
 
         const response = await fetch(
-          `https://graph.facebook.com/v19.0/${this.phoneNumberId}/messages`,
+          `https://graph.facebook.com/v20.0/${iaPhoneId}/messages`,
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${this.token}`,
+              Authorization: `Bearer ${iaToken}`,
               "Content-Type": "application/json",
             },
             body: JSON.stringify(payload),

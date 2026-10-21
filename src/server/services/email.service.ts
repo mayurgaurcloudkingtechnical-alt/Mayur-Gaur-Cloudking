@@ -225,6 +225,47 @@ export class EmailService {
   }
 
   /**
+   * Resend HTTP API transport (https://resend.com/docs/api-reference/emails/send-email).
+   * Requires RESEND_API_KEY and a verified sending domain matching EMAIL_FROM.
+   */
+  private static async sendViaResend(
+    to: string,
+    subject: string,
+    html: string,
+    text?: string,
+    cc?: string | string[],
+    bcc?: string | string[]
+  ): Promise<{ success: boolean; message?: string }> {
+    const apiKey = process.env.RESEND_API_KEY?.trim();
+    if (!apiKey) return { success: false, message: "RESEND_API_KEY not configured" };
+    const from =
+      process.env.EMAIL_FROM?.trim() ||
+      `${process.env.FROM_NAME?.trim() || "SOFTLAB GLOBAL"} <${process.env.FROM_EMAIL?.trim() || "admissions@softlabglobal.com"}>`;
+    const toList = (v?: string | string[]) =>
+      (v ? (Array.isArray(v) ? v : [v]) : []).map((e) => e.trim()).filter(Boolean);
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from,
+          to: [to.trim()],
+          ...(toList(cc).length ? { cc: toList(cc) } : {}),
+          ...(toList(bcc).length ? { bcc: toList(bcc) } : {}),
+          subject,
+          html,
+          ...(text ? { text } : {}),
+        }),
+      });
+      const data: any = await res.json().catch(() => ({}));
+      if (res.ok && data?.id) return { success: true, message: `Resend id ${data.id}` };
+      return { success: false, message: `HTTP ${res.status}: ${data?.message || JSON.stringify(data)}` };
+    } catch (err: any) {
+      return { success: false, message: err.message };
+    }
+  }
+
+  /**
    * Dispatches email with template interpolation, error handling, and database audit logging.
    */
   static async sendEmail(opts: SendEmailOptions): Promise<{ sent: boolean; reason?: string }> {
@@ -237,24 +278,46 @@ export class EmailService {
     let status = "QUEUED";
     let error: string | undefined = undefined;
 
-    if (this.isConfigured()) {
+    const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
+    const preferSmtp = process.env.EMAIL_PROVIDER?.trim().toUpperCase() === "SMTP";
+    const errors: string[] = [];
+
+    // 1. Resend HTTP API (primary when RESEND_API_KEY is configured)
+    if (hasResend && !(preferSmtp && this.isConfigured())) {
+      const result = await this.sendViaResend(to, subject, html, text, opts.cc, opts.bcc);
+      if (result.success) {
+        status = "SENT";
+      } else {
+        errors.push(`Resend: ${result.message}`);
+        console.warn(`[EmailService] Resend failed for ${to}: ${result.message}`);
+      }
+    }
+
+    // 2. SMTP (primary when EMAIL_PROVIDER=SMTP, otherwise fallback)
+    if (status !== "SENT" && this.isConfigured()) {
       try {
         const result = await this.sendViaSmtp(to, subject, html, text, opts.cc, opts.bcc);
         if (result.success) {
           status = "SENT";
         } else {
-          status = "FAILED";
-          error = result.message;
+          errors.push(`SMTP: ${result.message}`);
           console.warn(`[EmailService] Failed to dispatch email to ${to}: ${result.message}`);
         }
       } catch (e: any) {
-        status = "FAILED";
-        error = e.message;
+        errors.push(`SMTP: ${e.message}`);
         console.error(`[EmailService] Error sending to ${to}:`, e);
       }
-    } else {
-      status = "CONFIG_MISSING";
-      console.log(`[EmailService] (Simulated/Unconfigured) Email to ${to} | Subject: "${subject}"`);
+    }
+
+    if (status !== "SENT") {
+      if (!hasResend && !this.isConfigured()) {
+        status = "CONFIG_MISSING";
+        error = "No email provider configured (set RESEND_API_KEY or SMTP_USER/SMTP_PASSWORD).";
+        console.warn(`[EmailService] (Unconfigured) Email to ${to} | Subject: "${subject}"`);
+      } else {
+        status = "FAILED";
+        error = errors.join(" || ");
+      }
     }
 
     // Persist to email logs in PostgreSQL

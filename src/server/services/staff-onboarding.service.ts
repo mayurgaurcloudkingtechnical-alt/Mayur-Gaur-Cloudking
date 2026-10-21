@@ -432,7 +432,7 @@ export class StaffOnboardingService {
     const phone = staff.personalPhone || staff.user.phone || staff.user.whatsappNumber;
 
     // Send Email
-    await EmailService.sendStaffCredentials({
+    const emailResult = await EmailService.sendStaffCredentials({
       to: primaryEmail,
       staffName: fullName,
       employeeId: staff.employeeId,
@@ -440,20 +440,33 @@ export class StaffOnboardingService {
       temporaryPassword: tempPassword,
       roleName: staff.user.roleCode,
       designation: staff.designation,
-    }).catch((err) => console.error("[StaffOnboardingService] Resend email error:", err));
+    }).catch((err) => {
+      console.error("[StaffOnboardingService] Resend email error:", err);
+      return { sent: false, reason: err?.message as string | undefined };
+    });
 
     // Send WhatsApp
+    let waResult: { success: boolean; error?: string } = { success: false, error: "No phone number on profile" };
     if (phone) {
       const waMessage = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${fullName}*,\n\nYour official portal credentials for SoftLab Global (${staff.designation}):\n\n• Employee ID: \`${staff.employeeId}\`\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: \`${primaryEmail}\`\n• Temporary Password: \`${tempPassword}\`\n\nWarm regards,\n*HR & Executive Management*\n*SOFTLAB GLOBAL*`;
-      await WhatsAppBusinessService.sendMessage({
+      waResult = await WhatsAppBusinessService.sendMessage({
         toPhone: phone,
         text: waMessage,
-      }).catch((err: any) => console.error("[StaffOnboardingService] Resend WhatsApp error:", err));
+      }).catch((err: any) => {
+        console.error("[StaffOnboardingService] Resend WhatsApp error:", err);
+        return { success: false, error: err?.message };
+      });
     }
 
+    const emailSent = !!(emailResult as any)?.sent;
+    const whatsappSent = !!waResult.success;
     return {
-      success: true,
-      message: `Welcome credentials sent to ${fullName} via Email and WhatsApp.`,
+      success: emailSent || whatsappSent,
+      emailSent,
+      whatsappSent,
+      emailError: emailSent ? undefined : (emailResult as any)?.reason,
+      whatsappError: whatsappSent ? undefined : waResult.error,
+      message: `Email: ${emailSent ? "SENT" : `FAILED (${(emailResult as any)?.reason || "unknown"})`} | WhatsApp: ${whatsappSent ? "SENT" : `FAILED (${waResult.error || "unknown"})`}`,
       temporaryPassword: tempPassword,
     };
   }

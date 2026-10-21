@@ -2,6 +2,10 @@
 
 import React, { useState, useRef } from "react";
 import {
+  SoftlabIdCardFront,
+  SoftlabIdCardBack,
+} from "@/components/common/softlab-id-card";
+import {
   X,
   Printer,
   Download,
@@ -381,322 +385,47 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
               id="printable-id-card-area"
               className="flex flex-wrap items-center justify-center gap-6 py-2"
             >
-              {/* ========================================================================= */}
-              {/* CARD FRONT (Exact replica of user's uploaded Image 2) */}
-              {/* ========================================================================= */}
+              {/* CARD FRONT */}
               {(activeSide === "both" || activeSide === "front") && (
                 <div className="flex flex-col items-center">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 no-print">
                     FRONT SIDE
                   </span>
-
-                  {/* Physical Card Container: 330px x 530px (standard CR80 vertical badge) */}
-                  <div className="w-[330px] h-[530px] bg-white rounded-[24px] shadow-2xl border border-slate-300 overflow-hidden relative flex flex-col justify-between font-sans select-none">
-                    {/* Metallic Lanyard Clip Hole */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-20 h-5 bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 rounded-b-xl border border-slate-400 shadow-sm flex items-center justify-center z-30">
-                      <div className="w-10 h-1.5 bg-slate-700/60 rounded-full" />
-                    </div>
-
-                    {/* Top Wave & Building Graphic Overlay */}
-                    <div className="relative pt-6 px-4 bg-gradient-to-b from-white via-white to-transparent z-10">
-                      {/* Logo & Tagline */}
-                      <div className="flex items-center justify-center gap-2 pt-2">
-                        {/* Official 3D SoftLab Global Logo */}
-                        <img
-                          src="/images/softlab-global-logo-3d.jpg"
-                          alt="SoftLab Global"
-                          className="w-10 h-10 rounded-full object-cover shadow-sm border border-slate-200"
-                        />
-                        <div className="leading-tight text-center">
-                          <h1 className="text-lg font-black tracking-tight text-[#0A2540]">
-                            <span className="text-[#059669]">SOFTLAB </span>GLOBAL
-                          </h1>
-                          <p className="text-[7.5px] font-bold text-[#0A2540] tracking-wider uppercase">
-                            LEARN TODAY • CODE TOMORROW • LEAD THE FUTURE
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Upper Dynamic Waves (Blue/Green) & Service Bullet Points */}
-                    <div className="relative -mt-2">
-                      <svg viewBox="0 0 330 110" className="w-full h-auto drop-shadow-sm">
-                        <defs>
-                          <linearGradient id="waveGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#10B981" />
-                            <stop offset="50%" stopColor="#0EA5E9" />
-                            <stop offset="100%" stopColor="#1E40AF" />
-                          </linearGradient>
-                        </defs>
-                        <path
-                          d="M0,40 C80,95 240,0 330,55 L330,0 L0,0 Z"
-                          fill="url(#waveGrad)"
-                          opacity="0.9"
-                        />
-                        <path
-                          d="M0,25 C100,85 220,10 330,35 L330,0 L0,0 Z"
-                          fill="#059669"
-                          opacity="0.4"
-                        />
-                      </svg>
-
-                      {/* Right-aligned service bullets */}
-                      <div className="absolute top-2 right-3 text-right text-[7.5px] font-bold text-slate-800 space-y-0.5 z-10 leading-none tracking-tight">
-                        <p>IT TRAINING</p>
-                        <p>SKILL DEVELOPMENT</p>
-                        <p>LIVE PROJECTS</p>
-                        <p>PLACEMENT SUPPORT</p>
-                        <p>CORPORATE SERVICES</p>
-                      </div>
-                    </div>
-
-                    {/* Centered Circular Photo with dual green & blue ring */}
-                    <div className="relative -mt-10 flex flex-col items-center z-20">
-                      <div className="relative w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-emerald-500 via-sky-400 to-blue-700 shadow-lg">
-                        <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-2 border-white">
-                          {photoPreview ? (
-                            <img src={photoPreview} alt="Staff" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
-                              <User className="w-14 h-14" />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Employee Name & Designation */}
-                      <div className="mt-2 text-center">
-                        <h2 className="text-base font-black text-[#0A2540] uppercase tracking-wide leading-tight">
-                          {formData.fullName}
-                        </h2>
-                        <p className="text-xs font-bold text-blue-900 mt-0.5">{formData.designation}</p>
-                      </div>
-                    </div>
-
-                    {/* Employee Credentials with Icons & QR Verification */}
-                    <div className="px-5 py-1 z-20 flex items-center justify-between gap-2 mt-1">
-                      {/* Left side details */}
-                      <div className="space-y-1 text-[9.5px] text-slate-700 flex-1 leading-tight font-medium">
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 text-[9px]">
-                            <User className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="font-semibold text-slate-900 w-20">Employee ID :</span>
-                          <span className="font-bold text-slate-900 font-mono">{formData.employeeId}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 text-[9px]">
-                            <Building2 className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="font-semibold text-slate-900 w-20">Department :</span>
-                          <span className="font-semibold text-slate-800">{formData.department}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 text-[9px]">
-                            <Phone className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="font-semibold text-slate-900 w-20">Contact No. :</span>
-                          <span className="font-semibold text-slate-800">{formData.contactNo}</span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 text-[9px]">
-                            <Mail className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="font-semibold text-slate-900 w-20">Email :</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[125px]">
-                            {formData.email}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center flex-shrink-0 text-[9px]">
-                            <MapPin className="w-2.5 h-2.5" />
-                          </span>
-                          <span className="font-semibold text-slate-900 w-20">Work Location :</span>
-                          <span className="font-semibold text-slate-800 truncate max-w-[125px]">
-                            {formData.workLocation}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Right side QR Code */}
-                      <div className="flex flex-col items-center justify-center p-1.5 bg-white border border-slate-300 rounded-lg shadow-sm flex-shrink-0">
-                        <div className="w-14 h-14 bg-slate-900 p-1 rounded flex items-center justify-center text-white">
-                          <QrCode className="w-12 h-12 text-white" />
-                        </div>
-                        <span className="text-[6.5px] font-black text-slate-800 uppercase tracking-tighter mt-1">
-                          SCAN TO VERIFY
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bottom Dynamic Wave + 4 Feature Pillars + URL */}
-                    <div className="relative mt-2">
-                      <svg viewBox="0 0 330 40" className="w-full h-auto block">
-                        <path
-                          d="M0,15 C90,0 210,35 330,10 L330,40 L0,40 Z"
-                          fill="#0A2540"
-                        />
-                        <path
-                          d="M0,25 C120,5 240,30 330,20 L330,40 L0,40 Z"
-                          fill="#059669"
-                          opacity="0.3"
-                        />
-                      </svg>
-
-                      {/* 4 Feature Icons strip */}
-                      <div className="bg-[#0A2540] text-white px-3 pb-2 pt-0.5">
-                        <div className="grid grid-cols-4 gap-1 text-center border-b border-slate-700/60 pb-1.5">
-                          <div>
-                            <p className="text-[6.5px] font-bold tracking-tight text-emerald-400">LEARN TODAY</p>
-                          </div>
-                          <div>
-                            <p className="text-[6.5px] font-bold tracking-tight text-sky-400">&lt;/&gt; CODE TOMORROW</p>
-                          </div>
-                          <div>
-                            <p className="text-[6.5px] font-bold tracking-tight text-amber-400">LEAD THE FUTURE</p>
-                          </div>
-                          <div>
-                            <p className="text-[6.5px] font-bold tracking-tight text-purple-300">EMPOWERING MINDS</p>
-                          </div>
-                        </div>
-
-                        {/* Bottom URL */}
-                        <div className="flex items-center justify-center gap-1 mt-1 text-[9px] font-bold text-slate-200 tracking-wider">
-                          <Globe className="w-3 h-3 text-emerald-400" />
-                          <span>{formData.websiteUrl}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <SoftlabIdCardFront
+                    cardType="STAFF"
+                    fullName={formData.fullName}
+                    designationOrCourse={formData.designation}
+                    idNumber={formData.employeeId}
+                    idLabel="Employee ID"
+                    departmentOrBatch={formData.department}
+                    departmentLabel="Department"
+                    contactNo={formData.contactNo}
+                    email={formData.email}
+                    workLocation={formData.workLocation}
+                    photoUrl={photoPreview || formData.photoUrl}
+                  />
                 </div>
               )}
 
-              {/* ========================================================================= */}
-              {/* CARD BACK (Exact replica of user's uploaded Image 2) */}
-              {/* ========================================================================= */}
+              {/* CARD BACK */}
               {(activeSide === "both" || activeSide === "back") && (
                 <div className="flex flex-col items-center">
                   <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 no-print">
                     BACK SIDE
                   </span>
-
-                  {/* Physical Card Container: 330px x 530px */}
-                  <div className="w-[330px] h-[530px] bg-white rounded-[24px] shadow-2xl border border-slate-300 overflow-hidden relative flex flex-col justify-between font-sans select-none">
-                    {/* Metallic Lanyard Clip Hole */}
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 w-20 h-5 bg-gradient-to-b from-slate-400 via-slate-200 to-slate-400 rounded-b-xl border border-slate-400 shadow-sm flex items-center justify-center z-30">
-                      <div className="w-10 h-1.5 bg-slate-700/60 rounded-full" />
-                    </div>
-
-                    {/* Top Logo */}
-                    <div className="pt-6 px-4 bg-gradient-to-b from-white via-white to-transparent">
-                      <div className="flex items-center justify-center gap-2 pt-2">
-                        <img
-                          src="/images/softlab-global-logo-3d.jpg"
-                          alt="SoftLab Global"
-                          className="w-9 h-9 rounded-full object-cover shadow-sm border border-slate-200"
-                        />
-                        <div className="leading-tight text-center">
-                          <h1 className="text-base font-black tracking-tight text-[#0A2540]">
-                            <span className="text-[#059669]">SOFTLAB </span>GLOBAL
-                          </h1>
-                          <p className="text-[6.5px] font-bold text-[#0A2540] tracking-wider uppercase">
-                            LEARN TODAY • CODE TOMORROW • LEAD THE FUTURE
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Main Content Sections */}
-                    <div className="px-4 space-y-2 flex-1 mt-1">
-                      {/* Section 1: ABOUT SOFTLAB GLOBAL */}
-                      <div>
-                        <div className="inline-block px-3 py-0.5 rounded-full bg-emerald-600 text-white text-[8px] font-bold uppercase tracking-wider mb-1">
-                          ABOUT SOFTLAB GLOBAL
-                        </div>
-                        <p className="text-[8px] text-slate-600 leading-tight font-medium">
-                          {formData.aboutText}
-                        </p>
-                      </div>
-
-                      {/* 4 Feature Badges */}
-                      <div className="grid grid-cols-4 gap-1">
-                        <div className="bg-blue-50 border border-blue-200 rounded p-1 text-center">
-                          <p className="text-[6.5px] font-bold text-blue-900 leading-tight">IT TRAINING & COURSES</p>
-                        </div>
-                        <div className="bg-emerald-50 border border-emerald-200 rounded p-1 text-center">
-                          <p className="text-[6.5px] font-bold text-emerald-900 leading-tight">LIVE PROJECTS & INTERN</p>
-                        </div>
-                        <div className="bg-amber-50 border border-amber-200 rounded p-1 text-center">
-                          <p className="text-[6.5px] font-bold text-amber-900 leading-tight">PLACEMENT SUPPORT</p>
-                        </div>
-                        <div className="bg-purple-50 border border-purple-200 rounded p-1 text-center">
-                          <p className="text-[6.5px] font-bold text-purple-900 leading-tight">CORPORATE IT SERVICES</p>
-                        </div>
-                      </div>
-
-                      {/* Section 2: OFFICE ADDRESS */}
-                      <div>
-                        <div className="inline-block px-3 py-0.5 rounded-full bg-blue-700 text-white text-[8px] font-bold uppercase tracking-wider mb-1">
-                          OFFICE ADDRESS
-                        </div>
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="text-[8px] text-slate-700 space-y-0.5 leading-tight flex-1">
-                            <p className="font-semibold text-slate-900">{formData.officeAddress}</p>
-                            <p className="text-slate-600">📞 {formData.officePhone}</p>
-                            <p className="text-slate-600">✉️ {formData.officeEmail}</p>
-                            <p className="text-slate-600 font-semibold">🌐 {formData.websiteUrl}</p>
-                          </div>
-                          {/* Location QR */}
-                          <div className="flex flex-col items-center justify-center p-1 bg-white border border-slate-300 rounded shadow-sm flex-shrink-0">
-                            <div className="w-10 h-10 bg-slate-900 p-0.5 rounded flex items-center justify-center text-white">
-                              <QrCode className="w-9 h-9 text-white" />
-                            </div>
-                            <span className="text-[5.5px] font-black text-slate-800 uppercase tracking-tighter mt-0.5">
-                              SCAN LOCATION
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Section 3: TERMS & CONDITIONS */}
-                      <div>
-                        <div className="inline-block px-3 py-0.5 rounded-full bg-emerald-700 text-white text-[8px] font-bold uppercase tracking-wider mb-1">
-                          TERMS & CONDITIONS
-                        </div>
-                        <div className="space-y-0.5 text-[7px] text-slate-600 leading-tight">
-                          {formData.terms?.map((term, idx) => (
-                            <p key={idx}>{term}</p>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Authorised Signatory Block */}
-                      <div className="flex items-end justify-between pt-1">
-                        <div className="text-[7px] text-slate-400">
-                          <p>Issued by HR Operations</p>
-                          <p className="font-mono">VERIFIED BADGE</p>
-                        </div>
-                        <div className="text-right">
-                          <div className="font-serif italic text-sm text-slate-800 font-bold border-b border-slate-400 pb-0.5 px-2">
-                            Director Signature
-                          </div>
-                          <p className="text-[7.5px] font-bold text-slate-800 mt-0.5">
-                            Authorised Signatory
-                          </p>
-                          <p className="text-[6.5px] font-semibold text-slate-500">Director, SoftLab Global</p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Bottom Dark Navy Footer */}
-                    <div className="bg-[#0A2540] py-2 text-center text-white text-[8px] font-bold tracking-widest uppercase">
-                      LEARN TODAY | CODE TOMORROW | LEAD THE FUTURE
-                    </div>
-                  </div>
+                  <SoftlabIdCardBack
+                    aboutText={formData.aboutText}
+                    officeAddressLine1="SoftLab Global"
+                    officeAddressLine2="4th Floor, 211/C/59, Tata Motors Building,"
+                    officeAddressLine3="Near Landmark, Prayagraj,"
+                    officeAddressLine4="Uttar Pradesh - 211011, India."
+                    officePhone={formData.officePhone}
+                    officeEmail={formData.officeEmail}
+                    websiteUrl={formData.websiteUrl}
+                    terms={formData.terms}
+                    signatoryTitle="Authorised Signatory"
+                    signatoryOrg="SoftLab Global"
+                  />
                 </div>
               )}
             </div>
