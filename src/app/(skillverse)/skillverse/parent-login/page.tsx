@@ -21,17 +21,35 @@ export default function SkillverseParentPortalPage() {
   const [accessPin, setAccessPin] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [familyData, setFamilyData] = useState<any | null>(null);
+  const [prefSavedMsg, setPrefSavedMsg] = useState<string | null>(null);
+  const [whatsappAlerts, setWhatsappAlerts] = useState(true);
+  const [emailReports, setEmailReports] = useState(true);
+  const [smsAttendanceAlerts, setSmsAttendanceAlerts] = useState(true);
+  const [preferredLanguage, setPreferredLanguage] = useState<"ENGLISH" | "HINDI_ENGLISH">("ENGLISH");
 
   const verifyParentMutation = trpc.skillverse.verifyParentPortalAccess.useMutation({
     onSuccess: (data) => {
       setErrorMsg(null);
       setFamilyData(data);
+      if (data.student?.communicationPreferences) {
+        setWhatsappAlerts(data.student.communicationPreferences.whatsappAlerts);
+        setEmailReports(data.student.communicationPreferences.emailReports);
+        setSmsAttendanceAlerts(data.student.communicationPreferences.smsAttendanceAlerts);
+        setPreferredLanguage(data.student.communicationPreferences.preferredLanguage);
+      }
     },
     onError: (err) => {
       setErrorMsg(
         err.message ||
           "Parent verification failed. Access is strictly restricted to your linked child's profile."
       );
+    },
+  });
+
+  const updatePrefsMutation = trpc.skillverse.updateParentCommunicationPreferences.useMutation({
+    onSuccess: () => {
+      setPrefSavedMsg("Family communication preferences saved.");
+      setTimeout(() => setPrefSavedMsg(null), 3500);
     },
   });
 
@@ -201,6 +219,59 @@ export default function SkillverseParentPortalPage() {
           <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-900">
             <strong className="block">DPDP Parent Consent Status: ACTIVE</strong>
             Verified parent/guardian consent is on file for {student.studentName}.
+          </div>
+
+          <div className="pt-2 border-t border-slate-200 space-y-2.5 text-xs">
+            <h3 className="font-extrabold text-slate-900">
+              Parent Communication Preferences
+            </h3>
+            {prefSavedMsg && (
+              <div className="p-2 rounded-lg bg-emerald-100 text-emerald-900 font-bold">
+                {prefSavedMsg}
+              </div>
+            )}
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={whatsappAlerts}
+                onChange={(e) => setWhatsappAlerts(e.target.checked)}
+              />
+              <span>WhatsApp Academic & Fee Reminders</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={emailReports}
+                onChange={(e) => setEmailReports(e.target.checked)}
+              />
+              <span>Monthly Email Progress Reports</span>
+            </label>
+            <label className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={smsAttendanceAlerts}
+                onChange={(e) => setSmsAttendanceAlerts(e.target.checked)}
+              />
+              <span>Daily Attendance Alerts</span>
+            </label>
+            <button
+              type="button"
+              disabled={updatePrefsMutation.isPending}
+              onClick={() =>
+                updatePrefsMutation.mutate({
+                  enrollmentCode: student.enrollmentCode,
+                  parentPhone,
+                  accessPin,
+                  whatsappAlerts,
+                  emailReports,
+                  smsAttendanceAlerts,
+                  preferredLanguage,
+                })
+              }
+              className="w-full py-2 rounded-xl bg-slate-900 hover:bg-emerald-800 text-white font-bold"
+            >
+              Save Communication Preferences
+            </button>
           </div>
         </div>
 

@@ -96,6 +96,23 @@ export interface SkillverseStudentProfileRecord {
     score?: string;
     teacherFeedback?: string;
   }[];
+  assessmentScores: {
+    attemptId?: string;
+    testTitle: string;
+    subject: string;
+    date: string;
+    marksObtained: number;
+    maxMarks: number;
+    status?: "COMPLETED" | "PENDING_TEACHER_REVIEW" | "EVALUATED";
+    teacherRemark?: string;
+  }[];
+  communicationPreferences?: {
+    whatsappAlerts: boolean;
+    emailReports: boolean;
+    smsAttendanceAlerts: boolean;
+    preferredLanguage: "ENGLISH" | "HINDI_ENGLISH";
+    updatedAt: string;
+  };
   ptmSchedules: {
     id: string;
     scheduledDate: string;
@@ -105,6 +122,32 @@ export interface SkillverseStudentProfileRecord {
   }[];
   status: "ACTIVE" | "COMPLETED" | "SUSPENDED";
   createdAt: string;
+}
+
+export interface SkillverseQuizAttemptRecord {
+  attemptId: string;
+  enrollmentCode?: string;
+  studentName?: string;
+  quizTitle: string;
+  autoAwardedMarks: number;
+  descriptiveAwardedMarks: number;
+  totalAwardedMarks: number;
+  totalMaxMarks: number;
+  hasDescriptivePending: boolean;
+  overallStatus: "COMPLETED" | "PENDING_TEACHER_REVIEW" | "EVALUATED";
+  teacherFeedback?: string;
+  evaluatedBy?: string;
+  evaluatedAt?: string;
+  itemResults: {
+    questionId: string;
+    type: "MCQ" | "MSQ" | "DESCRIPTIVE";
+    prompt?: string;
+    awardedMarks: number;
+    maxMarks: number;
+    descriptiveAnswer?: string;
+    status: "AUTO_EVALUATED" | "PENDING_TEACHER_EVALUATION" | "TEACHER_EVALUATED";
+  }[];
+  submittedAt: string;
 }
 
 export interface SkillverseInvoiceRecord {
@@ -195,6 +238,7 @@ const CATEGORIES = {
   INVOICE: "SKILLVERSE_INVOICE",
   CERTIFICATE: "SKILLVERSE_CERTIFICATE",
   ASSESSMENT: "SKILLVERSE_ASSESSMENT",
+  QUIZ_ATTEMPT: "SKILLVERSE_QUIZ_ATTEMPT",
   NOTIFICATION: "SKILLVERSE_NOTIFICATION",
   ANALYTICS: "SKILLVERSE_ANALYTICS",
   AUDIT: "SKILLVERSE_AUDIT",
@@ -380,6 +424,20 @@ export class SkillverseService {
       batches,
       verifiedFaculty,
       diagnosticQuestions: INITIAL_DIAGNOSTIC_QUESTIONS,
+    };
+  }
+
+  /**
+   * Public Catalog & Config: Server-side enforcement of PUBLISHED courses and ACTIVE packages/add-ons.
+   * Draft and Archived items are strictly excluded from public discovery.
+   */
+  static async getPublicCatalogAndConfig() {
+    const full = await this.getCatalogAndConfig();
+    return {
+      ...full,
+      courses: full.courses.filter((c) => c.status === "PUBLISHED"),
+      packages: full.packages.filter((p) => p.status === "ACTIVE"),
+      addons: full.addons.filter((a) => a.status === "ACTIVE"),
     };
   }
 
@@ -654,6 +712,7 @@ export class SkillverseService {
       invoiceRows,
       certRows,
       assessmentRows,
+      quizAttemptRows,
       notificationRows,
       analyticsRows,
       auditRows,
@@ -681,6 +740,11 @@ export class SkillverseService {
         take: 50,
       }),
       db.systemSetting.findMany({
+        where: { category: CATEGORIES.QUIZ_ATTEMPT },
+        orderBy: { updatedAt: "desc" },
+        take: 50,
+      }),
+      db.systemSetting.findMany({
         where: { category: CATEGORIES.NOTIFICATION },
         orderBy: { updatedAt: "desc" },
         take: 50,
@@ -701,6 +765,9 @@ export class SkillverseService {
     const students = studentRows.map((r) => r.value as unknown as SkillverseStudentProfileRecord);
     const invoices = invoiceRows.map((r) => r.value as unknown as SkillverseInvoiceRecord);
     const certificates = certRows.map((r) => r.value as unknown as SkillverseCertificateRecord);
+    const quizAttempts = quizAttemptRows.map(
+      (r) => r.value as unknown as SkillverseQuizAttemptRecord
+    );
 
     const paidRevenueInr = invoices
       .filter((inv) => inv.status === "PAID")
@@ -717,6 +784,7 @@ export class SkillverseService {
       invoices,
       certificates,
       assessments: assessmentRows.map((r) => r.value as any),
+      quizAttempts,
       notifications: notificationRows.map((r) => r.value as any),
       analyticsEvents: analyticsRows.map((r) => r.value as any),
       auditLogs: auditRows.map((r) => r.value as any),
@@ -839,6 +907,14 @@ export class SkillverseService {
           status: "PENDING",
         },
       ],
+      assessmentScores: [],
+      communicationPreferences: {
+        whatsappAlerts: true,
+        emailReports: true,
+        smsAttendanceAlerts: true,
+        preferredLanguage: "ENGLISH",
+        updatedAt: new Date().toISOString(),
+      },
       ptmSchedules: [
         {
           id: `PTM-${Date.now()}`,
@@ -1017,88 +1093,527 @@ export class SkillverseService {
 
   /**
    * Admin Course Catalogue CRUD (Create / Edit / Publish / Archive without code changes)
+   * Preserves existing curriculum modules and metadata when updating partial fields, and
+   * populates complete valid defaults when creating a new course.
    */
   static async upsertCourse(input: {
-    course: SkillverseCourseItem;
+    course: Partial<SkillverseCourseItem> & {
+      slug: string;
+      title?: string;
+      monthlyFeeInr?: number;
+      oneTimeFeeInr?: number | null;
+      batchTiming?: string;
+    };
     actorName: string;
   }) {
     const config = await this.getCatalogAndConfig();
     const existingIdx = config.courses.findIndex(
-      (c) => c.id === input.course.id || c.slug === input.course.slug
+      (c) => (input.course.id && c.id === input.course.id) || c.slug === input.course.slug
     );
     const updatedCourses = [...config.courses];
+    const resolvedPrice =
+      input.course.priceInr ??
+      input.course.monthlyFeeInr ??
+      (input.course.oneTimeFeeInr !== null && input.course.oneTimeFeeInr !== undefined
+        ? input.course.oneTimeFeeInr
+        : undefined);
+
+    let finalCourse: SkillverseCourseItem;
+
     if (existingIdx >= 0) {
-      updatedCourses[existingIdx] = input.course;
+      const prev = updatedCourses[existingIdx];
+      finalCourse = {
+        ...prev,
+        ...input.course,
+        id: prev.id,
+        code: input.course.code || prev.code,
+        slug: input.course.slug || prev.slug,
+        title: input.course.title || prev.title,
+        priceInr: resolvedPrice !== undefined ? resolvedPrice : prev.priceInr,
+        status: input.course.status || prev.status,
+        shortSummary: input.course.shortSummary || prev.shortSummary,
+        defaultTimetable:
+          input.course.defaultTimetable || input.course.batchTiming || prev.defaultTimetable,
+        modules:
+          input.course.modules && input.course.modules.length > 0
+            ? input.course.modules
+            : prev.modules,
+        learningOutcomes:
+          input.course.learningOutcomes && input.course.learningOutcomes.length > 0
+            ? input.course.learningOutcomes
+            : prev.learningOutcomes,
+      };
+      updatedCourses[existingIdx] = finalCourse;
     } else {
-      updatedCourses.unshift(input.course);
+      const seq = 100 + updatedCourses.length + 1;
+      finalCourse = {
+        id: input.course.id || `SV-CRS-${seq}`,
+        code: input.course.code || `SV-${seq}`,
+        slug: input.course.slug.trim().toLowerCase(),
+        title: input.course.title || input.course.slug,
+        category: input.course.category || "TECH_AI_CODING",
+        categoryLabel: input.course.categoryLabel || "Future Skills & Academic Program",
+        eligibleGrades:
+          input.course.eligibleGrades && input.course.eligibleGrades.length > 0
+            ? input.course.eligibleGrades
+            : ["Class 8", "Class 9", "Class 10", "Class 11", "Class 12"],
+        applicableBoards:
+          input.course.applicableBoards && input.course.applicableBoards.length > 0
+            ? input.course.applicableBoards
+            : ["CBSE", "ICSE / ISC", "UP Board / State Boards"],
+        deliveryModes:
+          input.course.deliveryModes && input.course.deliveryModes.length > 0
+            ? input.course.deliveryModes
+            : ["ONLINE", "OFFLINE", "HYBRID"],
+        durationLabel: input.course.durationLabel || "3 Months (Structured Module)",
+        durationMonths: input.course.durationMonths || 3,
+        teachingHours: input.course.teachingHours || 48,
+        pricingType: input.course.pricingType || "STANDALONE",
+        priceInr: resolvedPrice !== undefined ? resolvedPrice : 1499,
+        billingCycle: input.course.billingCycle || "MONTHLY",
+        gstPercent: input.course.gstPercent ?? 0,
+        installmentAvailable: input.course.installmentAvailable ?? true,
+        batchCapacity: input.course.batchCapacity || 25,
+        defaultTimetable:
+          input.course.defaultTimetable ||
+          input.course.batchTiming ||
+          "Mon–Sat | 4:00 PM – 6:00 PM",
+        prerequisites: input.course.prerequisites || "Open to eligible school students",
+        shortSummary:
+          input.course.shortSummary ||
+          "Structured concept mastery, guided problem solving, and practical lab sessions.",
+        description:
+          input.course.description ||
+          input.course.shortSummary ||
+          "Comprehensive SLG SKILLVERSE academic and practical skill development program.",
+        learningOutcomes:
+          input.course.learningOutcomes && input.course.learningOutcomes.length > 0
+            ? input.course.learningOutcomes
+            : [
+                "Master foundational concepts with structured analytical problem solving",
+                "Complete hands-on assignments and unit evaluations",
+              ],
+        modules:
+          input.course.modules && input.course.modules.length > 0
+            ? input.course.modules
+            : [
+                {
+                  title: "Module 1: Core Concepts & Guided Practice",
+                  lessons: [
+                    "Foundational Principles & Concept Walkthrough",
+                    "Applied Problem Solving & Practical Exercises",
+                  ],
+                  teachingHours: 24,
+                },
+              ],
+        assessmentPattern:
+          input.course.assessmentPattern ||
+          "Weekly objective quizzes + faculty-evaluated descriptive assessments.",
+        syllabusRevisionDate:
+          input.course.syllabusRevisionDate || new Date().toISOString().slice(0, 10),
+        status: input.course.status || "PUBLISHED",
+        officialExamNotice: input.course.officialExamNotice,
+      };
+      updatedCourses.unshift(finalCourse);
     }
 
-    try {
-      await db.systemSetting.upsert({
-        where: { key: KEYS.COURSES },
-        update: { value: updatedCourses as any, updatedBy: input.actorName },
-        create: {
-          key: KEYS.COURSES,
-          category: CATEGORIES.CONFIG,
-          value: updatedCourses as any,
-          isSecret: false,
-          updatedBy: input.actorName,
-        },
-      });
-    } catch {
-      // Fallback in offline environments
-    }
+    await db.systemSetting.upsert({
+      where: { key: KEYS.COURSES },
+      update: { value: updatedCourses as any, updatedBy: input.actorName },
+      create: {
+        key: KEYS.COURSES,
+        category: CATEGORIES.CONFIG,
+        value: updatedCourses as any,
+        isSecret: false,
+        updatedBy: input.actorName,
+      },
+    });
 
     await this.logAudit({
       action: existingIdx >= 0 ? "COURSE_UPDATED" : "COURSE_CREATED",
       actor: input.actorName,
-      target: input.course.code,
-      details: `${input.course.title} (${input.course.status}) — ₹${input.course.priceInr}`,
+      target: finalCourse.code,
+      details: `${finalCourse.title} (${finalCourse.status}) — ₹${finalCourse.priceInr}`,
     });
 
-    return input.course;
+    return finalCourse;
   }
 
   /**
    * Admin Package Pricing & Inclusions CRUD
+   * Preserves all package metadata and automatically recalculates 12-month undiscounted total.
    */
   static async upsertPackage(input: {
-    pkg: SkillverseAcademicPackage;
+    pkg: Partial<SkillverseAcademicPackage> & {
+      id: string;
+      monthlyFeeInr?: number;
+      subjectsSummary?: string;
+    };
     actorName: string;
   }) {
     const config = await this.getCatalogAndConfig();
     const idx = config.packages.findIndex((p) => p.id === input.pkg.id);
     const updatedPackages = [...config.packages];
+    const resolvedMonthly =
+      input.pkg.monthlyPriceInr ??
+      input.pkg.monthlyFeeInr ??
+      (idx >= 0 ? updatedPackages[idx].monthlyPriceInr : 1499);
+
+    let finalPkg: SkillverseAcademicPackage;
     if (idx >= 0) {
-      updatedPackages[idx] = input.pkg;
+      const prev = updatedPackages[idx];
+      finalPkg = {
+        ...prev,
+        ...input.pkg,
+        id: prev.id,
+        code: input.pkg.code || prev.code,
+        name: input.pkg.name || prev.name,
+        monthlyPriceInr: resolvedMonthly,
+        twelveMonthUndiscountedTotalInr: resolvedMonthly * 12,
+        summary: input.pkg.summary || input.pkg.subjectsSummary || prev.summary,
+        inclusions:
+          input.pkg.inclusions && input.pkg.inclusions.length > 0
+            ? input.pkg.inclusions
+            : prev.inclusions,
+        status: input.pkg.status || prev.status,
+      };
+      updatedPackages[idx] = finalPkg;
     } else {
-      updatedPackages.push(input.pkg);
+      finalPkg = {
+        id: input.pkg.id,
+        code: input.pkg.code || input.pkg.id,
+        name: input.pkg.name || input.pkg.id,
+        badge: input.pkg.badge || "Custom Academic Package",
+        eligibleGrades: input.pkg.eligibleGrades || "Classes 8–12",
+        gradeList: input.pkg.gradeList || ["Class 8", "Class 9", "Class 10", "Class 11", "Class 12"],
+        monthlyPriceInr: resolvedMonthly,
+        twelveMonthUndiscountedTotalInr: resolvedMonthly * 12,
+        summary:
+          input.pkg.summary ||
+          input.pkg.subjectsSummary ||
+          "Structured monthly academic package with regular assessments.",
+        inclusions: input.pkg.inclusions || ["Live & Hybrid Classes", "Unit Assessments"],
+        subjectsCovered: input.pkg.subjectsCovered || ["Core Subjects"],
+        status: input.pkg.status || "ACTIVE",
+      };
+      updatedPackages.push(finalPkg);
     }
 
-    try {
-      await db.systemSetting.upsert({
-        where: { key: KEYS.PACKAGES },
-        update: { value: updatedPackages as any, updatedBy: input.actorName },
-        create: {
-          key: KEYS.PACKAGES,
-          category: CATEGORIES.CONFIG,
-          value: updatedPackages as any,
-          isSecret: false,
-          updatedBy: input.actorName,
-        },
-      });
-    } catch {
-      // Fallback in offline environments
-    }
+    await db.systemSetting.upsert({
+      where: { key: KEYS.PACKAGES },
+      update: { value: updatedPackages as any, updatedBy: input.actorName },
+      create: {
+        key: KEYS.PACKAGES,
+        category: CATEGORIES.CONFIG,
+        value: updatedPackages as any,
+        isSecret: false,
+        updatedBy: input.actorName,
+      },
+    });
 
     await this.logAudit({
       action: "PACKAGE_UPDATED",
       actor: input.actorName,
-      target: input.pkg.code,
-      details: `${input.pkg.name} — ₹${input.pkg.monthlyPriceInr}/mo`,
+      target: finalPkg.code,
+      details: `${finalPkg.name} — ₹${finalPkg.monthlyPriceInr}/mo (12-mo: ₹${finalPkg.twelveMonthUndiscountedTotalInr})`,
     });
 
-    return input.pkg;
+    return finalPkg;
+  }
+
+  /**
+   * Admin / Academic Coordinator Batch Management CRUD
+   */
+  static async upsertBatch(input: {
+    batch: Partial<SkillverseBatchRecord> & { batchCode: string; title: string };
+    actorName: string;
+  }) {
+    const config = await this.getCatalogAndConfig();
+    const updatedBatches = [...config.batches];
+    const idx = updatedBatches.findIndex(
+      (b) => b.batchCode === input.batch.batchCode || (input.batch.id && b.id === input.batch.id)
+    );
+
+    let finalBatch: SkillverseBatchRecord;
+    if (idx >= 0) {
+      const prev = updatedBatches[idx];
+      finalBatch = {
+        ...prev,
+        ...input.batch,
+        id: prev.id,
+        batchCode: input.batch.batchCode || prev.batchCode,
+        title: input.batch.title || prev.title,
+      };
+      updatedBatches[idx] = finalBatch;
+    } else {
+      finalBatch = {
+        id: input.batch.id || `BATCH-${Date.now()}`,
+        batchCode: input.batch.batchCode.trim().toUpperCase(),
+        title: input.batch.title.trim(),
+        gradeBand: input.batch.gradeBand || "Classes 8–10",
+        courseSlug: input.batch.courseSlug || "school-foundation-8-10",
+        teacherName: input.batch.teacherName || "Academic Faculty Wing",
+        schedule: input.batch.schedule || "Mon–Sat | 4:00 PM – 6:00 PM",
+        deliveryMode: input.batch.deliveryMode || "HYBRID",
+        capacity: input.batch.capacity || 25,
+        enrolledCount: input.batch.enrolledCount || 0,
+        status: input.batch.status || "OPEN",
+      };
+      updatedBatches.unshift(finalBatch);
+    }
+
+    await db.systemSetting.upsert({
+      where: { key: KEYS.BATCHES },
+      update: { value: updatedBatches as any, updatedBy: input.actorName },
+      create: {
+        key: KEYS.BATCHES,
+        category: CATEGORIES.CONFIG,
+        value: updatedBatches as any,
+        isSecret: false,
+        updatedBy: input.actorName,
+      },
+    });
+
+    await this.logAudit({
+      action: idx >= 0 ? "BATCH_UPDATED" : "BATCH_CREATED",
+      actor: input.actorName,
+      target: finalBatch.batchCode,
+      details: `${finalBatch.title} (${finalBatch.schedule}) — Faculty: ${finalBatch.teacherName}`,
+    });
+
+    return finalBatch;
+  }
+
+  /**
+   * Persistent Student Quiz Submission & Faculty Descriptive Grading Workflow
+   */
+  static async submitAndPersistQuizAttempt(input: {
+    enrollmentCode?: string;
+    quizTitle: string;
+    questions: {
+      id: string;
+      type: "MCQ" | "MSQ" | "DESCRIPTIVE";
+      prompt: string;
+      marks: number;
+      correctOptionIndex?: number;
+      correctOptionIndices?: number[];
+    }[];
+    responses: {
+      questionId: string;
+      selectedOptionIndex?: number;
+      selectedOptionIndices?: number[];
+      descriptiveAnswer?: string;
+    }[];
+  }) {
+    const evaluation = this.evaluateQuizSubmissionPure({
+      questions: input.questions,
+      responses: input.responses,
+    });
+
+    const attemptId = `SV-QZ-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    let studentName: string | undefined;
+
+    if (input.enrollmentCode) {
+      const key = `SV_STU_${input.enrollmentCode.trim().toUpperCase()}`;
+      const row = await db.systemSetting.findUnique({ where: { key } });
+      if (row) {
+        const student = row.value as unknown as SkillverseStudentProfileRecord;
+        studentName = student.studentName;
+        if (!Array.isArray(student.assessmentScores)) {
+          student.assessmentScores = [];
+        }
+        student.assessmentScores.unshift({
+          attemptId,
+          testTitle: input.quizTitle,
+          subject: "Online Quiz & Descriptive Assessment",
+          date: new Date().toISOString().slice(0, 10),
+          marksObtained: evaluation.autoAwardedMarks,
+          maxMarks: evaluation.totalMaxMarks,
+          status: evaluation.overallStatus,
+          teacherRemark:
+            evaluation.overallStatus === "PENDING_TEACHER_REVIEW"
+              ? "Auto-graded objective items completed; descriptive answers queued for faculty grading."
+              : "Auto-graded online assessment completed.",
+        });
+        await db.systemSetting.update({
+          where: { key },
+          data: { value: student as any },
+        });
+      }
+    }
+
+    const attemptRecord: SkillverseQuizAttemptRecord = {
+      attemptId,
+      enrollmentCode: input.enrollmentCode?.trim().toUpperCase(),
+      studentName,
+      quizTitle: input.quizTitle,
+      autoAwardedMarks: evaluation.autoAwardedMarks,
+      descriptiveAwardedMarks: 0,
+      totalAwardedMarks: evaluation.autoAwardedMarks,
+      totalMaxMarks: evaluation.totalMaxMarks,
+      hasDescriptivePending: evaluation.hasDescriptivePending,
+      overallStatus: evaluation.overallStatus,
+      itemResults: evaluation.itemResults.map((ir) => {
+        const q = input.questions.find(( item ) => item.id === ir.questionId);
+        return {
+          ...ir,
+          prompt: q?.prompt,
+        };
+      }),
+      submittedAt: new Date().toISOString(),
+    };
+
+    await db.systemSetting.create({
+      data: {
+        key: `SV_QUIZ_${attemptId}`,
+        category: CATEGORIES.QUIZ_ATTEMPT,
+        value: attemptRecord as any,
+        isSecret: false,
+      },
+    });
+
+    return {
+      ...evaluation,
+      attemptId,
+    };
+  }
+
+  /**
+   * Authorized Faculty Evaluation of Pending Descriptive Quiz Answers
+   */
+  static async gradeDescriptiveQuizAttempt(input: {
+    attemptId: string;
+    descriptiveMarksAwarded: number;
+    teacherFeedback: string;
+    actorName: string;
+  }) {
+    const key = `SV_QUIZ_${input.attemptId.trim()}`;
+    const row = await db.systemSetting.findUnique({ where: { key } });
+    if (!row) {
+      throw new Error(`Quiz attempt ${input.attemptId} not found.`);
+    }
+
+    const attempt = row.value as unknown as SkillverseQuizAttemptRecord;
+    const descriptiveMax = attempt.itemResults
+      .filter((i) => i.type === "DESCRIPTIVE")
+      .reduce((acc, i) => acc + i.maxMarks, 0);
+
+    if (input.descriptiveMarksAwarded < 0 || input.descriptiveMarksAwarded > descriptiveMax) {
+      throw new Error(
+        `Descriptive marks must be between 0 and ${descriptiveMax}.`
+      );
+    }
+
+    attempt.descriptiveAwardedMarks = input.descriptiveMarksAwarded;
+    attempt.totalAwardedMarks = attempt.autoAwardedMarks + input.descriptiveMarksAwarded;
+    attempt.hasDescriptivePending = false;
+    attempt.overallStatus = "EVALUATED";
+    attempt.teacherFeedback = input.teacherFeedback.trim();
+    attempt.evaluatedBy = input.actorName;
+    attempt.evaluatedAt = new Date().toISOString();
+    attempt.itemResults = attempt.itemResults.map((item) =>
+      item.type === "DESCRIPTIVE"
+        ? {
+            ...item,
+            awardedMarks: input.descriptiveMarksAwarded,
+            status: "TEACHER_EVALUATED" as const,
+          }
+        : item
+    );
+
+    await db.systemSetting.update({
+      where: { key },
+      data: { value: attempt as any, updatedBy: input.actorName },
+    });
+
+    if (attempt.enrollmentCode) {
+      const stuKey = `SV_STU_${attempt.enrollmentCode}`;
+      const stuRow = await db.systemSetting.findUnique({ where: { key: stuKey } });
+      if (stuRow) {
+        const student = stuRow.value as unknown as SkillverseStudentProfileRecord;
+        if (!Array.isArray(student.assessmentScores)) {
+          student.assessmentScores = [];
+        }
+        const scoreIdx = student.assessmentScores.findIndex(
+          (s) => s.attemptId === attempt.attemptId || s.testTitle === attempt.quizTitle
+        );
+        const updatedScoreEntry = {
+          attemptId: attempt.attemptId,
+          testTitle: attempt.quizTitle,
+          subject: "Online Quiz & Descriptive Assessment",
+          date: attempt.submittedAt.slice(0, 10),
+          marksObtained: attempt.totalAwardedMarks,
+          maxMarks: attempt.totalMaxMarks,
+          status: "EVALUATED" as const,
+          teacherRemark: `${input.teacherFeedback.trim()} (Evaluated by ${input.actorName})`,
+        };
+        if (scoreIdx >= 0) {
+          student.assessmentScores[scoreIdx] = updatedScoreEntry;
+        } else {
+          student.assessmentScores.unshift(updatedScoreEntry);
+        }
+        await db.systemSetting.update({
+          where: { key: stuKey },
+          data: { value: student as any, updatedBy: input.actorName },
+        });
+      }
+    }
+
+    await this.logAudit({
+      action: "QUIZ_DESCRIPTIVE_GRADED",
+      actor: input.actorName,
+      target: attempt.attemptId,
+      details: `Awarded ${attempt.totalAwardedMarks}/${attempt.totalMaxMarks} (${input.teacherFeedback})`,
+    });
+
+    return attempt;
+  }
+
+  /**
+   * Verified Parent Communication Preferences Update (Requires server-side family PIN verification)
+   */
+  static async updateParentCommunicationPreferences(input: {
+    enrollmentCode: string;
+    parentPhone: string;
+    accessPin: string;
+    whatsappAlerts: boolean;
+    emailReports: boolean;
+    smsAttendanceAlerts: boolean;
+    preferredLanguage: "ENGLISH" | "HINDI_ENGLISH";
+  }) {
+    const key = `SV_STU_${input.enrollmentCode.trim().toUpperCase()}`;
+    const row = await db.systemSetting.findUnique({ where: { key } });
+    if (!row) {
+      throw new Error("No student enrollment found with that Enrollment Code.");
+    }
+
+    const student = row.value as unknown as SkillverseStudentProfileRecord;
+    const normalizedInputPhone = input.parentPhone.replace(/\D/g, "").slice(-10);
+    const normalizedRecordPhone = student.parentPhone.replace(/\D/g, "").slice(-10);
+
+    if (
+      normalizedInputPhone !== normalizedRecordPhone ||
+      hashPin(input.accessPin.trim()) !== student.parentAccessPinHash
+    ) {
+      throw new Error(
+        "Parent authorization failed. Cannot modify communication preferences for another family."
+      );
+    }
+
+    student.communicationPreferences = {
+      whatsappAlerts: input.whatsappAlerts,
+      emailReports: input.emailReports,
+      smsAttendanceAlerts: input.smsAttendanceAlerts,
+      preferredLanguage: input.preferredLanguage,
+      updatedAt: new Date().toISOString(),
+    };
+
+    await db.systemSetting.update({
+      where: { key },
+      data: { value: student as any },
+    });
+
+    return student.communicationPreferences;
   }
 
   /**

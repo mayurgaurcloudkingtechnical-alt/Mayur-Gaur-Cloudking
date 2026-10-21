@@ -45,7 +45,7 @@ function requireRoles(ctx: any, allowed: string[]) {
 
 export const skillverseRouter = router({
   getPublicCatalog: publicProcedure.query(async () => {
-    return SkillverseService.getCatalogAndConfig();
+    return SkillverseService.getPublicCatalogAndConfig();
   }),
 
   calculateFeeBreakdown: publicProcedure
@@ -405,6 +405,7 @@ export const skillverseRouter = router({
       z.object({
         slug: z.string().min(3),
         title: z.string().min(3),
+        priceInr: z.number().min(0).optional(),
         monthlyFeeInr: z.number().min(0).optional(),
         oneTimeFeeInr: z.number().min(0).nullable().optional(),
         status: z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]).optional(),
@@ -415,7 +416,7 @@ export const skillverseRouter = router({
     .mutation(async ({ ctx, input }) => {
       const actor = requireRoles(ctx, ACADEMIC_ROLES);
       return SkillverseService.upsertCourse({
-        course: input as any,
+        course: input,
         actorName: actor.name,
       });
     }),
@@ -424,15 +425,39 @@ export const skillverseRouter = router({
     .input(
       z.object({
         id: z.string().min(2),
+        monthlyPriceInr: z.number().min(0).optional(),
         monthlyFeeInr: z.number().min(0).optional(),
         name: z.string().optional(),
         subjectsSummary: z.string().optional(),
+        status: z.enum(["ACTIVE", "ARCHIVED"]).optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       const actor = requireRoles(ctx, ADMIN_FINANCE_ROLES);
       return SkillverseService.upsertPackage({
-        pkg: input as any,
+        pkg: input,
+        actorName: actor.name,
+      });
+    }),
+
+  upsertBatch: protectedProcedure
+    .input(
+      z.object({
+        batchCode: z.string().min(3),
+        title: z.string().min(3),
+        gradeBand: z.string().optional(),
+        courseSlug: z.string().optional(),
+        teacherName: z.string().optional(),
+        schedule: z.string().optional(),
+        deliveryMode: z.enum(["ONLINE", "OFFLINE", "HYBRID"]).optional(),
+        capacity: z.number().min(1).max(200).optional(),
+        status: z.enum(["OPEN", "ONGOING", "COMPLETED"]).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.upsertBatch({
+        batch: input,
         actorName: actor.name,
       });
     }),
@@ -463,34 +488,38 @@ export const skillverseRouter = router({
       })
     )
     .mutation(async ({ input }) => {
-      const evaluation = SkillverseService.evaluateQuizSubmissionPure({
-        questions: input.questions,
-        responses: input.responses,
+      return SkillverseService.submitAndPersistQuizAttempt(input);
+    }),
+
+  gradeDescriptiveQuizAttempt: protectedProcedure
+    .input(
+      z.object({
+        attemptId: z.string().min(4),
+        descriptiveMarksAwarded: z.number().min(0),
+        teacherFeedback: z.string().min(2),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.gradeDescriptiveQuizAttempt({
+        ...input,
+        actorName: actor.name,
       });
+    }),
 
-      if (input.enrollmentCode) {
-        const key = `SV_STU_${input.enrollmentCode.trim().toUpperCase()}`;
-        const row = await db.systemSetting.findUnique({ where: { key } });
-        if (row) {
-          const student = row.value as unknown as SkillverseStudentProfileRecord;
-          student.assessmentScores.unshift({
-            testTitle: input.quizTitle,
-            subject: "Online Quiz & Descriptive Assessment",
-            date: new Date().toISOString().slice(0, 10),
-            marksObtained: evaluation.autoAwardedMarks,
-            maxMarks: evaluation.totalMaxMarks,
-            teacherRemark:
-              evaluation.overallStatus === "PENDING_TEACHER_REVIEW"
-                ? "Auto-graded objective items completed; descriptive answers queued for faculty grading."
-                : "Auto-graded online assessment completed.",
-          });
-          await db.systemSetting.update({
-            where: { key },
-            data: { value: student as any },
-          });
-        }
-      }
-
-      return evaluation;
+  updateParentCommunicationPreferences: publicProcedure
+    .input(
+      z.object({
+        enrollmentCode: z.string().min(4),
+        parentPhone: z.string().min(10),
+        accessPin: z.string().min(4),
+        whatsappAlerts: z.boolean(),
+        emailReports: z.boolean(),
+        smsAttendanceAlerts: z.boolean(),
+        preferredLanguage: z.enum(["ENGLISH", "HINDI_ENGLISH"]),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return SkillverseService.updateParentCommunicationPreferences(input);
     }),
 });

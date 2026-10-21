@@ -106,7 +106,8 @@ export function SkillverseAdminPortal() {
 
   const upsertCourseMutation = trpc.skillverse.upsertCourse.useMutation({
     onSuccess: () => {
-      utils.skillverse.getCatalogueConfig.invalidate();
+      utils.skillverse.getAdminDashboardData.invalidate();
+      utils.skillverse.getPublicCatalog.invalidate();
       setToastMsg("Course configuration updated without code changes.");
       setTimeout(() => setToastMsg(null), 4000);
     },
@@ -114,8 +115,28 @@ export function SkillverseAdminPortal() {
 
   const upsertPackageMutation = trpc.skillverse.upsertPackage.useMutation({
     onSuccess: () => {
-      utils.skillverse.getCatalogueConfig.invalidate();
+      utils.skillverse.getAdminDashboardData.invalidate();
+      utils.skillverse.getPublicCatalog.invalidate();
       setToastMsg("Package pricing updated.");
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  const upsertBatchMutation = trpc.skillverse.upsertBatch.useMutation({
+    onSuccess: (b) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      utils.skillverse.getPublicCatalog.invalidate();
+      setToastMsg(`Batch ${b.batchCode} (${b.title}) saved.`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  const gradeQuizMutation = trpc.skillverse.gradeDescriptiveQuizAttempt.useMutation({
+    onSuccess: (res) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      setToastMsg(
+        `Descriptive assessment ${res.attemptId} graded (${res.totalAwardedMarks}/${res.totalMaxMarks}).`
+      );
       setTimeout(() => setToastMsg(null), 4000);
     },
   });
@@ -127,6 +148,15 @@ export function SkillverseAdminPortal() {
   const [courseStatusEdit, setCourseStatusEdit] = useState<"DRAFT" | "PUBLISHED" | "ARCHIVED">("PUBLISHED");
   const [pkgIdEdit, setPkgIdEdit] = useState("PKG-1-STARTER");
   const [pkgFeeEdit, setPkgFeeEdit] = useState(1499);
+
+  // Batch & Descriptive Grading state
+  const [batchCodeEdit, setBatchCodeEdit] = useState("SV-B26-810A");
+  const [batchTitleEdit, setBatchTitleEdit] = useState("Classes 8–10 Foundation & FutureReady Batch A");
+  const [batchTeacherEdit, setBatchTeacherEdit] = useState("Academic Faculty Wing");
+  const [batchScheduleEdit, setBatchScheduleEdit] = useState("Mon–Sat | 4:00 PM – 6:00 PM");
+  const [gradeAttemptId, setGradeAttemptId] = useState("");
+  const [gradeMarks, setGradeMarks] = useState(4);
+  const [gradeFeedback, setGradeFeedback] = useState("Clear conceptual explanation of Ohm's Law and circuit current limits.");
 
   if (isLoading) {
     return (
@@ -168,6 +198,8 @@ export function SkillverseAdminPortal() {
     invoices,
     certificates,
     assessments,
+    quizAttempts,
+    batches,
     notifications,
     analyticsEvents,
     auditLogs,
@@ -465,6 +497,125 @@ export function SkillverseAdminPortal() {
                 ))}
               </div>
             )}
+
+            {/* Teacher Descriptive Quiz Evaluation & Batch Manager */}
+            <div className="pt-4 border-t border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <h3 className="font-extrabold text-slate-900">
+                  Teacher Desk: Grade Descriptive Quiz Submissions (
+                  {(quizAttempts || []).filter((q: any) => q.overallStatus === "PENDING_TEACHER_REVIEW").length}{" "}
+                  Pending)
+                </h3>
+                {(quizAttempts || []).length > 0 && (
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {(quizAttempts || []).map((qa: any) => (
+                      <div
+                        key={qa.attemptId}
+                        onClick={() => setGradeAttemptId(qa.attemptId)}
+                        className="p-2 rounded-lg bg-white border border-slate-200 cursor-pointer hover:border-blue-400"
+                      >
+                        <div className="flex justify-between font-bold">
+                          <span className="font-mono text-blue-700">{qa.attemptId}</span>
+                          <span>{qa.overallStatus}</span>
+                        </div>
+                        <div className="text-[11px] text-slate-600">
+                          {qa.studentName || qa.enrollmentCode || "Guest"} • Score:{" "}
+                          {qa.totalAwardedMarks}/{qa.totalMaxMarks}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <input
+                  type="text"
+                  placeholder="Attempt ID (e.g. SV-QZ-...)"
+                  value={gradeAttemptId}
+                  onChange={(e) => setGradeAttemptId(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                />
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={gradeMarks}
+                    onChange={(e) => setGradeMarks(Number(e.target.value))}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Faculty feedback..."
+                    value={gradeFeedback}
+                    onChange={(e) => setGradeFeedback(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={!gradeAttemptId || gradeQuizMutation.isPending}
+                  onClick={() =>
+                    gradeQuizMutation.mutate({
+                      attemptId: gradeAttemptId,
+                      descriptiveMarksAwarded: gradeMarks,
+                      teacherFeedback: gradeFeedback,
+                    })
+                  }
+                  className="w-full py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold"
+                >
+                  Save Descriptive Marks & Feedback
+                </button>
+              </div>
+
+              <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                <h3 className="font-extrabold text-slate-900">
+                  Batch & Faculty Allocation ({(batches || []).length} Batches)
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="Batch Code"
+                    value={batchCodeEdit}
+                    onChange={(e) => setBatchCodeEdit(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-mono"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Faculty Name"
+                    value={batchTeacherEdit}
+                    onChange={(e) => setBatchTeacherEdit(e.target.value)}
+                    className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                  />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Batch Title"
+                  value={batchTitleEdit}
+                  onChange={(e) => setBatchTitleEdit(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                />
+                <input
+                  type="text"
+                  placeholder="Schedule"
+                  value={batchScheduleEdit}
+                  onChange={(e) => setBatchScheduleEdit(e.target.value)}
+                  className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
+                />
+                <button
+                  type="button"
+                  onClick={() =>
+                    upsertBatchMutation.mutate({
+                      batchCode: batchCodeEdit,
+                      title: batchTitleEdit,
+                      teacherName: batchTeacherEdit,
+                      schedule: batchScheduleEdit,
+                    })
+                  }
+                  className="w-full py-2 rounded-xl bg-slate-900 hover:bg-blue-700 text-white font-bold"
+                >
+                  Create / Update Batch & Faculty
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

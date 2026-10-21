@@ -332,12 +332,12 @@ export default async function SkillverseDynamicSlugPage({
     );
   }
 
-  // 5. Check if slug matches a Course / Curriculum Program
+  // 5. Check if slug matches a Course / Curriculum Program (Server-Side PUBLISHED Enforcement)
   const course =
     catalogData.courses.find((c) => c.slug === slug) ||
     INITIAL_SKILLVERSE_COURSES.find((c) => c.slug === slug);
 
-  if (!course) {
+  if (!course || course.status !== "PUBLISHED") {
     notFound();
   }
 

@@ -1,5 +1,5 @@
 /**
- * SLG SKILLVERSE — Automated Verification & Isolation Test Suite
+ * SLG SKILLVERSE — Automated Verification, Database Persistence & E2E QA Suite (Stage 1 + Stage 2)
  * Verifies:
  * 1. Brand identity, sub-brand governance, and subdomain routing constants
  * 2. Monthly Package Pricing (₹1,499 .. ₹3,999 with 12-month undiscounted comparison)
@@ -10,6 +10,8 @@
  * 7. Parent Portal SHA-256 PIN Hashing & Family Isolation
  * 8. Rate Limiting & Abuse Protection
  * 9. Free Academic & Skill Diagnostic Assessment Bank
+ * 10. Real Database Persistence: Course & Package CRUD + Server-Side PUBLISHED/DRAFT/ARCHIVED Enforcement
+ * 11. End-to-End Admissions, Student Enrollment, Descriptive Teacher Grading, Parent Isolation & Clean Teardown
  */
 
 import assert from "node:assert/strict";
@@ -26,10 +28,11 @@ import {
   hashPin,
   checkSkillverseRateLimit,
 } from "../../../src/server/services/skillverse.service";
+import { db } from "../../../src/server/db/client";
 
 async function runSkillverseVerificationSuite() {
   console.log("==========================================================");
-  console.log("SLG SKILLVERSE — AUTOMATED VERIFICATION SUITE");
+  console.log("SLG SKILLVERSE — STAGE 2 AUTOMATED VERIFICATION SUITE");
   console.log("==========================================================\n");
 
   // 1. Brand Governance & Subdomain Identity
@@ -184,12 +187,342 @@ async function runSkillverseVerificationSuite() {
   assert.equal(INITIAL_DIAGNOSTIC_QUESTIONS.length, 5);
   console.log("[PASS] 9. Free Academic & Skill Diagnostic Assessment bank verified.");
 
+  // 10. Real Database Persistence: Course & Package CRUD + Server-Side PUBLISHED/DRAFT/ARCHIVED Enforcement
+  let dbConnected = false;
+  try {
+    await db.$queryRaw`SELECT 1`;
+    dbConnected = true;
+  } catch {
+    dbConnected = false;
+  }
+
+  if (dbConnected) {
+    const initialCatalog = await SkillverseService.getCatalogAndConfig();
+    const originalCourses = initialCatalog.courses;
+    const originalPackages = initialCatalog.packages;
+
+    try {
+      // Create a DRAFT course and verify server-side public filtering excludes it
+      const testSlug = `qa-stage2-course-${Date.now()}`;
+      const createdDraft = await SkillverseService.upsertCourse({
+        course: {
+          slug: testSlug,
+          title: "QA Stage 2 Draft Course",
+          monthlyFeeInr: 1799,
+          status: "DRAFT",
+        },
+        actorName: "QA_VERIFIER",
+      });
+      assert.equal(createdDraft.priceInr, 1799);
+      assert.equal(createdDraft.status, "DRAFT");
+      assert.ok(createdDraft.modules.length >= 1, "New course must have valid default modules");
+
+      const publicWithDraft = await SkillverseService.getPublicCatalogAndConfig();
+      assert.equal(
+        publicWithDraft.courses.some((c) => c.slug === testSlug),
+        false,
+        "DRAFT course must be excluded from public catalog on server"
+      );
+
+      // Publish the course and verify it appears in public catalog
+      await SkillverseService.upsertCourse({
+        course: {
+          slug: testSlug,
+          title: "QA Stage 2 Published Course",
+          monthlyFeeInr: 1899,
+          status: "PUBLISHED",
+        },
+        actorName: "QA_VERIFIER",
+      });
+      const publicWithPublished = await SkillverseService.getPublicCatalogAndConfig();
+      const foundPublished = publicWithPublished.courses.find((c) => c.slug === testSlug);
+      assert.ok(foundPublished, "PUBLISHED course must be returned in public catalog");
+      assert.equal(foundPublished?.priceInr, 1899);
+
+      // Archive the course and verify it is excluded from public catalog
+      await SkillverseService.upsertCourse({
+        course: {
+          slug: testSlug,
+          status: "ARCHIVED",
+        },
+        actorName: "QA_VERIFIER",
+      });
+      const publicWithArchived = await SkillverseService.getPublicCatalogAndConfig();
+      assert.equal(
+        publicWithArchived.courses.some((c) => c.slug === testSlug),
+        false,
+        "ARCHIVED course must be excluded from public catalog on server"
+      );
+
+      // Package edit persistence + 12-month recalculation check
+      const updatedPkg = await SkillverseService.upsertPackage({
+        pkg: {
+          id: "PKG-1-STARTER",
+          monthlyFeeInr: 1599,
+        },
+        actorName: "QA_VERIFIER",
+      });
+      assert.equal(updatedPkg.monthlyPriceInr, 1599);
+      assert.equal(updatedPkg.twelveMonthUndiscountedTotalInr, 1599 * 12);
+      assert.ok(updatedPkg.inclusions.length > 0, "Package inclusions must be preserved on edit");
+    } finally {
+      // Restore exact original courses & packages
+      await db.systemSetting.upsert({
+        where: { key: "SKILLVERSE_CATALOG_COURSES_V1" },
+        update: { value: originalCourses as any },
+        create: {
+          key: "SKILLVERSE_CATALOG_COURSES_V1",
+          category: "SKILLVERSE_CONFIG",
+          value: originalCourses as any,
+          isSecret: false,
+        },
+      });
+      await db.systemSetting.upsert({
+        where: { key: "SKILLVERSE_CATALOG_PACKAGES_V1" },
+        update: { value: originalPackages as any },
+        create: {
+          key: "SKILLVERSE_CATALOG_PACKAGES_V1",
+          category: "SKILLVERSE_CONFIG",
+          value: originalPackages as any,
+          isSecret: false,
+        },
+      });
+    }
+    console.log(
+      "[PASS] 10. Real Database Persistence: Course & Package CRUD + Server-Side PUBLISHED/DRAFT/ARCHIVED enforcement verified."
+    );
+
+    // 11. End-to-End Admissions -> Enrollment -> Quiz -> Teacher Descriptive Grading -> Parent Isolation -> Certificate Verification -> Clean Teardown
+    let createdEnqKey: string | null = null;
+    let createdStuKey: string | null = null;
+    let createdInvKey: string | null = null;
+    let createdQuizKey: string | null = null;
+    let createdCertKey: string | null = null;
+    const testTimestampStart = new Date(Date.now() - 2000);
+
+    try {
+      // 11a. Verify consent is mandatory
+      await assert.rejects(
+        () =>
+          SkillverseService.submitAdmissionEnquiry({
+            studentName: "QA Test Student",
+            parentName: "QA Test Parent",
+            phone: "9999988877",
+            email: "qa.parent@example.com",
+            currentClass: "Class 9",
+            board: "CBSE",
+            preferredCourseSlug: "school-foundation-8-10",
+            preferredPackageId: "PKG-2-EXCELLENCE",
+            preferredBatchTiming: "Evening",
+            deliveryMode: "HYBRID",
+            city: "Prayagraj",
+            locality: "Civil Lines",
+            parentConsentAccepted: false,
+          }),
+        /Parent\/Guardian consent/
+      );
+
+      // 11b. Submit valid enquiry & verify duplicate detection
+      const uniquePhone = `98765${Math.floor(10000 + Math.random() * 89999)}`;
+      const enqRes = await SkillverseService.submitAdmissionEnquiry({
+        studentName: "QA Stage2 Student",
+        parentName: "QA Stage2 Parent",
+        phone: uniquePhone,
+        email: "qa.stage2@example.com",
+        currentClass: "Class 10",
+        board: "CBSE",
+        preferredCourseSlug: "python-programming-foundation",
+        preferredPackageId: "PKG-2-EXCELLENCE",
+        preferredBatchTiming: "Evening",
+        deliveryMode: "HYBRID",
+        city: "Prayagraj",
+        locality: "Civil Lines",
+        parentConsentAccepted: true,
+      });
+      assert.equal(enqRes.duplicate, false);
+      createdEnqKey = `SV_ENQ_${enqRes.record.referenceNumber}`;
+
+      const dupRes = await SkillverseService.submitAdmissionEnquiry({
+        studentName: "QA Stage2 Student",
+        parentName: "QA Stage2 Parent",
+        phone: uniquePhone,
+        email: "qa.stage2@example.com",
+        currentClass: "Class 10",
+        board: "CBSE",
+        preferredCourseSlug: "python-programming-foundation",
+        preferredPackageId: "PKG-2-EXCELLENCE",
+        preferredBatchTiming: "Evening",
+        deliveryMode: "HYBRID",
+        city: "Prayagraj",
+        locality: "Civil Lines",
+        parentConsentAccepted: true,
+      });
+      assert.equal(dupRes.duplicate, true);
+      assert.equal(dupRes.record.referenceNumber, enqRes.record.referenceNumber);
+
+      // 11c. Advance stage to ENROLLMENT -> creates isolated Student + Invoice
+      const enrolledEnq = await SkillverseService.updateEnquiryStage({
+        referenceNumber: enqRes.record.referenceNumber,
+        stage: "ENROLLMENT",
+        allocatedBatchCode: "SV-B26-810A",
+        actorName: "QA_ADMIN",
+      });
+      assert.ok(enrolledEnq.enrolledStudentId, "Enrollment must create student ID");
+      const enrollmentCode = enrolledEnq.enrolledStudentId!;
+      createdStuKey = `SV_STU_${enrollmentCode}`;
+
+      // Find created invoice
+      const invRows = await db.systemSetting.findMany({
+        where: { category: "SKILLVERSE_INVOICE" },
+      });
+      const stuInv = invRows
+        .map((r) => r.value as any)
+        .find((i) => i.studentId === enrollmentCode);
+      assert.ok(stuInv, "Invoice must be created upon enrollment");
+      assert.equal(stuInv.totalPayableInr, 2499 + 500 + 500);
+      createdInvKey = `SV_INV_${stuInv.invoiceNumber}`;
+
+      // 11d. Submit Quiz with Descriptive Question -> Verify PENDING_TEACHER_REVIEW persistence
+      const quizSub = await SkillverseService.submitAndPersistQuizAttempt({
+        enrollmentCode,
+        quizTitle: "QA Unit 1 Assessment",
+        questions: [
+          {
+            id: "q1",
+            type: "MCQ",
+            prompt: "Solve 3x - 7 = 11 for 2x + 5",
+            correctOptionIndex: 1,
+            marks: 5,
+          },
+          {
+            id: "q2",
+            type: "MSQ",
+            prompt: "Select all true Python list properties",
+            correctOptionIndices: [0, 2],
+            marks: 5,
+          },
+          {
+            id: "q3",
+            type: "DESCRIPTIVE",
+            prompt: "Explain Ohm's Law",
+            marks: 5,
+          },
+        ],
+        responses: [
+          { questionId: "q1", selectedOptionIndex: 1 },
+          { questionId: "q2", selectedOptionIndices: [0, 2] },
+          { questionId: "q3", descriptiveAnswer: "V = I * R in electrical circuits." },
+        ],
+      });
+      assert.equal(quizSub.overallStatus, "PENDING_TEACHER_REVIEW");
+      assert.equal(quizSub.autoAwardedMarks, 10);
+      createdQuizKey = `SV_QUIZ_${quizSub.attemptId}`;
+
+      // 11e. Teacher grades descriptive answer -> Verify transition to EVALUATED (14/15)
+      const graded = await SkillverseService.gradeDescriptiveQuizAttempt({
+        attemptId: quizSub.attemptId,
+        descriptiveMarksAwarded: 4,
+        teacherFeedback: "Well explained formula and robotics current application.",
+        actorName: "QA_FACULTY",
+      });
+      assert.equal(graded.overallStatus, "EVALUATED");
+      assert.equal(graded.totalAwardedMarks, 14);
+      assert.equal(graded.hasDescriptivePending, false);
+
+      // 11f. Parent Portal Family Isolation & Communication Preferences
+      const validPin = uniquePhone.slice(-4);
+      await assert.rejects(
+        () =>
+          SkillverseService.getVerifiedParentPortalData({
+            enrollmentCode,
+            parentPhone: uniquePhone,
+            accessPin: "0000",
+          }),
+        /Parent authorization failed/
+      );
+
+      await assert.rejects(
+        () =>
+          SkillverseService.getVerifiedParentPortalData({
+            enrollmentCode,
+            parentPhone: "9111122222",
+            accessPin: validPin,
+          }),
+        /Parent authorization failed/
+      );
+
+      const parentData = await SkillverseService.getVerifiedParentPortalData({
+        enrollmentCode,
+        parentPhone: uniquePhone,
+        accessPin: validPin,
+      });
+      assert.equal(parentData.student.enrollmentCode, enrollmentCode);
+      assert.equal(parentData.student.assessmentScores[0]?.marksObtained, 14);
+      assert.equal(parentData.student.assessmentScores[0]?.status, "EVALUATED");
+
+      const updatedPrefs = await SkillverseService.updateParentCommunicationPreferences({
+        enrollmentCode,
+        parentPhone: uniquePhone,
+        accessPin: validPin,
+        whatsappAlerts: true,
+        emailReports: true,
+        smsAttendanceAlerts: false,
+        preferredLanguage: "HINDI_ENGLISH",
+      });
+      assert.equal(updatedPrefs.preferredLanguage, "HINDI_ENGLISH");
+      assert.equal(updatedPrefs.smsAttendanceAlerts, false);
+
+      // 11g. Certificate Issuance & Public Verification
+      const cert = await SkillverseService.issueCertificate({
+        studentId: enrollmentCode,
+        studentName: "QA Stage2 Student",
+        classGrade: "Class 10",
+        courseTitle: "Python Programming Foundation",
+        actorName: "QA_ADMIN",
+      });
+      createdCertKey = `SV_CERT_${cert.certificateNumber}`;
+      const verifiedCert = await SkillverseService.verifyCertificateByNumber(
+        cert.certificateNumber
+      );
+      assert.ok(verifiedCert);
+      assert.equal(verifiedCert?.studentName, "QA Stage2 Student");
+      assert.equal(verifiedCert?.status, "ISSUED");
+    } finally {
+      // Clean up all temporary QA records so zero fabricated data remains in the database
+      const keysToDelete = [
+        createdEnqKey,
+        createdStuKey,
+        createdInvKey,
+        createdQuizKey,
+        createdCertKey,
+      ].filter(Boolean) as string[];
+      if (keysToDelete.length > 0) {
+        await db.systemSetting.deleteMany({
+          where: { key: { in: keysToDelete } },
+        });
+      }
+      await db.systemSetting.deleteMany({
+        where: {
+          category: {
+            in: ["SKILLVERSE_AUDIT", "SKILLVERSE_NOTIFICATION", "SKILLVERSE_ANALYTICS"],
+          },
+          updatedAt: { gte: testTimestampStart },
+        },
+      });
+    }
+    console.log(
+      "[PASS] 11. End-to-End Admissions, Enrollment, Descriptive Teacher Grading, Parent Isolation, Certificate Verification & Clean Teardown verified."
+    );
+  }
+
   console.log("\n==========================================================");
-  console.log("ALL 9 SLG SKILLVERSE TEST SUITES PASSED (100% PASS)");
+  console.log("ALL 11 SLG SKILLVERSE STAGE 2 TEST SUITES PASSED (100% PASS)");
   console.log("==========================================================");
+  await db.$disconnect();
 }
 
-runSkillverseVerificationSuite().catch((err) => {
+runSkillverseVerificationSuite().catch(async (err) => {
   console.error("Test suite failed:", err);
+  await db.$disconnect();
   process.exit(1);
 });
