@@ -4,6 +4,7 @@ import { SITE_CONFIG } from "@/lib/constants/site";
 import { Button } from "@/components/ui/button";
 import { ServiceEnquiryForm } from "@/components/public/service-enquiry-form";
 import { ServicesView } from "@/components/public/services-view";
+import { ImsServicesSection } from "@/components/public/ims-services-section";
 import {
   ShieldCheck,
   Clock,
@@ -99,6 +100,9 @@ export default function ServicesPage() {
           <ServicesView />
         </div>
       </section>
+
+      {/* 2B. IT Infrastructure & Managed Services (IMS) Division */}
+      <ImsServicesSection />
 
       {/* 3. Consultation CTA Banner */}
       <section className="py-12 bg-slate-950 border-b border-slate-800/80">

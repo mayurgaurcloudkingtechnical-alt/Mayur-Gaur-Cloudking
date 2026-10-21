@@ -50,6 +50,12 @@ export function ServicesDashboardView({ basePath = "/admin/services" }: { basePa
             <span>Service Packages</span>
           </Link>
         </Button>
+        <Button asChild size="sm" variant="outline" className="border-blue-200 bg-blue-50/60 text-blue-700 hover:bg-blue-100/70 font-bold text-xs h-8">
+          <Link href="/admin/ims">
+            <Sparkles className="h-3.5 w-3.5 mr-1.5 text-blue-600" />
+            <span>IMS Division (BOQ, Quotations & AMC)</span>
+          </Link>
+        </Button>
       </div>
 
       {/* KPI Cards Grid */}

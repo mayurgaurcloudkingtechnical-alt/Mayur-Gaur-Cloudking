@@ -29,8 +29,10 @@ import { workPlannerRouter } from "./work-planner";
 import { callyzerRouter } from "./callyzer";
 import { hiringAutomationRouter } from "./hiring-automation";
 import { metaAdsRouter } from "./meta-ads";
+import { imsRouter } from "./ims";
 
 export const appRouter = router({
+  ims: imsRouter,
   metaAds: metaAdsRouter,
   hiringAutomation: hiringAutomationRouter,
   auth: authRouter,
