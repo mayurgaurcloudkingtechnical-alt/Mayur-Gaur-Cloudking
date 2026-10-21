@@ -66,7 +66,8 @@ const PORTAL_LINKS = [
 ];
 
 export function SkillverseShell({ children }: { children: React.ReactNode }) {
-  const { data: session } = useSession();
+  const sessionResult = useSession ? useSession() : null;
+  const session = sessionResult?.data;
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);

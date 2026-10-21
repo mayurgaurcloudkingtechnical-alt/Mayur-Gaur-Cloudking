@@ -71,7 +71,8 @@ type TabId =
   | "analytics_audit";
 
 export function SkillverseAdminPortal() {
-  const { data: session } = useSession();
+  const sessionResult = useSession ? useSession() : null;
+  const session = sessionResult?.data;
   const [activeTab, setActiveTab] = useState<TabId>("admissions");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
