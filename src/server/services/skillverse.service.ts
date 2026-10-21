@@ -54,6 +54,13 @@ export interface SkillverseEnquiryRecord {
   assignedCounselor?: string;
   followUpDate?: string;
   followUpNotes?: string;
+  followUpHistory?: {
+    timestamp: string;
+    note: string;
+    actorName: string;
+    stage?: string;
+    nextFollowUpDate?: string;
+  }[];
   demoScheduledAt?: string;
   assessmentScore?: number;
   assessmentMaxScore?: number;
@@ -862,6 +869,133 @@ export class SkillverseService {
     });
 
     return updated;
+  }
+
+  static async deleteEnquiry(referenceNumber: string, actorName: string) {
+    const key = `SV_ENQ_${referenceNumber}`;
+    await db.systemSetting.delete({ where: { key } }).catch(() => null);
+    await this.logAudit({
+      action: "ENQUIRY_DELETED",
+      actor: actorName,
+      target: referenceNumber,
+      details: `Deleted enquiry ${referenceNumber}`,
+    });
+    return { success: true, referenceNumber };
+  }
+
+  static async addFollowUpNote(input: {
+    referenceNumber: string;
+    note: string;
+    nextFollowUpDate?: string;
+    stage?: SkillverseAdmissionStage;
+    actorName: string;
+  }) {
+    const key = `SV_ENQ_${input.referenceNumber}`;
+    const row = await db.systemSetting.findUnique({ where: { key } });
+    if (!row) throw new Error(`Enquiry ${input.referenceNumber} not found.`);
+
+    const enq = row.value as unknown as SkillverseEnquiryRecord;
+    const history = enq.followUpHistory || [];
+    history.unshift({
+      timestamp: new Date().toISOString(),
+      note: input.note,
+      actorName: input.actorName,
+      stage: input.stage || enq.stage,
+      nextFollowUpDate: input.nextFollowUpDate,
+    });
+
+    const updated: SkillverseEnquiryRecord = {
+      ...enq,
+      followUpNotes: input.note,
+      followUpDate: input.nextFollowUpDate ?? enq.followUpDate,
+      stage: input.stage || enq.stage,
+      followUpHistory: history,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // If stage was changed to ENROLLMENT or ACTIVE_STUDENT, trigger student auto-creation
+    if (
+      (updated.stage === "ENROLLMENT" || updated.stage === "ACTIVE_STUDENT") &&
+      !updated.enrolledStudentId
+    ) {
+      const studentEnrollment = await this.enrollStudentFromEnquiry(updated, input.actorName);
+      updated.enrolledStudentId = studentEnrollment.student.enrollmentCode;
+    }
+
+    await db.systemSetting.update({
+      where: { key },
+      data: { value: updated as any },
+    });
+
+    await this.logAudit({
+      action: "FOLLOW_UP_LOGGED",
+      actor: input.actorName,
+      target: input.referenceNumber,
+      details: `Note: ${input.note.slice(0, 100)}`,
+    });
+
+    return updated;
+  }
+
+  static async createDirectLead(input: {
+    studentName: string;
+    parentName: string;
+    phone: string;
+    email: string;
+    currentClass: string;
+    board?: string;
+    schoolName?: string;
+    preferredCourseSlug: string;
+    preferredPackageId?: string;
+    competitiveAddonId?: string;
+    deliveryMode?: "ONLINE" | "OFFLINE" | "HYBRID";
+    city?: string;
+    locality?: string;
+    stage?: string;
+    notes?: string;
+    followUpDate?: string;
+    demoScheduledAt?: string;
+    actorName: string;
+  }) {
+    const res = await this.submitAdmissionEnquiry({
+      studentName: input.studentName,
+      parentName: input.parentName,
+      phone: input.phone,
+      email: input.email,
+      currentClass: input.currentClass,
+      board: input.board || "CBSE",
+      schoolName: input.schoolName,
+      preferredCourseSlug: input.preferredCourseSlug,
+      preferredPackageId: input.preferredPackageId,
+      competitiveAddonId: input.competitiveAddonId,
+      preferredBatchTiming: "Evening (4:00 PM – 6:00 PM)",
+      deliveryMode: input.deliveryMode || "HYBRID",
+      city: input.city || "Prayagraj",
+      locality: input.locality || "Civil Lines",
+      enquirySource: "DIRECT_STAFF_CRM",
+      parentConsentAccepted: true,
+      initialStage: (input.stage as SkillverseAdmissionStage) || "ENQUIRY",
+      demoScheduledAt: input.demoScheduledAt,
+    });
+
+    if (input.notes) {
+      await this.addFollowUpNote({
+        referenceNumber: res.record.referenceNumber,
+        note: input.notes,
+        nextFollowUpDate: input.followUpDate,
+        stage: res.record.stage,
+        actorName: input.actorName,
+      });
+    }
+
+    await this.logAudit({
+      action: "DIRECT_LEAD_CREATED",
+      actor: input.actorName,
+      target: res.record.referenceNumber,
+      details: `Staff created direct lead for ${input.studentName} (${input.currentClass})`,
+    });
+
+    return res.record;
   }
 
   static async enrollStudentFromEnquiry(enquiry: SkillverseEnquiryRecord, actorName: string) {

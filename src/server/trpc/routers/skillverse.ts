@@ -244,6 +244,75 @@ export const skillverseRouter = router({
       });
     }),
 
+  deleteEnquiry: protectedProcedure
+    .input(z.object({ referenceNumber: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ADMISSIONS_ROLES);
+      return SkillverseService.deleteEnquiry(input.referenceNumber, actor.name);
+    }),
+
+  addFollowUpNote: protectedProcedure
+    .input(
+      z.object({
+        referenceNumber: z.string(),
+        note: z.string().min(1),
+        nextFollowUpDate: z.string().optional(),
+        stage: z
+          .enum([
+            "ENQUIRY",
+            "FOLLOW_UP",
+            "DEMO_BOOKING",
+            "ASSESSMENT",
+            "COUNSELING",
+            "APPLICATION",
+            "PARENT_CONSENT",
+            "FEE_PAYMENT",
+            "ENROLLMENT",
+            "BATCH_ALLOCATION",
+            "ACTIVE_STUDENT",
+          ])
+          .optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ADMISSIONS_ROLES);
+      return SkillverseService.addFollowUpNote({
+        ...input,
+        stage: input.stage as SkillverseAdmissionStage | undefined,
+        actorName: actor.name,
+      });
+    }),
+
+  createDirectLead: protectedProcedure
+    .input(
+      z.object({
+        studentName: z.string().min(2),
+        parentName: z.string().min(2),
+        phone: z.string().min(10),
+        email: z.string().email(),
+        currentClass: z.string(),
+        board: z.string().default("CBSE"),
+        schoolName: z.string().optional(),
+        preferredCourseSlug: z.string(),
+        preferredPackageId: z.string().optional(),
+        competitiveAddonId: z.string().optional(),
+        deliveryMode: z.enum(["ONLINE", "OFFLINE", "HYBRID"]).default("HYBRID"),
+        city: z.string().default("Prayagraj"),
+        locality: z.string().default("Civil Lines"),
+        stage: z.string().default("ENQUIRY"),
+        notes: z.string().optional(),
+        followUpDate: z.string().optional(),
+        demoScheduledAt: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ADMISSIONS_ROLES);
+      return SkillverseService.createDirectLead({
+        ...input,
+        actorName: actor.name,
+      });
+    }),
+
   markStudentAttendance: protectedProcedure
     .input(
       z.object({
