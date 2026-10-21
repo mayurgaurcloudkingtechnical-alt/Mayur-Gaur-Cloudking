@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api as trpc } from "@/lib/trpc/react";
@@ -18,7 +18,7 @@ const CATEGORY_TABS: { code: "ALL" | SkillverseCategoryCode; label: string }[] =
   { code: "COMMUNICATION_CAREER", label: "English, Speaking & Career" },
 ];
 
-export default function SkillverseAllCoursesPage() {
+function SkillverseAllCoursesContent() {
   const searchParams = useSearchParams();
   const initialQuery = searchParams.get("q") || "";
 
@@ -167,5 +167,19 @@ export default function SkillverseAllCoursesPage() {
         ))}
       </div>
     </div>
+  );
+}
+
+export default function SkillverseAllCoursesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="max-w-7xl mx-auto px-4 py-16 text-center text-xs text-slate-500">
+          Loading SLG SKILLVERSE Course Catalogue...
+        </div>
+      }
+    >
+      <SkillverseAllCoursesContent />
+    </Suspense>
   );
 }

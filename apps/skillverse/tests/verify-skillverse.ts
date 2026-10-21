@@ -15,6 +15,7 @@
  */
 
 import assert from "node:assert/strict";
+import crypto from "node:crypto";
 import {
   SKILLVERSE_BRAND,
   INITIAL_ACADEMIC_PACKAGES,
@@ -28,6 +29,11 @@ import {
   hashPin,
   checkSkillverseRateLimit,
 } from "../../../src/server/services/skillverse.service";
+import { skillverseRouter } from "../../../src/server/trpc/routers/skillverse";
+import { POST as createOrderPost } from "../../../src/app/api/skillverse/payment/create-order/route";
+import { POST as verifyPaymentPost } from "../../../src/app/api/skillverse/payment/verify/route";
+import { POST as webhookPost } from "../../../src/app/api/skillverse/payment/webhook/route";
+import { NextRequest } from "next/server";
 import { db } from "../../../src/server/db/client";
 
 async function runSkillverseVerificationSuite() {
@@ -513,10 +519,230 @@ async function runSkillverseVerificationSuite() {
     console.log(
       "[PASS] 11. End-to-End Admissions, Enrollment, Descriptive Teacher Grading, Parent Isolation, Certificate Verification & Clean Teardown verified."
     );
+
+    // 12. Server-Side Role-Based Access Control (RBAC) across Unauthenticated, Student, Telecaller, Trainer & Super Admin
+    const makeCaller = (roleCode?: string) =>
+      skillverseRouter.createCaller({
+        db,
+        headers: new Headers(),
+        session: roleCode
+          ? ({
+              user: { id: `qa_${roleCode}`, roleCode, name: `QA ${roleCode}` },
+              expires: new Date(Date.now() + 3600_000).toISOString(),
+            } as any)
+          : null,
+        user: roleCode
+          ? ({ id: `qa_${roleCode}`, roleCode, name: `QA ${roleCode}` } as any)
+          : null,
+      });
+
+    const anonCaller = makeCaller(undefined);
+    const studentCaller = makeCaller("STUDENT");
+    const telecallerCaller = makeCaller("TELECALLER");
+    const trainerCaller = makeCaller("TRAINER");
+
+    await assert.rejects(
+      () => anonCaller.getAdminDashboardData(),
+      /You must be signed in/
+    );
+    await assert.rejects(
+      () => studentCaller.getAdminDashboardData(),
+      /do not have permission/
+    );
+    await assert.rejects(
+      () =>
+        studentCaller.upsertCourse({
+          slug: "python-programming-foundation",
+          title: "Unauthorized Edit",
+        }),
+      /do not have permission/
+    );
+    await assert.rejects(
+      () =>
+        telecallerCaller.upsertPackage({
+          id: "PKG-1-STARTER",
+          monthlyFeeInr: 999,
+        }),
+      /do not have permission/
+    );
+    await assert.rejects(
+      () =>
+        trainerCaller.upsertPackage({
+          id: "PKG-1-STARTER",
+          monthlyFeeInr: 999,
+        }),
+      /do not have permission/
+    );
+    await assert.rejects(
+      () =>
+        trainerCaller.issueCertificate({
+          studentId: "SV-STU-2026-101",
+          studentName: "Test",
+          classGrade: "Class 10",
+          courseTitle: "Python",
+        }),
+      /do not have permission/
+    );
+    console.log(
+      "[PASS] 12. Server-Side RBAC verified (Unauthenticated, STUDENT, TELECALLER, and TRAINER role boundaries enforced)."
+    );
+
+    // 13. Payment Order Creation, Sandbox Verification, Webhook Failed-Payment & Idempotency
+    const testInvNum = `SV-INV-QA-${Date.now()}`;
+    const testInvKey = `SV_INV_${testInvNum}`;
+    const payTestStart = new Date(Date.now() - 2000);
+    try {
+      await db.systemSetting.create({
+        data: {
+          key: testInvKey,
+          category: "SKILLVERSE_INVOICE",
+          value: {
+            id: `sv_inv_qa_${Date.now()}`,
+            invoiceNumber: testInvNum,
+            studentId: "SV-STU-QA-101",
+            studentName: "QA Payment Student",
+            parentName: "QA Payment Parent",
+            parentEmail: "qa.pay@example.com",
+            parentPhone: "9876543210",
+            packageTitle: "Skillverse Starter Foundation",
+            packageMonthlyAmountInr: 1499,
+            addonMonthlyAmountInr: 0,
+            standaloneAmountInr: 0,
+            admissionFeeInr: 500,
+            learningKitFeeInr: 500,
+            discountInr: 0,
+            taxAmountInr: 0,
+            totalPayableInr: 2499,
+            status: "PENDING",
+            dueDate: new Date().toISOString().slice(0, 10),
+            createdAt: new Date().toISOString(),
+          } as any,
+          isSecret: false,
+        },
+      });
+
+      // 13a. Create server-side order
+      const orderReq = new NextRequest("http://localhost:3000/api/skillverse/payment/create-order", {
+        method: "POST",
+        body: JSON.stringify({ invoiceNumber: testInvNum }),
+      });
+      const orderRes = await createOrderPost(orderReq);
+      const orderJson = await orderRes.json();
+      assert.equal(orderRes.status, 200);
+      assert.ok(orderJson.orderId);
+      assert.equal(orderJson.amountInr, 2499);
+
+      // 13b. Webhook payment.failed transitions invoice to FAILED (with HMAC signature if secret configured)
+      const whSecret =
+        process.env.RAZORPAY_WEBHOOK_SECRET || process.env.RAZORPAY_KEY_SECRET || "";
+      const signWebhook = (raw: string) =>
+        whSecret && !whSecret.includes("YourRazorpay")
+          ? {
+              "x-razorpay-signature": crypto
+                .createHmac("sha256", whSecret)
+                .update(raw)
+                .digest("hex"),
+            }
+          : {};
+
+      if (whSecret && !whSecret.includes("YourRazorpay")) {
+        // Verify unsigned webhook is rejected with 400
+        const unsignedWhReq = new NextRequest(
+          "http://localhost:3000/api/skillverse/payment/webhook",
+          {
+            method: "POST",
+            body: JSON.stringify({ event: "payment.failed", invoiceNumber: testInvNum }),
+          }
+        );
+        const unsignedWhRes = await webhookPost(unsignedWhReq);
+        assert.equal(unsignedWhRes.status, 400, "Unsigned webhook must be rejected");
+      }
+
+      const failBody = JSON.stringify({
+        event: "payment.failed",
+        invoiceNumber: testInvNum,
+      });
+      const failWhReq = new NextRequest("http://localhost:3000/api/skillverse/payment/webhook", {
+        method: "POST",
+        headers: signWebhook(failBody),
+        body: failBody,
+      });
+      const failWhRes = await webhookPost(failWhReq);
+      const failWhJson = await failWhRes.json();
+      assert.equal(failWhRes.status, 200);
+      assert.equal(failWhJson.status, "FAILED");
+
+      // 13c. Reject invalid verification token / signature
+      const badVerifyReq = new NextRequest("http://localhost:3000/api/skillverse/payment/verify", {
+        method: "POST",
+        body: JSON.stringify({
+          invoiceNumber: testInvNum,
+          sandboxTestToken: "INVALID_TOKEN",
+        }),
+      });
+      const badVerifyRes = await verifyPaymentPost(badVerifyReq);
+      assert.equal(badVerifyRes.status, 400);
+
+      // 13d. Verify with valid HMAC signature (or order-bound sandbox token) -> PAID + receipt generated
+      const keySecret = process.env.RAZORPAY_KEY_SECRET || "";
+      const isLiveSecret = Boolean(keySecret) && !keySecret.includes("YourRazorpay");
+      const testPayId = `pay_qa_${Date.now()}`;
+      const verifyPayload = isLiveSecret
+        ? {
+            invoiceNumber: testInvNum,
+            razorpay_order_id: orderJson.orderId,
+            razorpay_payment_id: testPayId,
+            razorpay_signature: crypto
+              .createHmac("sha256", keySecret)
+              .update(`${orderJson.orderId}|${testPayId}`)
+              .digest("hex"),
+          }
+        : {
+            invoiceNumber: testInvNum,
+            sandboxTestToken: `SBX_VERIFY_${orderJson.orderId}`,
+          };
+
+      const goodVerifyReq = new NextRequest("http://localhost:3000/api/skillverse/payment/verify", {
+        method: "POST",
+        body: JSON.stringify(verifyPayload),
+      });
+      const goodVerifyRes = await verifyPaymentPost(goodVerifyReq);
+      const goodVerifyJson = await goodVerifyRes.json();
+      assert.equal(goodVerifyRes.status, 200);
+      assert.equal(goodVerifyJson.verified, true);
+      assert.equal(goodVerifyJson.invoice.status, "PAID");
+      assert.ok(goodVerifyJson.invoice.receiptNumber?.startsWith("SV-RCPT-"));
+
+      // 13e. Duplicate webhook payment.captured is idempotent
+      const dupBody = JSON.stringify({
+        event: "payment.captured",
+        invoiceNumber: testInvNum,
+      });
+      const dupWhReq = new NextRequest("http://localhost:3000/api/skillverse/payment/webhook", {
+        method: "POST",
+        headers: signWebhook(dupBody),
+        body: dupBody,
+      });
+      const dupWhRes = await webhookPost(dupWhReq);
+      const dupWhJson = await dupWhRes.json();
+      assert.equal(dupWhRes.status, 200);
+      assert.equal(dupWhJson.idempotent, true);
+    } finally {
+      await db.systemSetting.deleteMany({ where: { key: testInvKey } });
+      await db.systemSetting.deleteMany({
+        where: {
+          category: { in: ["SKILLVERSE_AUDIT", "SKILLVERSE_ANALYTICS"] },
+          updatedAt: { gte: payTestStart },
+        },
+      });
+    }
+    console.log(
+      "[PASS] 13. Payment Order Creation, Token/Signature Verification, Failed-Payment Webhook & Idempotency verified."
+    );
   }
 
   console.log("\n==========================================================");
-  console.log("ALL 11 SLG SKILLVERSE STAGE 2 TEST SUITES PASSED (100% PASS)");
+  console.log("ALL 13 SLG SKILLVERSE STAGE 2 TEST SUITES PASSED (100% PASS)");
   console.log("==========================================================");
   await db.$disconnect();
 }

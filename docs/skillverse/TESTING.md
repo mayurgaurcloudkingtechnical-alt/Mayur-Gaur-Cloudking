@@ -1,9 +1,13 @@
 # SLG SKILLVERSE — Testing & Quality Assurance (Stage 2)
 
 ## 1. Automated Verification Commands
-- **Stage 2 Skillverse Automated Verification & E2E Persistence Suite (11/11 Suites)**:
+- **Stage 2 Skillverse Automated Verification & E2E Persistence Suite (13/13 Suites)**:
   ```bash
   npx tsx apps/skillverse/tests/verify-skillverse.ts
+  ```
+- **Skillverse ESLint Check**:
+  ```bash
+  npx eslint "src/app/(skillverse)/**/*.{ts,tsx}" "src/components/skillverse/**/*.{ts,tsx}" "src/server/services/skillverse.service.ts" "src/server/trpc/routers/skillverse.ts" "src/app/api/skillverse/**/*.ts"
   ```
 - **TypeScript Verification**:
   ```bash
@@ -14,7 +18,7 @@
   curl http://localhost:3000/api/skillverse/health
   ```
 
-## 2. Stage 2 Verified Test Suites (`11/11` Passed)
+## 2. Stage 2 Verified Test Suites (`13/13` Passed)
 1. **Suite 1 — Brand Governance & Subdomain Identity**: Verifies `SLG SKILLVERSE — Powered by SoftLab Global`, hostname constants, and color palette (`#071630` Navy, `#0052CC` Royal Blue).
 2. **Suite 2 — Monthly Academic Packages**: Verifies all 5 packages (`₹1,499`, `₹2,499`, `₹3,499`, `₹2,999`, `₹3,999`) and exact 12-month undiscounted totals (`monthlyPriceInr * 12`).
 3. **Suite 3 — Competitive Add-Ons & Initial Fee Rules**: Verifies 9 competitive tracks and one-time fee rules (`₹500` Admission + `₹500` Learning Kit + `₹0` Free Assessment + `₹0` Free Demo).
@@ -34,7 +38,7 @@
     - Grades descriptive response via `gradeDescriptiveQuizAttempt` and verifies `EVALUATED` status (`14/15` marks) on both the attempt and student profile.
     - Verifies Parent Portal rejects wrong PIN or wrong phone number, allows verified family access, and persists `updateParentCommunicationPreferences`.
     - Issues and verifies a public certificate (`SLG-SV-CERT-...`), then cleans up all temporary QA records.
-
-## 3. Pre-Existing Unrelated Repository Type Errors (Documented Separately)
-During full-repository `tsc --noEmit`, all Skillverse files (`src/server/services/skillverse.service.ts`, `src/server/trpc/routers/skillverse.ts`, `src/components/skillverse/*`, `src/app/(skillverse)/*`, `src/app/api/skillverse/*`, and `apps/skillverse/*`) compiled with **0 errors**.
-Pre-existing type errors were observed in unrelated `src/components/admin/ims/*` and `src/components/public/ims-quote-request-form.tsx` files from an earlier IMS commit; per Rule 1, unrelated modules were not modified.
+12. **Suite 12 — Server-Side Role-Based Access Control (RBAC)**:
+    - Verifies via `skillverseRouter.createCaller` that unauthenticated callers (`UNAUTHORIZED`), `STUDENT` callers (`FORBIDDEN`), `TELECALLER` callers (blocked from pricing/package/certificate mutations), and `TRAINER` callers (blocked from finance/certificate mutations) are enforced server-side.
+13. **Suite 13 — Payment Order Creation, HMAC Signature / Sandbox Token Verification, Webhook `payment.failed` & Idempotency**:
+    - Verifies `/api/skillverse/payment/create-order`, `/api/skillverse/payment/verify`, and `/api/skillverse/payment/webhook` end-to-end against PostgreSQL (unsigned webhook rejection, signed `payment.failed` status update, invalid signature rejection, valid HMAC signature / sandbox token verification + `SV-RCPT-...` receipt generation, and `payment.captured` duplicate webhook idempotency).

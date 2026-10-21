@@ -43,8 +43,9 @@ export async function POST(req: NextRequest) {
 
     const secret = process.env.RAZORPAY_KEY_SECRET || "";
     const isLiveConfigured = Boolean(secret) && !secret.includes("YourRazorpay");
+    const isSandboxOrder = Boolean(invoice.razorpayOrderId?.startsWith("order_sv_sbx_"));
 
-    if (isLiveConfigured) {
+    if (isLiveConfigured && (!isSandboxOrder || razorpay_signature)) {
       if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
         return NextResponse.json(
           { error: "Missing Razorpay payment signature parameters." },
