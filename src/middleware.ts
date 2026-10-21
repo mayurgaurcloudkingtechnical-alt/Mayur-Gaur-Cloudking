@@ -5,7 +5,25 @@ export async function middleware(req: NextRequest) {
   const host = req.headers.get("host")?.toLowerCase() || "";
   const { pathname } = req.nextUrl;
   const isLmsSubdomain = host.startsWith("lms.") || req.nextUrl.searchParams.get("portal") === "lms";
+  const isSkillverseSubdomain =
+    host.startsWith("skillverse.") || req.nextUrl.searchParams.get("portal") === "skillverse";
   const isApiSubdomain = host.startsWith("api.");
+
+  // Handle SLG SKILLVERSE Subdomain (skillverse.softlabglobal.com) Routing Isolation
+  if (
+    isSkillverseSubdomain &&
+    !pathname.startsWith("/skillverse") &&
+    !pathname.startsWith("/api/") &&
+    !pathname.startsWith("/trpc/") &&
+    !pathname.startsWith("/_next/") &&
+    !pathname.startsWith("/images/") &&
+    !pathname.startsWith("/login") &&
+    !/\.(jpg|jpeg|png|gif|ico|svg|css|js|woff|woff2|ttf|csv)$/i.test(pathname)
+  ) {
+    const rewriteUrl = req.nextUrl.clone();
+    rewriteUrl.pathname = `/skillverse${pathname === "/" ? "" : pathname}`;
+    return NextResponse.rewrite(rewriteUrl);
+  }
 
   // Handle API Subdomain & Native API v1 CORS
   if (isApiSubdomain || pathname.startsWith("/api/v1/")) {
@@ -189,15 +207,6 @@ export async function middleware(req: NextRequest) {
 
 export const config = {
   matcher: [
-    "/",
-    "/login",
-    "/student-login",
-    "/student/:path*",
-    "/trainer/:path*",
-    "/telecaller/:path*",
-    "/counselor/:path*",
-    "/admin/:path*",
-    "/api/:path*",
-    "/trpc/:path*",
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };

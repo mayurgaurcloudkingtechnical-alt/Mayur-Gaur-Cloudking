@@ -30,8 +30,10 @@ import { callyzerRouter } from "./callyzer";
 import { hiringAutomationRouter } from "./hiring-automation";
 import { metaAdsRouter } from "./meta-ads";
 import { imsRouter } from "./ims";
+import { skillverseRouter } from "./skillverse";
 
 export const appRouter = router({
+  skillverse: skillverseRouter,
   ims: imsRouter,
   metaAds: metaAdsRouter,
   hiringAutomation: hiringAutomationRouter,
