@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import { SKILLVERSE_BRAND } from "@/lib/constants/skillverse-data";
 import {
   BookOpen,
@@ -22,6 +23,8 @@ import {
   ArrowRight,
   Globe,
   MessageCircle,
+  LogOut,
+  User as UserIcon,
 } from "lucide-react";
 
 const ACADEMIC_LINKS = [
@@ -63,6 +66,7 @@ const PORTAL_LINKS = [
 ];
 
 export function SkillverseShell({ children }: { children: React.ReactNode }) {
+  const { data: session } = useSession();
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,7 +98,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <PhoneCall className="w-3 h-3" /> +91-9196596975
             </a>
           </div>
-          <div className="flex items-center gap-4 text-[11px] font-semibold">
+          <div className="flex items-center gap-3 sm:gap-4 text-[11px] font-semibold flex-wrap justify-center sm:justify-end">
             <Link
               href="/skillverse/student-login"
               className="text-cyan-300 hover:text-white transition-colors"
@@ -109,12 +113,33 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               Parent Portal
             </Link>
             <span className="text-slate-600">|</span>
-            <Link
-              href="/skillverse/staff-login"
-              className="text-slate-300 hover:text-white transition-colors"
-            >
-              Teacher & Admin
-            </Link>
+            {session?.user ? (
+              <div className="flex items-center gap-2">
+                <Link
+                  href="/skillverse/staff-login"
+                  className="text-emerald-300 hover:text-white transition-colors flex items-center gap-1 font-bold"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Staff: {session.user.name || "Admin"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                  className="text-rose-300 hover:text-rose-100 underline text-[10px] font-bold cursor-pointer"
+                  title="Sign Out of Session"
+                >
+                  (Logout)
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login?callbackUrl=/skillverse/staff-login"
+                className="text-slate-300 hover:text-white transition-colors flex items-center gap-1"
+              >
+                <Lock className="w-3 h-3 text-cyan-300" />
+                Staff Sign In
+              </Link>
+            )}
           </div>
         </div>
       </div>
@@ -288,6 +313,47 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             >
               Book a Free Demo
             </Link>
+
+            {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
+            {session?.user ? (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+                <Link
+                  href="/skillverse/staff-login"
+                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors"
+                  title="Open Admissions CRM & Staff Command Center"
+                >
+                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-black flex items-center justify-center text-xs shadow-xs">
+                    {(session.user.name || "S").charAt(0).toUpperCase()}
+                  </div>
+                  <div className="hidden 2xl:flex flex-col text-left">
+                    <span className="text-xs font-bold text-slate-900 leading-tight">
+                      {session.user.name || "Staff"}
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-mono font-bold">
+                      {(session.user as any)?.roleCode || "STAFF"}
+                    </span>
+                  </div>
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                  className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
+                  title="Log Out of Staff Session"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Logout</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login?callbackUrl=/skillverse/staff-login"
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                title="Staff, Teacher & Admin Login"
+              >
+                <Lock className="w-3.5 h-3.5 text-slate-500" />
+                <span>Staff Login</span>
+              </Link>
+            )}
           </div>
 
           {/* Mobile Hamburger */}
@@ -304,6 +370,41 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
         {/* Mobile Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-5 space-y-5 max-h-[82vh] overflow-y-auto">
+            {/* Mobile Profile / Login Status Bar */}
+            <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+              {session?.user ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-bold flex items-center justify-center text-xs">
+                      {(session.user.name || "S").charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-xs text-slate-900">{session.user.name || "Staff Admin"}</div>
+                      <div className="text-[10px] text-emerald-700 font-mono font-bold">{(session.user as any)?.roleCode || "STAFF"}</div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold"
+                  >
+                    <LogOut className="w-3.5 h-3.5" /> Logout
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-600 font-medium">Staff or Teacher?</span>
+                  <Link
+                    href="/login?callbackUrl=/skillverse/staff-login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 text-white text-xs font-bold"
+                  >
+                    <Lock className="w-3.5 h-3.5" /> Staff Login
+                  </Link>
+                </div>
+              )}
+            </div>
+
             {/* Direct Mobile Quick Contact Buttons */}
             <div className="grid grid-cols-2 gap-2 text-xs font-bold">
               <a
