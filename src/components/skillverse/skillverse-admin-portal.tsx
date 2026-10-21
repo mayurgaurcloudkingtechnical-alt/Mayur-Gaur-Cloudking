@@ -1,8 +1,7 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, Component, type ErrorInfo, type ReactNode } from "react";
 import Link from "next/link";
-import { signOut, useSession } from "next-auth/react";
 import { api as trpc } from "@/lib/trpc/react";
 import type { SkillverseAdmissionStage, SkillverseEnquiryRecord } from "@/server/services/skillverse.service";
 import {
@@ -71,10 +70,21 @@ type TabId =
   | "analytics_audit";
 
 export function SkillverseAdminPortal() {
-  const sessionResult = useSession ? useSession() : null;
-  const session = sessionResult?.data;
+  const { data: staffUser } = trpc.skillverse.getCurrentStaffSession.useQuery(undefined, {
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const [activeTab, setActiveTab] = useState<TabId>("admissions");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const handleLogout = async () => {
+    try {
+      const { signOut } = await import("next-auth/react");
+      await signOut({ callbackUrl: "/skillverse/staff-login" });
+    } catch {
+      window.location.href = "/api/auth/signout";
+    }
+  };
 
   // CRM Pipeline & Table states
   const [viewMode, setViewMode] = useState<"table" | "kanban">("table");
@@ -313,20 +323,26 @@ export function SkillverseAdminPortal() {
     );
   }
 
-  const {
-    enquiries,
-    students,
-    invoices,
-    certificates,
-    assessments,
-    quizAttempts,
-    batches,
-    notifications,
-    analyticsEvents,
-    auditLogs,
-    metrics,
-    cms,
-  } = data;
+  const enquiries = data.enquiries || [];
+  const students = data.students || [];
+  const invoices = data.invoices || [];
+  const certificates = data.certificates || [];
+  const assessments = data.assessments || [];
+  const quizAttempts = data.quizAttempts || [];
+  const batches = data.batches || [];
+  const notifications = data.notifications || [];
+  const analyticsEvents = data.analyticsEvents || [];
+  const auditLogs = data.auditLogs || [];
+  const metrics = data.metrics || {
+    totalEnquiries: 0,
+    demoBookingsCount: 0,
+    activeStudentsCount: 0,
+    conversionRatePercent: 0,
+    paidRevenueInr: 0,
+    pendingFeeInr: 0,
+    certificatesIssuedCount: 0,
+  };
+  const cms = data.cms;
 
   const currentCms = cmsDraft || cms;
 
@@ -423,22 +439,22 @@ export function SkillverseAdminPortal() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
           <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-white/20 shadow-xs">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-black flex items-center justify-center text-sm shadow-sm shrink-0">
-              {(session?.user?.name || "S").charAt(0).toUpperCase()}
+              {(staffUser?.name || "S").charAt(0).toUpperCase()}
             </div>
             <div className="text-left text-xs">
               <div className="font-bold text-white flex items-center gap-1.5">
-                <span className="truncate max-w-[130px]">{session?.user?.name || "Staff Admin"}</span>
+                <span className="truncate max-w-[130px]">{staffUser?.name || "Staff Admin"}</span>
                 <span className="px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300 font-mono text-[9px] font-bold uppercase">
-                  {(session?.user as any)?.roleCode || "SUPER_ADMIN"}
+                  {staffUser?.roleCode || "SUPER_ADMIN"}
                 </span>
               </div>
               <div className="text-[11px] text-slate-300 truncate max-w-[160px]">
-                {session?.user?.email || "staff@softlabglobal.com"}
+                {staffUser?.email || "staff@softlabglobal.com"}
               </div>
             </div>
             <button
               type="button"
-              onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+              onClick={handleLogout}
               className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-200 border border-rose-400/40 text-xs font-bold transition-all shadow-2xs cursor-pointer"
               title="Log Out of Staff Session"
             >
@@ -2138,4 +2154,63 @@ export function SkillverseAdminPortal() {
       )}
     </div>
   );
+}
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+export class SkillverseAdminPortalErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("SkillverseAdminPortal caught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-4">
+          <div className="p-8 rounded-3xl bg-white border border-rose-200 shadow-xl space-y-4">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto font-bold text-xl">
+              !
+            </div>
+            <h2 className="text-xl font-black text-slate-900">
+              Staff Portal Refresh Required
+            </h2>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              A temporary interface error occurred. Click below to reload the Staff Portal.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                this.setState({ hasError: false, error: null });
+                window.location.reload();
+              }}
+              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+            >
+              Reload Portal
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
 }

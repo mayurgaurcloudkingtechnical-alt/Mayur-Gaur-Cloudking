@@ -48,6 +48,18 @@ export const skillverseRouter = router({
     return SkillverseService.getPublicCatalogAndConfig();
   }),
 
+  getCurrentStaffSession: publicProcedure.query(async ({ ctx }) => {
+    if (!ctx.user) return null;
+    return {
+      id: ctx.user.id,
+      name: ctx.user.name,
+      firstName: ctx.user.firstName,
+      lastName: ctx.user.lastName,
+      email: ctx.user.email,
+      roleCode: ctx.user.roleCode,
+    };
+  }),
+
   calculateFeeBreakdown: publicProcedure
     .input(
       z.object({

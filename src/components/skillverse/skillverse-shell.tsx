@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { api as trpc } from "@/lib/trpc/react";
 import { SKILLVERSE_BRAND } from "@/lib/constants/skillverse-data";
 import {
   BookOpen,
@@ -66,12 +66,23 @@ const PORTAL_LINKS = [
 ];
 
 export function SkillverseShell({ children }: { children: React.ReactNode }) {
-  const sessionResult = useSession ? useSession() : null;
-  const session = sessionResult?.data;
+  const { data: staffUser } = trpc.skillverse.getCurrentStaffSession.useQuery(undefined, {
+    staleTime: 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
   const pathname = usePathname();
   const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  const handleLogout = async () => {
+    try {
+      const { signOut } = await import("next-auth/react");
+      await signOut({ callbackUrl: "/skillverse/staff-login" });
+    } catch {
+      window.location.href = "/api/auth/signout";
+    }
+  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,18 +125,18 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               Parent Portal
             </Link>
             <span className="text-slate-600">|</span>
-            {session?.user ? (
+            {staffUser ? (
               <div className="flex items-center gap-2">
                 <Link
                   href="/skillverse/staff-login"
                   className="text-emerald-300 hover:text-white transition-colors flex items-center gap-1 font-bold"
                 >
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Staff: {session.user.name || "Admin"}
+                  Staff: {staffUser.name || "Admin"}
                 </Link>
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                  onClick={handleLogout}
                   className="text-rose-300 hover:text-rose-100 underline text-[10px] font-bold cursor-pointer"
                   title="Sign Out of Session"
                 >
@@ -316,7 +327,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
-            {session?.user ? (
+            {staffUser ? (
               <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
                 <Link
                   href="/skillverse/staff-login"
@@ -324,20 +335,20 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                   title="Open Admissions CRM & Staff Command Center"
                 >
                   <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-black flex items-center justify-center text-xs shadow-xs">
-                    {(session.user.name || "S").charAt(0).toUpperCase()}
+                    {(staffUser.name || "S").charAt(0).toUpperCase()}
                   </div>
                   <div className="hidden 2xl:flex flex-col text-left">
                     <span className="text-xs font-bold text-slate-900 leading-tight">
-                      {session.user.name || "Staff"}
+                      {staffUser.name || "Staff"}
                     </span>
                     <span className="text-[10px] text-emerald-700 font-mono font-bold">
-                      {(session.user as any)?.roleCode || "STAFF"}
+                      {staffUser.roleCode || "STAFF"}
                     </span>
                   </div>
                 </Link>
                 <button
                   type="button"
-                  onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                  onClick={handleLogout}
                   className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-2xs"
                   title="Log Out of Staff Session"
                 >
@@ -373,20 +384,20 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
           <div className="lg:hidden bg-white border-t border-slate-200 px-4 py-5 space-y-5 max-h-[82vh] overflow-y-auto">
             {/* Mobile Profile / Login Status Bar */}
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
-              {session?.user ? (
+              {staffUser ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-bold flex items-center justify-center text-xs">
-                      {(session.user.name || "S").charAt(0).toUpperCase()}
+                      {(staffUser.name || "S").charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <div className="font-bold text-xs text-slate-900">{session.user.name || "Staff Admin"}</div>
-                      <div className="text-[10px] text-emerald-700 font-mono font-bold">{(session.user as any)?.roleCode || "STAFF"}</div>
+                      <div className="font-bold text-xs text-slate-900">{staffUser.name || "Staff Admin"}</div>
+                      <div className="text-[10px] text-emerald-700 font-mono font-bold">{staffUser.roleCode || "STAFF"}</div>
                     </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => signOut({ callbackUrl: "/skillverse/staff-login" })}
+                    onClick={handleLogout}
                     className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-100 text-rose-800 text-xs font-bold"
                   >
                     <LogOut className="w-3.5 h-3.5" /> Logout

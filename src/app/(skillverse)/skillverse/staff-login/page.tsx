@@ -1,6 +1,13 @@
 import React from "react";
-import { SkillverseAdminPortal } from "@/components/skillverse/skillverse-admin-portal";
+import {
+  SkillverseAdminPortal,
+  SkillverseAdminPortalErrorBoundary,
+} from "@/components/skillverse/skillverse-admin-portal";
 
 export default function SkillverseStaffPortalPage() {
-  return <SkillverseAdminPortal />;
+  return (
+    <SkillverseAdminPortalErrorBoundary>
+      <SkillverseAdminPortal />
+    </SkillverseAdminPortalErrorBoundary>
+  );
 }
