@@ -152,6 +152,11 @@ export default function RecruitersPublicPage() {
               <span>SoftLab Global Corporate Recruitment &amp; Talent Alliance</span>
             </div>
 
+            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-950/90 text-emerald-300 border border-emerald-500/50 shadow-md">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+              <span>Open for Vendor Empanelment &middot; Minimal Fee: 8.33% to 12% on CTC &middot; Zero Advance</span>
+            </div>
+
             <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.15]">
               Hire Top 1% Pre-Vetted Tech Talent.{" "}
               <span className="bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400 bg-clip-text text-transparent">
@@ -248,6 +253,215 @@ export default function RecruitersPublicPage() {
                 </div>
               );
             })}
+          </div>
+        </div>
+      </section>
+
+      {/* ===================================================================== */}
+      {/* VENDOR EMPANELMENT & MANPOWER ALLIANCE SECTION                         */}
+      {/* ===================================================================== */}
+      <section className="py-16 sm:py-24 border-b border-slate-800 bg-gradient-to-b from-slate-950 via-slate-900/60 to-slate-950 relative overflow-hidden">
+        <div className="absolute top-1/2 right-1/4 w-96 h-96 bg-emerald-500/10 blur-3xl rounded-full pointer-events-none" />
+
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center max-w-3xl mx-auto space-y-4 mb-16">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-950 text-emerald-400 border border-emerald-500/40">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Official Corporate Empanelment Program</span>
+            </div>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight">
+              Open for Vendor Empanelment &middot;{" "}
+              <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                Minimal Market Fee: 8.33% to 12% on CTC
+              </span>
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed">
+              SoftLab Global partners with corporate recruiting teams, enterprises, and IT consultancies as an authorized staffing vendor. We fulfill your niche and volume manpower needs with transparent commercials, zero upfront advance, and automated GST billing upon joining.
+            </p>
+          </div>
+
+          {/* Transparent Empanelment Rate Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            {/* Card 1: 8.33% */}
+            <div className="p-8 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-emerald-500/40 transition space-y-5 relative group shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-950 text-emerald-400 border border-emerald-500/30">
+                  Standard Foundation
+                </span>
+                <span className="text-2xl font-black text-emerald-400 font-mono">8.33%</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Entry &amp; Mid-Level Tech Engineers</h3>
+                <p className="text-xs text-slate-400 mt-1">Freshers to 3 Years Experience &middot; ~ 1 Month Gross Salary</p>
+              </div>
+              <ul className="text-xs text-slate-300 space-y-2.5 pt-4 border-t border-slate-800">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Full-Stack Web (MERN / Next.js / Python)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>QA Automation &amp; Manual Testing</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Mobile App Developers (Flutter / React Native)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span><strong>Zero Advance</strong> &middot; Pay only upon joining</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>30 to 60 Days Free Replacement Guarantee</span>
+                </li>
+              </ul>
+              <div className="pt-2">
+                <a
+                  href="#post-hiring-form"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 group-hover:bg-emerald-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                >
+                  <span>Empanel for Entry Tech (8.33%)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Card 2: 10% - 12% */}
+            <div className="p-8 rounded-3xl bg-slate-900/90 border-2 border-cyan-500/50 hover:border-cyan-400 transition space-y-5 relative group shadow-2xl shadow-cyan-950/30">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950">
+                MOST POPULAR FOR ENTERPRISES
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-cyan-950 text-cyan-400 border border-cyan-500/30">
+                  Niche &amp; Lateral
+                </span>
+                <span className="text-2xl font-black text-cyan-400 font-mono">10% - 12%</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Senior Engineers &amp; Specialist Stacks</h3>
+                <p className="text-xs text-slate-400 mt-1">3 to 7+ Years Experience &middot; Cloud, AI &amp; Architecture</p>
+              </div>
+              <ul className="text-xs text-slate-300 space-y-2.5 pt-4 border-t border-slate-800">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Cloud &amp; DevOps Specialists (AWS, K8s, CI/CD)</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Data Science, AI / LLM &amp; ML Engineers</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Cyber Security &amp; SOC Analysts</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span>Rigorous architectural code review completed</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-cyan-400 shrink-0" />
+                  <span><strong>90 Days Free Replacement Guarantee</strong></span>
+                </li>
+              </ul>
+              <div className="pt-2">
+                <a
+                  href="#post-hiring-form"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 transition hover:shadow-lg shadow-cyan-950/40"
+                >
+                  <span>Empanel for Lateral Tech (10-12%)</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+
+            {/* Card 3: Bulk / Custom */}
+            <div className="p-8 rounded-3xl bg-slate-900/90 border border-slate-800 hover:border-purple-500/40 transition space-y-5 relative group shadow-xl">
+              <div className="flex items-center justify-between">
+                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-950 text-purple-400 border border-purple-500/30">
+                  Bulk Cohorts
+                </span>
+                <span className="text-xl font-black text-purple-400 font-mono">Volume Slabs</span>
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-white">Campus &amp; Large-Scale Drives</h3>
+                <p className="text-xs text-slate-400 mt-1">10+ to 100+ Hires &middot; Tiered Volume Rebates</p>
+              </div>
+              <ul className="text-xs text-slate-300 space-y-2.5 pt-4 border-t border-slate-800">
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Negotiable slab rates for bulk hiring cohorts</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Custom online coding test platform setup</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Dedicated corporate relationship manager</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Automated multi-candidate consolidated invoicing</span>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="w-4 h-4 text-purple-400 shrink-0" />
+                  <span>Staggered batch rollout &amp; onboarding sync</span>
+                </li>
+              </ul>
+              <div className="pt-2">
+                <a
+                  href="#post-hiring-form"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 group-hover:bg-purple-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                >
+                  <span>Request Bulk Drive Proposal</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Pillars of SoftLab Vendor Empanelment */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 p-6 rounded-2xl bg-slate-900/50 border border-slate-800">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Zero Upfront Sourcing Cost</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                No retainer fees, registration charges, or hidden advances. You only pay after a candidate is interviewed, selected, and joins your company.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs">
+                <FileCheck2 className="w-4 h-4" />
+                <span>Automated GST Tax Invoicing</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Instantly upon candidate joining, our CRM generates an official GST tax invoice (SAC 998512) and dispatches it via email and WhatsApp with 30-day payment terms.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-purple-400 font-bold text-xs">
+                <ShieldCheck className="w-4 h-4" />
+                <span>Up to 90 Days Free Replacement</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                If a placed candidate leaves or does not clear probation within 90 days, we furnish a qualified replacement candidate at zero extra charge.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 text-amber-400 font-bold text-xs">
+                <Clock className="w-4 h-4" />
+                <span>48-Hour Shortlist Turnaround</span>
+              </div>
+              <p className="text-[11px] text-slate-400 leading-relaxed">
+                Receive pre-screened resumes with live GitHub pull-request links, coding test percentiles, and interview slots within two business days.
+              </p>
+            </div>
           </div>
         </div>
       </section>
@@ -683,12 +897,13 @@ export default function RecruitersPublicPage() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="text-xs font-semibold text-slate-300 block mb-1">Hiring Model</label>
+                        <label className="text-xs font-semibold text-slate-300 block mb-1">Hiring &amp; Empanelment Model</label>
                         <select
                           value={formData.hiringType}
                           onChange={(e) => setFormData({ ...formData, hiringType: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-cyan-500"
+                          className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-white text-xs focus:outline-none focus:border-cyan-500 font-semibold"
                         >
+                          <option value="VENDOR_EMPANELMENT">Corporate Vendor Empanelment (8.33% - 12% CTC Fee)</option>
                           <option value="FULL_TIME">Full-Time Direct Employment</option>
                           <option value="INTERNSHIP">Paid Internship to Full-Time Conversion</option>
                           <option value="BULK_HIRING">Bulk Campus Drive (10+ Hires)</option>
@@ -784,6 +999,16 @@ export default function RecruitersPublicPage() {
           </div>
 
           <div className="space-y-4">
+            <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
+              <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                <span>How does Corporate Vendor Empanelment and Staffing Invoicing work?</span>
+              </h4>
+              <p className="text-xs text-slate-400 leading-relaxed pl-6">
+                SoftLab Global operates as an empaneled staffing vendor with a minimal market fee of <strong>8.33% to 12% on annual CTC</strong>. There are zero upfront charges or advance retainers. When a candidate is interviewed, selected, and joins your organization, an official GST tax invoice (SAC 998512) is generated automatically by our CRM and dispatched to your HR contact via email and WhatsApp with 30-day corporate credit payment terms and up to 90 days replacement protection.
+              </p>
+            </div>
+
             <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-2">
               <h4 className="text-sm font-bold text-white flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 text-emerald-400" />

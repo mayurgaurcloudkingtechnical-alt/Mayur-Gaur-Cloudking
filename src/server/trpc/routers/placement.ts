@@ -178,6 +178,69 @@ export const placementRouter = router({
       return CorporatePartnerService.createRecruiterUser(asAuthUser(ctx.user), input);
     }),
 
+  // ==========================================
+  // CORPORATE STAFFING INVOICES & BILLING
+  // ==========================================
+  createStaffingInvoice: requireRoleProcedure(adminRoles)
+    .input(
+      z.object({
+        partnerId: z.string().optional(),
+        companyName: z.string().min(1),
+        companyGst: z.string().optional(),
+        companyAddress: z.string().optional(),
+        companyCity: z.string().optional(),
+        companyState: z.string().optional(),
+        contactPerson: z.string().optional(),
+        contactEmail: z.string().optional(),
+        contactPhone: z.string().optional(),
+        candidateName: z.string().min(1),
+        candidateEmail: z.string().optional(),
+        candidatePhone: z.string().optional(),
+        position: z.string().min(1),
+        joinedDate: z.union([z.string(), z.date()]).optional(),
+        annualCtc: z.number().positive(),
+        feePercentage: z.number().min(5).max(30).optional(),
+        sacCode: z.string().optional(),
+        authorizedBy: z.string().optional(),
+        dueDate: z.union([z.string(), z.date()]).optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CorporatePartnerService.createStaffingInvoice(asAuthUser(ctx.user), input);
+    }),
+
+  listStaffingInvoices: requireRoleProcedure(adminRoles).query(async () => {
+    return CorporatePartnerService.listStaffingInvoices();
+  }),
+
+  getStaffingInvoiceById: requireRoleProcedure(adminRoles)
+    .input(z.object({ id: z.string() }))
+    .query(async ({ input }) => {
+      return CorporatePartnerService.getStaffingInvoiceById(input.id);
+    }),
+
+  updateStaffingInvoiceStatus: requireRoleProcedure(adminRoles)
+    .input(
+      z.object({
+        invoiceId: z.string(),
+        status: z.enum(["UNPAID", "PAID", "PARTIALLY_PAID", "CANCELLED"]),
+        paymentMode: z.string().optional(),
+        transactionRef: z.string().optional(),
+        paidAt: z.union([z.string(), z.date()]).optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CorporatePartnerService.updateStaffingInvoiceStatus(asAuthUser(ctx.user), input);
+    }),
+
+  dispatchStaffingInvoice: requireRoleProcedure(adminRoles)
+    .input(z.object({ invoiceId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return CorporatePartnerService.dispatchStaffingInvoice(asAuthUser(ctx.user), input.invoiceId);
+    }),
+
   listRecruiterContacts: requireRoleProcedure(adminRoles)
     .input(z.object({ companyId: z.string().optional() }).optional())
     .query(async ({ input }) => {

@@ -42,8 +42,9 @@ import {
 } from "lucide-react";
 import { JobDriveStatus, JobType, PlacementApplicationStatus } from "@prisma/client";
 import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";
+import { CorporateStaffingInvoiceModal } from "./corporate-staffing-invoice-modal";
 
-type RecruiterTabKey = "overview" | "companies" | "openings" | "candidates" | "bulkDrives";
+type RecruiterTabKey = "overview" | "companies" | "openings" | "candidates" | "bulkDrives" | "invoices";
 
 const TECH_DOMAINS = [
   "ALL",
@@ -70,6 +71,30 @@ export function RecruiterCrmView() {
   const [selectedCompanyForLogin, setSelectedCompanyForLogin] = useState<any>(null);
   const [selectedContactForCard, setSelectedContactForCard] = useState<any>(null);
   const [loginCredsCreated, setLoginCredsCreated] = useState<any>(null);
+
+  // Invoicing states
+  const [viewingInvoice, setViewingInvoice] = useState<any>(null);
+  const [showGenerateInvoiceModal, setShowGenerateInvoiceModal] = useState(false);
+  const [invoiceForm, setInvoiceForm] = useState({
+    partnerId: "",
+    companyName: "",
+    companyGst: "",
+    companyAddress: "",
+    companyCity: "Prayagraj",
+    companyState: "Uttar Pradesh",
+    contactPerson: "",
+    contactEmail: "",
+    contactPhone: "",
+    candidateName: "",
+    candidateEmail: "",
+    candidatePhone: "",
+    position: "Full-Stack Engineer",
+    annualCtc: 600000,
+    feePercentage: 8.33,
+    joinedDate: new Date().toISOString().split("T")[0],
+    authorizedBy: "Harsh Shukla",
+    notes: "",
+  });
 
   // Form states for new company
   const [companyForm, setCompanyForm] = useState({
@@ -119,8 +144,19 @@ export function RecruiterCrmView() {
     api.placement.listCorporatePartnersDetailed.useQuery();
   const { data: drives = [], refetch: refetchDrives } = api.placement.listAdminDrives.useQuery();
   const { data: talentPool = [] } = api.placement.listTalentPool.useQuery();
+  const { data: staffingInvoices = [], refetch: refetchInvoices } =
+    api.placement.listStaffingInvoices.useQuery();
 
   // Mutations
+  const createStaffingInvoiceMutation = api.placement.createStaffingInvoice.useMutation({
+    onSuccess: (invoice) => {
+      setShowGenerateInvoiceModal(false);
+      refetchInvoices();
+      setViewingInvoice(invoice);
+    },
+    onError: (err) => alert(`Failed to generate staffing invoice: ${err.message}`),
+  });
+
   const createPartnerMutation = api.placement.createPartner.useMutation({
     onSuccess: () => {
       setShowAddCompanyModal(false);
@@ -410,6 +446,18 @@ export function RecruiterCrmView() {
           <Calendar className="w-3.5 h-3.5 text-pink-400" />
           <span>Bulk Campus Drives</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("invoices")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+            activeTab === "invoices"
+              ? "bg-slate-900 text-white shadow-sm"
+              : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+          }`}
+        >
+          <CreditCard className="w-3.5 h-3.5 text-emerald-500" />
+          <span>Staffing Invoices &amp; Billing ({staffingInvoices.length})</span>
+        </button>
       </div>
 
       {/* ===================================================================== */}
@@ -678,6 +726,38 @@ export function RecruiterCrmView() {
                               <span>Login</span>
                             </button>
 
+                            {/* Staffing Invoice for this company */}
+                            <button
+                              onClick={() => {
+                                setInvoiceForm({
+                                  partnerId: partner.id,
+                                  companyName: partner.name,
+                                  companyGst: partner.gstNumber || "",
+                                  companyAddress: partner.address || "",
+                                  companyCity: partner.city || "Prayagraj",
+                                  companyState: partner.state || "Uttar Pradesh",
+                                  contactPerson: partner.contactPerson || "HR Lead",
+                                  contactEmail: partner.contactEmail || "",
+                                  contactPhone: partner.contactPhone || "",
+                                  candidateName: "",
+                                  candidateEmail: "",
+                                  candidatePhone: "",
+                                  position: "Full-Stack Engineer",
+                                  annualCtc: 600000,
+                                  feePercentage: 8.33,
+                                  joinedDate: new Date().toISOString().split("T")[0],
+                                  authorizedBy: "Harsh Shukla",
+                                  notes: `Corporate vendor empanelment placement invoice for ${partner.name}.`,
+                                });
+                                setShowGenerateInvoiceModal(true);
+                              }}
+                              className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-md text-[11px] font-bold flex items-center gap-1 border border-emerald-200 transition"
+                              title="Generate Staffing Invoice for this Company"
+                            >
+                              <CreditCard className="w-3.5 h-3.5" />
+                              <span>Invoice</span>
+                            </button>
+
                             {/* Corporate Visiting Card */}
                             <button
                               onClick={() =>
@@ -822,6 +902,266 @@ export function RecruiterCrmView() {
           >
             Schedule Bulk Drive Now
           </button>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* TAB CONTENT 6: CORPORATE STAFFING INVOICES & EMPANELMENT              */}
+      {/* ===================================================================== */}
+      {activeTab === "invoices" && (
+        <div className="space-y-6">
+          {/* Top Invoicing Header & Action */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                  Empanelment Billing
+                </span>
+                <span className="text-xs font-bold text-slate-500">Commercial Standard: 8.33% to 12% on CTC</span>
+              </div>
+              <h3 className="text-lg font-extrabold text-slate-900 mt-1">
+                Corporate Staffing Invoices &amp; Placement Remittances
+              </h3>
+              <p className="text-xs text-slate-500">
+                Generate and dispatch official GST tax invoices (SAC 998512) for corporate placement fulfillments with automated email and WhatsApp alerts.
+              </p>
+            </div>
+
+            <button
+              onClick={() => {
+                setInvoiceForm({
+                  partnerId: partnersDetailed[0]?.id || "",
+                  companyName: partnersDetailed[0]?.name || "",
+                  companyGst: partnersDetailed[0]?.gstNumber || "",
+                  companyAddress: partnersDetailed[0]?.address || "",
+                  companyCity: partnersDetailed[0]?.city || "Prayagraj",
+                  companyState: partnersDetailed[0]?.state || "Uttar Pradesh",
+                  contactPerson: partnersDetailed[0]?.contactPerson || "",
+                  contactEmail: partnersDetailed[0]?.contactEmail || "",
+                  contactPhone: partnersDetailed[0]?.contactPhone || "",
+                  candidateName: "",
+                  candidateEmail: "",
+                  candidatePhone: "",
+                  position: "Full-Stack Engineer",
+                  annualCtc: 600000,
+                  feePercentage: 8.33,
+                  joinedDate: new Date().toISOString().split("T")[0],
+                  authorizedBy: "Harsh Shukla",
+                  notes: "Corporate vendor empanelment placement fee (8.33% CTC + 18% GST).",
+                });
+                setShowGenerateInvoiceModal(true);
+              }}
+              className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-black flex items-center gap-2 shadow-md transition whitespace-nowrap self-start sm:self-auto"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Generate Staffing Invoice</span>
+            </button>
+          </div>
+
+          {/* Quick Metrics for Invoices */}
+          {(() => {
+            const totalInvoiced = staffingInvoices.reduce((acc: number, inv: any) => acc + (inv.grandTotal || 0), 0);
+            const totalPaid = staffingInvoices
+              .filter((inv: any) => inv.status === "PAID")
+              .reduce((acc: number, inv: any) => acc + (inv.grandTotal || 0), 0);
+            const totalPending = staffingInvoices
+              .filter((inv: any) => inv.status !== "PAID")
+              .reduce((acc: number, inv: any) => acc + (inv.grandTotal || 0), 0);
+
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Total Invoiced</span>
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 font-mono">
+                    {new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(totalInvoiced)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 font-medium">{staffingInvoices.length} Invoices Issued</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Collected / Paid</span>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-600 font-mono">
+                    {new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(totalPaid)}
+                  </p>
+                  <p className="text-[10px] text-emerald-600 font-medium">Realized corporate revenue</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-amber-600 uppercase tracking-wider">Pending Receivables</span>
+                  <p className="text-xl sm:text-2xl font-black text-amber-600 font-mono">
+                    {new Intl.NumberFormat("en-IN", {
+                      style: "currency",
+                      currency: "INR",
+                      maximumFractionDigits: 0,
+                    }).format(totalPending)}
+                  </p>
+                  <p className="text-[10px] text-amber-600 font-medium">30-day payment cycle</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs space-y-1">
+                  <span className="text-[11px] font-bold text-cyan-600 uppercase tracking-wider">Empanelment Fee</span>
+                  <p className="text-xl sm:text-2xl font-black text-cyan-700">8.33% - 12%</p>
+                  <p className="text-[10px] text-cyan-700 font-medium">SAC 998512 &middot; 18% GST</p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Invoices List Table */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 font-bold uppercase tracking-wider">
+                    <th className="py-3 px-4">Invoice #</th>
+                    <th className="py-3 px-4">Recruiter / Client</th>
+                    <th className="py-3 px-4">Candidate Placed</th>
+                    <th className="py-3 px-4 text-right">Annual CTC</th>
+                    <th className="py-3 px-4 text-right">Fee Rate</th>
+                    <th className="py-3 px-4 text-right">Grand Total</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium">
+                  {staffingInvoices.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="text-center py-12 text-slate-400 space-y-3">
+                        <CreditCard className="w-10 h-10 text-slate-300 mx-auto" />
+                        <p className="font-semibold text-slate-600">No Staffing Invoices Generated Yet</p>
+                        <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                          When a pre-vetted student or lateral candidate joins a corporate recruiter, generate their GST tax invoice here.
+                        </p>
+                        <button
+                          onClick={() => {
+                            setInvoiceForm({
+                              partnerId: partnersDetailed[0]?.id || "",
+                              companyName: partnersDetailed[0]?.name || "Tech Partner Pvt Ltd",
+                              companyGst: partnersDetailed[0]?.gstNumber || "",
+                              companyAddress: partnersDetailed[0]?.address || "",
+                              companyCity: partnersDetailed[0]?.city || "Prayagraj",
+                              companyState: partnersDetailed[0]?.state || "Uttar Pradesh",
+                              contactPerson: partnersDetailed[0]?.contactPerson || "HR Lead",
+                              contactEmail: partnersDetailed[0]?.contactEmail || "hr@company.com",
+                              contactPhone: partnersDetailed[0]?.contactPhone || "+91 9876543210",
+                              candidateName: "Aman Sharma",
+                              candidateEmail: "aman@example.com",
+                              candidatePhone: "+91 9123456789",
+                              position: "Full-Stack Developer",
+                              annualCtc: 650000,
+                              feePercentage: 8.33,
+                              joinedDate: new Date().toISOString().split("T")[0],
+                              authorizedBy: "Harsh Shukla",
+                              notes: "Corporate vendor empanelment placement fee (8.33% CTC + 18% GST).",
+                            });
+                            setShowGenerateInvoiceModal(true);
+                          }}
+                          className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition shadow-sm"
+                        >
+                          Generate Sample Staffing Invoice
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    staffingInvoices.map((inv: any) => {
+                      const formattedAmount = new Intl.NumberFormat("en-IN", {
+                        style: "currency",
+                        currency: "INR",
+                        maximumFractionDigits: 0,
+                      }).format(inv.grandTotal);
+
+                      const formattedCtc = new Intl.NumberFormat("en-IN", {
+                        style: "currency",
+                        currency: "INR",
+                        maximumFractionDigits: 0,
+                      }).format(inv.annualCtc);
+
+                      const invoiceDate = new Date(inv.createdAt).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      });
+
+                      return (
+                        <tr key={inv.id} className="hover:bg-slate-50 transition">
+                          <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                            <span className="text-cyan-700 hover:underline cursor-pointer" onClick={() => setViewingInvoice(inv)}>
+                              {inv.invoiceNumber}
+                            </span>
+                            <p className="text-[10px] text-slate-400 font-sans font-normal">{invoiceDate}</p>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <p className="font-extrabold text-slate-900">{inv.companyName}</p>
+                            <p className="text-[11px] text-slate-500">{inv.contactPerson || "HR Lead"}</p>
+                          </td>
+
+                          <td className="py-3 px-4">
+                            <p className="font-bold text-slate-900">{inv.candidateName}</p>
+                            <p className="text-[11px] text-slate-500">{inv.position}</p>
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-mono font-semibold text-slate-700">
+                            {formattedCtc}
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-mono font-bold text-cyan-700">
+                            {inv.feePercentage}%
+                          </td>
+
+                          <td className="py-3 px-4 text-right font-mono font-extrabold text-slate-900 text-sm">
+                            {formattedAmount}
+                          </td>
+
+                          <td className="py-3 px-4 text-center">
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                inv.status === "PAID"
+                                  ? "bg-emerald-100 text-emerald-800 border border-emerald-300"
+                                  : "bg-amber-100 text-amber-800 border border-amber-300"
+                              }`}
+                            >
+                              {inv.status}
+                            </span>
+                          </td>
+
+                          <td className="py-3 px-4 text-right">
+                            <div className="flex items-center justify-end gap-1.5 flex-nowrap">
+                              <button
+                                onClick={() => setViewingInvoice(inv)}
+                                className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                                title="View Tax Invoice"
+                              >
+                                <Eye className="w-3.5 h-3.5 text-cyan-600" />
+                                <span>View</span>
+                              </button>
+
+                              <button
+                                onClick={() => setViewingInvoice(inv)}
+                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-xs font-semibold flex items-center gap-1 transition"
+                                title="Print or Dispatch"
+                              >
+                                <Share2 className="w-3.5 h-3.5" />
+                                <span>Dispatch</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
 
@@ -1198,6 +1538,359 @@ export function RecruiterCrmView() {
           isOpen={!!selectedContactForCard}
           onClose={() => setSelectedContactForCard(null)}
           initialData={selectedContactForCard}
+        />
+      )}
+
+      {/* ===================================================================== */}
+      {/* MODAL 4: GENERATE CORPORATE STAFFING INVOICE                          */}
+      {/* ===================================================================== */}
+      {showGenerateInvoiceModal && (
+        <div className="fixed inset-0 z-50 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 my-auto">
+            <div className="px-6 py-4 bg-gradient-to-r from-slate-900 via-emerald-950 to-teal-950 text-white flex items-center justify-between border-b border-slate-800">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-emerald-400" />
+                <div>
+                  <h3 className="font-bold text-base">Generate Corporate Staffing Tax Invoice</h3>
+                  <p className="text-[11px] text-emerald-300">
+                    Vendor Empanelment Placement Fulfillment (8.33% to 12% on CTC)
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowGenerateInvoiceModal(false)}
+                className="text-slate-400 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                createStaffingInvoiceMutation.mutate({
+                  partnerId: invoiceForm.partnerId || undefined,
+                  companyName: invoiceForm.companyName.trim(),
+                  companyGst: invoiceForm.companyGst.trim() || undefined,
+                  companyAddress: invoiceForm.companyAddress.trim() || undefined,
+                  companyCity: invoiceForm.companyCity.trim() || undefined,
+                  companyState: invoiceForm.companyState.trim() || "Uttar Pradesh",
+                  contactPerson: invoiceForm.contactPerson.trim() || undefined,
+                  contactEmail: invoiceForm.contactEmail.trim() || undefined,
+                  contactPhone: invoiceForm.contactPhone.trim() || undefined,
+                  candidateName: invoiceForm.candidateName.trim(),
+                  candidateEmail: invoiceForm.candidateEmail.trim() || undefined,
+                  candidatePhone: invoiceForm.candidatePhone.trim() || undefined,
+                  position: invoiceForm.position.trim(),
+                  joinedDate: invoiceForm.joinedDate,
+                  annualCtc: Number(invoiceForm.annualCtc),
+                  feePercentage: Number(invoiceForm.feePercentage) || 8.33,
+                  authorizedBy: invoiceForm.authorizedBy.trim() || "Harsh Shukla",
+                  notes: invoiceForm.notes.trim() || undefined,
+                });
+              }}
+              className="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-xs"
+            >
+              {/* 1. Company Selection & Details */}
+              <div className="space-y-3 pb-3 border-b border-slate-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                    <Building2 className="w-4 h-4 text-cyan-600" />
+                    <span>Recruiter / Corporate Client Information</span>
+                  </span>
+                  {partnersDetailed.length > 0 && (
+                    <select
+                      onChange={(e) => {
+                        const selected = partnersDetailed.find((p: any) => p.id === e.target.value);
+                        if (selected) {
+                          setInvoiceForm((prev) => ({
+                            ...prev,
+                            partnerId: selected.id,
+                            companyName: selected.name,
+                            companyGst: selected.gstNumber || "",
+                            companyAddress: selected.address || "",
+                            companyCity: selected.city || "Prayagraj",
+                            companyState: selected.state || "Uttar Pradesh",
+                            contactPerson: selected.contactPerson || "",
+                            contactEmail: selected.contactEmail || "",
+                            contactPhone: selected.contactPhone || "",
+                          }));
+                        }
+                      }}
+                      className="px-2.5 py-1 text-[11px] border border-slate-300 rounded-lg bg-slate-50 font-semibold"
+                    >
+                      <option value="">-- Autofill from Partner Account --</option>
+                      {partnersDetailed.map((p: any) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} ({p.city || "HQ"})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Company / Organization Name *</label>
+                    <input
+                      required
+                      type="text"
+                      value={invoiceForm.companyName}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, companyName: e.target.value })}
+                      placeholder="e.g. Wipro Enterprises Ltd"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Company GSTIN Number</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.companyGst}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, companyGst: e.target.value.toUpperCase() })}
+                      placeholder="09AAECS8989M1Z5"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono uppercase"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">HR / Recruiter Contact Name</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.contactPerson}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, contactPerson: e.target.value })}
+                      placeholder="e.g. Rohit Verma"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Work Email (for Invoice PDF)</label>
+                    <input
+                      type="email"
+                      value={invoiceForm.contactEmail}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, contactEmail: e.target.value })}
+                      placeholder="rohit@company.com"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Phone / WhatsApp Number</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.contactPhone}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, contactPhone: e.target.value })}
+                      placeholder="+91 9876543210"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Billing State</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.companyState}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, companyState: e.target.value })}
+                      placeholder="Uttar Pradesh"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 2. Placed Candidate Details */}
+              <div className="space-y-3 pb-3 border-b border-slate-200">
+                <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <UserCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Placed Candidate &amp; Role Particulars</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Candidate Full Name *</label>
+                    <input
+                      required
+                      type="text"
+                      value={invoiceForm.candidateName}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, candidateName: e.target.value })}
+                      placeholder="e.g. Aman Sharma"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-bold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Hired Position / Designation *</label>
+                    <input
+                      required
+                      type="text"
+                      value={invoiceForm.position}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, position: e.target.value })}
+                      placeholder="e.g. Associate Full-Stack Developer"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Date of Joining *</label>
+                    <input
+                      required
+                      type="date"
+                      value={invoiceForm.joinedDate}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, joinedDate: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Candidate Contact Mobile</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.candidatePhone}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, candidatePhone: e.target.value })}
+                      placeholder="+91 9123456789"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 3. Commercials: CTC, Empanelment Fee %, Live Calculation */}
+              <div className="space-y-3 pb-3 border-b border-slate-200">
+                <span className="font-bold text-slate-800 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                  <CreditCard className="w-4 h-4 text-purple-600" />
+                  <span>Commercial Fee Calculation (8.33% to 12% on CTC)</span>
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Annual CTC Offered (in INR) *</label>
+                    <input
+                      required
+                      type="number"
+                      min="100000"
+                      step="10000"
+                      value={invoiceForm.annualCtc}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, annualCtc: Number(e.target.value) })}
+                      placeholder="600000"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-mono font-bold text-slate-900"
+                    />
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      e.g. ₹6,00,000 (6.0 LPA) or ₹8,50,000 (8.5 LPA)
+                    </p>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <label className="text-slate-700 font-bold">Empanelment Fee Rate (%) *</label>
+                      <span className="font-mono font-black text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded">
+                        {invoiceForm.feePercentage}%
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="range"
+                        min="8.33"
+                        max="12.0"
+                        step="0.01"
+                        value={invoiceForm.feePercentage}
+                        onChange={(e) => setInvoiceForm({ ...invoiceForm, feePercentage: parseFloat(e.target.value) })}
+                        className="w-full cursor-pointer accent-emerald-600"
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                      <span>8.33% (1 Month Gross)</span>
+                      <span>10.0% (Mid-Senior)</span>
+                      <span>12.0% (Niche / Lateral)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LIVE CALCULATION PREVIEW BOX */}
+                {(() => {
+                  const base = Math.round(Number(invoiceForm.annualCtc) * (Number(invoiceForm.feePercentage) / 100));
+                  const tax = Math.round(base * 0.18);
+                  const grand = base + tax;
+                  return (
+                    <div className="p-3.5 rounded-xl bg-slate-900 text-white space-y-1 font-mono text-xs">
+                      <div className="flex justify-between text-slate-400">
+                        <span>Base Placement Fee ({invoiceForm.feePercentage}% of CTC):</span>
+                        <span className="font-bold text-white">
+                          {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(base)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-slate-400">
+                        <span>GST @ 18% (SAC 998512 - Staffing Services):</span>
+                        <span>
+                          {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(tax)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between pt-1 border-t border-slate-700 font-bold text-sm text-emerald-400">
+                        <span>Grand Total Payable:</span>
+                        <span>
+                          {new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(grand)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Authorized Signatory</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.authorizedBy}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, authorizedBy: e.target.value })}
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-700 font-bold mb-1">Notes / Terms</label>
+                    <input
+                      type="text"
+                      value={invoiceForm.notes}
+                      onChange={(e) => setInvoiceForm({ ...invoiceForm, notes: e.target.value })}
+                      placeholder="e.g. 90-day replacement guarantee included"
+                      className="w-full px-3 py-2 border border-slate-300 rounded-lg"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setShowGenerateInvoiceModal(false)}
+                  className="px-4 py-2 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createStaffingInvoiceMutation.isPending}
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white rounded-xl text-xs font-black shadow-md transition disabled:opacity-50"
+                >
+                  {createStaffingInvoiceMutation.isPending ? "Generating Tax Invoice..." : "Generate & Preview Tax Invoice"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===================================================================== */}
+      {/* VIEW / DISPATCH TAX INVOICE MODAL                                     */}
+      {/* ===================================================================== */}
+      {viewingInvoice && (
+        <CorporateStaffingInvoiceModal
+          invoice={viewingInvoice}
+          onClose={() => setViewingInvoice(null)}
+          onUpdated={() => {
+            refetchInvoices();
+            setViewingInvoice(null);
+          }}
         />
       )}
     </div>

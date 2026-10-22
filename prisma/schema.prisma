@@ -1490,9 +1490,56 @@ model CorporatePartner {
   recruiters RecruiterContact[]
   followUps  RecruiterFollowUp[]
   jobFairStalls JobFairRecruiter[]
+  invoices   CorporateStaffingInvoice[]
 
   @@index([isActive])
   @@map("corporate_partners")
+}
+
+model CorporateStaffingInvoice {
+  id                String            @id @default(cuid())
+  invoiceNumber     String            @unique // e.g. "SLG-INV-STF-2026-0001"
+  partnerId         String?
+  partner           CorporatePartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  companyName       String
+  companyGst        String?
+  companyAddress    String?
+  companyCity       String?
+  companyState      String?
+  contactPerson     String?
+  contactEmail      String?
+  contactPhone      String?
+
+  candidateName     String
+  candidateEmail    String?
+  candidatePhone    String?
+  position          String
+  joinedDate        DateTime          @default(now())
+  annualCtc         Float             // in Rupees, e.g. 600000 (6 LPA)
+  feePercentage     Float             @default(8.33) // 8.33 to 12.0 %
+  baseAmount        Float             // annualCtc * (feePercentage / 100)
+  sacCode           String            @default("998512") // Staffing & Manpower Supply Services
+  gstRate           Float             @default(18.0)
+  cgstAmount        Float             @default(0)
+  sgstAmount        Float             @default(0)
+  igstAmount        Float             @default(0)
+  totalTaxAmount    Float             @default(0)
+  grandTotal        Float             // baseAmount + totalTaxAmount
+
+  status            String            @default("UNPAID") // UNPAID, PAID, PARTIALLY_PAID, CANCELLED
+  dueDate           DateTime?
+  paidAt            DateTime?
+  paymentMode       String?           // NEFT, RTGS, IMPS, UPI, CHEQUE
+  transactionRef    String?
+  notes             String?           @db.Text
+  authorizedBy      String?           @default("Harsh Shukla")
+
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([partnerId])
+  @@index([status])
+  @@map("corporate_staffing_invoices")
 }
 
 model RecruiterContact {
