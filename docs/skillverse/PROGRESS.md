@@ -48,6 +48,13 @@
   - Added **Lead Detail & Follow-up Timeline Drawer** with historical notes log, next follow-up scheduler, stage updater, and direct one-click student enrollment.
   - Added **Export to CSV** functionality for filtered leads.
   - Verified live on `https://skillverse.softlabglobal.com/skillverse/staff-login` (HTTP 200, `PRERENDER Age: 0`).
+- **LMS & CRM Overhaul, Studio, YouTube & Credential Governance (`d722516`, `d700555`)**:
+  - **Shared Higher Authority Credentials**: Unified SoftLab Global and Skillverse access for `MANAGER`, `ADMIN`, `DIRECTOR`, and `SUPER_ADMIN`. Higher authorities log into both platforms with identical existing credentials without requiring separate accounts.
+  - **Staff Governance & Credential Provisioning Desk**: All other staff profiles (`FACULTY`, `TEACHER`, `TRAINER`, `COUNSELOR`, `TELECALLER`, `COORDINATOR`) cannot log in until explicitly provisioned and approved by higher authorities.
+  - **Instant Student & Parent Credential Generation**: On-the-spot enrollment credential generation (`SV-STU-XXXXXX` / `SV-PAR-XXXXXX`) during admission with instant SMS/WhatsApp-ready notifications.
+  - **Skillverse Live Studio & Classroom**: Embedded WebRTC / HTML5 Canvas / MediaStream live virtual studio directly inside the platform without third-party redirects.
+  - **YouTube Automation**: Automatic class post-processing to target channel (`UCat1xHXxCdog_mWkEBA5jMQ`) with automated SEO titles, descriptions, keyword tags, and playlist assignment by Subject, Grade, Module, and Topic.
+  - **Runtime Null-Safety & Error Boundary Fix (`d700555`)**: Resolved interface error on `/staff-login` by adding defensive null-coalescing across CRM metrics and phone strings. Deployed and verified live on production edge.
 - **Complete Skillverse LMS & CRM Ecosystem + Native Live Studio & YouTube Automation**:
   - **Strict Platform & Authentication Separation**: Separated SoftLab Global LMS from Skillverse LMS with zero cross-login leak. Staff and faculty cannot log into Skillverse unless explicitly provisioned by a **Super Admin** or **Director** (Higher Authority).
   - **Higher Authority Governance & Security Desk**: Added Super Admin/Director governance tab in the CRM to view, provision, and revoke staff credentials with role assignments (`SUPER_ADMIN`, `DIRECTOR`, `SKILLVERSE_ADMIN`, `FACULTY`, `COUNSELOR`, `ACADEMIC_COORDINATOR`), department tags, and custom/auto access keys.
