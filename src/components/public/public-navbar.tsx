@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { SITE_CONFIG } from "@/lib/constants/site";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { Menu, X, UserCheck, GraduationCap, Building2, Sparkles, PhoneCall, Globe, Award, ChevronLeft, ChevronRight } from "lucide-react";
+import { Menu, X, UserCheck, GraduationCap, Building2, Sparkles, PhoneCall, Globe, Award, ChevronLeft, ChevronRight, Briefcase } from "lucide-react";
 import { openCareerCounselingModal } from "@/components/public/career-counseling-modal";
 
 interface PublicNavbarProps {
@@ -211,6 +211,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
               const isUniversity = link.href === "/dr-preeti-global-university";
               const isGlobalCert = link.href === "/delaware-digital-university";
               const isCampusPartnership = link.href === "/campus-partnerships";
+              const isRecruiters = link.href === "/recruiters";
 
               return (
                 <Link
@@ -228,6 +229,8 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                       ? "text-sky-300 hover:text-sky-200 hover:bg-sky-950/30 border border-sky-500/20"
                       : isCampusPartnership
                       ? "text-emerald-300 hover:text-emerald-200 hover:bg-emerald-950/30 border border-emerald-500/20"
+                      : isRecruiters
+                      ? "text-cyan-300 hover:text-cyan-200 hover:bg-cyan-950/30 border border-cyan-500/30 shadow-xs"
                       : "text-slate-300 hover:text-emerald-300 hover:bg-slate-900/80"
                   }`}
                 >
@@ -235,6 +238,7 @@ export function PublicNavbar({ userRole }: PublicNavbarProps) {
                   {isUniversity && <Award className="h-3 w-3 text-amber-400 shrink-0" />}
                   {isGlobalCert && <Globe className="h-3 w-3 text-sky-400 shrink-0" />}
                   {isCampusPartnership && <Building2 className="h-3 w-3 text-emerald-400 shrink-0" />}
+                  {isRecruiters && <Briefcase className="h-3 w-3 text-cyan-400 shrink-0" />}
                   <span>{link.label}</span>
                 </Link>
               );

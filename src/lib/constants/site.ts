@@ -53,6 +53,7 @@ export const SITE_CONFIG = {
     { label: "Faculty", href: "/trainers" },
     { label: "Career Support", href: "/career" },
     { label: "Campus Partnerships", href: "/campus-partnerships" },
+    { label: "For Recruiters", href: "/recruiters" },
     { label: "Services", href: "/services" },
     { label: "About Us", href: "/about" },
     { label: "Franchise", href: "/franchise" },

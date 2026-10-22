@@ -136,6 +136,14 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Job Fairs & Events", href: "/institution/dashboard?tab=jobfairs", icon: <Calendar className="h-4 w-4" /> },
           { title: "Reports & Exports", href: "/institution/dashboard?tab=reports", icon: <BarChart3 className="h-4 w-4" /> },
         ];
+      case "RECRUITER":
+        return [
+          { title: "Recruiter Command", href: "/admin/recruiters", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Company Profile", href: "/admin/recruiters?tab=companies", icon: <Building2 className="h-4 w-4" /> },
+          { title: "Job Openings", href: "/admin/recruiters?tab=openings", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Candidate Matchmaker", href: "/admin/recruiters?tab=candidates", icon: <Users className="h-4 w-4" /> },
+          { title: "Bulk Hiring Drives", href: "/admin/recruiters?tab=drives", icon: <Calendar className="h-4 w-4" /> },
+        ];
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
@@ -208,7 +216,12 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Certificates", href: "/admin/certificates", icon: <Award className="h-4 w-4" /> },
           { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
           { title: "WhatsApp Hiring", href: "/admin/placements?tab=whatsapp-hiring", icon: <MessageSquare className="h-4 w-4" />, badge: "AI" },
-          { title: "Campus & Universities", href: "/admin/campus-partnerships", icon: <Building2 className="h-4 w-4" />, badge: "Partners" },
+          ...(["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER", "HR", "PLACEMENT_OFFICER"].includes(roleCode)
+            ? [
+                { title: "Campus & Universities", href: "/admin/campus-partnerships", icon: <Building2 className="h-4 w-4" />, badge: "Partners" },
+                { title: "Recruiters & Hiring", href: "/admin/recruiters", icon: <Briefcase className="h-4 w-4" />, badge: "Corporate" },
+              ]
+            : []),
           { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
           { title: "Callyzer Live Tracking", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "Live" },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },

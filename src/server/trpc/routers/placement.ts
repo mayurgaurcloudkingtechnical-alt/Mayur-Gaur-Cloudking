@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { router, protectedProcedure, requireRoleProcedure } from "../init";
+import { router, publicProcedure, protectedProcedure, requireRoleProcedure } from "../init";
 import {
   UserRoleCode,
   JobType,
@@ -19,6 +19,8 @@ const adminRoles = [
   UserRoleCode.SUPER_ADMIN,
   UserRoleCode.ADMIN,
   UserRoleCode.DIRECTOR,
+  UserRoleCode.MANAGER,
+  UserRoleCode.HR,
   UserRoleCode.PLACEMENT_OFFICER,
 ];
 
@@ -121,6 +123,59 @@ export const placementRouter = router({
     .input(z.object({ id: z.string() }))
     .query(async ({ input }) => {
       return CorporatePartnerService.getPartnerById(input.id);
+    }),
+
+  listCorporatePartnersDetailed: requireRoleProcedure(adminRoles).query(async () => {
+    return CorporatePartnerService.listCorporatePartnersDetailed();
+  }),
+
+  /**
+   * Public recruiter submission from https://www.softlabglobal.com/recruiters
+   */
+  registerPublicRecruiter: publicProcedure
+    .input(
+      z.object({
+        companyName: z.string().min(1, "Company name is required"),
+        industry: z.string().optional(),
+        website: z.string().optional(),
+        companySize: z.string().optional(),
+        city: z.string().optional(),
+        state: z.string().optional(),
+        contactPersonName: z.string().min(1, "Contact person name is required"),
+        designation: z.string().optional(),
+        contactEmail: z.string().email("Valid work email is required"),
+        contactPhone: z.string().min(8, "Valid phone number is required"),
+        whatsappNumber: z.string().optional(),
+        hiringType: z.string().optional(),
+        targetDomains: z.array(z.string()).default([]),
+        jobTitle: z.string().optional(),
+        openingsCount: z.number().int().positive().optional(),
+        salaryPackage: z.string().optional(),
+        workMode: z.string().optional(),
+        jobDescription: z.string().optional(),
+        notes: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return CorporatePartnerService.registerPublicRecruiter(input);
+    }),
+
+  /**
+   * Provisions a RECRUITER role user account for corporate partner HR
+   */
+  createRecruiterUser: requireRoleProcedure(adminRoles)
+    .input(
+      z.object({
+        companyId: z.string(),
+        email: z.string().email(),
+        firstName: z.string().min(1),
+        lastName: z.string().min(1),
+        phone: z.string().optional(),
+        password: z.string().min(6).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CorporatePartnerService.createRecruiterUser(asAuthUser(ctx.user), input);
     }),
 
   listRecruiterContacts: requireRoleProcedure(adminRoles)
