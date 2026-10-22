@@ -415,8 +415,8 @@ export function SkillverseAdminPortal() {
           </h1>
           <p className="text-xs text-slate-600 leading-relaxed">
             Access to the SLG SKILLVERSE Admissions CRM, Teacher Portal, Finance Desk, and CMS
-            requires an authenticated SoftLab Global staff session (Super Admin, Skillverse Admin,
-            Counselor, Teacher, or Finance Officer).
+            requires an authenticated SoftLab Global staff session.
+            Higher Authorities (Manager, Admin, Director, or Super Admin) can log in directly with their same credentials; other staff require provisioned credentials.
           </p>
           <Link
             href="/login?callbackUrl=/skillverse/staff-login"
@@ -424,6 +424,51 @@ export function SkillverseAdminPortal() {
           >
             Sign In with Staff Credentials →
           </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if non-higher-authority staff has not yet been provisioned
+  if (staffUser && staffUser.canAccessSkillverse === false) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16">
+        <div className="bg-white rounded-3xl border border-amber-200 p-8 shadow-xl space-y-5 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold uppercase tracking-wider">
+            Skillverse Staff Authorization Required
+          </span>
+          <h1 className="text-2xl font-black text-slate-900">
+            Higher Authority Access Provisioning Needed
+          </h1>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            You are signed in as <strong>{staffUser.name}</strong> ({staffUser.roleCode}).
+            According to Skillverse governance, Higher Authorities (<strong>Manager</strong>, <strong>Admin</strong>, <strong>Director</strong>, or <strong>Super Admin</strong>)
+            can log into both SoftLab Global and Skillverse using their same credentials.
+            All other staff and faculty profiles must be provisioned through leadership.
+          </p>
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-700 space-y-1">
+            <div className="font-bold text-slate-900">Next Steps:</div>
+            <div>• Contact your Manager, Director, or Super Admin to provision your Skillverse Staff Credential.</div>
+            <div>• If you hold higher authority credentials, please sign in with that account.</div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
+            >
+              Sign Out / Switch Account
+            </button>
+            <Link
+              href="/skillverse"
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs"
+            >
+              Back to Public Site
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -439,14 +484,14 @@ export function SkillverseAdminPortal() {
   const notifications = data.notifications || [];
   const analyticsEvents = data.analyticsEvents || [];
   const auditLogs = data.auditLogs || [];
-  const metrics = data.metrics || {
-    totalEnquiries: 0,
-    demoBookingsCount: 0,
-    activeStudentsCount: 0,
-    conversionRatePercent: 0,
-    paidRevenueInr: 0,
-    pendingFeeInr: 0,
-    certificatesIssuedCount: 0,
+  const metrics = {
+    totalEnquiries: data?.metrics?.totalEnquiries ?? 0,
+    demoBookingsCount: data?.metrics?.demoBookingsCount ?? 0,
+    activeStudentsCount: data?.metrics?.activeStudentsCount ?? 0,
+    conversionRatePercent: data?.metrics?.conversionRatePercent ?? 0,
+    paidRevenueInr: data?.metrics?.paidRevenueInr ?? 0,
+    pendingFeeInr: data?.metrics?.pendingFeeInr ?? 0,
+    certificatesIssuedCount: data?.metrics?.certificatesIssuedCount ?? 0,
   };
   const cms = data.cms;
 
@@ -457,12 +502,12 @@ export function SkillverseAdminPortal() {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
-        enq.studentName.toLowerCase().includes(q) ||
-        enq.parentName.toLowerCase().includes(q) ||
-        enq.phone.includes(q) ||
-        enq.email.toLowerCase().includes(q) ||
-        enq.referenceNumber.toLowerCase().includes(q) ||
-        (enq.schoolName && enq.schoolName.toLowerCase().includes(q));
+        (enq.studentName ? enq.studentName.toLowerCase().includes(q) : false) ||
+        (enq.parentName ? enq.parentName.toLowerCase().includes(q) : false) ||
+        (enq.phone ? enq.phone.includes(q) : false) ||
+        (enq.email ? enq.email.toLowerCase().includes(q) : false) ||
+        (enq.referenceNumber ? enq.referenceNumber.toLowerCase().includes(q) : false) ||
+        (enq.schoolName ? enq.schoolName.toLowerCase().includes(q) : false);
 
       const matchesStage =
         selectedStageFilter === "ALL" || enq.stage === selectedStageFilter;
@@ -551,7 +596,7 @@ export function SkillverseAdminPortal() {
               <div className="font-bold text-white flex items-center gap-1.5">
                 <span className="truncate max-w-[130px]">{staffUser?.name || "Staff Admin"}</span>
                 <span className="px-1.5 py-0.5 rounded bg-emerald-400/20 text-emerald-300 font-mono text-[9px] font-bold uppercase">
-                  {staffUser?.roleCode || "SUPER_ADMIN"}
+                  {staffUser?.isHigherAuthority ? `${staffUser?.roleCode} • Higher Authority` : staffUser?.roleCode || "SUPER_ADMIN"}
                 </span>
               </div>
               <div className="text-[11px] text-slate-300 truncate max-w-[160px]">
@@ -598,43 +643,43 @@ export function SkillverseAdminPortal() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Total Enquiries</span>
-          <div className="text-2xl font-black text-slate-900 mt-1">{metrics.totalEnquiries}</div>
+          <div className="text-2xl font-black text-slate-900 mt-1">{metrics.totalEnquiries ?? 0}</div>
           <span className="text-[10px] text-blue-600 font-semibold">
-            Conversion: {metrics.conversionRatePercent}%
+            Conversion: {metrics.conversionRatePercent ?? 0}%
           </span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Demo Bookings</span>
           <div className="text-2xl font-black text-emerald-700 mt-1">
-            {metrics.demoBookingsCount}
+            {metrics.demoBookingsCount ?? 0}
           </div>
           <span className="text-[10px] text-slate-500">Scheduled Demos</span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Active Students</span>
           <div className="text-2xl font-black text-blue-700 mt-1">
-            {metrics.activeStudentsCount}
+            {metrics.activeStudentsCount ?? 0}
           </div>
           <span className="text-[10px] text-slate-500">Enrolled & Linked</span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Paid Fee Revenue</span>
           <div className="text-2xl font-black text-emerald-700 mt-1">
-            ₹{metrics.paidRevenueInr.toLocaleString("en-IN")}
+            ₹{(metrics.paidRevenueInr ?? 0).toLocaleString("en-IN")}
           </div>
           <span className="text-[10px] text-slate-500">Verified Receipts</span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Pending Dues</span>
           <div className="text-2xl font-black text-amber-600 mt-1">
-            ₹{metrics.pendingFeeInr.toLocaleString("en-IN")}
+            ₹{(metrics.pendingFeeInr ?? 0).toLocaleString("en-IN")}
           </div>
           <span className="text-[10px] text-slate-500">Open Invoices</span>
         </div>
         <div className="bg-white p-4 rounded-2xl border border-slate-200">
           <span className="text-[11px] font-bold text-slate-500 uppercase">Certificates</span>
           <div className="text-2xl font-black text-slate-900 mt-1">
-            {metrics.certificatesIssuedCount}
+            {metrics.certificatesIssuedCount ?? 0}
           </div>
           <span className="text-[10px] text-slate-500">QR Verifiable</span>
         </div>
@@ -864,9 +909,9 @@ export function SkillverseAdminPortal() {
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                       {filteredEnquiries.map((enq) => {
-                        const cleanPhone = enq.phone.replace(/\D/g, "").slice(-10);
+                        const cleanPhone = (enq.phone || "").replace(/\D/g, "").slice(-10);
                         const waMsg = encodeURIComponent(
-                          `Hello ${enq.parentName}, greetings from SLG SKILLVERSE (SoftLab Global)! We received ${enq.studentName}'s enquiry for ${enq.preferredCourseSlug} (${enq.currentClass}). Would you like to schedule a free demo session or discuss academic details?`
+                          `Hello ${enq.parentName || "Parent"}, greetings from SLG SKILLVERSE (SoftLab Global)! We received ${enq.studentName || "Student"}'s enquiry for ${enq.preferredCourseSlug || "Foundation"} (${enq.currentClass || "Class"}). Would you like to schedule a free demo session or discuss academic details?`
                         );
                         return (
                           <tr key={enq.id} className="hover:bg-slate-50/80 transition-colors">
@@ -876,7 +921,7 @@ export function SkillverseAdminPortal() {
                                 {enq.referenceNumber}
                               </span>
                               <span className="text-[10px] text-slate-400">
-                                {new Date(enq.createdAt).toLocaleDateString("en-IN", {
+                                {new Date(enq.createdAt || Date.now()).toLocaleDateString("en-IN", {
                                   day: "2-digit",
                                   month: "short",
                                   year: "numeric",
@@ -1060,9 +1105,9 @@ export function SkillverseAdminPortal() {
                           </div>
                         ) : (
                           stageLeads.map((enq) => {
-                            const cleanPhone = enq.phone.replace(/\D/g, "").slice(-10);
+                            const cleanPhone = (enq.phone || "").replace(/\D/g, "").slice(-10);
                             const waMsg = encodeURIComponent(
-                              `Hello ${enq.parentName}, greetings from SLG SKILLVERSE (SoftLab Global)! Regarding ${enq.studentName}'s enquiry for ${enq.preferredCourseSlug}...`
+                              `Hello ${enq.parentName || "Parent"}, greetings from SLG SKILLVERSE (SoftLab Global)! Regarding ${enq.studentName || "Student"}'s enquiry for ${enq.preferredCourseSlug || "Foundation"}...`
                             );
                             return (
                               <div
@@ -3100,18 +3145,31 @@ export class SkillverseAdminPortalErrorBoundary extends Component<
               Staff Portal Refresh Required
             </h2>
             <p className="text-xs text-slate-600 leading-relaxed">
-              A temporary interface error occurred. Click below to reload the Staff Portal.
+              A temporary interface error occurred. Click below to reload the Staff Portal, or sign in with your SoftLab Global Higher Authority credentials (Manager, Admin, Director, or Super Admin).
             </p>
-            <button
-              type="button"
-              onClick={() => {
-                this.setState({ hasError: false, error: null });
-                window.location.reload();
-              }}
-              className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-            >
-              Reload Portal
-            </button>
+            {this.state.error && (
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-mono text-left max-h-32 overflow-y-auto">
+                {this.state.error.message || String(this.state.error)}
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                className="flex-1 px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+              >
+                Reload Portal
+              </button>
+              <Link
+                href="/login?callbackUrl=/skillverse/staff-login"
+                className="flex-1 px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center justify-center"
+              >
+                Sign In Again
+              </Link>
+            </div>
           </div>
         </div>
       );

@@ -2130,12 +2130,23 @@ export class SkillverseService {
   }
 
   // =========================================================================
-  // HIGHER AUTHORITY STAFF CREDENTIAL MANAGEMENT (DIRECTOR / SUPER_ADMIN)
+  // HIGHER AUTHORITY STAFF CREDENTIAL MANAGEMENT (MANAGER, ADMIN, DIRECTOR, SUPER_ADMIN)
   // =========================================================================
 
+  static isHigherAuthorityRole(roleCode?: string | null): boolean {
+    if (!roleCode) return false;
+    const higherRoles = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+    return higherRoles.includes(roleCode.toUpperCase());
+  }
+
   static async verifyStaffAccessAuthority(input: { email?: string; roleCode?: string; accessKey?: string }) {
-    if (input.roleCode === "SUPER_ADMIN" || input.roleCode === "DIRECTOR") {
-      return { authorized: true, role: input.roleCode, isSuperAuthority: true };
+    if (this.isHigherAuthorityRole(input.roleCode)) {
+      return {
+        authorized: true,
+        role: input.roleCode!,
+        isHigherAuthority: true,
+        isSuperAuthority: true,
+      };
     }
 
     if (!input.email) {
@@ -2147,7 +2158,8 @@ export class SkillverseService {
     if (!row || !row.value) {
       return {
         authorized: false,
-        reason: "Access Restricted: You have not been provisioned credentials by the Super Admin or Director for SLG Skillverse.",
+        reason:
+          "Access Restricted: Your Skillverse staff credentials have not been authorized by Higher Authority (Manager, Admin, Director, or Super Admin). Please contact leadership to generate your access.",
       };
     }
 
@@ -2155,7 +2167,7 @@ export class SkillverseService {
     if (cred.status !== "ACTIVE") {
       return {
         authorized: false,
-        reason: `Your Skillverse staff credentials are currently ${cred.status}. Contact Director or Super Admin.`,
+        reason: `Your Skillverse staff credentials are currently ${cred.status}. Contact a Manager, Admin, Director, or Super Admin.`,
       };
     }
 
@@ -2163,7 +2175,7 @@ export class SkillverseService {
       return { authorized: false, reason: "Invalid Skillverse Staff Access Key." };
     }
 
-    return { authorized: true, role: cred.role, credential: cred };
+    return { authorized: true, role: cred.role, credential: cred, isHigherAuthority: false };
   }
 
   static async listStaffCredentials() {
@@ -2183,8 +2195,10 @@ export class SkillverseService {
     actorName: string;
     actorRole: string;
   }) {
-    if (input.actorRole !== "SUPER_ADMIN" && input.actorRole !== "DIRECTOR") {
-      throw new Error("Only the Super Admin or Director can generate Skillverse staff credentials.");
+    if (!this.isHigherAuthorityRole(input.actorRole)) {
+      throw new Error(
+        "Only Higher Authorities (Manager, Admin, Director, or Super Admin) can generate Skillverse staff credentials."
+      );
     }
 
     const email = input.email.trim().toLowerCase();
@@ -2240,8 +2254,10 @@ export class SkillverseService {
     actorName: string;
     actorRole: string;
   }) {
-    if (input.actorRole !== "SUPER_ADMIN" && input.actorRole !== "DIRECTOR") {
-      throw new Error("Only the Super Admin or Director can modify Skillverse staff credentials.");
+    if (!this.isHigherAuthorityRole(input.actorRole)) {
+      throw new Error(
+        "Only Higher Authorities (Manager, Admin, Director, or Super Admin) can modify Skillverse staff credentials."
+      );
     }
 
     const key = `SV_STAFF_${input.email.trim().toLowerCase()}`;

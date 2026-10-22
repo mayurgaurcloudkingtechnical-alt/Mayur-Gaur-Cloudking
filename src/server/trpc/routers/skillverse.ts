@@ -10,11 +10,15 @@ import {
 } from "@/server/services/skillverse.service";
 import { db } from "@/server/db/client";
 
-const ADMIN_FINANCE_ROLES = [
+export const HIGHER_AUTHORITY_ROLES = [
   "SUPER_ADMIN",
   "DIRECTOR",
   "ADMIN",
   "MANAGER",
+];
+
+const ADMIN_FINANCE_ROLES = [
+  ...HIGHER_AUTHORITY_ROLES,
   "ACCOUNTANT",
 ];
 
@@ -50,6 +54,16 @@ export const skillverseRouter = router({
 
   getCurrentStaffSession: publicProcedure.query(async ({ ctx }) => {
     if (!ctx.user) return null;
+    const isHigherAuthority = HIGHER_AUTHORITY_ROLES.includes(ctx.user.roleCode as any);
+    let provisionedCred: any = null;
+    if (!isHigherAuthority && ctx.user.email) {
+      const authCheck = await SkillverseService.verifyStaffAccessAuthority({
+        email: ctx.user.email,
+        roleCode: ctx.user.roleCode,
+      });
+      provisionedCred = authCheck.authorized ? (authCheck as any).credential : null;
+    }
+
     return {
       id: ctx.user.id,
       name: ctx.user.name,
@@ -57,6 +71,10 @@ export const skillverseRouter = router({
       lastName: ctx.user.lastName,
       email: ctx.user.email,
       roleCode: ctx.user.roleCode,
+      isHigherAuthority,
+      isProvisionedStaff: Boolean(provisionedCred),
+      provisionedRole: provisionedCred?.role || (isHigherAuthority ? ctx.user.roleCode : null),
+      canAccessSkillverse: isHigherAuthority || Boolean(provisionedCred),
     };
   }),
 
@@ -603,7 +621,7 @@ export const skillverseRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const actor = requireRoles(ctx, ["SUPER_ADMIN", "DIRECTOR"]);
+      const actor = requireRoles(ctx, HIGHER_AUTHORITY_ROLES);
       return SkillverseService.provisionStaffCredential({
         ...input,
         actorName: actor.name,
@@ -619,7 +637,7 @@ export const skillverseRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const actor = requireRoles(ctx, ["SUPER_ADMIN", "DIRECTOR"]);
+      const actor = requireRoles(ctx, HIGHER_AUTHORITY_ROLES);
       return SkillverseService.revokeStaffCredential({
         ...input,
         actorName: actor.name,
