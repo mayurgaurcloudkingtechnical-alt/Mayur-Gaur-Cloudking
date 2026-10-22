@@ -60,9 +60,11 @@ const ADMISSIONS_LINKS = [
 ];
 
 const PORTAL_LINKS = [
-  { href: "/skillverse/student-login", label: "Student Login", badge: "LMS" },
+  { href: "/skillverse/crm", label: "Admissions CRM", badge: "CRM" },
+  { href: "/skillverse/lms", label: "Academic LMS & Live Studio", badge: "LMS" },
+  { href: "/skillverse/student-login", label: "Student Login", badge: "Student" },
   { href: "/skillverse/parent-login", label: "Parent Login", badge: "Family" },
-  { href: "/skillverse/staff-login", label: "Staff / Teacher / Admin Login", badge: "Staff" },
+  { href: "/skillverse/staff-login", label: "Staff & Higher Authority Login", badge: "Command" },
 ];
 
 export function SkillverseShell({ children }: { children: React.ReactNode }) {
@@ -110,10 +112,24 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <PhoneCall className="w-3 h-3" /> +91-9196596975
             </a>
           </div>
-          <div className="flex items-center gap-3 sm:gap-4 text-[11px] font-semibold flex-wrap justify-center sm:justify-end">
+          <div className="flex items-center gap-2 sm:gap-3 text-[11px] font-semibold flex-wrap justify-center sm:justify-end">
+            <Link
+              href="/skillverse/crm"
+              className="text-emerald-300 hover:text-white transition-colors font-bold"
+            >
+              Admissions CRM
+            </Link>
+            <span className="text-slate-600">|</span>
+            <Link
+              href="/skillverse/lms"
+              className="text-cyan-300 hover:text-white transition-colors font-bold"
+            >
+              Academic LMS
+            </Link>
+            <span className="text-slate-600">|</span>
             <Link
               href="/skillverse/student-login"
-              className="text-cyan-300 hover:text-white transition-colors"
+              className="text-slate-200 hover:text-white transition-colors"
             >
               Student Portal
             </Link>
@@ -122,7 +138,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               href="/skillverse/parent-login"
               className="text-lime-300 hover:text-white transition-colors"
             >
-              Parent Portal
+              Parent Desk
             </Link>
             <span className="text-slate-600">|</span>
             {staffUser ? (
@@ -145,8 +161,8 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <Link
-                href="/login?callbackUrl=/skillverse/staff-login"
-                className="text-slate-300 hover:text-white transition-colors flex items-center gap-1"
+                href="/skillverse/login"
+                className="text-slate-200 hover:text-white transition-colors flex items-center gap-1 font-bold"
               >
                 <Lock className="w-3 h-3 text-cyan-300" />
                 Staff Sign In
@@ -285,6 +301,51 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             >
               Admissions
             </Link>
+
+            {/* Dropdown: Dedicated Portals (CRM, LMS, Student, Parent) */}
+            <div className="relative group">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Portals & LMS <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+              </button>
+              <div className="invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-150 absolute left-0 top-full pt-2 w-64 z-50">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-2 space-y-1">
+                  <Link
+                    href="/skillverse/crm"
+                    className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    💼 Admissions CRM Pipeline
+                  </Link>
+                  <Link
+                    href="/skillverse/lms"
+                    className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    🎓 Academic LMS & Classes
+                  </Link>
+                  <Link
+                    href="/skillverse/live-classroom"
+                    className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-emerald-50 hover:text-emerald-700"
+                  >
+                    🎥 In-House Live Studio
+                  </Link>
+                  <Link
+                    href="/skillverse/student-login"
+                    className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700"
+                  >
+                    🧑‍🎓 Student Portal & Quizzes
+                  </Link>
+                  <Link
+                    href="/skillverse/parent-login"
+                    className="block px-3 py-2 rounded-xl text-xs font-semibold text-slate-700 hover:bg-purple-50 hover:text-purple-700"
+                  >
+                    👨‍👩‍👧 Parent Progress Desk
+                  </Link>
+                </div>
+              </div>
+            </div>
+
             <Link
               href="/skillverse/contact"
               className={`px-3 py-2 rounded-xl text-xs font-bold transition-colors ${
@@ -358,7 +419,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               </div>
             ) : (
               <Link
-                href="/login?callbackUrl=/skillverse/staff-login"
+                href="/skillverse/login"
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
                 title="Staff, Teacher & Admin Login"
               >

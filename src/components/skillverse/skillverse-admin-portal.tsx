@@ -3,6 +3,7 @@
 import React, { useState, useMemo, Component, type ErrorInfo, type ReactNode } from "react";
 import Link from "next/link";
 import { api as trpc } from "@/lib/trpc/react";
+import { SkillverseAuthForm } from "@/components/skillverse/skillverse-auth-form";
 import type {
   SkillverseAdmissionStage,
   SkillverseEnquiryRecord,
@@ -75,7 +76,7 @@ const STAGES: SkillverseAdmissionStage[] = [
   "ACTIVE_STUDENT",
 ];
 
-type TabId =
+export type TabId =
   | "admissions"
   | "live_studio"
   | "staff_governance"
@@ -85,12 +86,22 @@ type TabId =
   | "cms_seo"
   | "analytics_audit";
 
-export function SkillverseAdminPortal() {
+export interface SkillverseAdminPortalProps {
+  initialTab?: TabId;
+  portalMode?: "crm" | "lms" | "all";
+}
+
+export function SkillverseAdminPortal({
+  initialTab,
+  portalMode = "all",
+}: SkillverseAdminPortalProps = {}) {
   const { data: staffUser } = trpc.skillverse.getCurrentStaffSession.useQuery(undefined, {
     staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
-  const [activeTab, setActiveTab] = useState<TabId>("admissions");
+  const defaultTab: TabId =
+    initialTab || (portalMode === "crm" ? "admissions" : portalMode === "lms" ? "live_studio" : "admissions");
+  const [activeTab, setActiveTab] = useState<TabId>(defaultTab);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   const handleLogout = async () => {
@@ -405,26 +416,20 @@ export function SkillverseAdminPortal() {
 
   if (error || !data) {
     return (
-      <div className="max-w-lg mx-auto px-4 py-16">
-        <div className="bg-white rounded-3xl border border-slate-200 p-8 shadow-lg space-y-4 text-center">
-          <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto">
-            <Lock className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-black text-slate-900">
-            Skillverse Staff, Teacher & Admin Authentication Required
-          </h1>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            Access to the SLG SKILLVERSE Admissions CRM, Teacher Portal, Finance Desk, and CMS
-            requires an authenticated SoftLab Global staff session.
-            Higher Authorities (Manager, Admin, Director, or Super Admin) can log in directly with their same credentials; other staff require provisioned credentials.
-          </p>
-          <Link
-            href="/login?callbackUrl=/skillverse/staff-login"
-            className="inline-block w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs"
-          >
-            Sign In with Staff Credentials →
-          </Link>
-        </div>
+      <div className="max-w-xl mx-auto px-4 py-12">
+        <SkillverseAuthForm
+          title="SLG SKILLVERSE Academic & Leadership Login"
+          subtitle={
+            portalMode === "crm"
+              ? "Admissions CRM & Pipeline Desk"
+              : portalMode === "lms"
+              ? "Academic LMS & Live Classroom Hub"
+              : "Staff, Teacher & Admin Command Center"
+          }
+          onSuccessCallback={() => {
+            refetch();
+          }}
+        />
       </div>
     );
   }
@@ -576,13 +581,22 @@ export function SkillverseAdminPortal() {
       <div className="bg-gradient-to-r from-[#071630] via-[#0B2247] to-[#15803D] rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
         <div>
           <span className="text-xs font-bold uppercase tracking-widest text-lime-300 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-lime-300" /> SLG SKILLVERSE — Unified Staff, Teacher & Admin Command Center
+            <Sparkles className="w-3.5 h-3.5 text-lime-300" />
+            {portalMode === "crm"
+              ? "SLG SKILLVERSE — Admissions CRM & Enrolment Desk"
+              : portalMode === "lms"
+              ? "SLG SKILLVERSE — Academic LMS & Live Classroom Studio"
+              : "SLG SKILLVERSE — Unified Staff, Teacher & Leadership Command Center"}
           </span>
           <h1 className="text-2xl sm:text-3xl font-black mt-1">
-            Admissions CRM, Teacher LMS, Finance & CMS
+            {portalMode === "crm"
+              ? "Admissions Pipeline & Lead Intelligence"
+              : portalMode === "lms"
+              ? "Live Studio, YouTube Broadcasting & Batches"
+              : "Admissions CRM, Teacher LMS, Finance & CMS"}
           </h1>
           <p className="text-xs text-slate-200 mt-1">
-            Real database-backed metrics from the isolated Skillverse PostgreSQL namespace.
+            Dedicated Skillverse database partition — 100% isolated from SoftLab Global corporate records.
           </p>
         </div>
 
@@ -629,6 +643,56 @@ export function SkillverseAdminPortal() {
               Health JSON
             </a>
           </div>
+        </div>
+      </div>
+
+      {/* Top Mode Navigation Switcher */}
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-2xl border border-slate-200/90 shadow-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <Link
+            href="/skillverse/crm"
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              portalMode === "crm"
+                ? "bg-[#16A34A] text-white shadow-sm"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+            }`}
+          >
+            <Users className="w-4 h-4" />
+            <span>Admissions CRM</span>
+          </Link>
+          <Link
+            href="/skillverse/lms"
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              portalMode === "lms"
+                ? "bg-[#0052CC] text-white shadow-sm"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+            }`}
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Academic LMS</span>
+          </Link>
+          <Link
+            href="/skillverse/live-classroom"
+            className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all flex items-center gap-2"
+          >
+            <Video className="w-4 h-4 text-emerald-600" />
+            <span>In-House Studio</span>
+          </Link>
+          <Link
+            href="/skillverse/staff-login"
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+              portalMode === "all"
+                ? "bg-slate-900 text-white shadow-sm"
+                : "bg-slate-100 hover:bg-slate-200 text-slate-700"
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            <span>Full Command Center</span>
+          </Link>
+        </div>
+
+        <div className="text-[11px] font-bold text-slate-500 pr-2 hidden sm:block">
+          Partition: <span className="font-mono text-emerald-700">SKILLVERSE_* Isolated Database</span>
         </div>
       </div>
 
@@ -687,16 +751,32 @@ export function SkillverseAdminPortal() {
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
-        {[
-          { id: "admissions", label: "11-Stage Admissions CRM", icon: Users },
-          { id: "live_studio", label: "Live Classroom & YouTube Studio", icon: Video },
-          { id: "staff_governance", label: "Staff Governance & Security", icon: ShieldCheck },
-          { id: "students_teacher", label: "Students, Batches & Teacher Portal", icon: GraduationCap },
-          { id: "finance_fees", label: "Fee Invoices & Receipts", icon: CreditCard },
-          { id: "certificates", label: "Certificates & Verification", icon: Award },
-          { id: "cms_seo", label: "Admin CMS & SEO", icon: Settings },
-          { id: "analytics_audit", label: "Analytics, Notifications & Audit", icon: BarChart3 },
-        ].map((t) => {
+        {(
+          portalMode === "crm"
+            ? [
+                { id: "admissions", label: "11-Stage Admissions CRM", icon: Users },
+                { id: "finance_fees", label: "Fee Invoices & Transparent Packages", icon: CreditCard },
+                { id: "analytics_audit", label: "Admissions & Pipeline Analytics", icon: BarChart3 },
+                { id: "staff_governance", label: "Staff Governance & Security", icon: ShieldCheck },
+              ]
+            : portalMode === "lms"
+            ? [
+                { id: "live_studio", label: "Live Classroom & YouTube Studio", icon: Video },
+                { id: "students_teacher", label: "Students, Batches & Teacher Portal", icon: GraduationCap },
+                { id: "certificates", label: "Certificates & Verification", icon: Award },
+                { id: "analytics_audit", label: "LMS Analytics & YouTube Archives", icon: BarChart3 },
+                { id: "staff_governance", label: "Faculty Allocation & Security", icon: ShieldCheck },
+              ]
+            : [
+                { id: "admissions", label: "11-Stage Admissions CRM", icon: Users },
+                { id: "live_studio", label: "Live Classroom & YouTube Studio", icon: Video },
+                { id: "staff_governance", label: "Staff Governance & Security", icon: ShieldCheck },
+                { id: "students_teacher", label: "Students, Batches & Teacher Portal", icon: GraduationCap },
+                { id: "finance_fees", label: "Fee Invoices & Receipts", icon: CreditCard },
+                { id: "certificates", label: "Certificates & Verification", icon: Award },
+                { id: "analytics_audit", label: "Analytics, Notifications & Audit", icon: BarChart3 },
+              ]
+        ).map((t) => {
           const Icon = t.icon;
           const active = activeTab === t.id;
           return (
@@ -704,7 +784,7 @@ export function SkillverseAdminPortal() {
               key={t.id}
               type="button"
               onClick={() => setActiveTab(t.id as TabId)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                 active
                   ? "bg-blue-600 text-white shadow-xs"
                   : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
@@ -3164,7 +3244,7 @@ export class SkillverseAdminPortalErrorBoundary extends Component<
                 Reload Portal
               </button>
               <Link
-                href="/login?callbackUrl=/skillverse/staff-login"
+                href="/skillverse/login"
                 className="flex-1 px-6 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs transition-all flex items-center justify-center"
               >
                 Sign In Again

@@ -10,19 +10,58 @@ export async function middleware(req: NextRequest) {
   const isApiSubdomain = host.startsWith("api.");
 
   // Handle SLG SKILLVERSE Subdomain (skillverse.softlabglobal.com) Routing Isolation
-  if (
-    isSkillverseSubdomain &&
-    !pathname.startsWith("/skillverse") &&
-    !pathname.startsWith("/api/") &&
-    !pathname.startsWith("/trpc/") &&
-    !pathname.startsWith("/_next/") &&
-    !pathname.startsWith("/images/") &&
-    !pathname.startsWith("/login") &&
-    !/\.(jpg|jpeg|png|gif|ico|svg|css|js|woff|woff2|ttf|csv)$/i.test(pathname)
-  ) {
+  if (isSkillverseSubdomain) {
+    // Pass API, TRPC, Next internal assets and media straight through
+    if (
+      pathname.startsWith("/api/") ||
+      pathname.startsWith("/trpc/") ||
+      pathname.startsWith("/_next/") ||
+      pathname.startsWith("/images/") ||
+      /\.(jpg|jpeg|png|gif|ico|svg|css|js|woff|woff2|ttf|csv)$/i.test(pathname)
+    ) {
+      return NextResponse.next();
+    }
+
     const rewriteUrl = req.nextUrl.clone();
-    rewriteUrl.pathname = `/skillverse${pathname === "/" ? "" : pathname}`;
-    return NextResponse.rewrite(rewriteUrl);
+
+    // Direct Portal Aliases for Skillverse Subdomain
+    if (pathname === "/login" || pathname === "/signin") {
+      rewriteUrl.pathname = "/skillverse/login";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+    if (pathname === "/crm") {
+      rewriteUrl.pathname = "/skillverse/crm";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+    if (pathname === "/lms" || pathname === "/classroom") {
+      rewriteUrl.pathname = "/skillverse/lms";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+    if (
+      pathname === "/staff" ||
+      pathname === "/staff-login" ||
+      pathname === "/admin" ||
+      pathname === "/dashboard"
+    ) {
+      rewriteUrl.pathname = "/skillverse/staff-login";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+    if (pathname === "/student" || pathname === "/student-login") {
+      rewriteUrl.pathname = "/skillverse/student-login";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+    if (pathname === "/parent" || pathname === "/parent-login") {
+      rewriteUrl.pathname = "/skillverse/parent-login";
+      return NextResponse.rewrite(rewriteUrl);
+    }
+
+    // Default rewrite: prefix all other paths with /skillverse
+    if (!pathname.startsWith("/skillverse")) {
+      rewriteUrl.pathname = `/skillverse${pathname === "/" ? "" : pathname}`;
+      return NextResponse.rewrite(rewriteUrl);
+    }
+
+    return NextResponse.next();
   }
 
   // Handle API Subdomain & Native API v1 CORS
