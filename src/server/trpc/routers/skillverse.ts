@@ -164,52 +164,12 @@ export const skillverseRouter = router({
     .input(
       z.object({
         enrollmentCode: z.string().min(4),
-        studentEmail: z.string().email(),
+        studentEmail: z.string().email().optional(),
+        studentPassword: z.string().optional(),
       })
     )
     .mutation(async ({ input }) => {
-      const key = `SV_STU_${input.enrollmentCode.trim().toUpperCase()}`;
-      const row = await db.systemSetting.findUnique({ where: { key } });
-      if (!row) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Enrollment Code not found. Please check your Skillverse admission letter.",
-        });
-      }
-      const student = row.value as unknown as SkillverseStudentProfileRecord;
-      if (student.studentEmail.toLowerCase() !== input.studentEmail.trim().toLowerCase()) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Student email does not match this Enrollment Code.",
-        });
-      }
-
-      const config = await SkillverseService.getCatalogAndConfig();
-      const enrolledCourses = config.courses.filter((c) =>
-        student.enrolledCourseSlugs.includes(c.slug)
-      );
-
-      const [invoiceRows, certRows] = await Promise.all([
-        db.systemSetting.findMany({ where: { category: "SKILLVERSE_INVOICE" } }),
-        db.systemSetting.findMany({ where: { category: "SKILLVERSE_CERTIFICATE" } }),
-      ]);
-
-      const invoices = invoiceRows
-        .map((r) => r.value as unknown as SkillverseInvoiceRecord)
-        .filter((inv) => inv.studentId === student.enrollmentCode);
-
-      const certificates = certRows
-        .map((r) => r.value as unknown as SkillverseCertificateRecord)
-        .filter((c) => c.studentId === student.enrollmentCode && c.status === "ISSUED");
-
-      const { parentAccessPinHash, ...safeStudent } = student;
-
-      return {
-        student: safeStudent,
-        enrolledCourses,
-        invoices,
-        certificates,
-      };
+      return SkillverseService.getVerifiedStudentPortalData(input);
     }),
 
   verifyCertificate: publicProcedure
@@ -602,5 +562,137 @@ export const skillverseRouter = router({
     )
     .mutation(async ({ input }) => {
       return SkillverseService.updateParentCommunicationPreferences(input);
+    }),
+
+  // =========================================================================
+  // HIGHER AUTHORITY STAFF CREDENTIALS DESK
+  // =========================================================================
+
+  verifyStaffAccessAuthority: publicProcedure
+    .input(
+      z.object({
+        email: z.string().optional(),
+        roleCode: z.string().optional(),
+        accessKey: z.string().optional(),
+      })
+    )
+    .query(async ({ input }) => {
+      return SkillverseService.verifyStaffAccessAuthority(input);
+    }),
+
+  listStaffCredentials: protectedProcedure.query(async ({ ctx }) => {
+    requireRoles(ctx, ADMIN_FINANCE_ROLES);
+    return SkillverseService.listStaffCredentials();
+  }),
+
+  provisionStaffCredential: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        fullName: z.string().min(2),
+        role: z.enum([
+          "SUPER_ADMIN",
+          "DIRECTOR",
+          "SKILLVERSE_ADMIN",
+          "FACULTY",
+          "COUNSELOR",
+          "ACADEMIC_COORDINATOR",
+        ]),
+        department: z.string().min(2),
+        accessKey: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ["SUPER_ADMIN", "DIRECTOR"]);
+      return SkillverseService.provisionStaffCredential({
+        ...input,
+        actorName: actor.name,
+        actorRole: actor.role,
+      });
+    }),
+
+  revokeStaffCredential: protectedProcedure
+    .input(
+      z.object({
+        email: z.string().email(),
+        status: z.enum(["SUSPENDED", "REVOKED", "ACTIVE"]),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ["SUPER_ADMIN", "DIRECTOR"]);
+      return SkillverseService.revokeStaffCredential({
+        ...input,
+        actorName: actor.name,
+        actorRole: actor.role,
+      });
+    }),
+
+  // =========================================================================
+  // LIVE CLASSROOM & YOUTUBE PIPELINE PROCEDURES
+  // =========================================================================
+
+  listLiveClassSessions: publicProcedure
+    .input(z.object({ batchCode: z.string().optional() }).optional())
+    .query(async ({ input }) => {
+      return SkillverseService.listLiveClassSessions(input?.batchCode);
+    }),
+
+  createOrScheduleLiveClass: protectedProcedure
+    .input(
+      z.object({
+        title: z.string().min(3),
+        subject: z.string().min(2),
+        grade: z.string().min(2),
+        moduleName: z.string().min(2),
+        topic: z.string().min(2),
+        batchCode: z.string().min(2),
+        teacherName: z.string().min(2),
+        scheduledStartTime: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.createOrScheduleLiveClass({
+        ...input,
+        actorName: actor.name,
+      });
+    }),
+
+  startLiveClassSession: protectedProcedure
+    .input(z.object({ sessionCode: z.string().min(3) }))
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.startLiveClassSession({
+        sessionCode: input.sessionCode,
+        actorName: actor.name,
+      });
+    }),
+
+  joinLiveClassSession: publicProcedure
+    .input(
+      z.object({
+        sessionCode: z.string().min(3),
+        enrollmentCode: z.string().min(4),
+        studentName: z.string().min(2),
+      })
+    )
+    .mutation(async ({ input }) => {
+      return SkillverseService.joinLiveClassSession(input);
+    }),
+
+  endLiveClassAndPublishToYouTube: protectedProcedure
+    .input(
+      z.object({
+        sessionCode: z.string().min(3),
+        whiteboardNotesUrl: z.string().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = requireRoles(ctx, ACADEMIC_ROLES);
+      return SkillverseService.endLiveClassAndPublishToYouTube({
+        sessionCode: input.sessionCode,
+        whiteboardNotesUrl: input.whiteboardNotesUrl,
+        actorName: actor.name,
+      });
     }),
 });

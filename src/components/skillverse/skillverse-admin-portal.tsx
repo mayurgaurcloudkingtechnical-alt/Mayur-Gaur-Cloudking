@@ -3,7 +3,13 @@
 import React, { useState, useMemo, Component, type ErrorInfo, type ReactNode } from "react";
 import Link from "next/link";
 import { api as trpc } from "@/lib/trpc/react";
-import type { SkillverseAdmissionStage, SkillverseEnquiryRecord } from "@/server/services/skillverse.service";
+import type {
+  SkillverseAdmissionStage,
+  SkillverseEnquiryRecord,
+  SkillverseCredentialsCard,
+  SkillverseStaffCredentialRecord,
+  SkillverseLiveClassSessionRecord,
+} from "@/server/services/skillverse.service";
 import {
   INITIAL_SKILLVERSE_COURSES,
   INITIAL_ACADEMIC_PACKAGES,
@@ -45,6 +51,14 @@ import {
   Sparkles,
   ExternalLink,
   MessageCircle,
+  Video,
+  Key,
+  Copy,
+  Check,
+  Share2,
+  PlayCircle,
+  Radio,
+  Eye,
 } from "lucide-react";
 
 const STAGES: SkillverseAdmissionStage[] = [
@@ -63,6 +77,8 @@ const STAGES: SkillverseAdmissionStage[] = [
 
 type TabId =
   | "admissions"
+  | "live_studio"
+  | "staff_governance"
   | "students_teacher"
   | "finance_fees"
   | "certificates"
@@ -119,6 +135,32 @@ export function SkillverseAdminPortal() {
   const [newInitialFollowUpDate, setNewInitialFollowUpDate] = useState("");
   const [newDemoDate, setNewDemoDate] = useState("");
 
+  // Instant Admission Credentials Card Modal
+  const [credentialsCardModal, setCredentialsCardModal] = useState<SkillverseCredentialsCard | null>(null);
+  const [copiedCredentials, setCopiedCredentials] = useState(false);
+
+  // Higher Authority Staff Provisioning Modal & Form
+  const [isProvisionStaffOpen, setIsProvisionStaffOpen] = useState(false);
+  const [staffFullName, setStaffFullName] = useState("");
+  const [staffEmail, setStaffEmail] = useState("");
+  const [staffRole, setStaffRole] = useState<
+    "SUPER_ADMIN" | "DIRECTOR" | "SKILLVERSE_ADMIN" | "FACULTY" | "COUNSELOR" | "ACADEMIC_COORDINATOR"
+  >("FACULTY");
+  const [staffDepartment, setStaffDepartment] = useState("Academics & Faculty");
+  const [staffAccessKey, setStaffAccessKey] = useState("");
+
+  // In-Platform Live Studio & YouTube Automation Form
+  const [isScheduleClassOpen, setIsScheduleClassOpen] = useState(false);
+  const [liveTitle, setLiveTitle] = useState("");
+  const [liveSubject, setLiveSubject] = useState("Mathematics Foundation");
+  const [liveGrade, setLiveGrade] = useState("Class 10");
+  const [liveModuleName, setLiveModuleName] = useState("Module 1 - Quadratic Equations");
+  const [liveTopic, setLiveTopic] = useState("Mastering Standard Forms & Factorization");
+  const [liveBatchCode, setLiveBatchCode] = useState("SV-2026-X-A");
+  const [liveTeacherName, setLiveTeacherName] = useState("Senior Math Faculty");
+  const [liveStartTime, setLiveStartTime] = useState("");
+  const [previewYouTubeJob, setPreviewYouTubeJob] = useState<any | null>(null);
+
   // Attendance form state
   const [attEnrollmentCode, setAttEnrollmentCode] = useState("");
   const [attSubject, setAttSubject] = useState("Mathematics & Science Foundation");
@@ -133,6 +175,64 @@ export function SkillverseAdminPortal() {
   const utils = trpc.useUtils();
   const { data, isLoading, error, refetch, isFetching } = trpc.skillverse.getAdminDashboardData.useQuery();
 
+  // Higher Authority Staff mutations
+  const provisionStaffMutation = trpc.skillverse.provisionStaffCredential.useMutation({
+    onSuccess: (res) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      setIsProvisionStaffOpen(false);
+      setStaffFullName("");
+      setStaffEmail("");
+      setStaffAccessKey("");
+      setToastMsg(`Provisioned staff access for ${res.fullName} (${res.email}) as ${res.role}.`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+    onError: (err) => {
+      setToastMsg(`Failed to provision staff: ${err.message}`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  const revokeStaffMutation = trpc.skillverse.revokeStaffCredential.useMutation({
+    onSuccess: (res) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      setToastMsg(`Staff access for ${res.email} updated to ${res.status}.`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+    onError: (err) => {
+      setToastMsg(`Error: ${err.message}`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  // Live Studio & YouTube mutations
+  const scheduleLiveClassMutation = trpc.skillverse.createOrScheduleLiveClass.useMutation({
+    onSuccess: (session) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      setIsScheduleClassOpen(false);
+      setLiveTitle("");
+      setToastMsg(`Live Classroom session ${session.sessionCode} scheduled.`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+    onError: (err) => {
+      setToastMsg(`Error scheduling class: ${err.message}`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
+  const endLiveClassMutation = trpc.skillverse.endLiveClassAndPublishToYouTube.useMutation({
+    onSuccess: (res) => {
+      utils.skillverse.getAdminDashboardData.invalidate();
+      setToastMsg(
+        `Class session ended! YouTube publication package prepared for Channel UCat1xHXxCdog_mWkEBA5jMQ.`
+      );
+      setTimeout(() => setToastMsg(null), 5000);
+    },
+    onError: (err) => {
+      setToastMsg(`Error ending class: ${err.message}`);
+      setTimeout(() => setToastMsg(null), 4000);
+    },
+  });
+
   const updateStageMutation = trpc.skillverse.updateEnquiryStage.useMutation({
     onSuccess: (updated) => {
       utils.skillverse.getAdminDashboardData.invalidate();
@@ -143,6 +243,9 @@ export function SkillverseAdminPortal() {
       );
       if (selectedLeadForDetail && selectedLeadForDetail.referenceNumber === updated.referenceNumber) {
         setSelectedLeadForDetail(updated);
+      }
+      if ((updated as any).credentialsCard) {
+        setCredentialsCardModal((updated as any).credentialsCard);
       }
       setTimeout(() => setToastMsg(null), 4000);
     },
@@ -194,6 +297,9 @@ export function SkillverseAdminPortal() {
       utils.skillverse.getAdminDashboardData.invalidate();
       setSelectedLeadForDetail(updated);
       setFollowUpNoteText("");
+      if ((updated as any).credentialsCard) {
+        setCredentialsCardModal((updated as any).credentialsCard);
+      }
       setToastMsg(`Follow-up note logged for ${updated.referenceNumber}`);
       setTimeout(() => setToastMsg(null), 4000);
     },
@@ -538,6 +644,8 @@ export function SkillverseAdminPortal() {
       <div className="flex flex-wrap gap-2 border-b border-slate-200 pb-3">
         {[
           { id: "admissions", label: "11-Stage Admissions CRM", icon: Users },
+          { id: "live_studio", label: "Live Classroom & YouTube Studio", icon: Video },
+          { id: "staff_governance", label: "Staff Governance & Security", icon: ShieldCheck },
           { id: "students_teacher", label: "Students, Batches & Teacher Portal", icon: GraduationCap },
           { id: "finance_fees", label: "Fee Invoices & Receipts", icon: CreditCard },
           { id: "certificates", label: "Certificates & Verification", icon: Award },
@@ -1188,7 +1296,7 @@ export function SkillverseAdminPortal() {
                       >
                         {INITIAL_SKILLVERSE_COURSES.map((c) => (
                           <option key={c.slug} value={c.slug}>
-                            {c.title} ({c.gradeCategory})
+                            {c.title} ({c.categoryLabel})
                           </option>
                         ))}
                       </select>
@@ -1220,7 +1328,7 @@ export function SkillverseAdminPortal() {
                         <option value="">None (Base Only)</option>
                         {INITIAL_COMPETITIVE_ADDONS.map((a) => (
                           <option key={a.id} value={a.id}>
-                            {a.title} (+₹{a.monthlyAddonPriceInr}/mo)
+                            {a.name} (+₹{a.monthlyAddonPriceInr}/mo)
                           </option>
                         ))}
                       </select>
@@ -1543,6 +1651,326 @@ export function SkillverseAdminPortal() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* TAB: IN-PLATFORM LIVE STUDIO & YOUTUBE PIPELINE */}
+      {activeTab === "live_studio" && (
+        <div className="space-y-6">
+          {/* Studio Header Banner */}
+          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 sm:p-8 text-white border border-indigo-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-rose-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <Radio className="w-3.5 h-3.5 text-rose-400 animate-pulse" /> Native Live Classroom Studio
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 text-xs font-mono">
+                  Zero 3rd-Party Dependencies
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                In-Platform Classroom & YouTube Broadcast Center
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                Conduct live classes directly inside Skillverse with digital whiteboard, WebRTC camera/audio,
+                screen sharing, and automated publishing to the official YouTube Channel (
+                <strong className="text-white font-mono">UCat1xHXxCdog_mWkEBA5jMQ</strong>).
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsScheduleClassOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> Schedule Live Lecture
+              </button>
+              <Link
+                href="/skillverse/live-classroom?role=FACULTY"
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all"
+              >
+                <Video className="w-4 h-4" /> Open Faculty Live Studio
+              </Link>
+            </div>
+          </div>
+
+          {/* YouTube Channel Connected Card */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                <Video className="w-6 h-6" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-sm text-slate-900">Official YouTube Channel Integration</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                    Connected
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5 font-mono">
+                  Channel ID: UCat1xHXxCdog_mWkEBA5jMQ | Auto SEO & Playlist Generator
+                </p>
+              </div>
+            </div>
+            <a
+              href="https://www.youtube.com/channel/UCat1xHXxCdog_mWkEBA5jMQ"
+              target="_blank"
+              rel="noreferrer"
+              className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center gap-2 shadow-sm transition"
+            >
+              <ExternalLink className="w-3.5 h-3.5" /> Visit YouTube Channel
+            </a>
+          </div>
+
+          {/* Sessions List */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-extrabold text-sm text-slate-900">
+                Live Class Sessions & YouTube Queue ({data?.liveSessions?.length || 0})
+              </h3>
+              <span className="text-xs text-slate-500 font-medium">Classes auto-archive with 15+ SEO tags & chapter markers</span>
+            </div>
+
+            {data?.liveSessions && data.liveSessions.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {data.liveSessions.map((session: any) => (
+                  <div
+                    key={session.id}
+                    className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 hover:bg-white transition space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                          session.status === "LIVE"
+                            ? "bg-rose-600 text-white animate-pulse"
+                            : session.status === "SCHEDULED"
+                            ? "bg-blue-100 text-blue-800"
+                            : "bg-emerald-100 text-emerald-800"
+                        }`}
+                      >
+                        {session.status === "LIVE" ? "🔴 Live Now" : session.status}
+                      </span>
+                      <span className="text-[11px] font-mono text-slate-500">{session.sessionCode}</span>
+                    </div>
+
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 leading-snug">{session.topic}</h4>
+                      <p className="text-xs text-slate-600 mt-1">
+                        {session.subject} • {session.grade} • Batch: <strong className="text-slate-800">{session.targetBatchCode}</strong>
+                      </p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">Faculty: {session.facultyName}</p>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span className="text-slate-500 text-[11px]">
+                        {new Date(session.scheduledStartTime).toLocaleString("en-IN", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </span>
+
+                      <div className="flex items-center gap-1.5">
+                        {session.status === "LIVE" ? (
+                          <>
+                            <Link
+                              href={`/skillverse/live-classroom?sessionId=${session.id}&role=FACULTY`}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition"
+                            >
+                              Enter Studio
+                            </Link>
+                            <button
+                              type="button"
+                              onClick={() => endLiveClassMutation.mutate({ sessionCode: session.sessionCode })}
+                              className="px-3 py-1.5 rounded-lg bg-rose-600 text-white font-bold hover:bg-rose-700 transition"
+                            >
+                              End & Publish
+                            </button>
+                          </>
+                        ) : session.status === "SCHEDULED" ? (
+                          <Link
+                            href={`/skillverse/live-classroom?sessionId=${session.id}&role=FACULTY`}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 text-white font-bold hover:bg-blue-700 transition"
+                          >
+                            Launch Studio →
+                          </Link>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const job = (data?.youtubeJobs || []).find((j: any) => j.sessionId === session.id);
+                              setPreviewYouTubeJob({
+                                session,
+                                job: job || {
+                                  videoTitle: `${session.subject}: ${session.topic} | ${session.grade} Complete Masterclass`,
+                                  playlistName: `${session.subject} - ${session.moduleName}`,
+                                  tags: [
+                                    "Skillverse",
+                                    "CBSE 2026",
+                                    "ICSE Foundation",
+                                    session.subject,
+                                    session.topic,
+                                    session.grade,
+                                    "SoftLab Global",
+                                    "Board Exam Prep",
+                                    "Concept Lecture",
+                                    "Live Classroom",
+                                  ],
+                                  description: `Official SLG Skillverse Lecture by ${session.facultyName}.\n\nChapter Breakdown:\n00:00 - Introduction & Key Formulas\n15:00 - Core Concept Explanation\n35:00 - Solved Exemplar Questions\n50:00 - Doubt Q&A & Summary\n\nAdmissions Helpline: +91-9196596975\nWebsite: https://skillverse.softlabglobal.com`,
+                                },
+                              });
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs transition"
+                          >
+                            View YouTube Package
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-400 text-xs">
+                No live classroom sessions recorded yet. Click "Schedule Live Lecture" above to create one.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* TAB: HIGHER AUTHORITY STAFF GOVERNANCE & SECURITY */}
+      {activeTab === "staff_governance" && (
+        <div className="space-y-6">
+          {/* Header Banner */}
+          <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 rounded-3xl p-6 sm:p-8 text-white border border-emerald-800/40 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Super Admin & Director Desk
+                </span>
+                <span className="px-2.5 py-0.5 rounded-full bg-white/10 text-slate-300 text-xs font-mono">
+                  Strict Authorization Governance
+                </span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight">
+                Skillverse Staff Governance & Credential Provisioning
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
+                Strict separation from SoftLab Global: No staff, faculty, or counselor can log into Skillverse
+                unless explicitly provisioned by a <strong>Super Admin</strong> or <strong>Director</strong>.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setIsProvisionStaffOpen(true)}
+              className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Provision New Staff Credential
+            </button>
+          </div>
+
+          {/* Provisioned Staff Table */}
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-xs space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="font-extrabold text-sm text-slate-900">
+                Authorized Staff Roster ({data?.staffCredentials?.length || 0})
+              </h3>
+              <span className="text-xs text-slate-500">Credentials can be instantly provisioned or revoked</span>
+            </div>
+
+            {data?.staffCredentials && data.staffCredentials.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
+                      <th className="py-3 px-3">Staff Member</th>
+                      <th className="py-3 px-3">Role</th>
+                      <th className="py-3 px-3">Department</th>
+                      <th className="py-3 px-3">Provisioned By</th>
+                      <th className="py-3 px-3">Status</th>
+                      <th className="py-3 px-3 text-right">Governance Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {data.staffCredentials.map((staff: any) => (
+                      <tr key={staff.email} className="hover:bg-slate-50/60 transition">
+                        <td className="py-3.5 px-3">
+                          <div className="font-bold text-slate-900">{staff.fullName}</div>
+                          <div className="text-slate-500 text-[11px] font-mono">{staff.email}</div>
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-100 text-blue-800 font-mono text-[10px] font-bold">
+                            {staff.role}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 text-slate-700">{staff.department}</td>
+                        <td className="py-3.5 px-3 text-slate-500 text-[11px]">
+                          {staff.provisionedBy} • {new Date(staff.createdAt).toLocaleDateString("en-IN")}
+                        </td>
+                        <td className="py-3.5 px-3">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              staff.status === "ACTIVE"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : staff.status === "SUSPENDED"
+                                ? "bg-amber-100 text-amber-800"
+                                : "bg-rose-100 text-rose-800"
+                            }`}
+                          >
+                            {staff.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-3 text-right space-x-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(
+                                `Skillverse Staff Login Access:\nPortal: https://skillverse.softlabglobal.com/skillverse/staff-login\nEmail: ${staff.email}\nTemporary Password: ${staff.temporaryPassword || "SV-STAFF-PASS-2026"}`
+                              );
+                              setToastMsg(`Copied login credentials for ${staff.fullName} to clipboard.`);
+                              setTimeout(() => setToastMsg(null), 3500);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] transition"
+                          >
+                            Copy Access
+                          </button>
+                          {staff.status === "ACTIVE" ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (confirm(`Revoke staff credentials for ${staff.fullName} (${staff.email})?`)) {
+                                  revokeStaffMutation.mutate({ email: staff.email, status: "REVOKED" });
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[11px] transition"
+                            >
+                              Revoke Access
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                revokeStaffMutation.mutate({ email: staff.email, status: "ACTIVE" });
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[11px] transition"
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-slate-400 text-xs">
+                No staff credentials provisioned yet. Click "Provision New Staff Credential" to grant authorized access.
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -2148,6 +2576,484 @@ export function SkillverseAdminPortal() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: INSTANT ADMISSION CREDENTIALS CARD                                */}
+      {/* ========================================================================= */}
+      {credentialsCardModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-xl w-full p-6 sm:p-8 space-y-5 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center shadow-md">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">Official Admission Credentials Card</h3>
+                  <p className="text-xs text-slate-500">Generated instantly upon Skillverse admission confirmation</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCredentialsCardModal(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Student Credential Box */}
+            <div className="p-4 rounded-2xl bg-slate-900 text-white space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  Student LMS Login Credentials
+                </span>
+                <span className="text-[11px] font-mono text-slate-400">Batch: {credentialsCardModal.batchCode}</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+                  <span className="text-slate-400 text-[10px] block">Student Enrollment Code (ID)</span>
+                  <span className="text-base font-mono font-black text-emerald-300 block select-all">
+                    {credentialsCardModal.enrollmentCode}
+                  </span>
+                </div>
+                <div className="bg-white/10 rounded-xl p-3 border border-white/10">
+                  <span className="text-slate-400 text-[10px] block">Instant Student Password</span>
+                  <span className="text-base font-mono font-black text-amber-300 block select-all">
+                    {credentialsCardModal.studentPassword}
+                  </span>
+                </div>
+              </div>
+              <div className="text-[11px] text-slate-300 flex items-center justify-between pt-1">
+                <span>Student Name: <strong className="text-white">{credentialsCardModal.studentName}</strong></span>
+                <Link
+                  href="/skillverse/student-login"
+                  target="_blank"
+                  className="text-emerald-400 hover:underline font-bold inline-flex items-center gap-1"
+                >
+                  Student Portal <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Parent Credential Box */}
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 space-y-3 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800">
+                  Parent / Guardian Portal Credentials
+                </span>
+                <span className="text-[10px] font-bold text-emerald-700">DPDP Consent: VERIFIED</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="bg-white rounded-xl p-3 border border-emerald-200">
+                  <span className="text-slate-400 text-[10px] block">Registered Parent Mobile</span>
+                  <span className="text-sm font-semibold text-slate-900 block select-all">
+                    {credentialsCardModal.parentPhone}
+                  </span>
+                </div>
+                <div className="bg-white rounded-xl p-3 border border-emerald-200">
+                  <span className="text-slate-400 text-[10px] block">Family Access PIN</span>
+                  <span className="text-base font-mono font-black text-emerald-700 block select-all">
+                    {credentialsCardModal.parentAccessPin}
+                  </span>
+                </div>
+              </div>
+              <div className="text-[11px] text-emerald-900 flex items-center justify-between pt-1">
+                <span>Guardian: <strong>{credentialsCardModal.parentName}</strong></span>
+                <Link
+                  href="/skillverse/parent-login"
+                  target="_blank"
+                  className="text-emerald-700 hover:underline font-bold inline-flex items-center gap-1"
+                >
+                  Parent Portal <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+              <a
+                href={`https://wa.me/${credentialsCardModal.parentPhone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                  `🌟 Welcome to SLG SKILLVERSE!\n\nDear ${credentialsCardModal.parentName},\nWe are pleased to confirm admission for ${credentialsCardModal.studentName} (Batch: ${credentialsCardModal.batchCode}).\n\n📚 STUDENT LMS LOGIN:\n• Portal: https://skillverse.softlabglobal.com/skillverse/student-login\n• Enrollment Code: ${credentialsCardModal.enrollmentCode}\n• Password: ${credentialsCardModal.studentPassword}\n\n👨‍👩‍👧 PARENT PROGRESS PORTAL:\n• Portal: https://skillverse.softlabglobal.com/skillverse/parent-login\n• Linked Mobile: ${credentialsCardModal.parentPhone}\n• Family PIN: ${credentialsCardModal.parentAccessPin}\n\nDedicated Helpline: +91-9196596975\nThank you for choosing Skillverse — Powered by SoftLab Global.`
+                )}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center justify-center gap-2 shadow-sm transition"
+              >
+                <MessageCircle className="w-4 h-4" /> 1-Click WhatsApp Dispatch
+              </a>
+
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `SLG SKILLVERSE ADMISSION CREDENTIALS\n\nStudent: ${credentialsCardModal.studentName}\nBatch: ${credentialsCardModal.batchCode}\n\nSTUDENT LOGIN:\nEnrollment Code: ${credentialsCardModal.enrollmentCode}\nPassword: ${credentialsCardModal.studentPassword}\nURL: https://skillverse.softlabglobal.com/skillverse/student-login\n\nPARENT PORTAL:\nGuardian: ${credentialsCardModal.parentName}\nPhone: ${credentialsCardModal.parentPhone}\nAccess PIN: ${credentialsCardModal.parentAccessPin}\nURL: https://skillverse.softlabglobal.com/skillverse/parent-login\n\nHelpline: +91-9196596975`
+                  );
+                  setCopiedCredentials(true);
+                  setTimeout(() => setCopiedCredentials(false), 3000);
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold flex items-center justify-center gap-2 transition"
+              >
+                {copiedCredentials ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copiedCredentials ? "Copied to Clipboard!" : "Copy Full Details"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: PROVISION NEW STAFF CREDENTIAL                                     */}
+      {/* ========================================================================= */}
+      {isProvisionStaffOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Provision Staff Access</h3>
+                <p className="text-xs text-slate-500">Only Super Admins & Directors can authorize Skillverse staff</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsProvisionStaffOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                provisionStaffMutation.mutate({
+                  fullName: staffFullName,
+                  email: staffEmail,
+                  role: staffRole,
+                  department: staffDepartment,
+                  accessKey: staffAccessKey || undefined,
+                });
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Dr. Rajesh Kumar"
+                  value={staffFullName}
+                  onChange={(e) => setStaffFullName(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Official Email Address *</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="e.g. rajesh.kumar@softlabglobal.com"
+                  value={staffEmail}
+                  onChange={(e) => setStaffEmail(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Assigned Role *</label>
+                  <select
+                    value={staffRole}
+                    onChange={(e) => setStaffRole(e.target.value as any)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white"
+                  >
+                    <option value="FACULTY">Faculty / Teacher</option>
+                    <option value="COUNSELOR">Admissions Counselor</option>
+                    <option value="ACADEMIC_COORDINATOR">Academic Coordinator</option>
+                    <option value="SKILLVERSE_ADMIN">Skillverse Admin</option>
+                    <option value="DIRECTOR">Director</option>
+                    <option value="SUPER_ADMIN">Super Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Department *</label>
+                  <input
+                    type="text"
+                    required
+                    value={staffDepartment}
+                    onChange={(e) => setStaffDepartment(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Custom Access Key <span className="text-slate-400 font-normal">(Optional, auto-generated if blank)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. SV-STAFF-PASS-2026"
+                  value={staffAccessKey}
+                  onChange={(e) => setStaffAccessKey(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsProvisionStaffOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={provisionStaffMutation.isPending}
+                  className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold"
+                >
+                  {provisionStaffMutation.isPending ? "Authorizing..." : "Authorize & Issue Access"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: SCHEDULE LIVE LECTURE                                              */}
+      {/* ========================================================================= */}
+      {isScheduleClassOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-lg w-full p-6 sm:p-8 space-y-5 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-black text-slate-900">Schedule Live Class Lecture</h3>
+                <p className="text-xs text-slate-500">In-platform live studio with automated YouTube publishing</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScheduleClassOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                scheduleLiveClassMutation.mutate({
+                  title: liveTitle || `${liveSubject}: ${liveTopic}`,
+                  subject: liveSubject,
+                  grade: liveGrade,
+                  moduleName: liveModuleName,
+                  topic: liveTopic,
+                  batchCode: liveBatchCode,
+                  teacherName: liveTeacherName,
+                  scheduledStartTime: liveStartTime || new Date().toISOString(),
+                });
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Lecture Topic *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Mastering Quadratic Equations & Factorization"
+                  value={liveTopic}
+                  onChange={(e) => setLiveTopic(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Subject *</label>
+                  <input
+                    type="text"
+                    required
+                    value={liveSubject}
+                    onChange={(e) => setLiveSubject(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Class / Grade *</label>
+                  <select
+                    value={liveGrade}
+                    onChange={(e) => setLiveGrade(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 bg-white"
+                  >
+                    <option value="Class 8">Class 8</option>
+                    <option value="Class 9">Class 9</option>
+                    <option value="Class 10">Class 10</option>
+                    <option value="Class 11">Class 11</option>
+                    <option value="Class 12">Class 12</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Module Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={liveModuleName}
+                  onChange={(e) => setLiveModuleName(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Batch Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={liveBatchCode}
+                    onChange={(e) => setLiveBatchCode(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300 font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">Faculty Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={liveTeacherName}
+                    onChange={(e) => setLiveTeacherName(e.target.value)}
+                    className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Scheduled Start Time</label>
+                <input
+                  type="datetime-local"
+                  value={liveStartTime}
+                  onChange={(e) => setLiveStartTime(e.target.value)}
+                  className="w-full px-3 py-2.5 rounded-xl border border-slate-300"
+                />
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsScheduleClassOpen(false)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={scheduleLiveClassMutation.isPending}
+                  className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold"
+                >
+                  {scheduleLiveClassMutation.isPending ? "Scheduling..." : "Schedule Live Lecture"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL: PREVIEW YOUTUBE JOB & SEO PACKAGE                                  */}
+      {/* ========================================================================= */}
+      {previewYouTubeJob && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl border border-slate-200 max-w-2xl w-full p-6 sm:p-8 space-y-5 shadow-2xl my-8">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center">
+                  <Video className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-black text-slate-900">YouTube SEO & Metadata Package</h3>
+                  <p className="text-xs text-slate-500 font-mono">Channel: UCat1xHXxCdog_mWkEBA5jMQ</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewYouTubeJob(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Generated SEO Title
+                </span>
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 font-bold text-slate-900 select-all">
+                  {previewYouTubeJob.job.videoTitle}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Target Playlist
+                </span>
+                <div className="p-2.5 rounded-xl bg-indigo-50 border border-indigo-200 font-semibold text-indigo-900 font-mono">
+                  📂 {previewYouTubeJob.job.playlistName}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  15+ SEO Keyword Tags
+                </span>
+                <div className="flex flex-wrap gap-1.5 p-3 rounded-xl bg-slate-50 border border-slate-200">
+                  {previewYouTubeJob.job.tags.map((t: string, i: number) => (
+                    <span key={i} className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 font-medium">
+                      #{t}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                  Structured Chapter Description
+                </span>
+                <pre className="p-3 rounded-xl bg-slate-900 text-slate-200 font-mono text-[11px] whitespace-pre-wrap max-h-40 overflow-y-auto">
+                  {previewYouTubeJob.job.description}
+                </pre>
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(
+                    `TITLE:\n${previewYouTubeJob.job.videoTitle}\n\nPLAYLIST:\n${previewYouTubeJob.job.playlistName}\n\nTAGS:\n${previewYouTubeJob.job.tags.join(", ")}\n\nDESCRIPTION:\n${previewYouTubeJob.job.description}`
+                  );
+                  setToastMsg("Copied YouTube SEO package to clipboard!");
+                  setTimeout(() => setToastMsg(null), 3000);
+                }}
+                className="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold flex items-center gap-1.5"
+              >
+                <Copy className="w-3.5 h-3.5" /> Copy SEO Package
+              </button>
+              <button
+                type="button"
+                onClick={() => setPreviewYouTubeJob(null)}
+                className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
