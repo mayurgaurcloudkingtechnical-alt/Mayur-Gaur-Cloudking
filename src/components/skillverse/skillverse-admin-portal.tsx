@@ -2514,11 +2514,20 @@ export function SkillverseAdminPortal({
               />
             </div>
             <div>
-              <label className="block font-bold text-slate-700 mb-1">Contact Phone</label>
+              <label className="block font-bold text-slate-700 mb-1">Admissions Phone (Main)</label>
               <input
                 type="text"
                 value={currentCms.contactPhone}
                 onChange={(e) => setCmsDraft({ ...currentCms, contactPhone: e.target.value })}
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300"
+              />
+            </div>
+            <div>
+              <label className="block font-bold text-slate-700 mb-1">Counselor Desk Phone</label>
+              <input
+                type="text"
+                value={currentCms.counselorPhone || "+91 91965 96979"}
+                onChange={(e) => setCmsDraft({ ...currentCms, counselorPhone: e.target.value })}
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-300"
               />
             </div>

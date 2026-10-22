@@ -813,9 +813,45 @@ export function SkillverseHomeView({
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-slate-900">Admissions Helpline & WhatsApp:</strong>
-                  {cms.contactPhone}
+                <div className="space-y-1">
+                  <div>
+                    <strong className="block text-slate-900">Admissions Helpline & WhatsApp (Main):</strong>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="tel:+919196596975"
+                        className="font-bold text-slate-900 hover:text-emerald-600 transition-colors"
+                      >
+                        {cms.contactPhone || "+91 91965 96975"}
+                      </a>
+                      <a
+                        href="https://wa.me/919196596975"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 hover:bg-emerald-200 transition-colors"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  </div>
+                  <div className="pt-1 border-t border-slate-200/60">
+                    <strong className="block text-slate-700 text-[11px]">Academic Counselor Desk:</strong>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="tel:+919196596979"
+                        className="font-semibold text-slate-800 hover:text-blue-600 transition-colors"
+                      >
+                        {cms.counselorPhone || "+91 91965 96979"}
+                      </a>
+                      <a
+                        href="https://wa.me/919196596979"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors"
+                      >
+                        Counselor WA
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
               <div className="flex items-start gap-3">

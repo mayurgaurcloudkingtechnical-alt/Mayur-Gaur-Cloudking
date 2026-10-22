@@ -199,23 +199,44 @@ export default async function SkillverseDynamicSlugPage({
               </div>
               <div className="flex items-start gap-3">
                 <Phone className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="block text-slate-900">Phone & WhatsApp:</strong>
-                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                    <a
-                      href="tel:+919196596975"
-                      className="text-blue-700 font-bold hover:underline"
-                    >
-                      {catalogData.cms.contactPhone}
-                    </a>
-                    <a
-                      href="https://wa.me/919196596975"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#15803D] hover:bg-emerald-200 text-xs font-bold inline-flex items-center gap-1 transition-colors"
-                    >
-                      WhatsApp Us
-                    </a>
+                <div className="space-y-1">
+                  <div>
+                    <strong className="block text-slate-900">Admissions Helpline & WhatsApp (Main):</strong>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <a
+                        href="tel:+919196596975"
+                        className="text-blue-700 font-bold hover:underline"
+                      >
+                        {catalogData.cms.contactPhone || "+91 91965 96975"}
+                      </a>
+                      <a
+                        href="https://wa.me/919196596975"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-[#15803D] hover:bg-emerald-200 text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                      >
+                        WhatsApp Us
+                      </a>
+                    </div>
+                  </div>
+                  <div className="pt-1 border-t border-slate-200/60">
+                    <strong className="block text-slate-700 text-xs">Academic Counselor Desk:</strong>
+                    <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                      <a
+                        href="tel:+919196596979"
+                        className="text-slate-800 font-semibold hover:underline"
+                      >
+                        {catalogData.cms.counselorPhone || "+91 91965 96979"}
+                      </a>
+                      <a
+                        href="https://wa.me/919196596979"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 hover:bg-blue-200 text-[11px] font-bold inline-flex items-center gap-1 transition-colors"
+                      >
+                        Counselor WA
+                      </a>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -347,6 +347,7 @@ export const skillverseRouter = router({
         announcementBanner: z.string(),
         contactAddress: z.string(),
         contactPhone: z.string(),
+        counselorPhone: z.string().optional(),
         contactWhatsapp: z.string(),
         contactEmail: z.string().email(),
         supportHours: z.string(),

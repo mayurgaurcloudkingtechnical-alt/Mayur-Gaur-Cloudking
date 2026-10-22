@@ -122,8 +122,17 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             <a
               href="tel:+919196596975"
               className="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-bold ml-1 transition-colors text-[11px]"
+              title="Main Admissions Helpline (+91-9196596975)"
             >
               <PhoneCall className="w-3 h-3 text-emerald-400" /> +91-9196596975
+            </a>
+            <span className="hidden xl:inline text-slate-500">|</span>
+            <a
+              href="tel:+919196596979"
+              className="hidden xl:inline-flex items-center gap-1 text-cyan-300 hover:text-white font-semibold transition-colors text-[11px]"
+              title="Academic Counselor Desk (+91-9196596979)"
+            >
+              Counselor: +91-9196596979
             </a>
           </div>
 
@@ -743,12 +752,22 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                 <p>{SKILLVERSE_BRAND.defaultContact.address}</p>
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span>
-                    Phone:{" "}
+                    Admissions Helpline (Main):{" "}
                     <a
                       href="tel:+919196596975"
                       className="text-white hover:text-emerald-300 font-bold underline transition-colors"
                     >
                       +91 91965 96975
+                    </a>
+                  </span>
+                  <span className="text-slate-600">|</span>
+                  <span>
+                    Counselor Desk:{" "}
+                    <a
+                      href="tel:+919196596979"
+                      className="text-cyan-300 hover:text-white font-bold underline transition-colors"
+                    >
+                      +91 91965 96979
                     </a>
                   </span>
                   <span className="text-slate-600">|</span>

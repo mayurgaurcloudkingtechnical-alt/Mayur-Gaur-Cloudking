@@ -290,6 +290,7 @@ export interface SkillverseCmsSettings {
   announcementBanner: string;
   contactAddress: string;
   contactPhone: string;
+  counselorPhone?: string;
   contactWhatsapp: string;
   contactEmail: string;
   supportHours: string;
@@ -403,6 +404,7 @@ export class SkillverseService {
           "Admissions Open for 2026–27 Academic & FutureReady Batches (Classes 8 to 12) | Free Diagnostic Assessment & Free Demo Class.",
         contactAddress: SKILLVERSE_BRAND.defaultContact.address,
         contactPhone: SKILLVERSE_BRAND.defaultContact.phone,
+        counselorPhone: SKILLVERSE_BRAND.defaultContact.counselorPhone,
         contactWhatsapp: SKILLVERSE_BRAND.defaultContact.whatsapp,
         contactEmail: SKILLVERSE_BRAND.defaultContact.email,
         supportHours: SKILLVERSE_BRAND.defaultContact.supportHours,

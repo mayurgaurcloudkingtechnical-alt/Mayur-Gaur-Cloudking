@@ -506,12 +506,23 @@ export function SkillverseEnquiryModal() {
                     >
                       Skip for now & browse website →
                     </button>
-                    <a
-                      href="tel:+919196596975"
-                      className="text-blue-600 font-bold hover:underline inline-flex items-center gap-1"
-                    >
-                      <PhoneCall className="w-3.5 h-3.5" /> Helpline: +91 91965 96975
-                    </a>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href="tel:+919196596975"
+                        className="text-blue-600 font-bold hover:underline inline-flex items-center gap-1"
+                        title="Main Admissions Helpline"
+                      >
+                        <PhoneCall className="w-3.5 h-3.5" /> +91 91965 96975
+                      </a>
+                      <span className="text-slate-300">|</span>
+                      <a
+                        href="tel:+919196596979"
+                        className="text-emerald-700 font-semibold hover:underline inline-flex items-center gap-1"
+                        title="Counselor Desk"
+                      >
+                        Counselor: 9196596979
+                      </a>
+                    </div>
                   </div>
                 </form>
               )}
