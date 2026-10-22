@@ -3,6 +3,7 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
+import { crmEventBus } from "./crm-event-bus.service";
 import {
   LeadSource,
   LeadStatus,
@@ -276,23 +277,27 @@ export class CrmLeadService {
     const andConditions: Prisma.LeadWhereInput[] = [];
 
     if (user.roleCode === UserRoleCode.TELECALLER) {
-      // Telecallers only see leads assigned to them or created by them
+      // Telecallers see leads assigned to them, created by them, or handled/interacted with by them
       andConditions.push({
         OR: [
           { assignedToId: user.id },
           { assignedCounselorId: user.id },
           { assignedTelecallerId: user.id },
           { createdById: user.id },
+          { lastHandledById: user.id },
+          { activities: { some: { userId: user.id } } },
         ],
       });
     } else if (!hasReadAll) {
-      // Counselors only see leads assigned to them or created by them (new counselors get a blank/clean CRM)
+      // Counselors see leads assigned to them, created by them, or handled/interacted with by them
       andConditions.push({
         OR: [
           { assignedToId: user.id },
           { assignedCounselorId: user.id },
           { assignedTelecallerId: user.id },
           { createdById: user.id },
+          { lastHandledById: user.id },
+          { activities: { some: { userId: user.id } } },
         ],
       });
     } else if (input.assignedToId) {
@@ -639,6 +644,14 @@ export class CrmLeadService {
     });
 
     if (existing) {
+      // Fix ownership for the active counselor/telecaller who re-engaged the lead
+      const updatedCounselorId =
+        user.roleCode === UserRoleCode.COUNSELOR ? user.id : existing.assignedCounselorId;
+      const updatedTelecallerId =
+        user.roleCode === UserRoleCode.TELECALLER ? user.id : existing.assignedTelecallerId;
+      const updatedAssignedToId =
+        existing.assignedToId || user.id;
+
       const updatedNotes = input.notes
         ? `${existing.notes || ""}\n[Manual Re-inquiry by ${user.firstName} ${user.lastName} on ${new Date().toISOString()}]: ${input.notes}`.trim()
         : existing.notes;
@@ -651,6 +664,10 @@ export class CrmLeadService {
           city: input.city || existing.city,
           qualification: input.qualification || existing.qualification,
           nextFollowUp: input.nextFollowUp || existing.nextFollowUp,
+          assignedToId: updatedAssignedToId,
+          assignedCounselorId: updatedCounselorId,
+          assignedTelecallerId: updatedTelecallerId,
+          lastHandledById: user.id,
         },
         include: {
           course: { select: { id: true, title: true } },
@@ -664,16 +681,38 @@ export class CrmLeadService {
           userId: user.id,
           activityType: "NOTE_ADDED",
           disposition: "DUPLICATE_UPDATED",
-          notes: `Updated lead via manual entry by ${user.firstName} ${user.lastName}.`,
+          notes: `Updated lead via manual entry by ${user.firstName} ${user.lastName} (${user.roleCode}). Re-assigned to counselor/telecaller desk.`,
         },
       });
 
-      return { lead: updated, isNew: false };
+      // Publish Real-Time Event
+      crmEventBus.publish({
+        type: "LEAD_UPDATED",
+        leadId: existing.id,
+        actorId: user.id,
+        actorName: `${user.firstName} ${user.lastName}`.trim(),
+        recipientUserIds: [
+          ...(updatedAssignedToId ? [updatedAssignedToId] : []),
+          ...(updatedCounselorId ? [updatedCounselorId] : []),
+          ...(updatedTelecallerId ? [updatedTelecallerId] : []),
+          user.id,
+        ],
+        payload: {
+          leadId: existing.id,
+          fullName: existing.fullName,
+          phone: cleanPhone,
+          status: updated.status,
+          duplicateUpdated: true,
+        },
+      });
+
+      return { lead: updated, isNew: false, duplicateUpdated: true };
     }
 
     const assignedToId = input.assignedToId || user.id;
-    const assignedCounselorId = input.assignedCounselorId || (user.roleCode === "COUNSELOR" ? user.id : null);
-    const assignedTelecallerId = input.assignedTelecallerId || (user.roleCode === "TELECALLER" ? user.id : null);
+    const assignedCounselorId = input.assignedCounselorId || (user.roleCode === UserRoleCode.COUNSELOR ? user.id : null);
+    const assignedTelecallerId = input.assignedTelecallerId || (user.roleCode === UserRoleCode.TELECALLER ? user.id : null);
+    const captureMethod = user.roleCode === UserRoleCode.TELECALLER ? "MANUAL_TELECALLER" : "MANUAL_COUNSELOR";
 
     const lead = await db.lead.create({
       data: {
@@ -692,6 +731,8 @@ export class CrmLeadService {
         assignedTelecallerId,
         nextFollowUp: input.nextFollowUp || null,
         createdById: user.id,
+        lastHandledById: user.id,
+        captureMethod,
       },
       include: {
         course: { select: { id: true, title: true } },
@@ -715,6 +756,29 @@ export class CrmLeadService {
       resourceType: "Lead",
       resourceId: lead.id,
       newData: { email: cleanEmail, phone: cleanPhone, source: lead.source },
+    });
+
+    // Publish Real-Time Event
+    crmEventBus.publish({
+      type: "LEAD_CREATED",
+      leadId: lead.id,
+      actorId: user.id,
+      actorName: `${user.firstName} ${user.lastName}`.trim(),
+      recipientUserIds: [
+        ...(assignedToId ? [assignedToId] : []),
+        ...(assignedCounselorId ? [assignedCounselorId] : []),
+        ...(assignedTelecallerId ? [assignedTelecallerId] : []),
+        user.id,
+      ],
+      payload: {
+        leadId: lead.id,
+        fullName: lead.fullName,
+        phone: cleanPhone,
+        status: lead.status,
+        source: lead.source,
+        captureMethod,
+        isNew: true,
+      },
     });
 
     return { lead, isNew: true };

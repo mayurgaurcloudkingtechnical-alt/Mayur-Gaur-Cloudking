@@ -62,6 +62,8 @@ export function CreateLeadDialog({
   // Bulk Upload State
   const [csvText, setCsvText] = useState("");
   const [bulkFeedback, setBulkFeedback] = useState<string | null>(null);
+  const [rowErrors, setRowErrors] = useState<Array<{ row: number; reason: string }>>([]);
+  const [selectedFileName, setSelectedFileName] = useState<string>("");
 
   // Instant Action State
   const [instantLead, setInstantLead] = useState<LeadActionTarget | null>(null);
@@ -110,13 +112,17 @@ export function CreateLeadDialog({
   });
 
   const bulkMutation = api.crm.bulkCreateLeads.useMutation({
-    onSuccess: (res) => {
+    onSuccess: (res: any) => {
       utils.crm.listLeads.invalidate();
       utils.crm.getStats.invalidate();
-      setBulkFeedback(`Successfully imported ${res.count} leads into your pipeline!`);
+      setRowErrors(res.rowErrors || []);
+      const summaryMsg = `Batch [${res.batchCode}]: Created ${res.createdCount} new lead(s), updated ${res.updatedCount} duplicate(s)${
+        res.failedCount > 0 ? `, ${res.failedCount} failed row(s)` : ""
+      }.`;
+      setBulkFeedback(summaryMsg);
       setCsvText("");
 
-      if (res.leads && res.leads.length > 0) {
+      if (res.leads && res.leads.length > 0 && res.failedCount === 0) {
         const firstLead = res.leads[0];
         const actionTarget: LeadActionTarget = {
           id: firstLead.id,
@@ -136,6 +142,20 @@ export function CreateLeadDialog({
       setErrorMsg(err.message || "Failed to bulk import leads.");
     },
   });
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSelectedFileName(file.name);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        setCsvText(text);
+      }
+    };
+    reader.readAsText(file);
+  };
 
   const handleSubmitSingle = (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +231,10 @@ export function CreateLeadDialog({
       return;
     }
 
-    bulkMutation.mutate({ leads: leadsToImport });
+    bulkMutation.mutate({
+      fileName: selectedFileName || "batch_upload.csv",
+      leads: leadsToImport,
+    });
   };
 
   const handleProceedApplication = (lead: LeadActionTarget) => {
@@ -428,11 +451,28 @@ export function CreateLeadDialog({
           ) : (
             /* Bulk CSV Import Tab */
             <form onSubmit={handleBulkSubmit} className="space-y-3 pt-1">
-              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-1">
-                <div className="font-bold flex items-center gap-1.5 text-slate-900">
-                  <Upload className="w-4 h-4 text-emerald-600" />
-                  <span>Paste CSV or Tabular Lead List</span>
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="font-bold flex items-center gap-1.5 text-slate-900">
+                    <Upload className="w-4 h-4 text-emerald-600" />
+                    <span>Upload CSV File or Paste Rows</span>
+                  </div>
+                  <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 shadow-xs">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>{selectedFileName ? "Change File" : "Choose File"}</span>
+                    <input
+                      type="file"
+                      accept=".csv,.txt"
+                      onChange={handleFileChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
+                {selectedFileName && (
+                  <div className="text-[11px] text-emerald-700 font-medium">
+                    Loaded file: {selectedFileName}
+                  </div>
+                )}
                 <p className="text-[11px] text-slate-500">
                   Format: <code>Candidate Name, 10-Digit Phone, Email, Course Title, City</code>
                 </p>
@@ -448,6 +488,15 @@ export function CreateLeadDialog({
                 onChange={(e) => setCsvText(e.target.value)}
                 className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
+
+              {rowErrors.length > 0 && (
+                <div className="max-h-28 overflow-y-auto rounded-lg bg-red-50 p-2 text-[11px] text-red-700 border border-red-200 space-y-1">
+                  <div className="font-bold">Failed Rows ({rowErrors.length}):</div>
+                  {rowErrors.map((err, idx) => (
+                    <div key={idx}>Row {err.row}: {err.reason}</div>
+                  ))}
+                </div>
+              )}
 
               <DialogFooter className="pt-2">
                 <Button

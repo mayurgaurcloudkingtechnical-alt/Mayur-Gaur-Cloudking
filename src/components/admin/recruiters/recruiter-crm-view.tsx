@@ -39,6 +39,7 @@ import {
   MapPin,
   Globe,
   Sliders,
+  Share2,
 } from "lucide-react";
 import { JobDriveStatus, JobType, PlacementApplicationStatus } from "@prisma/client";
 import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";

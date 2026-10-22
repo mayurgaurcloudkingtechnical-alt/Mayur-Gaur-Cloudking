@@ -40,6 +40,7 @@ import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dial
 import { LeadAutoConnectDialog } from "./lead-auto-connect-dialog";
 import { LeadQualificationDialog } from "./lead-qualification-dialog";
 import { ShieldCheck } from "lucide-react";
+import { formatISTDateTime, formatISTDate } from "@/lib/utils/date-formatter";
 
 interface CounselorLeadsViewProps {
   basePath?: string;
@@ -135,6 +136,27 @@ export function CounselorLeadsView({
       refetchOnWindowFocus: true,
     }
   );
+
+  // Real-time Server-Sent Events (SSE) synchronization
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource("/api/crm/live-events");
+      eventSource.addEventListener("crm_event", () => {
+        refetch();
+        utils.crm.getStats.invalidate();
+      });
+    } catch {
+      // Fallback relies on refetchInterval
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [refetch, utils]);
 
   const leads = data?.leads || [];
   const pagination = data?.pagination;
@@ -608,11 +630,7 @@ export function CounselorLeadsView({
                           <div className="font-bold text-slate-900">{lead.fullName}</div>
                           <div className="text-[11px] text-slate-400">
                             {lead.city ? `${lead.city} • ` : ""}
-                            {new Date(lead.createdAt).toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                              year: "numeric",
-                            })}
+                            {formatISTDateTime(lead.createdAt)}
                           </div>
                         </td>
                         <td className="py-3 px-3">
@@ -673,10 +691,7 @@ export function CounselorLeadsView({
                           {lead.nextFollowUp ? (
                             <span className="flex items-center gap-1 text-[11px]">
                               <Clock className="h-3 w-3 text-amber-600" />
-                              {new Date(lead.nextFollowUp).toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                              })}
+                              {formatISTDate(lead.nextFollowUp)}
                             </span>
                           ) : (
                             <span className="text-slate-400 text-[11px]">None scheduled</span>

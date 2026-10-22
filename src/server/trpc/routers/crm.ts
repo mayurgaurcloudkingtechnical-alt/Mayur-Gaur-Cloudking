@@ -1482,6 +1482,7 @@ export const crmRouter = router({
 
   /**
    * Bulk upload/create leads from CSV or dataset for counselor / telecaller.
+   * Tracks batch records, duplicates, errors, ownership, and dispatches SSE events.
    */
   bulkCreateLeads: requireRoleProcedure([
     UserRoleCode.SUPER_ADMIN,
@@ -1492,6 +1493,9 @@ export const crmRouter = router({
   ])
     .input(
       z.object({
+        fileName: z.string().optional(),
+        campaignName: z.string().optional(),
+        source: z.nativeEnum(LeadSource).optional(),
         leads: z.array(
           z.object({
             fullName: z.string().min(1),
@@ -1506,41 +1510,72 @@ export const crmRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      const createdLeads: any[] = [];
-      for (const item of input.leads) {
-        const cleanPhone = item.phone.replace(/\D/g, "").slice(-10);
-        if (cleanPhone.length !== 10) continue;
+      const result = await CrmIngestionService.ingestBulkLeads(asAuthUser(ctx.user), {
+        fileName: input.fileName,
+        campaignName: input.campaignName,
+        source: input.source,
+        leads: input.leads,
+      });
 
-        let interestedCourseId: string | undefined = undefined;
-        if (item.courseName) {
-          const matchedCourse = await db.course.findFirst({
-            where: {
-              OR: [
-                { title: { contains: item.courseName, mode: "insensitive" } },
-                { courseCode: { contains: item.courseName, mode: "insensitive" } },
-              ],
+      return {
+        count: result.createdCount + result.updatedCount,
+        createdCount: result.createdCount,
+        updatedCount: result.updatedCount,
+        failedCount: result.failedCount,
+        batchId: result.batchId,
+        batchCode: result.batchCode,
+        rowErrors: result.rowErrors,
+        leads: [],
+      };
+    }),
+
+  /**
+   * Lists lead import batches uploaded by or visible to current user
+   */
+  listImportBatches: requireRoleProcedure(crmRoles)
+    .input(
+      z
+        .object({
+          page: z.number().int().min(1).default(1),
+          limit: z.number().int().min(1).max(50).default(20),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const page = input?.page || 1;
+      const limit = input?.limit || 20;
+      const authUser = asAuthUser(ctx.user);
+      const hasReadAll = canReadAllLeads(authUser);
+
+      const where: any = hasReadAll ? {} : { uploaderId: ctx.user.id };
+
+      const [total, batches] = await Promise.all([
+        db.leadImportBatch.count({ where }),
+        db.leadImportBatch.findMany({
+          where,
+          orderBy: { startedAt: "desc" },
+          skip: (page - 1) * limit,
+          take: limit,
+          include: {
+            uploader: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                roleCode: true,
+              },
             },
-          });
-          if (matchedCourse) interestedCourseId = matchedCourse.id;
-        }
+          },
+        }),
+      ]);
 
-        try {
-          const lead = await CrmLeadService.createLead(asAuthUser(ctx.user), {
-            fullName: item.fullName.trim(),
-            phone: cleanPhone,
-            email: item.email?.trim() || undefined,
-            city: item.city?.trim() || "Prayagraj",
-            interestedCourseId,
-            source: item.source || LeadSource.BULK_UPLOAD,
-            notes: item.notes?.trim() || `Bulk imported by ${ctx.user.firstName}`,
-            assignedToId: ctx.user.id,
-          });
-          createdLeads.push(lead.lead);
-        } catch {
-          // Continue with next lead if duplicate or validation error
-        }
-      }
-      return { count: createdLeads.length, leads: createdLeads };
+      return {
+        batches,
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      };
     }),
 
   /**

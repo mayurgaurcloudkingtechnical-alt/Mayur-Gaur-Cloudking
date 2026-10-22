@@ -1,6 +1,7 @@
 import { db } from "@/server/db/client";
 import { UserRoleCode } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
+import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 
 export interface LogCallInput {
   contactName: string;
@@ -167,8 +168,39 @@ export class StaffCallyzerService {
     });
     if (!user) throw new TRPCError({ code: "NOT_FOUND", message: "User not found" });
 
-    // Try finding lead by ID or phone if leadId not passed
+    // Ingest into Centralized CRM Ingestion Service (auto-creates lead if missing, assigns handler, logs LeadActivity, publishes SSE)
     let matchedLeadId = input.leadId || null;
+    try {
+      const callIngestion = await CrmIngestionService.ingestCallEvent(
+        {
+          id: user.id,
+          email: user.email || "",
+          permissions: [],
+          firstName: user.firstName,
+          lastName: user.lastName,
+          roleCode: user.roleCode,
+        },
+        {
+          contactName: input.contactName,
+          contactPhone: input.contactPhone,
+          direction: input.callType === "INCOMING" ? "INBOUND" : "OUTBOUND",
+          callStatus: input.callStatus,
+          durationSeconds: input.durationSeconds,
+          disposition: input.disposition,
+          notes: input.notes,
+          nextFollowUpDate: input.nextFollowUpDate,
+          recordingUrl: input.recordingUrl,
+          transcript: input.transcript,
+          leadId: input.leadId || undefined,
+        }
+      );
+      if (callIngestion?.leadId) {
+        matchedLeadId = callIngestion.leadId;
+      }
+    } catch (ingestErr) {
+      console.error("CrmIngestionService.ingestCallEvent error in StaffCallyzerService:", ingestErr);
+    }
+
     if (!matchedLeadId && input.contactPhone) {
       const cleanPhone = input.contactPhone.replace(/\D/g, "").slice(-10);
       const existingLead = await db.lead.findFirst({

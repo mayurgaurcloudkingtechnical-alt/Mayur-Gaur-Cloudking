@@ -30,6 +30,7 @@ import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
 import { LeadAutoConnectDialog } from "../counselor/lead-auto-connect-dialog";
 import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
 import { ReportingHierarchyBanner } from "@/components/common/reporting-hierarchy-banner";
+import { formatISTDateTime, formatISTDate } from "@/lib/utils/date-formatter";
 
 interface TelecallerWorkstationViewProps {
   user: {
@@ -56,12 +57,39 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const utils = api.useUtils();
   const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
 
-  const { data: leadsData, isLoading: isLoadingLeads } = api.crm.listLeads.useQuery({
-    status: selectedStatus === "ALL" ? undefined : selectedStatus,
-    search: search.trim() || undefined,
-    limit: 30,
-    page: 1,
-  });
+  const { data: leadsData, isLoading: isLoadingLeads, refetch } = api.crm.listLeads.useQuery(
+    {
+      status: selectedStatus === "ALL" ? undefined : selectedStatus,
+      search: search.trim() || undefined,
+      limit: 30,
+      page: 1,
+    },
+    {
+      refetchInterval: 10000,
+      refetchOnWindowFocus: true,
+    }
+  );
+
+  // Real-time Server-Sent Events (SSE) synchronization
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    let eventSource: EventSource | null = null;
+    try {
+      eventSource = new EventSource("/api/crm/live-events");
+      eventSource.addEventListener("crm_event", () => {
+        refetch();
+        utils.crm.getStats.invalidate();
+      });
+    } catch {
+      // Polling fallback
+    }
+
+    return () => {
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [refetch, utils]);
 
   const { data: stats } = api.crm.getStats.useQuery();
   const { data: counselors = [] } = api.crm.listCounselors.useQuery();
@@ -425,6 +453,9 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                         <div className="font-mono text-xs font-semibold">{lead.phone}</div>
                         <div className="text-[11px] text-slate-400">
                           {lead.city ? lead.city : "City not specified"}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-0.5">
+                          {formatISTDateTime(lead.createdAt)}
                         </div>
                       </td>
 

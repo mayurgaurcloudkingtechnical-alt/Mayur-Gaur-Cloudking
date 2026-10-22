@@ -140,6 +140,8 @@ enum LeadSource {
   FRANCHISE_WEBSITE
   BULK_UPLOAD
   AI_CALLING
+  INBOUND_CALL
+  OUTBOUND_CALL
   OTHER
 }
 
@@ -308,6 +310,7 @@ model User {
   // Campus & Institutional Partnerships
   institutionMemberships  InstitutionUserMembership[]
   uploadedStudentImports  StudentImportJob[]          @relation("StudentImportUploader")
+  uploadedLeadBatches     LeadImportBatch[]           @relation("LeadBatchUploader")
   approvedInstitutions    InstitutionApproval[]       @relation("InstitutionApprover")
   createdJobFairs         JobFair[]                   @relation("JobFairCreator")
   verifiedStudentPayments StudentRegistrationPayment[] @relation("PaymentVerifier")
@@ -905,6 +908,14 @@ model Lead {
   serviceCategory        String?   // "SOFTWARE", "CORPORATE_TRAINING", "CAMPUS_DRIVE", "INSTITUTIONAL_PARTNERSHIP", "FRANCHISE"
   metaRawData            Json?
 
+  // Centralized Ingestion & Source Attribution
+  captureMethod       String?   // "MANUAL_COUNSELOR", "MANUAL_TELECALLER", "BULK_CSV_XLSX", "INBOUND_CALL", "OUTBOUND_CALL", "AI_VOICE", "WEBSITE_FORM", "WHATSAPP", "META_ADS", "GOOGLE_ADS"
+  importBatchId       String?
+  originalEventTime   DateTime?
+  aiAgentId           String?
+  lastHandledById     String?
+  callCount           Int       @default(0)
+
   @@index([email])
   @@index([phone])
   @@index([status])
@@ -912,6 +923,8 @@ model Lead {
   @@index([assignedCounselorId])
   @@index([assignedTelecallerId])
   @@index([source])
+  @@index([captureMethod])
+  @@index([importBatchId])
   @@index([nextFollowUp])
   @@index([interestedCourseId])
   @@index([franchiseState])
@@ -957,6 +970,29 @@ model FollowUpHistory {
   @@index([performedById])
   @@index([createdAt])
   @@map("follow_up_histories")
+}
+
+model LeadImportBatch {
+  id           String      @id @default(cuid())
+  batchCode    String      @unique // e.g. "SLG-IMP-20261022-0001"
+  uploaderId   String?
+  uploader     User?       @relation("LeadBatchUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  fileName     String?
+  source       LeadSource  @default(BULK_UPLOAD)
+  totalRows    Int         @default(0)
+  createdCount Int         @default(0)
+  updatedCount Int         @default(0)
+  failedCount  Int         @default(0)
+  errorSummary Json?       // [{ row, phone, name, reason }]
+  status       String      @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
+  startedAt    DateTime    @default(now())
+  completedAt  DateTime?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@index([uploaderId])
+  @@index([createdAt])
+  @@map("lead_import_batches")
 }
 
 // ==============================================================================
