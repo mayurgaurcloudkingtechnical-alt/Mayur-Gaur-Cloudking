@@ -193,46 +193,11 @@ export function SkillverseAuthForm({
           {/* TAB 1: STAFF & HIGHER AUTHORITIES */}
           {activeRole === "staff" && (
             <form onSubmit={handleStaffLogin} className="space-y-4">
-              <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/60 text-left text-[11px] text-blue-900 leading-relaxed space-y-1.5">
-                <div className="font-bold flex items-center gap-1 text-blue-800">
+              <div className="p-3 rounded-2xl bg-blue-50/70 border border-blue-200/60 text-left text-[11px] text-blue-900 leading-relaxed">
+                <span className="font-bold flex items-center gap-1 mb-0.5 text-blue-800">
                   <Sparkles className="w-3.5 h-3.5 text-blue-600" /> Higher Authorities Shared Login
-                </div>
-                <div>
-                  SoftLab Global <strong>Manager</strong>, <strong>Admin</strong>, <strong>Director</strong>, and <strong>Super Admin</strong> can sign in with their existing SoftLab credentials.
-                </div>
-                <div className="flex flex-wrap gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-500 font-bold self-center">Quick fill:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStaffEmail("admin@softlabglobal.com");
-                      setStaffPassword("SuperAdminSecure2026!");
-                    }}
-                    className="px-2 py-0.5 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-800 font-mono text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    Super Admin
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStaffEmail("director@softlabglobal.com");
-                      setStaffPassword("SuperAdminSecure2026!");
-                    }}
-                    className="px-2 py-0.5 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-mono text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    Director
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setStaffEmail("mayur.gaur@softlabglobal.com");
-                      setStaffPassword("SuperAdminSecure2026!");
-                    }}
-                    className="px-2 py-0.5 rounded-lg bg-purple-100 hover:bg-purple-200 text-purple-800 font-mono text-[10px] font-bold cursor-pointer transition-colors"
-                  >
-                    Mayur Gaur
-                  </button>
-                </div>
+                </span>
+                SoftLab Global <strong>Manager</strong>, <strong>Admin</strong>, <strong>Director</strong>, and <strong>Super Admin</strong> can sign in directly using their existing credentials. Other staff and faculty log in with their provisioned access keys.
               </div>
 
               <div>

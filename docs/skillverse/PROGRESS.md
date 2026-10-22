@@ -75,4 +75,4 @@
 - **Rules of Hooks Compliance & Higher Authorities Activation Fix**:
   - **Resolved Minified React Error #310**: Moved `filteredEnquiries = useMemo(...)` and data extraction before all early returns (`isLoading`, `error || !data`, `staffUser.canAccessSkillverse === false`), ensuring 100% compliance with React Rules of Hooks so hook execution counts never change between renders.
   - **Activated Higher Authority Accounts**: Verified and activated `director@softlabglobal.com`, `admin@softlabglobal.com`, and `mayur.gaur@softlabglobal.com` in PostgreSQL with password `SuperAdminSecure2026!`.
-  - **Quick Fill & Reload Propagation**: Added one-click quick-fill buttons for Super Admin, Director, and Mayur Gaur in `SkillverseAuthForm` and enforced `window.location.reload()` on authentication to guarantee session cookie persistence across edge and client.
+  - **Security Hardening**: Removed all public quick-fill credential buttons from the login form to prevent unauthorized access. Higher authorities and staff must manually input their registered email and secure password.
