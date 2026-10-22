@@ -14,19 +14,22 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs">
       <div
         className="fixed inset-0"
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
       />
-      <div className="relative z-50 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 text-slate-900">
+      <div className="relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 text-slate-900 border border-slate-200">
+        {/* Bold Black Close Button - High contrast, always clearly visible */}
         <button
+          type="button"
           onClick={() => onOpenChange(false)}
-          className="absolute right-3.5 top-3.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-black border border-slate-300 shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="absolute right-3.5 top-3.5 z-30 flex h-8 w-8 items-center justify-center rounded-full bg-black hover:bg-zinc-800 text-white border-2 border-black shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-black cursor-pointer hover:scale-105"
           aria-label="Close dialog"
+          title="Close dialog"
         >
-          <X className="h-4 w-4 text-black stroke-[2.5]" />
+          <X className="h-4 w-4 text-white stroke-[3]" />
         </button>
         {children}
       </div>

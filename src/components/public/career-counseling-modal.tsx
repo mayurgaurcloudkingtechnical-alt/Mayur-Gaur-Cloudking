@@ -17,6 +17,7 @@ import {
   HelpCircle,
   Clock,
   MapPin,
+  X,
 } from "lucide-react";
 
 interface CareerCounselingModalProps {
@@ -82,7 +83,8 @@ export function CareerCounselingModal({
   onClose,
   defaultCourse,
 }: CareerCounselingModalProps) {
-  const [internalOpen, setInternalOpen] = React.useState(false);
+  // Always open on initial load/refresh
+  const [internalOpen, setInternalOpen] = React.useState(true);
   const [state, setState] = React.useState<EnquiryState>({ success: false });
   const [isPending, setIsPending] = React.useState(false);
   const [selectedCourse, setSelectedCourse] = React.useState(
@@ -98,16 +100,11 @@ export function CareerCounselingModal({
     setTimeout(() => setState({ success: false }), 400);
   };
 
-  // Configured automatic popup behavior:
-  // Opens immediately on every page refresh or website visit as the primary inquiry prompt.
+  // Re-confirm popup opens on every page mount / refresh
   React.useEffect(() => {
-    if (controlledOpen !== undefined) return;
-
-    const timer = setTimeout(() => {
+    if (controlledOpen === undefined) {
       setInternalOpen(true);
-    }, 300);
-
-    return () => clearTimeout(timer);
+    }
   }, [controlledOpen]);
 
   // Listen for global window trigger events
