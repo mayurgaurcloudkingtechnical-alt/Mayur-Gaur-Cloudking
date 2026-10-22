@@ -20,13 +20,13 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
         onClick={() => onOpenChange(false)}
         aria-hidden="true"
       />
-      <div className="relative z-50 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95">
+      <div className="relative z-50 w-full max-w-lg rounded-xl bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 text-slate-900">
         <button
           onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+          className="absolute right-3.5 top-3.5 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-black border border-slate-300 shadow-xs transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
           aria-label="Close dialog"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4 text-black stroke-[2.5]" />
         </button>
         {children}
       </div>

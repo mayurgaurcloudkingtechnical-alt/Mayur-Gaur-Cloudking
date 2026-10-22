@@ -77,8 +77,6 @@ const UNIVERSITY_PROGRAMS_LIST = [
   "Ph.D — Non-Technical (Doctor of Philosophy)",
 ];
 
-const STORAGE_KEY = "softlab_counseling_dismissed_until";
-
 export function CareerCounselingModal({
   isOpen: controlledOpen,
   onClose,
@@ -90,26 +88,10 @@ export function CareerCounselingModal({
   const [selectedCourse, setSelectedCourse] = React.useState(
     defaultCourse || "AI & Machine Learning Complete Masterclass"
   );
-  const [dontShowAgain, setDontShowAgain] = React.useState(false);
 
   const isOpen = controlledOpen !== undefined ? controlledOpen : internalOpen;
 
-  const dismissPopup = React.useCallback((days = 7) => {
-    try {
-      const expiry = Date.now() + days * 24 * 60 * 60 * 1000;
-      localStorage.setItem(STORAGE_KEY, expiry.toString());
-    } catch {
-      // Ignore storage errors
-    }
-  }, []);
-
   const handleClose = () => {
-    if (dontShowAgain) {
-      dismissPopup(30);
-    } else {
-      dismissPopup(3);
-    }
-
     if (onClose) onClose();
     else setInternalOpen(false);
 
@@ -117,21 +99,13 @@ export function CareerCounselingModal({
   };
 
   // Configured automatic popup behavior:
-  // Opens automatically after 10 seconds on the public website if not dismissed.
+  // Opens immediately on every page refresh or website visit as the primary inquiry prompt.
   React.useEffect(() => {
     if (controlledOpen !== undefined) return;
-    try {
-      const dismissedUntil = localStorage.getItem(STORAGE_KEY);
-      if (dismissedUntil && Number(dismissedUntil) > Date.now()) {
-        return;
-      }
-    } catch {
-      // Ignore storage error
-    }
 
     const timer = setTimeout(() => {
       setInternalOpen(true);
-    }, 10000);
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [controlledOpen]);
@@ -167,7 +141,6 @@ export function CareerCounselingModal({
           source: "WEBSITE_CAREER_POPUP",
           courseOrInterest: selectedCourse,
         });
-        dismissPopup(30);
       }
     } catch (err: any) {
       setState({
@@ -241,7 +214,7 @@ export function CareerCounselingModal({
           </div>
         ) : (
           <div>
-            <DialogHeader className="space-y-1.5">
+            <DialogHeader className="space-y-1.5 pr-8">
               <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-3 py-0.5 rounded-full border border-emerald-200 w-fit mb-1">
                 <Sparkles className="w-3 h-3 text-emerald-600 animate-pulse" />
                 <span>SOFTLAB GLOBAL • Career Advisory Cell</span>
@@ -457,24 +430,18 @@ export function CareerCounselingModal({
                 </Button>
               </div>
 
-              {/* Cooldown checkbox / Don't show again */}
+              {/* Modal Footer / Skip Action */}
               <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-[11px] text-slate-500">
-                <label className="flex items-center gap-1.5 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={dontShowAgain}
-                    onChange={(e) => setDontShowAgain(e.target.checked)}
-                    className="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5"
-                  />
-                  <span>Don&apos;t show this popup again</span>
-                </label>
+                <span className="text-[10.5px] font-medium text-slate-400">
+                  ⚡ 100% Free Career & Placement Advisory
+                </span>
 
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="text-slate-400 hover:text-slate-600 hover:underline"
+                  className="font-semibold text-slate-500 hover:text-slate-900 hover:underline px-2 py-1"
                 >
-                  Skip for now
+                  Close / Skip for now
                 </button>
               </div>
             </form>
