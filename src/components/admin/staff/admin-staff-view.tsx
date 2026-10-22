@@ -30,6 +30,7 @@ import {
   Trash2,
   Send,
   Upload,
+  Sparkles,
 } from "lucide-react";
 import {
   StaffDepartment,
@@ -45,6 +46,7 @@ import { StaffRecruitmentTab } from "./staff-recruitment-tab";
 import { StaffOnboardingTab } from "./staff-onboarding-tab";
 import { StaffLettersTab } from "./staff-letters-tab";
 import { StaffIdCardModal } from "./staff-id-card-modal";
+import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";
 import { StaffOnboardingWizard } from "../users/staff-onboarding-wizard";
 import { CallyzerTeamMonitoringView } from "@/components/callyzer/callyzer-team-monitoring-view";
 
@@ -133,6 +135,7 @@ export function AdminStaffView() {
 
   // Super Admin Staff Edit, Delete & ID Card Studio state
   const [selectedStaffForCard, setSelectedStaffForCard] = useState<any>(null);
+  const [selectedStaffForVisitingCard, setSelectedStaffForVisitingCard] = useState<any>(null);
   const [selectedStaffForEdit, setSelectedStaffForEdit] = useState<any>(null);
   const [selectedStaffForDelete, setSelectedStaffForDelete] = useState<any>(null);
   const [editForm, setEditForm] = useState<{
@@ -654,11 +657,28 @@ export function AdminStaffView() {
                           className="py-3.5 px-4 cursor-pointer"
                           title="Click to view & edit complete profile and documents"
                         >
-                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
-                            {staff.user.firstName} {staff.user.lastName}
-                            <Edit2 className="w-3 h-3 text-slate-300 group-hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition" />
-                          </p>
-                          <p className="text-xs text-slate-400 font-mono">{staff.user.email}</p>
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                              {staff.profilePhoto || staff.user.avatarUrl ? (
+                                <img
+                                  src={staff.profilePhoto || staff.user.avatarUrl || ""}
+                                  alt={staff.user.firstName}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="text-xs font-bold text-slate-500 uppercase">
+                                  {staff.user.firstName?.[0]}{staff.user.lastName?.[0]}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition flex items-center gap-1.5">
+                                {staff.user.firstName} {staff.user.lastName}
+                                <Edit2 className="w-3 h-3 text-slate-300 group-hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition" />
+                              </p>
+                              <p className="text-xs text-slate-400 font-mono">{staff.user.email}</p>
+                            </div>
+                          </div>
                         </td>
                         <td className="py-3.5 px-4">
                           <span className="px-2 py-0.5 rounded text-xs font-semibold bg-blue-50 text-blue-700">
@@ -718,13 +738,34 @@ export function AdminStaffView() {
                                   contactNo: staff.personalPhone || staff.user.phone || "+91 9196596975",
                                   email: staff.user.email,
                                   workLocation: staff.workLocation || "Head Office, Prayagraj",
-                                  photoUrl: staff.profilePhoto || "",
+                                  photoUrl: staff.profilePhoto || staff.user.avatarUrl || "",
+                                  staffId: staff.id,
+                                  userId: staff.user.id,
                                 })
                               }
                               className="px-2 py-1 text-xs font-semibold rounded bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition inline-flex items-center gap-1 shadow-sm"
                               title="Open 4K Official ID Card Studio & Print"
                             >
                               <CreditCard className="w-3.5 h-3.5 text-blue-600" /> ID Card
+                            </button>
+
+                            {/* Corporate Visiting Card Generator */}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setSelectedStaffForVisitingCard({
+                                  fullName: `${staff.user.firstName} ${staff.user.lastName}`,
+                                  designation: staff.designation,
+                                  phone: staff.personalPhone || staff.user.phone || "+91 9196596975",
+                                  email: staff.user.email,
+                                  roleCode: staff.user.roleCode,
+                                  isDirectorLevel: ["DIRECTOR", "SUPER_ADMIN"].includes(staff.user.roleCode),
+                                })
+                              }
+                              className="px-2 py-1 text-xs font-semibold rounded bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 transition inline-flex items-center gap-1 shadow-sm"
+                              title="Generate & Print Official Corporate Visiting Card"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-emerald-600" /> Visiting Card
                             </button>
 
                             {/* Edit Staff Profile */}
@@ -2028,6 +2069,17 @@ WhatsApp Line: ${createdStaffCredentials.whatsappNumber || createdStaffCredentia
           isOpen={!!selectedStaffForCard}
           onClose={() => setSelectedStaffForCard(null)}
           initialData={selectedStaffForCard}
+        />
+      )}
+
+      {/* ========================================================================= */}
+      {/* CORPORATE VISITING CARD STUDIO MODAL */}
+      {/* ========================================================================= */}
+      {selectedStaffForVisitingCard && (
+        <SoftlabVisitingCardModal
+          isOpen={!!selectedStaffForVisitingCard}
+          onClose={() => setSelectedStaffForVisitingCard(null)}
+          initialData={selectedStaffForVisitingCard}
         />
       )}
 

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,8 @@ import { LogOut, User as UserIcon, Menu } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { GlobalSearchDialog } from "@/components/common/global-search-dialog";
 import { NotificationBell } from "@/components/common/notification-bell";
+import { UserProfileModal } from "@/components/common/user-profile-modal";
+import { api } from "@/lib/trpc/react";
 
 interface NavbarProps {
   user: {
@@ -22,58 +25,89 @@ interface NavbarProps {
 }
 
 export function Navbar({ user, onToggleSidebar }: NavbarProps) {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const { data: meData } = api.auth.me.useQuery(undefined, {
+    staleTime: 30000,
+  });
+
+  const avatarUrl = meData?.avatarUrl;
+
   return (
-    <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur">
-      <div className="flex items-center gap-3">
-        {onToggleSidebar && (
-          <button
-            type="button"
-            onClick={onToggleSidebar}
-            className="rounded-md p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
-            aria-label="Toggle navigation menu"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        )}
-        <Link href="/" className="flex items-center gap-2">
-          <SoftlabLogo size="sm" showTagline={false} />
-        </Link>
-      </div>
-
-      <div className="flex items-center mx-2 sm:mx-4">
-        <GlobalSearchDialog />
-      </div>
-
-      <div className="flex items-center gap-3 sm:gap-4">
-        <NotificationBell />
-
-        <Badge variant="default" className="hidden sm:inline-flex uppercase font-mono text-[11px]">
-          {user.roleCode.replace(/_/g, " ")}
-        </Badge>
-
-        <div className="flex items-center gap-2 text-right">
-          <div className="hidden md:flex flex-col">
-            <span className="text-xs font-semibold text-slate-900 leading-none">
-              {user.firstName} {user.lastName}
-            </span>
-            <span className="text-[11px] text-slate-500">{user.email}</span>
-          </div>
-          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
-            <UserIcon className="h-4 w-4" />
-          </div>
+    <>
+      <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white/95 px-4 sm:px-6 backdrop-blur">
+        <div className="flex items-center gap-3">
+          {onToggleSidebar && (
+            <button
+              type="button"
+              onClick={onToggleSidebar}
+              className="rounded-md p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              aria-label="Toggle navigation menu"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+          <Link href="/" className="flex items-center gap-2">
+            <SoftlabLogo size="sm" showTagline={false} />
+          </Link>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => signOut({ callbackUrl: "/login" })}
-          className="border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
-          title="Sign Out"
-        >
-          <LogOut className="h-4 w-4 sm:mr-1.5" />
-          <span className="hidden sm:inline text-xs">Logout</span>
-        </Button>
-      </div>
-    </header>
+        <div className="flex items-center mx-2 sm:mx-4">
+          <GlobalSearchDialog />
+        </div>
+
+        <div className="flex items-center gap-3 sm:gap-4">
+          <NotificationBell />
+
+          <Badge variant="default" className="hidden sm:inline-flex uppercase font-mono text-[11px]">
+            {user.roleCode.replace(/_/g, " ")}
+          </Badge>
+
+          {/* Interactive Profile Area */}
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen(true)}
+            className="flex items-center gap-2 text-right group p-1 rounded-xl hover:bg-slate-100 transition cursor-pointer"
+            title="Click to view profile & change photo"
+          >
+            <div className="hidden md:flex flex-col text-right">
+              <span className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition leading-none">
+                {user.firstName} {user.lastName}
+              </span>
+              <span className="text-[11px] text-slate-500">{user.email}</span>
+            </div>
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 overflow-hidden border-2 border-emerald-400 shadow-xs group-hover:ring-2 group-hover:ring-blue-400 transition shrink-0">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={user.firstName}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <UserIcon className="h-4 w-4" />
+              )}
+            </div>
+          </button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="border-slate-200 text-slate-600 hover:text-red-600 hover:border-red-200 hover:bg-red-50"
+            title="Sign Out"
+          >
+            <LogOut className="h-4 w-4 sm:mr-1.5" />
+            <span className="hidden sm:inline text-xs">Logout</span>
+          </Button>
+        </div>
+      </header>
+
+      {/* Profile & Professional Visiting Card Modal */}
+      {isProfileOpen && (
+        <UserProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+        />
+      )}
+    </>
   );
 }

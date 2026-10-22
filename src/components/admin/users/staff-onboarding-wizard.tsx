@@ -39,6 +39,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { StaffDepartment, UserRoleCode } from "@prisma/client";
 import { StaffIdCardModal } from "../staff/staff-id-card-modal";
+import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";
 import { DocumentPreviewModal } from "@/components/common/document-preview-modal";
 
 export const DOCUMENT_CATEGORIES = [
@@ -198,6 +199,7 @@ export function StaffOnboardingWizard({
   // Post-onboarding Success Hub state & Modals
   const [onboardSuccessData, setOnboardSuccessData] = useState<any>(null);
   const [showIdCardModal, setShowIdCardModal] = useState(false);
+  const [showVisitingCardModal, setShowVisitingCardModal] = useState(false);
   const [previewDoc, setPreviewDoc] = useState<{
     title: string;
     documentType?: string;
@@ -624,6 +626,14 @@ export function StaffOnboardingWizard({
                 className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:from-blue-700 hover:to-indigo-700 transition"
               >
                 <CreditCard className="w-4 h-4" /> View & Print Official 4K ID Card
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowVisitingCardModal(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold text-sm flex items-center gap-2 shadow-lg hover:from-emerald-700 hover:to-teal-700 transition"
+              >
+                <Sparkles className="w-4 h-4" /> View & Print Visiting Card
               </button>
 
               <button
@@ -1583,6 +1593,22 @@ export function StaffOnboardingWizard({
             email: officialEmail || personalEmail,
             workLocation: workLocation || "Head Office, Prayagraj",
             photoUrl: profilePhoto,
+          }}
+        />
+      )}
+
+      {/* Corporate Visiting Card Modal */}
+      {showVisitingCardModal && (
+        <SoftlabVisitingCardModal
+          isOpen={showVisitingCardModal}
+          onClose={() => setShowVisitingCardModal(false)}
+          initialData={{
+            fullName: `${firstName} ${lastName}`,
+            designation,
+            phone: phone || "+91 9196596975",
+            email: officialEmail || personalEmail,
+            roleCode,
+            isDirectorLevel: ["DIRECTOR", "SUPER_ADMIN"].includes(roleCode),
           }}
         />
       )}

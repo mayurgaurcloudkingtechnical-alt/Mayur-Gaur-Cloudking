@@ -124,14 +124,40 @@ export function SoftlabIdCardFront({
 
         {/* Center: Passport Photo with Green/Blue gradient ring */}
         <div className="relative w-28 h-28 rounded-full p-1 bg-gradient-to-tr from-[#43B02A] via-[#00B4D8] to-[#0052CC] shadow-xl shrink-0 mx-auto">
-          <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-2 border-white">
+          <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-2 border-white flex items-center justify-center">
             {photoUrl ? (
-              <img src={photoUrl} alt={fullName} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400">
-                <User className="w-14 h-14" />
-              </div>
-            )}
+              <img
+                src={photoUrl}
+                alt={fullName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.currentTarget;
+                  target.style.display = "none";
+                  const fallback = target.nextElementSibling as HTMLElement | null;
+                  if (fallback) fallback.style.display = "flex";
+                }}
+              />
+            ) : null}
+            <div
+              className={`w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 ${
+                photoUrl ? "hidden" : "flex"
+              }`}
+            >
+              <span className="text-xl font-black uppercase text-slate-600 tracking-wider">
+                {fullName
+                  ? fullName
+                      .trim()
+                      .split(" ")
+                      .map((n) => n[0])
+                      .filter(Boolean)
+                      .slice(0, 2)
+                      .join("")
+                  : "SLG"}
+              </span>
+              <span className="text-[7.5px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                MEMBER
+              </span>
+            </div>
           </div>
         </div>
 

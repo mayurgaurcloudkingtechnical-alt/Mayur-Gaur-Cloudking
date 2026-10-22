@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState, useRef } from "react";
+import { api } from "@/lib/trpc/react";
 import {
   SoftlabIdCardFront,
   SoftlabIdCardBack,
 } from "@/components/common/softlab-id-card";
+import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";
 import {
   X,
   Printer,
@@ -34,6 +36,8 @@ export interface StaffIdCardData {
   email: string;
   workLocation: string;
   photoUrl: string;
+  staffId?: string;
+  userId?: string;
   aboutText?: string;
   officeAddress?: string;
   officePhone?: string;
@@ -83,21 +87,53 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
 
   const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
   const [activeSide, setActiveSide] = useState<"both" | "front" | "back">("both");
+  const [showVisitingCardModal, setShowVisitingCardModal] = useState(false);
   const [photoPreview, setPhotoPreview] = useState<string>(initialData.photoUrl || "");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const utils = api.useUtils();
+  const updateStaffMutation = api.staffErp.updateStaffProfile.useMutation({
+    onSuccess: () => {
+      utils.staffErp.listStaff.invalidate();
+    },
+  });
+
   if (!isOpen) return null;
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = reader.result as string;
-        setPhotoPreview(base64);
-        setFormData((prev) => ({ ...prev, photoUrl: base64 }));
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // 1. Instant local preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result as string;
+      setPhotoPreview(base64);
+      setFormData((prev) => ({ ...prev, photoUrl: base64 }));
+    };
+    reader.readAsDataURL(file);
+
+    // 2. Persist to server if staffId is provided
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append("file", file);
+      const res = await fetch("/api/upload/photo", {
+        method: "POST",
+        body: formDataUpload,
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.url) {
+        setFormData((prev) => ({ ...prev, photoUrl: data.url }));
+        setPhotoPreview(data.url);
+        if (initialData.staffId) {
+          await updateStaffMutation.mutateAsync({
+            staffId: initialData.staffId,
+            profilePhoto: data.url,
+          });
+        }
+      }
+    } catch (_) {
+      // Local preview already active
     }
   };
 
@@ -162,6 +198,14 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowVisitingCardModal(true)}
+              className="px-3.5 py-1.5 bg-blue-700/90 hover:bg-blue-600 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition border border-blue-500/40"
+              title="Open Corporate Landscape Visiting Card"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-300" /> Visiting Card
+            </button>
             <button
               onClick={handlePrint}
               className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
@@ -486,6 +530,20 @@ export function StaffIdCardModal({ isOpen, onClose, initialData }: StaffIdCardMo
           </div>
         </div>
       </div>
+
+      {showVisitingCardModal && (
+        <SoftlabVisitingCardModal
+          isOpen={showVisitingCardModal}
+          onClose={() => setShowVisitingCardModal(false)}
+          initialData={{
+            fullName: formData.fullName,
+            designation: formData.designation,
+            phone: formData.contactNo,
+            email: formData.email,
+            websiteUrl: formData.websiteUrl,
+          }}
+        />
+      )}
     </div>
   );
 }

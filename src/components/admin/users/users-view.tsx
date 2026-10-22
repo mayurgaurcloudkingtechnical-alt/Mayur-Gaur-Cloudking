@@ -25,9 +25,11 @@ import {
   Lock,
   Briefcase,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { UserRoleCode, UserStatus } from "@prisma/client";
 import { StaffOnboardingWizard } from "./staff-onboarding-wizard";
+import { SoftlabVisitingCardModal } from "@/components/common/softlab-visiting-card-modal";
 
 export function UsersView() {
   const [search, setSearch] = useState("");
@@ -41,6 +43,7 @@ export function UsersView() {
   const [selectedUserForStaff, setSelectedUserForStaff] = useState<any | null>(null);
   const [editUser, setEditUser] = useState<any | null>(null);
   const [resetPwdUser, setResetPwdUser] = useState<any | null>(null);
+  const [selectedUserForVisitingCard, setSelectedUserForVisitingCard] = useState<any | null>(null);
 
   // Create form states
   const [newFirstName, setNewFirstName] = useState("");
@@ -328,18 +331,37 @@ export function UsersView() {
                 users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                     <td className="p-3">
-                      <p className="font-bold text-slate-900">{u.name}</p>
-                      <p className="text-slate-500 text-[11px] font-mono">{u.email}</p>
-                      {u.studentId && (
-                        <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.5 rounded">
-                          {u.studentId}
-                        </span>
-                      )}
-                      {u.employeeId && (
-                        <span className="text-[10px] text-sky-700 font-mono font-bold bg-sky-50 px-1.5 py-0.5 rounded">
-                          {u.employeeId} ({u.department})
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full overflow-hidden bg-slate-100 border border-slate-200 shrink-0 flex items-center justify-center">
+                          {u.avatarUrl ? (
+                            <img
+                              src={u.avatarUrl}
+                              alt={u.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-[10px] font-bold text-slate-500 uppercase">
+                              {u.firstName?.[0]}{u.lastName?.[0]}
+                            </span>
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 leading-tight">{u.name}</p>
+                          <p className="text-slate-500 text-[11px] font-mono">{u.email}</p>
+                          <div className="flex items-center gap-1 mt-0.5">
+                            {u.studentId && (
+                              <span className="text-[10px] text-emerald-700 font-mono font-bold bg-emerald-50 px-1.5 py-0.2 rounded">
+                                {u.studentId}
+                              </span>
+                            )}
+                            {u.employeeId && (
+                              <span className="text-[10px] text-sky-700 font-mono font-bold bg-sky-50 px-1.5 py-0.2 rounded">
+                                {u.employeeId} ({u.department})
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </td>
                     <td className="p-3">
                       <Badge variant="outline" className="font-mono text-[11px] font-bold">
@@ -393,6 +415,48 @@ export function UsersView() {
                           >
                             <UserCheck className="h-3.5 w-3.5 text-indigo-600" />
                             <span>Move to Staff</span>
+                          </Button>
+                        )}
+
+                        {/* Professional Visiting Card (Staff, Partners, Recruiters, Institutions) */}
+                        {u.roleCode !== "STUDENT" && (
+                          <Button
+                            onClick={() =>
+                              setSelectedUserForVisitingCard({
+                                fullName:
+                                  u.name ||
+                                  `${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+                                  "SoftLab Team Member",
+                                designation:
+                                  u.roleCode === "DIRECTOR"
+                                    ? "Director"
+                                    : u.roleCode === "SUPER_ADMIN"
+                                    ? "Director / Super Admin"
+                                    : u.roleCode === "RECRUITER"
+                                    ? "Corporate Talent Acquisition Partner"
+                                    : u.roleCode === "FRANCHISE_PARTNER"
+                                    ? "Authorized Franchise Partner"
+                                    : u.roleCode === "INSTITUTION_ADMIN" ||
+                                      u.roleCode === "INSTITUTION_OFFICER"
+                                    ? "Institutional Relations Officer"
+                                    : u.roleCode === "TRAINER"
+                                    ? "Senior Technical Instructor"
+                                    : u.roleCode === "COUNSELOR"
+                                    ? "Academic & Career Counselor"
+                                    : u.roleCode?.replace(/_/g, " "),
+                                phone: u.phone || "+91 9196596975",
+                                email: u.email,
+                                roleCode: u.roleCode,
+                                isDirectorLevel: ["DIRECTOR", "SUPER_ADMIN"].includes(u.roleCode),
+                              })
+                            }
+                            size="sm"
+                            variant="outline"
+                            className="h-7 px-2 text-xs bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 flex items-center gap-1 shadow-xs"
+                            title="Generate & Print Professional Visiting Card"
+                          >
+                            <Sparkles className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="hidden xl:inline">Visiting Card</span>
                           </Button>
                         )}
 
@@ -753,6 +817,15 @@ export function UsersView() {
             </form>
           </Card>
         </div>
+      )}
+
+      {/* Professional Visiting Card Generator Modal */}
+      {selectedUserForVisitingCard && (
+        <SoftlabVisitingCardModal
+          isOpen={!!selectedUserForVisitingCard}
+          onClose={() => setSelectedUserForVisitingCard(null)}
+          initialData={selectedUserForVisitingCard}
+        />
       )}
 
       {/* 5-Step Staff Onboarding Wizard */}

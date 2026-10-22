@@ -24,11 +24,82 @@ export const authRouter = router({
             maxDiscountPercent: true,
           },
         },
+        staffProfile: {
+          select: {
+            id: true,
+            employeeId: true,
+            department: true,
+            designation: true,
+            workLocation: true,
+            profilePhoto: true,
+            personalPhone: true,
+            personalEmail: true,
+            joiningDate: true,
+            employmentType: true,
+            employmentStatus: true,
+          },
+        },
+        studentProfile: {
+          select: {
+            id: true,
+            studentId: true,
+            center: true,
+            educationProvider: true,
+            universityName: true,
+            universityProgram: true,
+            enrollments: {
+              take: 1,
+              orderBy: { enrolledAt: "desc" },
+              select: {
+                course: { select: { title: true } },
+                batch: { select: { name: true } },
+              },
+            },
+          },
+        },
       },
     });
 
     return dbUser;
   }),
+
+  /**
+   * Updates only the profile photo (avatarUrl) of the currently authenticated user.
+   * All other fields remain strictly read-only for security and record integrity.
+   */
+  updateProfilePhoto: protectedProcedure
+    .input(z.object({ avatarUrl: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const updatedUser = await ctx.db.user.update({
+        where: { id: ctx.user.id },
+        data: { avatarUrl: input.avatarUrl.trim() },
+        select: {
+          id: true,
+          avatarUrl: true,
+          firstName: true,
+          lastName: true,
+          roleCode: true,
+        },
+      });
+
+      // Also sync to staff profile if exists
+      await ctx.db.staffProfile
+        .updateMany({
+          where: { userId: ctx.user.id },
+          data: { profilePhoto: input.avatarUrl.trim() },
+        })
+        .catch(() => null);
+
+      // Also sync to student profile if exists
+      await ctx.db.studentProfile
+        .updateMany({
+          where: { userId: ctx.user.id },
+          data: { photoUrl: input.avatarUrl.trim() },
+        })
+        .catch(() => null);
+
+      return updatedUser;
+    }),
 
   getPermissions: protectedProcedure.query(async ({ ctx }) => {
     return ctx.user.permissions;

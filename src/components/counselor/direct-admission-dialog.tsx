@@ -472,7 +472,7 @@ export function DirectAdmissionDialog({
       setCreatedResult(res);
 
       // Auto-Dispatch 1: Send credentials directly to the student's personal WhatsApp number
-      const studPhone = (res.credentials?.phone || applicantPhone || whatsappNumber || "").replace(/\D/g, "");
+      const studPhone = ((res.credentials as any)?.phone || applicantPhone || whatsappNumber || "").replace(/\D/g, "");
       if (studPhone.length >= 10) {
         const fullStudPhone = studPhone.length === 10 ? `91${studPhone}` : studPhone;
         const studentMsg = `🎓 *OFFICIAL ADMISSION CONFIRMED — SOFTLAB GLOBAL* 🚀\n\nDear *${res.credentials?.fullName || applicantName}*,\nCongratulations on your confirmed admission!\n\n📋 *ADMISSION DETAILS*:\n• Student ID: *${res.credentials?.studentId}*\n• Admission No: *${res.credentials?.admissionNumber}*\n• Program: *${res.universityProgram || selectedCourse?.title || "Professional Program"}*\n\n🔑 *STUDENT LMS PORTAL LOGIN CREDENTIALS*:\n• Portal: https://softlabglobal.com/login\n• Username: *${res.credentials?.email || applicantEmail}*\n• Temporary Password: *${res.credentials?.temporaryPassword}*\n\n📞 Admissions Helpline: +91 9196596979\n🌐 www.softlabglobal.com`;
