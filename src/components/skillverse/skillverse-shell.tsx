@@ -6,6 +6,10 @@ import { usePathname, useRouter } from "next/navigation";
 import { api as trpc } from "@/lib/trpc/react";
 import { SKILLVERSE_BRAND } from "@/lib/constants/skillverse-data";
 import {
+  SkillverseEnquiryModal,
+  openSkillverseEnquiryModal,
+} from "@/components/skillverse/skillverse-enquiry-modal";
+import {
   BookOpen,
   GraduationCap,
   Cpu,
@@ -299,13 +303,15 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             </a>
 
             {/* Book a Free Demo Vibrant CTA */}
-            <Link
-              href="/skillverse/free-demo-class"
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-[0.98]"
+            <button
+              type="button"
+              onClick={() => openSkillverseEnquiryModal()}
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              title="Open Skillverse Admission & Demo Enquiry Form"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
               <span>Book Free Demo</span>
-            </Link>
+            </button>
 
             {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
             {staffUser ? (
@@ -763,13 +769,16 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="pt-2 border-t border-slate-200 flex flex-col gap-2">
-              <Link
-                href="/skillverse/free-demo-class"
-                onClick={() => setMobileMenuOpen(false)}
-                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#16A34A] to-[#22C55E] text-white text-center text-xs font-bold shadow-xs"
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openSkillverseEnquiryModal();
+                }}
+                className="w-full py-2.5 rounded-xl bg-gradient-to-r from-[#16A34A] to-[#22C55E] text-white text-center text-xs font-bold shadow-xs cursor-pointer"
               >
                 Book a Free Demo Class
-              </Link>
+              </button>
               <Link
                 href="/skillverse/student-assessment"
                 onClick={() => setMobileMenuOpen(false)}
@@ -980,6 +989,9 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
           <span className="sm:hidden">Call</span>
         </a>
       </aside>
+
+      {/* Inbuilt Refresh & Page Open Admission Enquiry Popup Modal */}
+      <SkillverseEnquiryModal />
     </div>
   );
 }
