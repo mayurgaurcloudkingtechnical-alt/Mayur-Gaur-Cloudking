@@ -109,35 +109,35 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
       {/* ==================================================================== */}
       {/* TIER 0: SLEEK TOP ANNOUNCEMENT & QUICK PORTALS STRIP                 */}
       {/* ==================================================================== */}
-      <div className="bg-[#071630] text-white text-xs border-b border-blue-900/60">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-4 overflow-hidden">
-          {/* Left: Brand Badge & Helpline */}
-          <div className="flex items-center gap-2.5 shrink-0 whitespace-nowrap">
+      <div className="bg-[#071630] text-white text-xs border-b border-blue-900/60 overflow-visible">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex items-center justify-between gap-3 overflow-visible">
+          {/* Left: Brand Badge & Helpline Numbers */}
+          <div className="flex items-center gap-2 lg:gap-3 shrink-0 whitespace-nowrap">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-gradient-to-r from-blue-600/30 to-emerald-500/30 border border-emerald-400/40 text-emerald-300 font-bold text-[10px] uppercase tracking-wider">
               <Sparkles className="w-3 h-3 text-emerald-400" /> Powered by SoftLab Global
             </span>
-            <span className="text-slate-300 font-medium hidden md:inline text-[11px]">
+            <span className="text-slate-300 font-medium hidden 2xl:inline text-[11px]">
               {SKILLVERSE_BRAND.supportingLine}
             </span>
             <a
               href="tel:+919196596975"
-              className="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-bold ml-1 transition-colors text-[11px]"
+              className="inline-flex items-center gap-1 text-emerald-300 hover:text-white font-bold transition-colors text-[11px]"
               title="Main Admissions Helpline (+91-9196596975)"
             >
               <PhoneCall className="w-3 h-3 text-emerald-400" /> +91-9196596975
             </a>
-            <span className="hidden xl:inline text-slate-500">|</span>
+            <span className="hidden lg:inline text-slate-500">|</span>
             <a
               href="tel:+919196596979"
-              className="hidden xl:inline-flex items-center gap-1 text-cyan-300 hover:text-white font-semibold transition-colors text-[11px]"
+              className="hidden lg:inline-flex items-center gap-1 text-cyan-300 hover:text-white font-semibold transition-colors text-[11px]"
               title="Academic Counselor Desk (+91-9196596979)"
             >
               Counselor: +91-9196596979
             </a>
           </div>
 
-          {/* Right: Quick Portals Strip */}
-          <div className="hidden sm:flex items-center gap-2.5 text-[11px] font-semibold shrink-0 whitespace-nowrap">
+          {/* Right: Quick Portals Strip (Guaranteed never to clip or push out of frame) */}
+          <div className="hidden sm:flex items-center gap-2 lg:gap-2.5 text-[11px] font-semibold shrink-0 whitespace-nowrap">
             <Link
               href="/skillverse/crm"
               className="text-emerald-300 hover:text-white transition-colors font-bold flex items-center gap-1"
@@ -166,33 +166,27 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             >
               Parent Desk
             </Link>
-            <span className="text-slate-600">|</span>
-            {staffUser ? (
-              <div className="flex items-center gap-1.5">
-                <Link
-                  href="/skillverse/staff-login"
-                  className="text-emerald-300 hover:text-white transition-colors flex items-center gap-1 font-bold"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Staff: {staffUser.name || "Admin"}
-                </Link>
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="text-rose-300 hover:text-rose-100 underline text-[10px] font-bold cursor-pointer"
-                  title="Sign Out of Session"
-                >
-                  (Logout)
-                </button>
-              </div>
-            ) : (
-              <Link
-                href="/skillverse/login"
-                className="text-slate-200 hover:text-white transition-colors flex items-center gap-1 font-bold"
-              >
-                <Lock className="w-3 h-3 text-cyan-300" />
-                Staff Sign In
-              </Link>
+            {staffUser && (
+              <>
+                <span className="text-slate-600">|</span>
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href="/skillverse/staff-login"
+                    className="text-emerald-300 hover:text-white transition-colors flex items-center gap-1 font-bold"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    Staff: {staffUser.name || "Admin"}
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-rose-300 hover:text-rose-100 underline text-[10px] font-bold cursor-pointer"
+                    title="Sign Out of Session"
+                  >
+                    (Logout)
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -246,7 +240,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
           </div>
 
           {/* Primary Action Cluster */}
-          <div className="hidden md:flex items-center gap-2.5 shrink-0">
+          <div className="hidden md:flex items-center gap-2 xl:gap-2.5 shrink-0">
             {/* WhatsApp Direct Chat Pill - Always single-line */}
             <a
               href="https://wa.me/919196596975"
@@ -256,14 +250,15 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               title="Chat on WhatsApp +91-9196596975"
             >
               <MessageCircle className="w-4 h-4 text-[#16A34A] shrink-0" />
-              <span className="whitespace-nowrap font-bold tracking-tight">+91 91965 96975</span>
+              <span className="hidden xl:inline whitespace-nowrap font-bold tracking-tight">+91 91965 96975</span>
+              <span className="xl:hidden whitespace-nowrap font-bold tracking-tight">WhatsApp</span>
             </a>
 
             {/* Book a Free Demo Vibrant CTA */}
             <button
               type="button"
               onClick={() => openSkillverseEnquiryModal()}
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
               title="Open Skillverse Admission & Demo Enquiry Form"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
@@ -329,14 +324,14 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
         <div className="hidden md:block w-full border-t border-slate-800/80 bg-gradient-to-r from-[#071630] via-[#0B2247] to-[#071630] text-white shadow-md relative z-30 overflow-visible">
           <div className="relative mx-auto max-w-7xl px-2 sm:px-4 lg:px-6 overflow-visible">
             <nav
-              className="w-full flex items-center justify-between lg:justify-center gap-1 xl:gap-2 py-2 overflow-visible relative"
+              className="w-full flex items-center justify-center gap-1 xl:gap-2 py-2 overflow-visible relative"
               aria-label="Skillverse Main Navigation"
             >
               {/* Home */}
               <Link
                 href="/skillverse"
                 data-active={pathname === "/skillverse" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -349,7 +344,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/about"
                 data-active={pathname === "/skillverse/about" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse/about"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -362,7 +357,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/courses"
                 data-active={pathname === "/skillverse/courses" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse/courses"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -375,7 +370,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <div className="relative group shrink-0">
                 <button
                   type="button"
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
+                  className={`inline-flex items-center gap-1 xl:gap-1.5 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
                     pathname.includes("foundation") || pathname.includes("jee") || pathname.includes("neet") || pathname.includes("olympiad") || pathname.includes("cuet") || pathname.includes("secondary")
                       ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-xs"
                       : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -407,7 +402,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <div className="relative group shrink-0">
                 <button
                   type="button"
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
+                  className={`inline-flex items-center gap-1 xl:gap-1.5 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
                     pathname.includes("ai") || pathname.includes("coding") || pathname.includes("robotics") || pathname.includes("digital") || pathname.includes("career")
                       ? "text-cyan-300 bg-cyan-950/80 border border-cyan-500/40 font-bold shadow-xs"
                       : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -439,7 +434,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/packages-and-fees"
                 data-active={pathname === "/skillverse/packages-and-fees" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse/packages-and-fees"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -452,7 +447,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/admissions"
                 data-active={pathname === "/skillverse/admissions" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse/admissions"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -465,7 +460,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/live-classroom"
                 data-active={pathname === "/skillverse/live-classroom" ? "true" : "false"}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-bold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 shadow-xs ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-bold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 border border-emerald-500/40 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900/60 shadow-xs ${
                   pathname === "/skillverse/live-classroom"
                     ? "ring-2 ring-emerald-400 bg-emerald-900/80 text-white"
                     : ""
@@ -482,7 +477,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <div className="relative group shrink-0">
                 <button
                   type="button"
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
+                  className={`inline-flex items-center gap-1 xl:gap-1.5 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer ${
                     pathname.includes("crm") || pathname.includes("lms") || pathname.includes("student-login") || pathname.includes("parent-login")
                       ? "text-amber-300 bg-amber-950/80 border border-amber-500/40 font-bold shadow-xs"
                       : "text-slate-200 hover:text-white hover:bg-white/10"
@@ -540,7 +535,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <Link
                 href="/skillverse/contact"
                 data-active={pathname === "/skillverse/contact" ? "true" : "false"}
-                className={`shrink-0 px-2.5 lg:px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                className={`shrink-0 px-2 lg:px-2.5 xl:px-3 py-1.5 rounded-lg text-[11px] xl:text-xs font-semibold tracking-wide transition-all whitespace-nowrap flex items-center gap-1 xl:gap-1.5 ${
                   pathname === "/skillverse/contact"
                     ? "text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 font-bold shadow-sm"
                     : "text-slate-200 hover:text-white hover:bg-white/10"
