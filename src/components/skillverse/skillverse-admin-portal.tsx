@@ -406,89 +406,17 @@ export function SkillverseAdminPortal({
   const [gradeMarks, setGradeMarks] = useState(4);
   const [gradeFeedback, setGradeFeedback] = useState("Clear conceptual explanation of Ohm's Law and circuit current limits.");
 
-  if (isLoading) {
-    return (
-      <div className="p-12 text-center text-slate-500 text-sm">
-        Loading SLG SKILLVERSE Staff, Teacher & Admin Portal...
-      </div>
-    );
-  }
-
-  if (error || !data) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-12">
-        <SkillverseAuthForm
-          title="SLG SKILLVERSE Academic & Leadership Login"
-          subtitle={
-            portalMode === "crm"
-              ? "Admissions CRM & Pipeline Desk"
-              : portalMode === "lms"
-              ? "Academic LMS & Live Classroom Hub"
-              : "Staff, Teacher & Admin Command Center"
-          }
-          onSuccessCallback={() => {
-            refetch();
-          }}
-        />
-      </div>
-    );
-  }
-
-  // Check if non-higher-authority staff has not yet been provisioned
-  if (staffUser && staffUser.canAccessSkillverse === false) {
-    return (
-      <div className="max-w-xl mx-auto px-4 py-16">
-        <div className="bg-white rounded-3xl border border-amber-200 p-8 shadow-xl space-y-5 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
-            <Lock className="w-7 h-7" />
-          </div>
-          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold uppercase tracking-wider">
-            Skillverse Staff Authorization Required
-          </span>
-          <h1 className="text-2xl font-black text-slate-900">
-            Higher Authority Access Provisioning Needed
-          </h1>
-          <p className="text-xs text-slate-600 leading-relaxed">
-            You are signed in as <strong>{staffUser.name}</strong> ({staffUser.roleCode}).
-            According to Skillverse governance, Higher Authorities (<strong>Manager</strong>, <strong>Admin</strong>, <strong>Director</strong>, or <strong>Super Admin</strong>)
-            can log into both SoftLab Global and Skillverse using their same credentials.
-            All other staff and faculty profiles must be provisioned through leadership.
-          </p>
-          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-700 space-y-1">
-            <div className="font-bold text-slate-900">Next Steps:</div>
-            <div>• Contact your Manager, Director, or Super Admin to provision your Skillverse Staff Credential.</div>
-            <div>• If you hold higher authority credentials, please sign in with that account.</div>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
-            >
-              Sign Out / Switch Account
-            </button>
-            <Link
-              href="/skillverse"
-              className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs"
-            >
-              Back to Public Site
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const enquiries = data.enquiries || [];
-  const students = data.students || [];
-  const invoices = data.invoices || [];
-  const certificates = data.certificates || [];
-  const assessments = data.assessments || [];
-  const quizAttempts = data.quizAttempts || [];
-  const batches = data.batches || [];
-  const notifications = data.notifications || [];
-  const analyticsEvents = data.analyticsEvents || [];
-  const auditLogs = data.auditLogs || [];
+  // Normalized safe data extractions (executed before any early returns)
+  const enquiries = data?.enquiries || [];
+  const students = data?.students || [];
+  const invoices = data?.invoices || [];
+  const certificates = data?.certificates || [];
+  const assessments = data?.assessments || [];
+  const quizAttempts = data?.quizAttempts || [];
+  const batches = data?.batches || [];
+  const notifications = data?.notifications || [];
+  const analyticsEvents = data?.analyticsEvents || [];
+  const auditLogs = data?.auditLogs || [];
   const metrics = {
     totalEnquiries: data?.metrics?.totalEnquiries ?? 0,
     demoBookingsCount: data?.metrics?.demoBookingsCount ?? 0,
@@ -498,10 +426,10 @@ export function SkillverseAdminPortal({
     pendingFeeInr: data?.metrics?.pendingFeeInr ?? 0,
     certificatesIssuedCount: data?.metrics?.certificatesIssuedCount ?? 0,
   };
-  const cms = data.cms;
-
+  const cms = data?.cms;
   const currentCms = cmsDraft || cms;
 
+  // Unconditionally called hook (Rules of Hooks guarantee)
   const filteredEnquiries = useMemo(() => {
     return (enquiries || []).filter((enq) => {
       const q = searchQuery.toLowerCase().trim();
@@ -574,6 +502,79 @@ export function SkillverseAdminPortal({
     link.click();
     document.body.removeChild(link);
   };
+
+  if (isLoading) {
+    return (
+      <div className="p-12 text-center text-slate-500 text-sm">
+        Loading SLG SKILLVERSE Staff, Teacher & Admin Portal...
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-12">
+        <SkillverseAuthForm
+          title="SLG SKILLVERSE Academic & Leadership Login"
+          subtitle={
+            portalMode === "crm"
+              ? "Admissions CRM & Pipeline Desk"
+              : portalMode === "lms"
+              ? "Academic LMS & Live Classroom Hub"
+              : "Staff, Teacher & Admin Command Center"
+          }
+          onSuccessCallback={() => {
+            refetch();
+          }}
+        />
+      </div>
+    );
+  }
+
+  // Check if non-higher-authority staff has not yet been provisioned
+  if (staffUser && staffUser.canAccessSkillverse === false) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16">
+        <div className="bg-white rounded-3xl border border-amber-200 p-8 shadow-xl space-y-5 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto">
+            <Lock className="w-7 h-7" />
+          </div>
+          <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold uppercase tracking-wider">
+            Skillverse Staff Authorization Required
+          </span>
+          <h1 className="text-2xl font-black text-slate-900">
+            Higher Authority Access Provisioning Needed
+          </h1>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            You are signed in as <strong>{staffUser.name}</strong> ({staffUser.roleCode}).
+            According to Skillverse governance, Higher Authorities (<strong>Manager</strong>, <strong>Admin</strong>, <strong>Director</strong>, or <strong>Super Admin</strong>)
+            can log into both SoftLab Global and Skillverse using their same credentials.
+            All other staff and faculty profiles must be provisioned through leadership.
+          </p>
+          <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-left text-xs text-slate-700 space-y-1">
+            <div className="font-bold text-slate-900">Next Steps:</div>
+            <div>• Contact your Manager, Director, or Super Admin to provision your Skillverse Staff Credential.</div>
+            <div>• If you hold higher authority credentials, please sign in with that account.</div>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="flex-1 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs"
+            >
+              Sign Out / Switch Account
+            </button>
+            <Link
+              href="/skillverse"
+              className="flex-1 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold text-xs"
+            >
+              Back to Public Site
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">

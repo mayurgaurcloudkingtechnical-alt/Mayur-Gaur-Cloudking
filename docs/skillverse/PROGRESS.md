@@ -72,3 +72,7 @@
   - **Dedicated Academic LMS & Live Classroom Hub (`/skillverse/lms`)**: In-platform WebRTC live studio, YouTube broadcast automation to channel `UCat1xHXxCdog_mWkEBA5jMQ`, subject/grade/batch scheduling, daily attendance registers, and subjective quiz grading desk.
   - **Corporate IT Clutter Eliminated**: Corporate client billing, industrial internship tracks, and vendor management remain exclusively in SoftLab Global.
   - **100% Database Isolation Verified**: Verified that all Skillverse CRM, student, and LMS data resides safely in `SKILLVERSE_*` system_settings partitions with zero overlap or conflict with SoftLab Global. All 13/13 E2E test suites passing.
+- **Rules of Hooks Compliance & Higher Authorities Activation Fix**:
+  - **Resolved Minified React Error #310**: Moved `filteredEnquiries = useMemo(...)` and data extraction before all early returns (`isLoading`, `error || !data`, `staffUser.canAccessSkillverse === false`), ensuring 100% compliance with React Rules of Hooks so hook execution counts never change between renders.
+  - **Activated Higher Authority Accounts**: Verified and activated `director@softlabglobal.com`, `admin@softlabglobal.com`, and `mayur.gaur@softlabglobal.com` in PostgreSQL with password `SuperAdminSecure2026!`.
+  - **Quick Fill & Reload Propagation**: Added one-click quick-fill buttons for Super Admin, Director, and Mayur Gaur in `SkillverseAuthForm` and enforced `window.location.reload()` on authentication to guarantee session cookie persistence across edge and client.
