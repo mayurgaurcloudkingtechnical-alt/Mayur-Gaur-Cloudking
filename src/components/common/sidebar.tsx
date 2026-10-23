@@ -33,6 +33,7 @@ import {
   MessageSquare,
   Video,
   Youtube,
+  Activity,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -152,6 +153,16 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
       default: // SUPER_ADMIN, DIRECTOR, ADMIN, MANAGER, HR, ACCOUNTANT, PLACEMENT_OFFICER
         return [
           { title: "Dashboard", href: "/admin/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          ...(["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER", "PLACEMENT_OFFICER", "HR"].includes(roleCode)
+            ? [
+                {
+                  title: "Live Operations & Audit",
+                  href: "/admin/operations",
+                  icon: <Activity className="h-4 w-4 text-emerald-500" />,
+                  badge: "Live",
+                },
+              ]
+            : []),
           ...(["SUPER_ADMIN", "ADMIN", "DIRECTOR"].includes(roleCode)
             ? [
                 {

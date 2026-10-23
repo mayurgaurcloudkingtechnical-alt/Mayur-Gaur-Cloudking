@@ -35,8 +35,10 @@ import { classroomRouter } from "./classroom";
 import { mockInterviewRouter } from "./mockInterview";
 import { recruiterInterviewRouter } from "./recruiterInterview";
 import { youtubePublisherRouter } from "./youtubePublisher";
+import { managementRouter } from "./management";
 
 export const appRouter = router({
+  management: managementRouter,
   classroom: classroomRouter,
   mockInterview: mockInterviewRouter,
   recruiterInterview: recruiterInterviewRouter,

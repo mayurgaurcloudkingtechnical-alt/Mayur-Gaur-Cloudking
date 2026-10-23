@@ -351,6 +351,13 @@ model User {
   conductedMockInterviews          MockInterview[]                   @relation("MockInterviewer")
   conductedRecruiterInterviews     RecruiterInterview[]              @relation("RecruiterInterviews")
 
+  // Management Control Center & Operations Relations
+  assignedAlerts                   ManagementAlert[]                 @relation("AlertAssignedTo")
+  acknowledgedAlerts               ManagementAlert[]                 @relation("AlertAcknowledgedBy")
+  resolvedAlerts                   ManagementAlert[]                 @relation("AlertResolvedBy")
+  requestedCorrections             RecordCorrectionLog[]             @relation("CorrectionRequestedBy")
+  approvedCorrections              RecordCorrectionLog[]             @relation("CorrectionApprovedBy")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -4355,5 +4362,83 @@ model RecruiterInterview {
   @@index([scheduledAt])
   @@map("recruiter_interviews")
 }
+
+// ==============================================================================
+// 19. MANAGEMENT LIVE OPERATIONS, INCIDENTS & RECORD CORRECTIONS
+// ==============================================================================
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+model ManagementAlert {
+  id               String        @id @default(cuid())
+  type             String        // "CLASS_START_OVERDUE", "ATTENDANCE_NOT_FINALIZED", "INTERVIEW_FEEDBACK_OVERDUE", "YOUTUBE_PUBLISH_FAILED", "PROVIDER_ERROR", "UNASSIGNED_TRAINER"
+  title            String
+  description      String        @db.Text
+  severity         AlertSeverity @default(MEDIUM)
+  status           AlertStatus   @default(OPEN)
+  sourceModule     String        // "CLASSROOM", "ATTENDANCE", "INTERVIEW", "COMMUNICATIONS", "YOUTUBE", "SYSTEM"
+  relatedRecordId  String?
+  assignedToId     String?
+  assignedTo       User?         @relation("AlertAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
+  acknowledgedById String?
+  acknowledgedBy   User?         @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id], onDelete: SetNull)
+  acknowledgedAt   DateTime?
+  resolvedById     String?
+  resolvedBy       User?         @relation("AlertResolvedBy", fields: [resolvedById], references: [id], onDelete: SetNull)
+  resolvedAt       DateTime?
+  resolutionNotes  String?       @db.Text
+  metadata         Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([sourceModule])
+  @@index([createdAt])
+  @@map("management_alerts")
+}
+
+enum CorrectionStatus {
+  APPLIED
+  PENDING_APPROVAL
+  REJECTED
+}
+
+model RecordCorrectionLog {
+  id              String           @id @default(cuid())
+  recordType      String           // "SCHEDULED_CLASS", "LIVE_ATTENDANCE", "MOCK_INTERVIEW", "RECRUITER_INTERVIEW", "YOUTUBE_QUEUE"
+  recordId        String
+  fieldChanged    String
+  oldValue        String?          @db.Text
+  newValue        String?          @db.Text
+  changeReason    String           @db.Text
+  status          CorrectionStatus @default(APPLIED)
+  requestedById   String
+  requestedBy     User             @relation("CorrectionRequestedBy", fields: [requestedById], references: [id], onDelete: Cascade)
+  approvedById    String?
+  approvedBy      User?            @relation("CorrectionApprovedBy", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedAt      DateTime?
+  rejectionReason String?          @db.Text
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([recordType, recordId])
+  @@index([requestedById])
+  @@index([status])
+  @@index([createdAt])
+  @@map("record_correction_logs")
+}
+
 
 
