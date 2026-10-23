@@ -16,6 +16,8 @@ import {
   INITIAL_ACADEMIC_PACKAGES,
   INITIAL_COMPETITIVE_ADDONS,
 } from "@/lib/constants/skillverse-data";
+import { isDiwaliCampaignActive } from "@/lib/constants/campaign";
+import { openSkillverseDiwaliModal } from "@/components/skillverse/skillverse-diwali-modal";
 import {
   Users,
   GraduationCap,
@@ -576,8 +578,30 @@ export function SkillverseAdminPortal({
     );
   }
 
+  const isDiwaliActive = isDiwaliCampaignActive();
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Active Festive Campaign Concession Notice for Staff */}
+      {isDiwaliActive && (
+        <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-slate-950 rounded-2xl p-3 sm:px-5 flex items-center justify-between gap-3 shadow-md border border-white/40">
+          <div className="flex items-center gap-2.5 text-xs font-black">
+            <span className="text-base">🪔</span>
+            <span>DIWALI FESTIVE CONCESSION ACTIVE:</span>
+            <span className="font-bold text-slate-900 hidden sm:inline">
+              Up to 45% Festive Scholarship available on all Academic &amp; Tech Packages till 10 Nov 2026.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => openSkillverseDiwaliModal()}
+            className="px-3 py-1 rounded-xl bg-slate-950 text-amber-300 font-extrabold text-[11px] hover:bg-slate-900 transition-all shrink-0 cursor-pointer"
+          >
+            View Flyer &amp; Terms →
+          </button>
+        </div>
+      )}
+
       {/* Header with Staff Session & Dedicated Logout Option */}
       <div className="bg-gradient-to-r from-[#071630] via-[#0B2247] to-[#15803D] rounded-3xl p-6 sm:p-8 text-white flex flex-col md:flex-row md:items-center justify-between gap-6 shadow-xl">
         <div>

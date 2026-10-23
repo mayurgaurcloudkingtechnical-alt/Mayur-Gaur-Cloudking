@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { api as trpc } from "@/lib/trpc/react";
 import { SKILLVERSE_BRAND } from "@/lib/constants/skillverse-data";
+import { isDiwaliCampaignActive } from "@/lib/constants/campaign";
 import {
   X,
   Sparkles,
@@ -33,8 +34,9 @@ export function openSkillverseEnquiryModal(detail?: { courseSlug?: string; grade
 
 export function SkillverseEnquiryModal() {
   const pathname = usePathname();
-  // Open by default so it shows immediately on every page open and refresh
-  const [isOpen, setIsOpen] = useState(true);
+  const isDiwaliActive = isDiwaliCampaignActive();
+  // When Diwali Offer is active, festive modal takes priority. Otherwise open regular enquiry modal.
+  const [isOpen, setIsOpen] = useState(!isDiwaliActive);
   const [submittedData, setSubmittedData] = useState<{
     referenceNumber: string;
     studentName: string;
@@ -65,11 +67,11 @@ export function SkillverseEnquiryModal() {
 
     if (isStaffPortal) {
       setIsOpen(false);
-    } else {
-      // Re-open on refresh / navigation across public pages
+    } else if (!isDiwaliActive) {
+      // Re-open on refresh / navigation across public pages when Diwali campaign is not active
       setIsOpen(true);
     }
-  }, [pathname]);
+  }, [pathname, isDiwaliActive]);
 
   // Listen for manual trigger events from "Book Demo" or "Enquire Now" buttons
   useEffect(() => {

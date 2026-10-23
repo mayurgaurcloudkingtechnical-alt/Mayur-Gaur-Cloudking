@@ -10,6 +10,12 @@ import {
   openSkillverseEnquiryModal,
 } from "@/components/skillverse/skillverse-enquiry-modal";
 import {
+  SkillverseDiwaliModal,
+  openSkillverseDiwaliModal,
+} from "@/components/skillverse/skillverse-diwali-modal";
+import { SkillverseDiwaliBanner } from "@/components/skillverse/skillverse-diwali-banner";
+import { isDiwaliCampaignActive } from "@/lib/constants/campaign";
+import {
   BookOpen,
   GraduationCap,
   Cpu,
@@ -106,6 +112,8 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+      {/* 24/7 Sliding Diwali Festive Concession Ribbon */}
+      <SkillverseDiwaliBanner />
       {/* ==================================================================== */}
       {/* TIER 0: SLEEK TOP ANNOUNCEMENT & QUICK PORTALS STRIP                 */}
       {/* ==================================================================== */}
@@ -254,15 +262,21 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               <span className="xl:hidden whitespace-nowrap font-bold tracking-tight">WhatsApp</span>
             </a>
 
-            {/* Book a Free Demo Vibrant CTA */}
+            {/* Book a Free Demo / Diwali Offer CTA */}
             <button
               type="button"
-              onClick={() => openSkillverseEnquiryModal()}
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] hover:opacity-95 text-white font-bold text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
-              title="Open Skillverse Admission & Demo Enquiry Form"
+              onClick={() => {
+                if (isDiwaliCampaignActive()) {
+                  openSkillverseDiwaliModal();
+                } else {
+                  openSkillverseEnquiryModal();
+                }
+              }}
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-[#16A34A] hover:opacity-95 text-white font-black text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              title="Open Skillverse Admission & Diwali Concession Form"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
-              <span>Book Free Demo</span>
+              <span>{isDiwaliCampaignActive() ? "Diwali 45% Offer" : "Book Free Demo"}</span>
             </button>
 
             {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
@@ -920,6 +934,9 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
 
       {/* Inbuilt Refresh & Page Open Admission Enquiry Popup Modal */}
       <SkillverseEnquiryModal />
+
+      {/* Inbuilt 24/7 Diwali Festive Offer Modal */}
+      <SkillverseDiwaliModal />
     </div>
   );
 }
