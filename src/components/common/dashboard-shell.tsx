@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Navbar } from "./navbar";
 import { Sidebar } from "./sidebar";
+import { DiwaliLmsBanner } from "./diwali-lms-banner";
 import { UserRoleCode } from "@prisma/client";
 
 interface DashboardShellProps {
@@ -24,6 +25,8 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         user={user}
         onToggleSidebar={() => setSidebarOpen((prev) => !prev)}
       />
+
+      <DiwaliLmsBanner />
 
       <div className="flex flex-1">
         <Sidebar

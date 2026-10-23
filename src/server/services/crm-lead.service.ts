@@ -186,7 +186,11 @@ export class CrmLeadService {
 
     const cleanPhone = normalizePhone(input.phone);
     const cleanEmail = normalizeEmail(input.email);
-    const leadSource = input.source || LeadSource.WEBSITE;
+    const validSources = Object.values(LeadSource) as string[];
+    const leadSource: LeadSource =
+      input.source && validSources.includes(input.source)
+        ? (input.source as LeadSource)
+        : LeadSource.WEBSITE;
 
     let matchedCourseId: string | null = null;
     let providerType: string = "SOFTLAB";

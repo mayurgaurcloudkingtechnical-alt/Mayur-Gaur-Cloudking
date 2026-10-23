@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, protectedProcedure } from "../init";
 import { NotificationService } from "@/server/services/notification.service";
+import { DiwaliCampaignBroadcastService } from "@/server/services/diwali-campaign-broadcast.service";
 
 export const notificationRouter = router({
   /**
@@ -69,4 +70,11 @@ export const notificationRouter = router({
         pushToken: input.pushToken,
       };
     }),
+
+  /**
+   * Broadcasts the Diwali Offer 2026 alert to all active platform users
+   */
+  broadcastDiwaliOfferAlert: protectedProcedure.mutation(async () => {
+    return DiwaliCampaignBroadcastService.broadcastToAllUsers();
+  }),
 });

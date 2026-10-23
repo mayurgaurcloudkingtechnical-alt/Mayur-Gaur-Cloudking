@@ -1,0 +1,247 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <radialGradient id="bgGlow" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#3B1042" />
+      <stop offset="45%" stop-color="#1B0A26" />
+      <stop offset="85%" stop-color="#080312" />
+      <stop offset="100%" stop-color="#030107" />
+    </radialGradient>
+
+    <radialGradient id="goldAura" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#FFE885" stop-opacity="0.9" />
+      <stop offset="30%" stop-color="#F59E0B" stop-opacity="0.6" />
+      <stop offset="70%" stop-color="#D97706" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#B45309" stop-opacity="0" />
+    </radialGradient>
+
+    <!-- Metallic Gold Foil Gradient -->
+    <linearGradient id="goldFoil" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFEFA6" />
+      <stop offset="25%" stop-color="#FBBF24" />
+      <stop offset="50%" stop-color="#F59E0B" />
+      <stop offset="75%" stop-color="#FDE68A" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
+
+    <!-- Fire/Diya Flame Gradient -->
+    <linearGradient id="flameGrad" x1="50%" y1="100%" x2="50%" y2="0%">
+      <stop offset="0%" stop-color="#DC2626" />
+      <stop offset="25%" stop-color="#EA580C" />
+      <stop offset="60%" stop-color="#F59E0B" />
+      <stop offset="85%" stop-color="#FDE047" />
+      <stop offset="100%" stop-color="#FFFFFF" />
+    </linearGradient>
+
+    <!-- Card Glass Border Gradient -->
+    <linearGradient id="glassBorder" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE68A" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#B45309" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#FDE68A" stop-opacity="0.6" />
+    </linearGradient>
+
+    <!-- Button Gradient -->
+    <linearGradient id="btnEmerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10B981" />
+      <stop offset="100%" stop-color="#047857" />
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="14" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+
+    <filter id="dropShadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.75" />
+    </filter>
+
+    <!-- Rangoli / Mandala Pattern Element -->
+    <g id="mandalaPetal">
+      <path d="M 0,0 C 15,-30 35,-60 0,-100 C -35,-60 -15,-30 0,0 Z" fill="none" stroke="url(#goldFoil)" stroke-width="1.5" opacity="0.35" />
+      <circle cx="0" cy="-60" r="4" fill="#FBBF24" opacity="0.5" />
+    </g>
+
+    <!-- Diya Motif -->
+    <g id="diya">
+      <!-- Flame Aura -->
+      <circle cx="0" cy="-35" r="30" fill="url(#goldAura)" opacity="0.8" filter="url(#softGlow)" />
+      <!-- Flame Outer -->
+      <path d="M 0,-65 C 16,-45 14,-20 0,-5 C -14,-20 -16,-45 0,-65 Z" fill="url(#flameGrad)" filter="url(#dropShadow)" />
+      <!-- Flame Core -->
+      <path d="M 0,-52 C 8,-38 7,-20 0,-10 C -7,-20 -8,-38 0,-52 Z" fill="#FFFFFF" opacity="0.9" />
+      <!-- Base Bowl -->
+      <ellipse cx="0" cy="5" rx="36" ry="14" fill="#92400E" stroke="url(#goldFoil)" stroke-width="2" />
+      <path d="M -36,5 Q 0,38 36,5 Z" fill="#78350F" stroke="url(#goldFoil)" stroke-width="2" />
+      <ellipse cx="0" cy="8" rx="28" ry="6" fill="#B45309" />
+      <circle cx="-16" cy="12" r="2" fill="#FDE68A" />
+      <circle cx="0" cy="15" r="2.5" fill="#FDE68A" />
+      <circle cx="16" cy="12" r="2" fill="#FDE68A" />
+    </g>
+  </defs>
+
+  <!-- Background Layer -->
+  <rect width="1200" height="630" fill="url(#bgGlow)" />
+
+  <!-- Decorative Mandala Wheels (Background Top Left & Top Right) -->
+  <g transform="translate(100, 80) scale(1.4)" opacity="0.25">
+    <circle cx="0" cy="0" r="120" fill="none" stroke="url(#goldFoil)" stroke-width="1" stroke-dasharray="4,6" />
+    <circle cx="0" cy="0" r="85" fill="none" stroke="url(#goldFoil)" stroke-width="1.5" />
+    <g transform="rotate(0)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(30)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(60)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(90)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(120)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(150)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(180)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(210)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(240)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(270)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(300)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(330)"><use href="#mandalaPetal" /></g>
+  </g>
+
+  <g transform="translate(1100, 80) scale(1.4)" opacity="0.25">
+    <circle cx="0" cy="0" r="120" fill="none" stroke="url(#goldFoil)" stroke-width="1" stroke-dasharray="4,6" />
+    <circle cx="0" cy="0" r="85" fill="none" stroke="url(#goldFoil)" stroke-width="1.5" />
+    <g transform="rotate(0)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(30)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(60)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(90)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(120)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(150)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(180)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(210)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(240)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(270)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(300)"><use href="#mandalaPetal" /></g>
+    <g transform="rotate(330)"><use href="#mandalaPetal" /></g>
+  </g>
+
+  <!-- Hanging Decorative Lanterns / Garlands -->
+  <g stroke="url(#goldFoil)" stroke-width="1" opacity="0.4">
+    <line x1="240" y1="0" x2="240" y2="70" />
+    <circle cx="240" cy="74" r="5" fill="#FBBF24" />
+    <line x1="380" y1="0" x2="380" y2="110" />
+    <circle cx="380" cy="114" r="6" fill="#FBBF24" />
+    <line x1="820" y1="0" x2="820" y2="110" />
+    <circle cx="820" cy="114" r="6" fill="#FBBF24" />
+    <line x1="960" y1="0" x2="960" y2="70" />
+    <circle cx="960" cy="74" r="5" fill="#FBBF24" />
+  </g>
+
+  <!-- Central Glow Ambient -->
+  <circle cx="600" cy="270" r="320" fill="url(#goldAura)" opacity="0.45" />
+
+  <!-- Outer Border Frame -->
+  <rect x="25" y="25" width="1150" height="580" rx="24" fill="none" stroke="url(#glassBorder)" stroke-width="2" />
+  <rect x="35" y="35" width="1130" height="560" rx="16" fill="none" stroke="url(#goldFoil)" stroke-width="0.8" opacity="0.4" stroke-dasharray="8,6" />
+
+  <!-- Corner Ornaments -->
+  <path d="M 25,65 Q 65,65 65,25" fill="none" stroke="url(#goldFoil)" stroke-width="2.5" />
+  <path d="M 1175,65 Q 1135,65 1135,25" fill="none" stroke="url(#goldFoil)" stroke-width="2.5" />
+  <path d="M 25,565 Q 65,565 65,605" fill="none" stroke="url(#goldFoil)" stroke-width="2.5" />
+  <path d="M 1175,565 Q 1135,565 1135,605" fill="none" stroke="url(#goldFoil)" stroke-width="2.5" />
+
+  <!-- TOP HEADER / BRAND IDENTITY -->
+  <g transform="translate(600, 68)" text-anchor="middle">
+    <!-- Brand Tag Badge -->
+    <rect x="-190" y="0" width="380" height="34" rx="17" fill="#1E1430" stroke="url(#goldFoil)" stroke-width="1.5" />
+    <text x="0" y="22" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#FDE68A" letter-spacing="3">
+      ★ SOFTLAB GLOBAL • FESTIVE ACADEMIC CONCESSION ★
+    </text>
+  </g>
+
+  <!-- MAIN HEADLINE: DIWALI DHAMAKA 2026 -->
+  <g transform="translate(600, 160)" text-anchor="middle">
+    <!-- Ambient Headline Glow -->
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="900" fill="#F59E0B" letter-spacing="4" filter="url(#softGlow)" opacity="0.6">
+      DIWALI DHAMAKA 2026
+    </text>
+    <!-- Sharp Golden Text -->
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="64" font-weight="900" fill="url(#goldFoil)" letter-spacing="4" filter="url(#dropShadow)">
+      DIWALI DHAMAKA 2026
+    </text>
+    <!-- Subtitle Celebration Line -->
+    <text x="0" y="38" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#E2E8F0" letter-spacing="1.5">
+      Celebrate Diwali with a Brighter Future &amp; Career-Ready Skills
+    </text>
+  </g>
+
+  <!-- CENTER MEGA DISCOUNT BADGE -->
+  <g transform="translate(600, 275)" text-anchor="middle">
+    <!-- Glowing Badge Pill -->
+    <rect x="-340" y="-48" width="680" height="96" rx="48" fill="#12061D" stroke="url(#goldFoil)" stroke-width="3" filter="url(#dropShadow)" />
+    <rect x="-332" y="-40" width="664" height="80" rx="40" fill="none" stroke="#FDE68A" stroke-width="1" stroke-dasharray="6,4" opacity="0.6" />
+
+    <!-- UP TO 45% OFF Text -->
+    <text x="0" y="8" font-family="system-ui, -apple-system, sans-serif" font-size="52" font-weight="950" fill="#FFFFFF" letter-spacing="2" filter="url(#dropShadow)">
+      UP TO <tspan fill="#FBBF24">45% OFF</tspan>
+    </text>
+    <text x="0" y="32" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="800" fill="#FDE68A" letter-spacing="5">
+      ON EVERY TECHNICAL &amp; UNIVERSITY COURSE
+    </text>
+  </g>
+
+  <!-- FLANKING DIYAS -->
+  <!-- Left Diya -->
+  <g transform="translate(160, 290) scale(1.35)">
+    <use href="#diya" />
+  </g>
+  <!-- Right Diya -->
+  <g transform="translate(1040, 290) scale(1.35)">
+    <use href="#diya" />
+  </g>
+
+  <!-- Bottom-center accent diyas -->
+  <g transform="translate(380, 480) scale(0.9)">
+    <use href="#diya" />
+  </g>
+  <g transform="translate(820, 480) scale(0.9)">
+    <use href="#diya" />
+  </g>
+
+  <!-- COURSE PILLS / DOMAINS BAR -->
+  <g transform="translate(600, 365)" text-anchor="middle">
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="700" fill="#CBD5E1" letter-spacing="1">
+      AI &amp; Machine Learning • Full Stack Web • Cloud &amp; DevOps • Cyber Security • Data Science • Degree Programs
+    </text>
+  </g>
+
+  <!-- EXPIRY & OFFER DETAILS STRIP -->
+  <g transform="translate(600, 410)" text-anchor="middle">
+    <rect x="-260" y="-18" width="520" height="36" rx="18" fill="#451A03" stroke="#F59E0B" stroke-width="1.5" />
+    <text x="0" y="5" font-family="system-ui, -apple-system, sans-serif" font-size="13" font-weight="800" fill="#FEF08A" letter-spacing="1">
+      ⏳ LIMITED-PERIOD OFFER VALID UNTIL 10 NOVEMBER 2026
+    </text>
+  </g>
+
+  <!-- ACTION CTAS ROW (VISUAL BUTTONS) -->
+  <g transform="translate(600, 490)">
+    <!-- Primary CTA: APPLY NOW -->
+    <g transform="translate(-160, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="24" fill="url(#btnEmerald)" stroke="#34D399" stroke-width="1.5" filter="url(#dropShadow)" />
+      <text x="0" y="7" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#FFFFFF" text-anchor="middle" letter-spacing="1.5">
+        APPLY NOW ➜
+      </text>
+    </g>
+
+    <!-- Secondary CTA: ENQUIRE NOW -->
+    <g transform="translate(160, 0)">
+      <rect x="-110" y="-24" width="220" height="48" rx="24" fill="#1E293B" stroke="url(#goldFoil)" stroke-width="1.5" filter="url(#dropShadow)" />
+      <text x="0" y="7" font-family="system-ui, -apple-system, sans-serif" font-size="15" font-weight="800" fill="#FDE68A" text-anchor="middle" letter-spacing="1.5">
+        ENQUIRE NOW 💬
+      </text>
+    </g>
+  </g>
+
+  <!-- FOOTER TRUST & VERIFICATION SEALS -->
+  <g transform="translate(600, 565)" text-anchor="middle">
+    <text x="0" y="0" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="500" fill="#94A3B8">
+      SOFTLAB GLOBAL ACADEMY • 100% Placement Support • In-House Live Studio • ISO 9001:2015 Certified
+    </text>
+    <text x="0" y="16" font-family="system-ui, -apple-system, sans-serif" font-size="9.5" font-weight="400" fill="#64748B">
+      *Terms &amp; conditions apply. Concessions vary by course domain and seat eligibility.
+    </text>
+  </g>
+</svg>

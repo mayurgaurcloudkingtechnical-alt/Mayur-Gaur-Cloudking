@@ -5,6 +5,8 @@ import { PublicFooter } from "@/components/public/public-footer";
 import { SITE_CONFIG } from "@/lib/constants/site";
 
 import { TopAnnouncementBar } from "@/components/public/top-announcement-bar";
+import { DiwaliSlidingBanner } from "@/components/public/diwali-sliding-banner";
+import { DiwaliOfferModal } from "@/components/public/diwali-offer-modal";
 import { FloatingWhatsApp } from "@/components/public/floating-whatsapp";
 import { CareerCounselingModal } from "@/components/public/career-counseling-modal";
 import { CourseBuyModal } from "@/components/public/course-buy-modal";
@@ -43,10 +45,12 @@ export default async function PublicLayout({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
       <TopAnnouncementBar />
+      <DiwaliSlidingBanner />
       <PublicNavbar userRole={session?.user?.roleCode ?? null} />
       <main className="flex-1">{children}</main>
       <PublicFooter />
       <FloatingWhatsApp />
+      <DiwaliOfferModal />
       <CareerCounselingModal />
       <CourseBuyModal />
       <ServiceDetailModal />
