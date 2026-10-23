@@ -37,7 +37,7 @@ export const SKILLVERSE_DIWALI_CAMPAIGN_2026 = {
   subheadline: "DIWALI FESTIVE OFFER — UP TO 45% OFF ON COURSES",
   discountBadge: "UP TO 45% OFF",
   discountSubtext: "ON ACADEMIC & SKILL COURSES",
-  flyerPath: "/images/skillverse-diwali-offer-2026.jpg",
+  flyerPath: "/images/skillverse-diwali-offer-2026.jpg?v=20261023",
   supportingCopy: [
     "Learn In-Demand Skills with Live & Practical Masterclasses.",
     "Expert Faculty & Academic Mentorship for Classes 8–12, JEE & NEET.",
