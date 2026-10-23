@@ -1,7 +1,7 @@
 import { requireRole } from "@/server/auth/rbac";
 import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
-import { TrainerAttendanceView } from "@/components/trainer/trainer-attendance-view";
+import { TrainerLiveClassesView } from "@/components/trainer/trainer-live-classes-view";
 
 export default async function TrainerClassesPage() {
   const user = await requireRole([
@@ -13,7 +13,7 @@ export default async function TrainerClassesPage() {
 
   return (
     <DashboardShell user={user}>
-      <TrainerAttendanceView />
+      <TrainerLiveClassesView />
     </DashboardShell>
   );
 }

@@ -31,6 +31,8 @@ import {
   Globe,
   CheckSquare,
   MessageSquare,
+  Video,
+  Youtube,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -62,6 +64,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
       case "STUDENT":
         return [
           { title: "Dashboard", href: "/student/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Live Classes", href: "/student/live-classes", icon: <Video className="h-4 w-4" />, badge: "Live" },
           { title: "My Courses", href: "/student/courses", icon: <BookOpen className="h-4 w-4" /> },
           { title: "Student ID Card", href: "/student/id-card", icon: <CreditCard className="h-4 w-4" /> },
           ...(isUniversityEnrolled
@@ -90,14 +93,16 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Fees & Breakdown", href: "/student/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "Payment History", href: "/student/payments", icon: <CreditCard className="h-4 w-4" /> },
           { title: "Career & Placement", href: "/student/placements", icon: <Briefcase className="h-4 w-4" /> },
+          { title: "Mock Interviews", href: "/student/interviews", icon: <Award className="h-4 w-4" /> },
         ];
       case "TRAINER":
         return [
           { title: "Performance Dashboard", href: "/trainer/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "Live Classroom Studio", href: "/trainer/classes", icon: <Video className="h-4 w-4" />, badge: "Studio" },
           { title: "Batches List", href: "/trainer/batches", icon: <Users className="h-4 w-4" /> },
           { title: "Attendance & Register", href: "/trainer/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },
           { title: "Course Topics & CMS", href: "/trainer/courses", icon: <BookOpen className="h-4 w-4" /> },
-          { title: "Live Classes Schedule", href: "/trainer/classes", icon: <Calendar className="h-4 w-4" /> },
+          { title: "Mock Interviews", href: "/trainer/interviews", icon: <Award className="h-4 w-4" /> },
         ];
       case "TELECALLER":
         return [
@@ -227,6 +232,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
           { title: "Work Planner", href: "/admin/work-planner", icon: <CheckSquare className="h-4 w-4" />, badge: "AI" },
           { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
+          { title: "YouTube Auto-Publishing", href: "/admin/youtube", icon: <Youtube className="h-4 w-4" />, badge: "API" },
           { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },
           { title: "Settings & RBAC", href: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
         ];

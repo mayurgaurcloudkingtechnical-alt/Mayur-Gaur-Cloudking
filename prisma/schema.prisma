@@ -82,6 +82,7 @@ enum EnrollmentStatus {
 
 enum ClassSessionStatus {
   SCHEDULED
+  IN_PROGRESS
   COMPLETED
   CANCELLED
   RESCHEDULED
@@ -346,6 +347,10 @@ model User {
   staffCallLogs                    StaffCallLog[]                    @relation("UserCallLogs")
   staffLiveSession                 StaffLiveSession?                 @relation("UserLiveSession")
 
+  // Virtual Mock & Recruiter Interview Relations
+  conductedMockInterviews          MockInterview[]                   @relation("MockInterviewer")
+  conductedRecruiterInterviews     RecruiterInterview[]              @relation("RecruiterInterviews")
+
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -456,6 +461,11 @@ model StudentProfile {
   jobFairRegistrations   JobFairRegistration[]
   driveNominations       DriveNomination[]
   registrationPayments   StudentRegistrationPayment[]
+
+  // Live Classes & Virtual Interviews
+  liveAttendances        LiveClassAttendance[]
+  mockInterviews         MockInterview[]
+  recruiterInterviews    RecruiterInterview[]
 
   @@index([studentId])
   @@map("student_profiles")
@@ -597,29 +607,40 @@ model BatchTrainer {
 }
 
 model ScheduledClass {
-  id              String             @id @default(cuid())
-  batchId         String
-  batch           Batch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
-  title           String
-  scheduledAt     DateTime
-  durationMin     Int                @default(60)
-  trainerId       String?
-  trainer         TrainerProfile?    @relation(fields: [trainerId], references: [id], onDelete: SetNull)
-  mode            DeliveryMode       @default(OFFLINE)
-  location        String? // Physical Room or Meeting URL
-  agendaNotes     String?            @db.Text
-  status          ClassSessionStatus @default(SCHEDULED)
-  statusReason    String?
-  topicCovered    String?
-  coveredLessonId String?
-  coveredLesson   Lesson?            @relation(fields: [coveredLessonId], references: [id], onDelete: SetNull)
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id                      String                  @id @default(cuid())
+  batchId                 String
+  batch                   Batch                   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  moduleId                String?
+  module                  Module?                 @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  title                   String
+  scheduledAt             DateTime
+  durationMin             Int                     @default(60)
+  trainerId               String?
+  trainer                 TrainerProfile?         @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  mode                    DeliveryMode            @default(OFFLINE)
+  location                String? // Physical Room or Meeting URL
+  agendaNotes             String?                 @db.Text
+  status                  ClassSessionStatus      @default(SCHEDULED)
+  statusReason            String?
+  topicCovered            String?
+  coveredLessonId         String?
+  coveredLesson           Lesson?                 @relation(fields: [coveredLessonId], references: [id], onDelete: SetNull)
+  roomCode                String?                 @unique
+  startedAt               DateTime?
+  endedAt                 DateTime?
+  isRecordingEnabled      Boolean                 @default(true)
+  allowAutoPublishYouTube Boolean                 @default(false)
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
 
-  attendance AttendanceRecord?
+  attendance              AttendanceRecord?
+  liveAttendances         LiveClassAttendance[]
+  liveSessionEvents       LiveClassSessionEvent[]
+  recordings              ClassRecording[]
 
   @@index([batchId, scheduledAt])
   @@index([trainerId])
+  @@index([moduleId])
   @@index([status])
   @@map("scheduled_classes")
 }
@@ -629,20 +650,21 @@ model ScheduledClass {
 // ==============================================================================
 
 model Module {
-  id          String        @id @default(cuid())
-  courseId    String
-  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title       String
-  description String?       @db.Text
-  sortOrder   Int           @default(0)
-  status      ContentStatus @default(DRAFT)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  deletedAt   DateTime?
+  id               String           @id @default(cuid())
+  courseId         String
+  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?          @db.Text
+  sortOrder        Int              @default(0)
+  status           ContentStatus    @default(DRAFT)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  deletedAt        DateTime?
 
-  lessons   Lesson[]
-  exams     Exam[]
-  questions QuestionBank[]
+  lessons          Lesson[]
+  exams            Exam[]
+  questions        QuestionBank[]
+  scheduledClasses ScheduledClass[]
 
   @@index([courseId, sortOrder])
   @@index([courseId, status])
@@ -1682,10 +1704,11 @@ model JobDrive {
   eligibleDegreeTypes   String[]          @default([])
   participatingColleges DriveInstitution[]
   nominations           DriveNomination[]
-  applications PlacementApplication[]
-  extractedHiringJobs ExtractedHiringJob[]
-  sourceReferences    JobSourceReference[]
-  changeProposals     JobChangeProposal[]
+  applications          PlacementApplication[]
+  recruiterInterviews   RecruiterInterview[]
+  extractedHiringJobs   ExtractedHiringJob[]
+  sourceReferences      JobSourceReference[]
+  changeProposals       JobChangeProposal[]
 
   @@index([companyId])
   @@index([recruiterId])
@@ -4170,6 +4193,167 @@ model StaffLiveSession {
   @@index([roleCode])
   @@index([lastActiveAt])
   @@map("staff_live_sessions")
+}
+
+// ==============================================================================
+// 41. LIVE VIRTUAL CLASSROOM, ATTENDANCE & AUTOMATED RECORDING PIPELINE
+// ==============================================================================
+
+model LiveClassAttendance {
+  id                   String           @id @default(cuid())
+  classId              String
+  class                ScheduledClass   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  studentId            String
+  student              StudentProfile   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  batchId              String
+  firstJoinedAt        DateTime?
+  lastLeftAt           DateTime?
+  totalDurationSeconds Int              @default(0)
+  joinCount            Int              @default(0)
+  attendancePercentage Float            @default(0.0)
+  status               AttendanceStatus @default(ABSENT)
+  isManuallyCorrected  Boolean          @default(false)
+  correctedById        String?
+  correctionReason     String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@unique([classId, studentId])
+  @@index([classId])
+  @@index([studentId])
+  @@index([batchId])
+  @@map("live_class_attendances")
+}
+
+model LiveClassSessionEvent {
+  id        String         @id @default(cuid())
+  classId   String
+  class     ScheduledClass @relation(fields: [classId], references: [id], onDelete: Cascade)
+  userId    String
+  userRole  String
+  eventType String // "JOINED", "LEFT", "RECONNECTED", "HAND_RAISED", "MIC_TOGGLED", "CAM_TOGGLED", "CHAT_SENT"
+  timestamp DateTime       @default(now())
+  metadata  Json?
+
+  @@index([classId, timestamp])
+  @@map("live_class_session_events")
+}
+
+model ClassRecording {
+  id                   String               @id @default(cuid())
+  classId              String
+  class                ScheduledClass       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  storageKey           String
+  storageProvider      String               @default("LOCAL_SECURE") // "LOCAL_SECURE", "S3", "R2", "DAILY"
+  durationSeconds      Int                  @default(0)
+  fileSizeBytes        BigInt?
+  videoUrl             String // secure / signed URL
+  status               String               @default("RECORDED") // "PROCESSING", "READY", "FAILED", "ARCHIVED"
+  isPublishedToYouTube Boolean              @default(false)
+  youTubePublishStatus String               @default("NOT_QUEUED") // "NOT_QUEUED", "QUEUED", "PROCESSING", "PUBLISHED", "FAILED", "BLOCKED_PRIVACY"
+  youTubeVideoId       String?
+  youTubeUrl           String?
+  youTubePrivacy       String               @default("UNLISTED") // "PRIVATE", "UNLISTED", "PUBLIC"
+  publishQueue         YouTubePublishQueue?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  @@index([classId])
+  @@map("class_recordings")
+}
+
+model YouTubePublishQueue {
+  id               String         @id @default(cuid())
+  recordingId      String         @unique
+  recording        ClassRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  classId          String
+  courseTitle      String
+  moduleTitle      String
+  lectureTopic     String
+  trainerName      String
+  targetPrivacy    String         @default("UNLISTED") // "PRIVATE", "UNLISTED", "PUBLIC"
+  status           String         @default("QUEUED") // "QUEUED", "PROCESSING", "UPLOADING", "PUBLISHED", "FAILED", "BLOCKED_PRIVACY"
+  attemptCount     Int            @default(0)
+  lastAttemptAt    DateTime?
+  errorMessage     String?
+  videoTitle       String?
+  videoDescription String?        @db.Text
+  tags             String[]       @default([])
+  thumbnailUrl     String?
+  youTubeVideoId   String?
+  youTubeUrl       String?
+  publishedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([status])
+  @@index([classId])
+  @@map("youtube_publish_queue")
+}
+
+model MockInterview {
+  id                  String         @id @default(cuid())
+  title               String
+  interviewType       String         @default("TECHNICAL") // "HR", "TECHNICAL", "COMMUNICATION", "APTITUDE", "ROLE_SPECIFIC"
+  scheduledAt         DateTime
+  durationMin         Int            @default(45)
+  status              String         @default("SCHEDULED") // "SCHEDULED", "IN_PROGRESS", "COMPLETED", "RESCHEDULED", "ABSENT", "CANCELLED"
+  roomCode            String         @unique
+  batchId             String?
+  courseId            String?
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  interviewerId       String
+  interviewer         User           @relation("MockInterviewer", fields: [interviewerId], references: [id], onDelete: Cascade)
+  instructions        String?        @db.Text
+  questionBank        Json?
+  scoreCommunication  Int? // 1-10
+  scoreTechnical      Int? // 1-10
+  scoreConfidence     Int? // 1-10
+  scoreProblemSolving Int? // 1-10
+  overallScore        Int? // 1-100
+  strengths           String?        @db.Text
+  improvements        String?        @db.Text
+  recommendations     String?        @db.Text
+  feedbackSubmittedAt DateTime?
+  recordingUrl        String? // strictly private, never YouTube
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([interviewerId])
+  @@index([scheduledAt])
+  @@map("mock_interviews")
+}
+
+model RecruiterInterview {
+  id                  String         @id @default(cuid())
+  title               String
+  jobDriveId          String?
+  jobDrive            JobDrive?      @relation(fields: [jobDriveId], references: [id], onDelete: SetNull)
+  recruiterId         String
+  recruiter           User           @relation("RecruiterInterviews", fields: [recruiterId], references: [id], onDelete: Cascade)
+  studentId           String
+  student             StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  scheduledAt         DateTime
+  durationMin         Int            @default(45)
+  stage               String         @default("TECHNICAL") // "SCREENING", "TECHNICAL", "MANAGERIAL", "FINAL_HR"
+  status              String         @default("SCHEDULED") // "SCHEDULED", "IN_PROGRESS", "SELECTED", "REJECTED", "ON_HOLD", "CANCELLED"
+  roomCode            String         @unique
+  meetingInstructions String?        @db.Text
+  feedback            String?        @db.Text
+  selectionDecision   String? // "SELECTED", "REJECTED", "NEXT_ROUND", "ON_HOLD"
+  privateNotes        String?        @db.Text
+  recordingUrl        String? // strictly private, never YouTube
+  institutionId       String? // For Campus/University drives
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  @@index([recruiterId])
+  @@index([studentId])
+  @@index([jobDriveId])
+  @@index([scheduledAt])
+  @@map("recruiter_interviews")
 }
 
 

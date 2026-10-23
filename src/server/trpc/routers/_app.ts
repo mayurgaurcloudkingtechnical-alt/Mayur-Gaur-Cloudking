@@ -31,8 +31,16 @@ import { hiringAutomationRouter } from "./hiring-automation";
 import { metaAdsRouter } from "./meta-ads";
 import { imsRouter } from "./ims";
 import { skillverseRouter } from "./skillverse";
+import { classroomRouter } from "./classroom";
+import { mockInterviewRouter } from "./mockInterview";
+import { recruiterInterviewRouter } from "./recruiterInterview";
+import { youtubePublisherRouter } from "./youtubePublisher";
 
 export const appRouter = router({
+  classroom: classroomRouter,
+  mockInterview: mockInterviewRouter,
+  recruiterInterview: recruiterInterviewRouter,
+  youtubePublisher: youtubePublisherRouter,
   skillverse: skillverseRouter,
   ims: imsRouter,
   metaAds: metaAdsRouter,
