@@ -50,8 +50,8 @@ export default async function PublicLayout({
       <main className="flex-1">{children}</main>
       <PublicFooter />
       <FloatingWhatsApp />
-      <DiwaliOfferModal />
       <CareerCounselingModal />
+      <DiwaliOfferModal />
       <CourseBuyModal />
       <ServiceDetailModal />
     </div>

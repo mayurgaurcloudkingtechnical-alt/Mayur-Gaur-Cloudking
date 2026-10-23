@@ -14,7 +14,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs">
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-[99990] flex items-center justify-center bg-black/75 p-4 backdrop-blur-xs">
       <div
         className="fixed inset-0"
         onClick={() => onOpenChange(false)}
