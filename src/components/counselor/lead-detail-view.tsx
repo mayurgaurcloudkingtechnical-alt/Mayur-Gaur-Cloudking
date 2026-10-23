@@ -42,29 +42,29 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
   const { data: omnichannelTimeline = [] } = api.omnichannel.getCustomerTimeline.useQuery({ leadId });
 
   const sendBrochureMutation = api.omnichannel.sendWhatsAppBrochure.useMutation({
-    onSuccess: () => {
-      alert("Official brochure dispatched to WhatsApp!");
+    onSuccess: (data) => {
+      alert(`Official brochure accepted by WhatsApp Cloud API!\nMessage ID: ${data.messageId}\nStatus: ACCEPTED_BY_PROVIDER (Waiting for carrier delivery receipt)`);
       utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
     },
-    onError: (err) => alert(err.message),
+    onError: (err) => alert(`WhatsApp Failed: ${err.message}`),
   });
 
   const sendPaymentLinkMutation = api.omnichannel.sendRazorpayLink.useMutation({
-    onSuccess: () => {
-      alert("Razorpay payment link sent to WhatsApp!");
+    onSuccess: (data) => {
+      alert(`Razorpay payment link accepted by WhatsApp Cloud API!\nMessage ID: ${data.messageId}\nStatus: ACCEPTED_BY_PROVIDER`);
       utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
       utils.crm.getLeadDetails.invalidate({ leadId });
     },
-    onError: (err) => alert(err.message),
+    onError: (err) => alert(`Payment Link WhatsApp Failed: ${err.message}`),
   });
 
   const triggerAiCallMutation = api.omnichannel.triggerAiCall.useMutation({
     onSuccess: (data) => {
-      alert(`AI Call Completed!\nOutcome: ${data.result.callOutcome}\nSummary: ${data.summary}`);
+      alert(`Real Outbound Call Dispatched to Carrier!\nProvider: ${data.provider}\nStatus: ${data.status}\nCarrier SID: ${data.providerCallId}\n\n${data.summary}`);
       utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
       utils.crm.getLeadDetails.invalidate({ leadId });
     },
-    onError: (err) => alert(`Call failed: ${err.message}`),
+    onError: (err) => alert(`Call Initiation Failed:\n${err.message}`),
   });
 
   const deleteLeadMutation = api.crm.deleteLead.useMutation({

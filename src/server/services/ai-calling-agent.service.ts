@@ -1,6 +1,7 @@
 import { CallingOutcome, LeadStatus } from "@prisma/client";
 import { SoftLabKnowledgeService } from "./softlab-knowledge.service";
 import { db } from "@/server/db/client";
+import { TelephonyService } from "./telephony/telephony.service";
 
 export interface ConversationTurn {
   role: "agent" | "lead";
@@ -376,80 +377,109 @@ export class AiCallingAgentService {
       language = "English";
     }
 
-    const callResult = await this.simulateRealisticCall({
+    // Initiate real carrier outbound call via TelephonyService (Twilio / Exotel)
+    const callRes = await TelephonyService.initiateCall({
+      leadId: lead.id,
+      leadPhone: lead.phone,
       leadName: lead.fullName,
-      phone: lead.phone,
       courseTitle: lead.course?.title || "Full Stack & AI Development",
-      language,
-      remarks: conversationSummary ? `WhatsApp context: ${conversationSummary}` : undefined,
-      simulatedScenario: "INTERESTED_STUDENT",
+      userId: params.performerUserId || lead.assignedToId || "SYSTEM",
+      forceCallingHours: false,
     });
 
-    // 1. Record call on CustomerTimelineEvent
+    if (!callRes.success) {
+      // Record failed attempt in timeline
+      await db.customerTimelineEvent.create({
+        data: {
+          leadId: lead.id,
+          eventType: "CALL_FAILED",
+          source: "AI_CALLING",
+          title: "Carrier Call Failed",
+          summary: callRes.error || "Failed to initiate call via telephony carrier.",
+          metadata: {
+            provider: callRes.provider,
+            error: callRes.error,
+          },
+        },
+      });
+
+      return {
+        success: false,
+        summary: callRes.error || "Telephony carrier call failed.",
+        result: {
+          callOutcome: "FAILED" as any,
+          interestLevel: "COLD",
+          conversationSummary: callRes.error || "Call failed to connect to carrier.",
+          durationSeconds: 0,
+          transcript: [],
+        } as any,
+      };
+    }
+
+    // 1. Record call initiation on CustomerTimelineEvent (Real carrier state, never fake COMPLETED)
     await db.customerTimelineEvent.create({
       data: {
         leadId: lead.id,
-        eventType: "CALL_COMPLETED",
+        eventType: "CALL_INITIATED",
         source: "AI_CALLING",
-        title: `AI Voice Call Completed (${callResult.callOutcome})`,
-        summary: callResult.conversationSummary,
+        title: `Carrier Call Initiated (${callRes.provider})`,
+        summary: `Outbound call placed to ${lead.phone} via ${callRes.provider} (Call SID: ${callRes.providerCallId}). Waiting for carrier answer.`,
         metadata: {
-          interestLevel: callResult.interestLevel,
-          durationSeconds: callResult.durationSeconds,
-          education: callResult.education,
-          learningMode: callResult.learningMode,
-          transcriptTurnsCount: callResult.transcript.length,
-          recommendedAction: callResult.recommendedAction,
+          provider: callRes.provider,
+          providerCallId: callRes.providerCallId,
+          status: callRes.status,
+          language,
         },
       },
     });
 
-    // 2. Attach call transcript to Omnichannel conversation
+    // 2. Attach call event to Omnichannel conversation if available
     if (waConvo) {
       await db.omnichannelMessage.create({
         data: {
           conversationId: waConvo.id,
-          senderType: "AI_AGENT",
-          senderName: "SoftLab AI Voice Agent",
+          senderType: "SYSTEM",
+          senderName: "SoftLab Telephony",
           channel: "VOICE_CALL",
-          messageType: "TRANSCRIPT",
-          content: `📞 Voice Call Completed (${callResult.durationSeconds}s)\nOutcome: ${callResult.callOutcome}\nSummary: ${callResult.conversationSummary}\nRecommended Action: ${callResult.recommendedAction}`,
+          messageType: "TEXT",
+          content: `📞 Outbound Call Dispatched via ${callRes.provider} (Call SID: ${callRes.providerCallId}). Status: ${callRes.status}. Waiting for carrier callback.`,
+          status: "INITIATED",
+          externalMsgId: callRes.providerCallId,
           metadata: {
-            transcript: callResult.transcript as any,
-            outcome: callResult.callOutcome,
-            score: callResult.interestLevel === "HOT" ? 90 : 75,
+            provider: callRes.provider,
+            callSid: callRes.providerCallId,
           } as any,
         },
       });
     }
 
-    // 3. Update Lead score and temperature
-    const newScore = Math.max(lead.leadScore || 50, callResult.interestLevel === "HOT" ? 90 : 75);
+    // 3. Update Lead status to CONTACTED if it was NEW
     const newStatus =
-      callResult.interestLevel === "HOT"
-        ? LeadStatus.INTERESTED
-        : lead.status === LeadStatus.NEW
+      lead.status === LeadStatus.NEW
         ? LeadStatus.CONTACTED
         : lead.status;
 
     await db.lead.update({
       where: { id: lead.id },
       data: {
-        leadScore: newScore,
-        temperature: callResult.interestLevel === "HOT" ? "HOT" : "WARM",
         status: newStatus,
         lastInteraction: new Date(),
-        preferredCallbackTime: callResult.callbackTimeText,
         notes: lead.notes
-          ? `${lead.notes}\n[AI Call Summary]: ${callResult.conversationSummary}`
-          : `[AI Call Summary]: ${callResult.conversationSummary}`,
+          ? `${lead.notes}\n[Carrier Call Initiated]: Call SID ${callRes.providerCallId} via ${callRes.provider}`
+          : `[Carrier Call Initiated]: Call SID ${callRes.providerCallId} via ${callRes.provider}`,
       },
     });
 
     return {
       success: true,
-      result: callResult,
-      summary: callResult.conversationSummary,
+      result: {
+        callOutcome: "CALL_INITIATED" as any,
+        interestLevel: "WARM",
+        conversationSummary: `Real call placed via ${callRes.provider} (SID: ${callRes.providerCallId}). Carrier status: ${callRes.status}.`,
+        durationSeconds: 0,
+        transcript: [],
+      } as any,
+      summary: `Real call placed via ${callRes.provider} (SID: ${callRes.providerCallId}). Ringing...`,
     };
   }
 }

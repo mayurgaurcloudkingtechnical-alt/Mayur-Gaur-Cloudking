@@ -9,6 +9,7 @@ import { WhatsAppBusinessConfigService } from "@/server/services/whatsapp-busine
 import { WhatsAppSalesGroupNotificationService } from "@/server/services/whatsapp-sales-group-notification.service";
 import { AiCounselorService } from "@/server/services/ai-counselor.service";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
+import { TelephonyService } from "@/server/services/telephony/telephony.service";
 import { db } from "@/server/db/client";
 
 export const omnichannelRouter = router({
@@ -285,6 +286,13 @@ export const omnichannelRouter = router({
         lead.id
       );
 
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error || "Failed to deliver WhatsApp brochure. Check WhatsApp API configuration.",
+        });
+      }
+
       // Record timeline event
       await OmnichannelInboxService.recordTimelineEvent({
         leadId: lead.id,
@@ -328,6 +336,13 @@ export const omnichannelRouter = router({
         input.paymentUrl,
         lead.id
       );
+
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error || "Failed to deliver payment link via WhatsApp. Check WhatsApp API configuration.",
+        });
+      }
 
       // Record payment link in database
       const amountPaise = input.amountRupees * 100;
@@ -433,11 +448,20 @@ export const omnichannelRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      return AiCallingAgentService.triggerDirectLeadCall({
+      const res = await AiCallingAgentService.triggerDirectLeadCall({
         leadId: input.leadId,
         performerUserId: ctx.user.id,
         preferredLanguage: input.preferredLanguage,
       });
+
+      if (!res.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: res.summary || "Failed to initiate outbound carrier call.",
+        });
+      }
+
+      return res;
     }),
 
   /**
@@ -522,5 +546,58 @@ export const omnichannelRouter = router({
       admissionDate: new Date(),
     });
   }),
+
+  /**
+   * Admin Diagnostic: Send Test WhatsApp Message
+   */
+  sendTestWhatsAppMessage: protectedProcedure
+    .input(
+      z.object({
+        phone: z.string().min(10, "Valid phone number required"),
+        message: z.string().optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const text =
+        input.message ||
+        `👋 Hello from SoftLab Global CRM System Diagnostics!\n\nThis is a verified test message sent from the official LMS Integrations Hub.\nTimestamp: ${new Date().toLocaleString("en-IN")}`;
+      const res = await WhatsAppBusinessService.sendMessage({
+        toPhone: input.phone,
+        text,
+      });
+      if (!res.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: res.error || "Failed to send test WhatsApp message. Check Meta Cloud API credentials.",
+        });
+      }
+      return res;
+    }),
+
+  /**
+   * Admin Diagnostic: Initiate Test Telephony Carrier Call
+   */
+  initiateTestCarrierCall: protectedProcedure
+    .input(
+      z.object({
+        phone: z.string().min(10, "Valid phone number required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      const res = await TelephonyService.initiateCall({
+        leadPhone: input.phone,
+        leadName: "Test Lead",
+        courseTitle: "Diagnostics Test",
+        userId: ctx.user.id,
+        forceCallingHours: true,
+      });
+      if (!res.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: res.error || "Failed to initiate test call via carrier.",
+        });
+      }
+      return res;
+    }),
 });
 

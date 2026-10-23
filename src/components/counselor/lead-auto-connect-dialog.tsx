@@ -276,7 +276,7 @@ export function LeadAutoConnectDialog({ open, onClose, onComplete }: LeadAutoCon
                     <strong className="text-emerald-700 text-base">{results.whatsappSentCount}</strong>
                   </div>
                   <div>
-                    <span className="text-slate-500 block">AI Calls Completed</span>
+                    <span className="text-slate-500 block">Calls Dispatched</span>
                     <strong className="text-blue-700 text-base">{results.aiCallsCompletedCount}</strong>
                   </div>
                   <div>

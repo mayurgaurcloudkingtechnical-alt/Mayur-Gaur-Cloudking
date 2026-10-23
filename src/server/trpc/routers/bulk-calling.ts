@@ -756,8 +756,9 @@ export const bulkCallingRouter = router({
       }
 
       return {
-        success: true,
+        success: waResult.success,
         platform: waResult.platform,
+        error: waResult.error,
         directWhatsAppUrl,
         messageText,
         recipientPhone: `+91 ${tenDigit}`,
@@ -779,15 +780,15 @@ export const bulkCallingRouter = router({
       const cleanPhone = input.contactPhone.replace(/\D/g, "").slice(-10);
       const dialUrl = `tel:+91${cleanPhone}`;
 
-      // Log outgoing call initiation in StaffCallyzer
+      // Log outgoing call initiation in StaffCallyzer with INITIATED state (0s duration until real callback/log update)
       const callLog = await StaffCallyzerService.logCallActivity(ctx.user.id, {
         contactName: input.contactName || `Candidate +91 ${cleanPhone}`,
         contactPhone: `+91 ${cleanPhone}`,
         callType: "OUTGOING",
-        callStatus: "CONNECTED",
-        disposition: "INTERESTED",
-        durationSeconds: 60,
-        notes: `[Live Outgoing Call from Bulk Calling Desk for ${input.courseTitle || "Course Inquiry"}]`,
+        callStatus: "INITIATED",
+        disposition: "CALL_INITIATED",
+        durationSeconds: 0,
+        notes: `[Dialer Call Dispatched from Bulk Calling Desk for ${input.courseTitle || "Course Inquiry"}]`,
       });
 
       return {

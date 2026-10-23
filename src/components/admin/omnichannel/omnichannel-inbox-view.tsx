@@ -68,20 +68,23 @@ export function OmnichannelInboxView() {
   });
 
   const sendBrochureMutation = api.omnichannel.sendWhatsAppBrochure.useMutation({
-    onSuccess: () => {
-      alert("Official brochure sent via WhatsApp!");
+    onSuccess: (data) => {
+      alert(`Official brochure accepted by WhatsApp Cloud API!\nMessage ID: ${data.messageId}\nStatus: ACCEPTED_BY_PROVIDER`);
       utils.omnichannel.getConversation.invalidate({ conversationId: selectedConvId! });
+    },
+    onError: (err) => {
+      alert(`WhatsApp Failed: ${err.message}`);
     },
   });
 
   const triggerCallMutation = api.omnichannel.triggerAiCall.useMutation({
     onSuccess: (data) => {
-      alert(`AI Call Completed!\nOutcome: ${data.result.callOutcome}\nSummary: ${data.summary}`);
+      alert(`Real Outbound Call Dispatched to Carrier!\nProvider: ${data.provider}\nStatus: ${data.status}\nCarrier SID: ${data.providerCallId}\n\n${data.summary}`);
       utils.omnichannel.getConversation.invalidate({ conversationId: selectedConvId! });
       utils.omnichannel.listConversations.invalidate();
     },
     onError: (err) => {
-      alert(`Call failed: ${err.message}`);
+      alert(`Call failed to connect: ${err.message}`);
     },
   });
 

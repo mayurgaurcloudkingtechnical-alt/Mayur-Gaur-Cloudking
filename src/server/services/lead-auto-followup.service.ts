@@ -3,6 +3,7 @@ import { LeadStatus, CallingOutcome, FollowUpType } from "@prisma/client";
 import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AiCallingAgentService } from "./ai-calling-agent.service";
 import { StaffCallyzerService } from "./staff-callyzer.service";
+import { TelephonyService } from "./telephony/telephony.service";
 
 export interface AutoFollowupBatchInput {
   mode: "WHATSAPP" | "AI_CALLING" | "BOTH";
@@ -235,97 +236,51 @@ export class LeadAutoFollowupService {
     }
 
     try {
-      const callSim = await AiCallingAgentService.simulateRealisticCall({
+      // Execute genuine outbound call via configured telephony carrier (Twilio / Exotel)
+      const callRes = await TelephonyService.initiateCall({
+        leadId: lead.id,
+        leadPhone: lead.phone,
         leadName: lead.fullName,
-        phone: lead.phone,
         courseTitle: course,
-        language: "Hindi",
-        simulatedScenario: "INTERESTED_STUDENT",
+        userId: params.actorId || lead.assignedToId || "system",
+        forceCallingHours: false,
       });
 
-      const recordingId = `call_${Date.now()}_${lead.id.slice(-6)}`;
-      const recordingUrl = `/api/recordings/${recordingId}`;
-
-      if (callSim) {
-        // 1. Record call on CustomerTimelineEvent
-        await db.customerTimelineEvent.create({
-          data: {
-            leadId: lead.id,
-            eventType: "CALL_COMPLETED",
-            source: "AI_CALLING",
-            title: `AI Voice Follow-up Call (${callSim.callOutcome})`,
-            summary: callSim.conversationSummary,
-            metadata: {
-              interestLevel: callSim.interestLevel,
-              durationSeconds: callSim.durationSeconds,
-              summary: callSim.conversationSummary,
-              recommendedAction: callSim.recommendedAction,
-              recordingUrl,
-              transcript: callSim.transcript as any,
-            },
-          },
-        });
-
-        // 2. Record lead activity in CRM
-        await db.leadActivity.create({
-          data: {
-            leadId: lead.id,
-            userId: params.actorId || lead.assignedToId || undefined,
-            activityType: "AI_VOICE_CALL",
-            disposition: callSim.callOutcome,
-            notes: `AI Voice Outreach (${callSim.durationSeconds}s): ${callSim.conversationSummary}`,
-          },
-        });
-
-        // 3. Update lead interaction, status, and temperature
-        const newStatus =
-          lead.status === LeadStatus.NEW
-            ? LeadStatus.CONTACTED
-            : callSim.interestLevel === "HOT"
-            ? LeadStatus.INTERESTED
-            : lead.status;
-
-        await db.lead.update({
-          where: { id: lead.id },
-          data: {
-            lastInteraction: new Date(),
-            status: newStatus,
-            temperature: callSim.interestLevel === "HOT" ? "HOT" : (lead.temperature || "WARM"),
-          },
-        });
-
-        // 4. Log to StaffCallyzerService so Callyzer live tracking & metrics reflect immediately!
-        const callerUserId = params.actorId || lead.assignedToId || lead.assignedCounselorId || lead.assignedTelecallerId;
-        if (callerUserId) {
-          try {
-            await StaffCallyzerService.logCallActivity(callerUserId, {
-              contactName: lead.fullName,
-              contactPhone: lead.phone,
-              callType: "OUTGOING",
-              callStatus: "CONNECTED",
-              disposition: callSim.callOutcome,
-              durationSeconds: callSim.durationSeconds || 120,
-              notes: `[AI Voice Follow-up]: ${callSim.conversationSummary}`,
-              leadId: lead.id,
-              recordingUrl,
-              transcript: callSim.transcript,
-            });
-          } catch (callLogErr: any) {
-            console.warn(`[LeadAutoFollowupService] Failed to log call activity for caller ${callerUserId}:`, callLogErr.message);
-          }
-        }
+      if (!callRes.success) {
+        return {
+          success: false,
+          outcome: CallingOutcome.FAILED,
+          summary: callRes.error || "Telephony carrier not configured",
+        };
       }
+
+      // Record lead activity with actual carrier outcome (INITIATED, not fake COMPLETED)
+      await db.leadActivity.create({
+        data: {
+          leadId: lead.id,
+          userId: params.actorId || lead.assignedToId || undefined,
+          activityType: "CALL",
+          disposition: "CALL_INITIATED",
+          notes: `Outbound call initiated via carrier (${callRes.provider}) [Call SID: ${callRes.providerCallId}]. Status: ${callRes.status}. Waiting for carrier connect event.`,
+        },
+      });
+
+      // Update lead lastInteraction
+      await db.lead.update({
+        where: { id: lead.id },
+        data: {
+          lastInteraction: new Date(),
+          status: lead.status === LeadStatus.NEW ? LeadStatus.CONTACTED : lead.status,
+        },
+      });
 
       return {
         success: true,
-        outcome: callSim.callOutcome,
-        interestLevel: callSim.interestLevel,
-        summary: callSim.conversationSummary,
-        recordingUrl,
-        transcript: callSim.transcript,
+        outcome: CallingOutcome.HIGH_INTENT,
+        summary: `Carrier call initiated via ${callRes.provider} (Call SID: ${callRes.providerCallId}). Status: ${callRes.status}`,
       };
     } catch (err: any) {
-      console.error(`[LeadAutoFollowupService] AI Calling error for ${lead.phone}:`, err.message);
+      console.error(`[LeadAutoFollowupService] Calling dispatch error for ${lead.phone}:`, err.message);
       return {
         success: false,
         summary: err.message,

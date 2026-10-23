@@ -43,6 +43,8 @@ export function IntegrationsHubView() {
   const integrationsHealth = api.omnichannel.getIntegrationsHealth.useQuery();
   const catalogStatus = api.omnichannel.getCatalogSyncStatus.useQuery();
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
+  const [testPhone, setTestPhone] = useState<string>("");
+  const [testFeedback, setTestFeedback] = useState<string | null>(null);
 
   const utils = api.useUtils();
   const syncCatalogMutation = api.omnichannel.syncCatalog.useMutation({
@@ -55,6 +57,28 @@ export function IntegrationsHubView() {
     onError: (err) => {
       setSyncFeedback(`Sync failed: ${err.message}`);
       setTimeout(() => setSyncFeedback(null), 8000);
+    },
+  });
+
+  const testWhatsAppMutation = api.omnichannel.sendTestWhatsAppMessage.useMutation({
+    onSuccess: (data) => {
+      setTestFeedback(`WhatsApp test message accepted! Message ID: ${data.messageId}`);
+      setTimeout(() => setTestFeedback(null), 8000);
+    },
+    onError: (err) => {
+      setTestFeedback(`WhatsApp test failed: ${err.message}`);
+      setTimeout(() => setTestFeedback(null), 8000);
+    },
+  });
+
+  const testCallMutation = api.omnichannel.initiateTestCarrierCall.useMutation({
+    onSuccess: (data) => {
+      setTestFeedback(`Test call dispatched via ${data.provider}! Status: ${data.status} (Call SID: ${data.providerCallId})`);
+      setTimeout(() => setTestFeedback(null), 8000);
+    },
+    onError: (err) => {
+      setTestFeedback(`Test call failed: ${err.message}`);
+      setTimeout(() => setTestFeedback(null), 8000);
     },
   });
 
@@ -359,31 +383,99 @@ export function IntegrationsHubView() {
             </div>
           </div>
 
-          {/* Card 4: AI Voice Calling Agent */}
+          {/* Card 4: Telephony Carrier & Real Calling */}
           <div className="bg-slate-800/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between space-y-3">
             <div>
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
                   <PhoneCall className="h-4 w-4 text-amber-400" />
-                  AI Voice Agent
+                  Telephony Carrier
                 </span>
-                <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]">
-                  READY
+                <Badge
+                  className={
+                    integrationsHealth.data?.telephony?.isConfigured
+                      ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px]"
+                      : "bg-rose-500/20 text-rose-300 border-rose-500/40 text-[10px]"
+                  }
+                >
+                  {integrationsHealth.data?.telephony?.isConfigured
+                    ? integrationsHealth.data?.telephony?.provider
+                    : "NOT CONFIGURED"}
                 </Badge>
               </div>
               <p className="text-[11px] text-slate-400 mt-2">
-                Model: <span className="text-white font-medium">SoftLab Neural Agent</span>
+                Active Provider: <span className="text-white font-medium">{integrationsHealth.data?.telephony?.provider || "None"}</span>
               </p>
-              <p className="text-[11px] text-slate-400">
-                Context Handover: <span className="text-emerald-400 font-medium">WhatsApp History Synced</span>
-              </p>
+              <div className="text-[11px] text-slate-400">
+                {integrationsHealth.data?.telephony?.isConfigured ? (
+                  <span className="text-emerald-400 font-medium">Verified Carrier Credentials</span>
+                ) : (
+                  <span className="text-rose-400 text-[10px] block leading-tight">
+                    Missing: {integrationsHealth.data?.telephony?.missingVars?.join(", ") || "TWILIO / EXOTEL env"}
+                  </span>
+                )}
+              </div>
             </div>
 
             <div className="border-t border-slate-700 pt-2 text-[10px] text-slate-400 flex justify-between">
-              <span>Campus Lab:</span>
-              <span className="text-slate-200">Civil Lines, Prayagraj</span>
+              <span>Calling Hours:</span>
+              <span className="text-slate-200">10:00 - 19:00 IST</span>
             </div>
           </div>
+        </div>
+
+        {/* Live Diagnostics & Test Execution Bar */}
+        <div className="bg-slate-950/70 border border-slate-800 rounded-xl p-4 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h5 className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Radio className="h-3.5 w-3.5 text-blue-400" />
+                Live Integration Diagnostics & Verification Console
+              </h5>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Trigger verified live tests to inspect provider response, credentials, and carrier webhook registration without fake success simulation.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="10-digit phone (e.g. 9876543210)"
+                value={testPhone}
+                onChange={(e) => setTestPhone(e.target.value)}
+                className="bg-slate-900 border border-slate-700 text-white text-xs rounded-lg px-3 py-1.5 w-52 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={testPhone.replace(/\D/g, "").length < 10 || testWhatsAppMutation.isPending}
+                onClick={() => testWhatsAppMutation.mutate({ phone: testPhone })}
+                className="h-8 text-xs bg-emerald-950 hover:bg-emerald-900 text-emerald-200 border-emerald-700"
+              >
+                {testWhatsAppMutation.isPending ? "Sending..." : "Test WhatsApp"}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={testPhone.replace(/\D/g, "").length < 10 || testCallMutation.isPending}
+                onClick={() => testCallMutation.mutate({ phone: testPhone })}
+                className="h-8 text-xs bg-indigo-950 hover:bg-indigo-900 text-indigo-200 border-indigo-700"
+              >
+                {testCallMutation.isPending ? "Calling..." : "Test Carrier Call"}
+              </Button>
+            </div>
+          </div>
+
+          {testFeedback && (
+            <div className="p-2.5 rounded-lg bg-blue-950/80 border border-blue-800/80 text-blue-200 text-xs flex items-center justify-between">
+              <span>{testFeedback}</span>
+              <button
+                onClick={() => setTestFeedback(null)}
+                className="text-blue-400 hover:text-white text-xs font-bold px-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

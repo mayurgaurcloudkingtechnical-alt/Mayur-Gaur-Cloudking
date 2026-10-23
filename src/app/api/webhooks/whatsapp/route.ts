@@ -240,7 +240,63 @@ export async function POST(req: NextRequest) {
             // Handle delivery & read status updates
             if (value && Array.isArray(value.statuses)) {
               for (const statusObj of value.statuses) {
-                console.log(`[WhatsApp Status] Message ${statusObj.id} status: ${statusObj.status}`);
+                const wamid = statusObj.id;
+                const statusStr = (statusObj.status || "").toUpperCase(); // "SENT", "DELIVERED", "READ", "FAILED"
+                console.log(`[WhatsApp Status] Message ${wamid} status: ${statusStr}`);
+
+                try {
+                  const existingMsg = await db.omnichannelMessage.findFirst({
+                    where: { externalMsgId: wamid },
+                    include: { conversation: true },
+                  });
+
+                  if (existingMsg) {
+                    await db.omnichannelMessage.update({
+                      where: { id: existingMsg.id },
+                      data: {
+                        status: statusStr,
+                        metadata: {
+                          ...(typeof existingMsg.metadata === "object" && existingMsg.metadata !== null
+                            ? (existingMsg.metadata as any)
+                            : {}),
+                          lastCarrierStatus: statusStr,
+                          statusUpdatedAt: new Date().toISOString(),
+                          errors: statusObj.errors,
+                        },
+                      },
+                    });
+
+                    if (statusStr === "FAILED") {
+                      const errDetail =
+                        statusObj.errors?.[0]?.title ||
+                        statusObj.errors?.[0]?.message ||
+                        "Carrier rejected message";
+                      await db.customerTimelineEvent.create({
+                        data: {
+                          leadId: existingMsg.conversation.leadId,
+                          eventType: "WHATSAPP_FAILED",
+                          source: "WHATSAPP",
+                          title: "WhatsApp Delivery Failed",
+                          summary: `Message ${wamid} failed to deliver: ${errDetail}`,
+                          metadata: { wamid, errors: statusObj.errors },
+                        },
+                      });
+                    } else if (statusStr === "READ") {
+                      await db.customerTimelineEvent.create({
+                        data: {
+                          leadId: existingMsg.conversation.leadId,
+                          eventType: "WHATSAPP_READ",
+                          source: "WHATSAPP",
+                          title: "WhatsApp Message Read",
+                          summary: `Lead opened and read WhatsApp message (${wamid}).`,
+                          metadata: { wamid },
+                        },
+                      });
+                    }
+                  }
+                } catch (statusDbErr: any) {
+                  console.error(`[WhatsApp Status DB Error] ${statusDbErr.message}`);
+                }
               }
             }
 

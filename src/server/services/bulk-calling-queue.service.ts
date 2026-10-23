@@ -321,85 +321,78 @@ export class BulkCallingQueueService {
       systemPrompt: batch.systemPrompt || undefined,
     });
 
-    if (response.success && response.result) {
-      const res = response.result;
+    if (response.success) {
+      if (response.result) {
+        const res = response.result;
+        const recordingUrl = `/api/recordings/ai_batch_${item.id}_${Date.now()}`;
 
-      const recordingUrl = `/api/recordings/ai_batch_${item.id}_${Date.now()}`;
-
-      // Update queue item with call outcome, extracted insights and recordingUrl
-      await db.callingQueueItem.update({
-        where: { id: item.id },
-        data: {
-          status: CallingQueueStatus.COMPLETED,
-          callOutcome: res.callOutcome,
-          interestLevel: res.interestLevel,
-          education: res.education,
-          experience: res.experience,
-          careerGoal: res.careerGoal,
-          budget: res.budget,
-          learningMode: res.learningMode,
-          preferredBatch: res.preferredBatch,
-          callbackTime: res.callbackTime,
-          callbackTimeText: res.callbackTimeText,
-          humanHandoffRequired: res.humanHandoffRequired,
-          handoffReason: res.handoffReason,
-          conversationSummary: res.conversationSummary,
-          transcript: res.transcript as any,
-          callDurationSeconds: res.durationSeconds,
-          providerCallId: response.providerCallId,
-          recordingUrl,
-        },
-      });
-
-      // Synchronize results to LMS CRM (create or update lead, timeline, follow-up)
-      try {
-        await BulkCallingCrmIntegrationService.syncCallResultToCrm({
-          queueItemId: item.id,
-          batchId: batch.id,
-          result: res,
-          performerUserId: userId,
+        // Update queue item with call outcome, extracted insights and recordingUrl
+        await db.callingQueueItem.update({
+          where: { id: item.id },
+          data: {
+            status: CallingQueueStatus.COMPLETED,
+            callOutcome: res.callOutcome,
+            interestLevel: res.interestLevel,
+            education: res.education,
+            experience: res.experience,
+            careerGoal: res.careerGoal,
+            budget: res.budget,
+            learningMode: res.learningMode,
+            preferredBatch: res.preferredBatch,
+            callbackTime: res.callbackTime,
+            callbackTimeText: res.callbackTimeText,
+            humanHandoffRequired: res.humanHandoffRequired,
+            handoffReason: res.handoffReason,
+            conversationSummary: res.conversationSummary,
+            transcript: res.transcript as any,
+            callDurationSeconds: res.durationSeconds,
+            providerCallId: response.providerCallId,
+            recordingUrl,
+          },
         });
-      } catch (crmErr) {
-        console.error("[CRM Sync Error]:", crmErr);
-      }
 
-      // Synchronize with StaffCallyzerService call logs and agent metrics
-      try {
-        await StaffCallyzerService.logCallActivity(userId, {
-          contactName: item.name || "Prospective Student",
-          contactPhone: item.phone,
-          callType: "OUTGOING",
-          callStatus: "CONNECTED",
-          disposition: res.callOutcome || "INTERESTED",
-          durationSeconds: res.durationSeconds || 120,
-          notes: `[Bulk AI Calling - Batch: ${batch.name}]: ${res.conversationSummary}`,
-          recordingUrl,
-          transcript: res.transcript,
+        // Synchronize results to LMS CRM (create or update lead, timeline, follow-up)
+        try {
+          await BulkCallingCrmIntegrationService.syncCallResultToCrm({
+            queueItemId: item.id,
+            batchId: batch.id,
+            result: res,
+            performerUserId: userId,
+          });
+        } catch (crmErr) {
+          console.error("[CRM Sync Error]:", crmErr);
+        }
+
+        // Update metrics on batch
+        const outcome = res.callOutcome;
+        await db.bulkCallingBatch.update({
+          where: { id: batch.id },
+          data: {
+            completedCalls: { increment: 1 },
+            interestedCount:
+              outcome === CallingOutcome.INTERESTED || outcome === CallingOutcome.ADMISSION_INTEREST
+                ? { increment: 1 }
+                : undefined,
+            followUpCount:
+              outcome === CallingOutcome.FOLLOW_UP_REQUIRED || outcome === CallingOutcome.CALLBACK_REQUESTED
+                ? { increment: 1 }
+                : undefined,
+            humanHandoffCount: res.humanHandoffRequired ? { increment: 1 } : undefined,
+            notInterestedCount: outcome === CallingOutcome.NOT_INTERESTED ? { increment: 1 } : undefined,
+            noAnswerCount: outcome === CallingOutcome.NO_ANSWER ? { increment: 1 } : undefined,
+            busyCount: outcome === CallingOutcome.BUSY ? { increment: 1 } : undefined,
+          },
         });
-      } catch (callyzerErr) {
-        console.warn("[Bulk Calling Callyzer Sync Error]:", callyzerErr);
+      } else {
+        // Real carrier outbound call dispatched; awaiting carrier status callback (webhook)
+        await db.callingQueueItem.update({
+          where: { id: item.id },
+          data: {
+            status: CallingQueueStatus.CALLING,
+            providerCallId: response.providerCallId,
+          },
+        });
       }
-
-      // Update metrics on batch
-      const outcome = res.callOutcome;
-      await db.bulkCallingBatch.update({
-        where: { id: batch.id },
-        data: {
-          completedCalls: { increment: 1 },
-          interestedCount:
-            outcome === CallingOutcome.INTERESTED || outcome === CallingOutcome.ADMISSION_INTEREST
-              ? { increment: 1 }
-              : undefined,
-          followUpCount:
-            outcome === CallingOutcome.FOLLOW_UP_REQUIRED || outcome === CallingOutcome.CALLBACK_REQUESTED
-              ? { increment: 1 }
-              : undefined,
-          humanHandoffCount: res.humanHandoffRequired ? { increment: 1 } : undefined,
-          notInterestedCount: outcome === CallingOutcome.NOT_INTERESTED ? { increment: 1 } : undefined,
-          noAnswerCount: outcome === CallingOutcome.NO_ANSWER ? { increment: 1 } : undefined,
-          busyCount: outcome === CallingOutcome.BUSY ? { increment: 1 } : undefined,
-        },
-      });
     } else {
       // Call Failed or Busy -> Check Retry policy
       const attempts = (item.attemptCount || 0) + 1;

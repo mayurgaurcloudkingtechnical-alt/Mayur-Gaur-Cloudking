@@ -1,5 +1,6 @@
 import { db } from "@/server/db/client";
 import { WhatsAppBusinessConfigService } from "./whatsapp-business-config.service";
+import { TelephonyService } from "./telephony/telephony.service";
 
 export interface WhatsAppSendOptions {
   toPhone: string;
@@ -182,10 +183,116 @@ export class WhatsAppBusinessService {
       }
 
       if (result.ok) {
-        return { success: true, messageId: result.data.messages[0].id, platform: "CLOUD_API" };
+        const messageId = result.data.messages[0].id;
+
+        // Persist message to Omnichannel Conversation and Lead Timeline
+        try {
+          const tenDigit = normalizedPhone.slice(-10);
+          let targetLeadId = options.leadId;
+
+          if (!targetLeadId) {
+            const matchedLead = await db.lead.findFirst({
+              where: {
+                OR: [{ phone: tenDigit }, { phone: normalizedPhone }],
+              },
+              select: { id: true },
+            });
+            targetLeadId = matchedLead?.id;
+          }
+
+          if (targetLeadId) {
+            // Find or create unified WhatsApp conversation
+            let conv = await db.omnichannelConversation.findFirst({
+              where: { leadId: targetLeadId, channel: "WHATSAPP" },
+            });
+
+            if (!conv) {
+              conv = await db.omnichannelConversation.create({
+                data: {
+                  leadId: targetLeadId,
+                  channel: "WHATSAPP",
+                  externalThreadId: normalizedPhone,
+                  status: "AI_HANDLING",
+                  unreadCount: 0,
+                },
+              });
+            }
+
+            const messageType = options.templateName
+              ? "TEMPLATE"
+              : options.mediaUrl
+              ? "MEDIA"
+              : "TEXT";
+            const content =
+              options.text ||
+              (options.mediaCaption
+                ? `[Document: ${options.mediaCaption}]`
+                : `[Template: ${options.templateName}]`);
+
+            await db.omnichannelMessage.create({
+              data: {
+                conversationId: conv.id,
+                senderType: "SYSTEM",
+                senderName: "SoftLab Global",
+                channel: "WHATSAPP",
+                messageType,
+                content,
+                mediaUrl: options.mediaUrl || null,
+                status: "ACCEPTED_BY_PROVIDER",
+                externalMsgId: messageId,
+                rawPayload: result.data as any,
+                metadata: {
+                  templateName: options.templateName,
+                  templateLanguage: options.templateLanguage,
+                  dispatchedAt: new Date().toISOString(),
+                } as any,
+              },
+            });
+
+            await db.lead.update({
+              where: { id: targetLeadId },
+              data: { lastInteraction: new Date() },
+            });
+
+            await db.customerTimelineEvent.create({
+              data: {
+                leadId: targetLeadId,
+                eventType: "WHATSAPP_OUTBOUND",
+                source: "WHATSAPP",
+                title: "WhatsApp Message Dispatched",
+                summary: `Message accepted by Meta Cloud API (wamid: ${messageId}). Waiting for carrier delivery callback.`,
+                metadata: {
+                  wamid: messageId,
+                  template: options.templateName,
+                  mediaUrl: options.mediaUrl,
+                },
+              },
+            });
+          }
+        } catch (dbErr: any) {
+          console.warn("[WhatsAppBusinessService] Failed to persist message status to DB:", dbErr.message);
+        }
+
+        return { success: true, messageId, platform: "CLOUD_API" };
       }
       const error = result.data?.error?.message || JSON.stringify(result.data);
       console.error(`[WhatsAppBusinessService] Meta API rejected message to ${normalizedPhone}: ${error}`);
+
+      if (options.leadId) {
+        try {
+          await db.customerTimelineEvent.create({
+            data: {
+              leadId: options.leadId,
+              eventType: "WHATSAPP_FAILED",
+              source: "WHATSAPP",
+              title: "WhatsApp Dispatch Failed",
+              summary: `Meta API rejected message to ${normalizedPhone}: ${error}`,
+              metadata: { error, raw: result.data },
+            },
+          });
+        } catch {}
+      }
+
       return { success: false, messageId: "FAILED", platform: "CLOUD_API", error };
     } catch (err: any) {
       console.error("WhatsApp API dispatch error:", err.message);
@@ -372,6 +479,7 @@ export class WhatsAppBusinessService {
    */
   public static async getSystemIntegrationsHealth() {
     const waStatus = await this.getWhatsAppConnectionStatus();
+    const telephonyConfig = await TelephonyService.getActiveProviderConfig();
     const hasRazorpay = !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET);
     const hasEmail = !!(process.env.RESEND_API_KEY || process.env.SMTP_SERVER);
 
@@ -384,6 +492,14 @@ export class WhatsAppBusinessService {
 
     return {
       whatsapp: waStatus,
+      telephony: {
+        provider: telephonyConfig.provider,
+        status: telephonyConfig.isConfigured ? "CONNECTED" : "NOT_CONFIGURED",
+        isConfigured: telephonyConfig.isConfigured,
+        missingVars: telephonyConfig.missingVars,
+        webhookUrlTwilio: "https://lms.softlabglobal.com/api/webhooks/telephony/twilio",
+        webhookUrlExotel: "https://lms.softlabglobal.com/api/webhooks/telephony/exotel",
+      },
       aiCounselor: {
         status: "READY",
         knowledgeCategoriesCount: 14,
@@ -391,7 +507,8 @@ export class WhatsAppBusinessService {
         supportedLanguages: ["ENGLISH", "HINDI", "HINGLISH"],
       },
       aiVoice: {
-        status: "READY",
+        status: telephonyConfig.isConfigured ? "READY" : "NOT_CONFIGURED",
+        provider: telephonyConfig.provider,
         supportedLanguages: ["Hindi", "English", "Hinglish"],
         model: "SoftLab Neural Voice Agent",
       },
