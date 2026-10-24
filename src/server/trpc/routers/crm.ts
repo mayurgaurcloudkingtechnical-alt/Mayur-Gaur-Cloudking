@@ -1602,9 +1602,66 @@ export const crmRouter = router({
    * Broadcast Admission Confirmation, Course Details, and LMS Credentials
    * to ALL previously admitted students in database (with BCC to softlabglobal9@gmail.com).
    */
-  broadcastToExistingAdmittedStudents: requireRoleProcedure(admissionRoles).mutation(async () => {
-    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
+  broadcastToExistingAdmittedStudents: requireRoleProcedure(admissionRoles).mutation(async ({ ctx }) => {
+    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents({
+      resetPasswords: false,
+      actor: asAuthUser(ctx.user),
+    });
   }),
+
+  /**
+   * Query status, masked contacts, and past dispatch history for an admission application
+   */
+  getAdmissionDispatchStatus: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.getStudentDispatchStatus({
+        applicationId: input.applicationId,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
+
+  /**
+   * Preview rendered HTML postcard and WhatsApp message text before resending
+   */
+  previewWelcomePostcard: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        credentialMode: z.enum(["KEEP_EXISTING", "GENERATE_TEMPORARY"]).default("KEEP_EXISTING"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.previewWelcomePostcard({
+        applicationId: input.applicationId,
+        credentialMode: input.credentialMode,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
+
+  /**
+   * Resend official welcome postcard and login instructions via Email, WhatsApp, or Both
+   */
+  resendWelcomePostcard: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        channel: z.enum(["EMAIL", "WHATSAPP", "BOTH"]).default("BOTH"),
+        resetPassword: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.resendStudentWelcomePostcard({
+        applicationId: input.applicationId,
+        channel: input.channel,
+        resetPassword: input.resetPassword,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
 
   /**
    * Get counts of untouched and pending leads for AI follow-up

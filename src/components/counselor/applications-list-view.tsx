@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { EditApplicationDialog } from "./edit-application-dialog";
+import { ResendWelcomePostcardDialog } from "./resend-welcome-postcard-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { formatPaiseToRupees } from "@/lib/utils";
 
@@ -43,6 +44,7 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
   const [isExporting, setIsExporting] = useState(false);
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
   const [loadingReceiptId, setLoadingReceiptId] = useState<string | null>(null);
+  const [postcardAppId, setPostcardAppId] = useState<string | null>(null);
 
   const utils = api.useUtils();
 
@@ -375,12 +377,25 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
                             </Button>
                           )}
                           {app.stage === ApplicationStage.CONVERTED && (
-                            <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1 font-medium">
-                              <Link href={`/counselor/fees?search=${encodeURIComponent(app.applicantName || "")}`}>
-                                <IndianRupee className="h-3 w-3 text-blue-600" />
-                                <span>Collect EMI</span>
-                              </Link>
-                            </Button>
+                            <>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPostcardAppId(app.id)}
+                                className="h-7 px-2 text-xs border-indigo-300 text-indigo-700 hover:bg-indigo-50 flex items-center gap-1 font-medium"
+                                title="Send / Resend Welcome Postcard & Login Credentials"
+                              >
+                                <MailCheck className="h-3.5 w-3.5 text-indigo-600" />
+                                <span>Postcard</span>
+                              </Button>
+                              <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-blue-300 text-blue-700 hover:bg-blue-50 flex items-center gap-1 font-medium">
+                                <Link href={`/counselor/fees?search=${encodeURIComponent(app.applicantName || "")}`}>
+                                  <IndianRupee className="h-3 w-3 text-blue-600" />
+                                  <span>Collect EMI</span>
+                                </Link>
+                              </Button>
+                            </>
                           )}
                           <Button asChild size="sm" variant="outline" className="h-7 px-2 text-xs border-slate-300">
                             <Link href={`${basePath}/${app.id}`}>Review</Link>
@@ -496,6 +511,12 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
         open={!!editingApp}
         onOpenChange={(open) => !open && setEditingApp(null)}
         application={editingApp}
+      />
+
+      <ResendWelcomePostcardDialog
+        open={!!postcardAppId}
+        onOpenChange={(open) => !open && setPostcardAppId(null)}
+        applicationId={postcardAppId || undefined}
       />
 
       {/* Dual Fee Receipt Viewer Modal */}

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { RazorpayCheckoutButton } from "@/components/payment/razorpay-checkout-button";
 import { EditApplicationDialog } from "./edit-application-dialog";
+import { ResendWelcomePostcardDialog } from "./resend-welcome-postcard-dialog";
 
 interface ApplicationDetailViewProps {
   applicationId: string;
@@ -44,6 +45,7 @@ export function ApplicationDetailView({
   const [decisionReason, setDecisionReason] = useState("");
   const [stageError, setStageError] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [postcardOpen, setPostcardOpen] = useState(false);
 
   const utils = api.useUtils();
   const { data: app, isLoading, error } = api.crm.getApplicationDetails.useQuery({ applicationId });
@@ -440,7 +442,7 @@ export function ApplicationDetailView({
 
             {/* Conversion Success Card */}
             {app.convertedStudentProfile && (
-              <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 space-y-2">
+              <div className="rounded-lg bg-emerald-50 p-4 border border-emerald-200 text-emerald-900 space-y-3">
                 <div className="flex items-center gap-2 font-bold text-sm text-emerald-950">
                   <UserCheck className="h-5 w-5 text-emerald-700" />
                   <span>Student Admission Formally Converted & Active</span>
@@ -449,6 +451,17 @@ export function ApplicationDetailView({
                   Student Record ID: <strong className="font-mono text-emerald-950">{app.convertedStudentProfile.studentId}</strong>.
                   LMS access is enabled for target course: {app.course.title}.
                 </p>
+                <div className="pt-1">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setPostcardOpen(true)}
+                    className="bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5 h-8 shadow-sm"
+                  >
+                    <Mail className="h-3.5 w-3.5" />
+                    <span>Send / Resend Welcome Postcard & Credentials</span>
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
@@ -571,6 +584,12 @@ export function ApplicationDetailView({
         onOpenChange={setEditOpen}
         application={app}
         onSuccess={() => utils.crm.getApplicationDetails.invalidate({ applicationId })}
+      />
+
+      <ResendWelcomePostcardDialog
+        open={postcardOpen}
+        onOpenChange={setPostcardOpen}
+        applicationId={applicationId}
       />
     </div>
   );

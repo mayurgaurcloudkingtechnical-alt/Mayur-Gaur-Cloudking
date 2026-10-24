@@ -41,11 +41,13 @@ import {
   MessageSquare,
   Send,
   Share2,
+  MailCheck,
 } from "lucide-react";
 import { PaymentMethod, UserStatus } from "@prisma/client";
 import { StudentIdCardView } from "@/components/common/student-id-card-view";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { EditFeeStructureDialog } from "@/components/admin/finance/edit-fee-structure-dialog";
+import { ResendWelcomePostcardDialog } from "@/components/counselor/resend-welcome-postcard-dialog";
 
 interface StudentDetailViewProps {
   studentId: string;
@@ -80,6 +82,7 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
 
   // Modals / subforms
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [postcardOpen, setPostcardOpen] = useState(false);
 
   // Photo upload (counselor/admin can upload student photo)
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -543,6 +546,17 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => setPostcardOpen(true)}
+            className="border-indigo-200 bg-indigo-50/70 hover:bg-indigo-100 text-indigo-700 gap-1.5 shadow-sm text-xs font-semibold"
+            title="Send / Resend Official Welcome Postcard & LMS Credentials"
+          >
+            <MailCheck className="h-4 w-4 text-indigo-600" />
+            <span>Welcome Postcard</span>
+          </Button>
+
           <Button
             size="sm"
             onClick={() => setAssignCourseOpen(true)}
@@ -2831,6 +2845,13 @@ export function StudentDetailView({ studentId }: StudentDetailViewProps) {
           />
         </div>
       )}
+
+      {/* RESEND STUDENT WELCOME POSTCARD & CREDENTIALS MODAL */}
+      <ResendWelcomePostcardDialog
+        open={postcardOpen}
+        onOpenChange={setPostcardOpen}
+        studentProfileId={student.id}
+      />
     </div>
   );
 }

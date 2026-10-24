@@ -471,8 +471,7 @@ export class EmailService {
    * 2b. Comprehensive Admission Confirmation & LMS Credentials Email
    * (Sent to Student with Course Details, Credentials & BCC to softlabglobal9@gmail.com)
    */
-  static async sendConsolidatedAdmissionWelcomeEmail(params: {
-    to: string;
+  static generateConsolidatedAdmissionWelcomeHtml(params: {
     studentName: string;
     studentId: string;
     admissionNumber: string;
@@ -480,15 +479,14 @@ export class EmailService {
     specialization?: string | null;
     providerName?: string | null;
     loginEmail: string;
-    temporaryPassword: string;
+    temporaryPassword?: string | null;
     batchName?: string;
     center?: string;
     counselorName?: string | null;
     counselorPhone?: string | null;
-  }) {
+  }): string {
     const center = params.center || "SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, Uttar Pradesh - 211011";
-    const subject = `Official Admission Confirmation & LMS Credentials — SOFTLAB GLOBAL (${params.studentId})`;
-    const html = `
+    return `
       <div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; padding: 24px; color: #1e293b; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px;">
         <div style="text-align: center; border-bottom: 3px solid #059669; padding-bottom: 20px; margin-bottom: 24px;">
           <h1 style="color: #059669; margin: 0; font-size: 26px; letter-spacing: -0.5px;">SOFTLAB GLOBAL</h1>
@@ -527,8 +525,17 @@ export class EmailService {
           <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
             <tr><td style="padding: 6px 0; color: #047857; width: 40%;">Portal Link:</td><td style="padding: 6px 0;"><a href="https://softlabglobal.com/login" style="color: #059669; font-weight: bold;">https://softlabglobal.com/login</a></td></tr>
             <tr><td style="padding: 6px 0; color: #047857;">Login Username / Email:</td><td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: #0f172a;">${params.loginEmail}</td></tr>
-            <tr><td style="padding: 6px 0; color: #047857;">Temporary Password:</td><td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: #dc2626; background: #fee2e2; padding: 4px 8px; border-radius: 4px; display: inline-block;">${params.temporaryPassword}</td></tr>
+            ${
+              params.temporaryPassword
+                ? `<tr><td style="padding: 6px 0; color: #047857;">Temporary Password:</td><td style="padding: 6px 0; font-family: monospace; font-weight: bold; color: #dc2626; background: #fee2e2; padding: 4px 8px; border-radius: 4px; display: inline-block;">${params.temporaryPassword}</td></tr>`
+                : `<tr><td style="padding: 6px 0; color: #047857;">Account Password:</td><td style="padding: 6px 0; font-weight: 600; color: #0f172a;">Use your existing registered password</td></tr>`
+            }
           </table>
+          ${
+            params.temporaryPassword
+              ? `<p style="font-size: 12px; color: #047857; margin: 10px 0 0 0;"><em>Please sign in and change your password upon first login.</em></p>`
+              : `<p style="font-size: 12px; color: #047857; margin: 10px 0 0 0;"><em>Your account is active. If you have forgotten your password, use the reset option on the portal or contact your coordinator.</em></p>`
+          }
         </div>
 
         <p style="text-align: center; margin: 26px 0;">
@@ -552,6 +559,25 @@ export class EmailService {
         </p>
       </div>
     `;
+  }
+
+  static async sendConsolidatedAdmissionWelcomeEmail(params: {
+    to: string;
+    studentName: string;
+    studentId: string;
+    admissionNumber: string;
+    courseName: string;
+    specialization?: string | null;
+    providerName?: string | null;
+    loginEmail: string;
+    temporaryPassword?: string | null;
+    batchName?: string;
+    center?: string;
+    counselorName?: string | null;
+    counselorPhone?: string | null;
+  }) {
+    const subject = `Official Admission Confirmation & LMS Credentials — SOFTLAB GLOBAL (${params.studentId})`;
+    const html = this.generateConsolidatedAdmissionWelcomeHtml(params);
 
     return this.sendEmail({
       to: params.to,

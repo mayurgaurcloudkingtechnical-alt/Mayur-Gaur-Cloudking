@@ -15,6 +15,18 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcryptjs";
 import { StudentAdmissionNotificationService } from "@/server/services/student-admission-notification.service";
+import { AuthenticatedUser } from "@/server/auth/rbac";
+
+function asAuthUser(user: any): AuthenticatedUser {
+  return {
+    id: user.id,
+    email: user.email || "",
+    roleCode: user.roleCode,
+    permissions: user.permissions || [],
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+  };
+}
 
 const privilegedAdminRoles = [
   UserRoleCode.SUPER_ADMIN,
@@ -1950,9 +1962,84 @@ export const adminRouter = router({
    * Broadcast Admission Confirmation, Course Details, and LMS Credentials
    * to ALL previously admitted students in database (with BCC to softlabglobal9@gmail.com).
    */
-  broadcastToExistingAdmittedStudents: requireRoleProcedure(privilegedAdminRoles).mutation(async () => {
-    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents();
+  broadcastToExistingAdmittedStudents: requireRoleProcedure(privilegedAdminRoles).mutation(async ({ ctx }) => {
+    return StudentAdmissionNotificationService.batchSendToExistingAdmittedStudents({
+      resetPasswords: false,
+      actor: asAuthUser(ctx.user),
+    });
   }),
+
+  /**
+   * Query status, masked contacts, and past dispatch history for a student profile
+   */
+  getStudentDispatchStatus: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.getStudentDispatchStatus({
+        studentProfileId: input.studentProfileId,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
+
+  /**
+   * Preview rendered HTML postcard and WhatsApp message text before resending
+   */
+  previewWelcomePostcard: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+        credentialMode: z.enum(["KEEP_EXISTING", "GENERATE_TEMPORARY"]).default("KEEP_EXISTING"),
+      })
+    )
+    .query(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.previewWelcomePostcard({
+        studentProfileId: input.studentProfileId,
+        credentialMode: input.credentialMode,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
+
+  /**
+   * Resend official welcome postcard and login instructions via Email, WhatsApp, or Both
+   */
+  resendStudentWelcomePostcard: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.COUNSELOR,
+  ])
+    .input(
+      z.object({
+        studentProfileId: z.string(),
+        channel: z.enum(["EMAIL", "WHATSAPP", "BOTH"]).default("BOTH"),
+        resetPassword: z.boolean().default(false),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return StudentAdmissionNotificationService.resendStudentWelcomePostcard({
+        studentProfileId: input.studentProfileId,
+        channel: input.channel,
+        resetPassword: input.resetPassword,
+        actor: asAuthUser(ctx.user),
+      });
+    }),
 
   /**
    * Connect with individual student on WhatsApp according to LMS credentials
