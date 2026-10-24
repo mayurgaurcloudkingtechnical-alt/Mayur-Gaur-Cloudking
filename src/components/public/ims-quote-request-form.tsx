@@ -148,7 +148,7 @@ export function ImsQuoteRequestForm() {
   const submitMutation = trpc.ims.submitRequirement.useMutation({
     onSuccess: (data) => {
       setFormError(null);
-      setSubmissionResult(data);
+      setSubmissionResult(data as any);
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     onError: (err) => {
@@ -203,11 +203,11 @@ export function ImsQuoteRequestForm() {
     }
 
     submitMutation.mutate({
-      name: name.trim(),
-      company: company.trim() || undefined,
+      fullName: name.trim(),
+      companyName: company.trim() || undefined,
       email: email.trim(),
       phone: phone.trim(),
-      projectLocation: projectLocation.trim(),
+      siteAddress: projectLocation.trim(),
       city: city.trim(),
       selectedServices,
       engagementType,
@@ -232,7 +232,7 @@ export function ImsQuoteRequestForm() {
       budgetRange,
       additionalNotes: additionalNotes.trim() || undefined,
       siteAttachments,
-    });
+    } as any);
   };
 
   if (submissionResult) {
@@ -346,7 +346,7 @@ export function ImsQuoteRequestForm() {
                           )}
                         </td>
                         <td className="py-3.5 px-4 text-right font-mono font-semibold text-slate-900">
-                          {item.pricePending || item.lineSubtotal === null ? (
+                          {item.pricePending || item.lineSubtotal === null || item.lineSubtotal === undefined ? (
                             <span className="text-amber-700 text-xs">To Be Verified</span>
                           ) : (
                             `₹${item.lineSubtotal.toLocaleString("en-IN")}`

@@ -84,7 +84,7 @@ export class YouTubePublishingService {
     const redirectUri =
       storedConfig.redirectUri ||
       process.env.YOUTUBE_REDIRECT_URI ||
-      `${process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "https://lms.softlabglobal.com"}/api/auth/youtube/callback`;
+      "https://lms.softlabglobal.com/api/auth/youtube/callback";
 
     return {
       clientId: clientId ? String(clientId).trim() : undefined,

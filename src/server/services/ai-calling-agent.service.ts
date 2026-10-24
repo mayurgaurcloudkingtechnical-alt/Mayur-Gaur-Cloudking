@@ -344,7 +344,14 @@ export class AiCallingAgentService {
     leadId: string;
     performerUserId?: string;
     preferredLanguage?: string;
-  }): Promise<{ success: boolean; result: ExtractedCallResult; summary: string }> {
+  }): Promise<{
+    success: boolean;
+    result: ExtractedCallResult;
+    summary: string;
+    provider?: string;
+    status?: string;
+    providerCallId?: string;
+  }> {
     const lead = await db.lead.findUnique({
       where: { id: params.leadId },
       include: {
@@ -405,6 +412,9 @@ export class AiCallingAgentService {
 
       return {
         success: false,
+        provider: callRes.provider,
+        status: callRes.status,
+        providerCallId: callRes.providerCallId,
         summary: callRes.error || "Telephony carrier call failed.",
         result: {
           callOutcome: "FAILED" as any,
@@ -472,6 +482,9 @@ export class AiCallingAgentService {
 
     return {
       success: true,
+      provider: callRes.provider,
+      status: callRes.status,
+      providerCallId: callRes.providerCallId,
       result: {
         callOutcome: "CALL_INITIATED" as any,
         interestLevel: "WARM",

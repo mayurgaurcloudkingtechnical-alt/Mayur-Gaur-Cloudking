@@ -16,7 +16,7 @@ export interface InitiateOutboundCallParams {
 
 export interface TelephonyCallResponse {
   success: boolean;
-  status: "INITIATED" | "RINGING" | "IN_PROGRESS" | "COMPLETED" | "BUSY" | "NO_ANSWER" | "FAILED";
+  status: "INITIATED" | "RINGING" | "IN_PROGRESS" | "COMPLETED" | "BUSY" | "NO_ANSWER" | "FAILED" | "QUEUED";
   providerCallId: string;
   provider: "TWILIO" | "EXOTEL" | "NONE";
   error?: string;

@@ -8,10 +8,9 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
 
-  const baseUrl =
-    process.env.NEXTAUTH_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    `${request.nextUrl.protocol}//${request.nextUrl.host}`;
+  const host = request.headers.get("x-forwarded-host") || request.nextUrl.host;
+  const proto = request.headers.get("x-forwarded-proto") || (request.nextUrl.protocol.replace(":", "") || "https");
+  const baseUrl = host ? `${proto}://${host}` : (process.env.NEXTAUTH_URL || "https://lms.softlabglobal.com");
 
   // If user declined or Google returned an error
   if (error) {

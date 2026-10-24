@@ -7,7 +7,7 @@ export interface LogCallInput {
   contactName: string;
   contactPhone: string;
   callType?: "OUTGOING" | "INCOMING" | "MISSED" | "REJECTED";
-  callStatus?: "CONNECTED" | "BUSY" | "NO_ANSWER" | "FAILED";
+  callStatus?: "CONNECTED" | "BUSY" | "NO_ANSWER" | "FAILED" | "INITIATED";
   disposition: string; // "INTERESTED", "ADMISSION_CONFIRMED", "CALLBACK", "FOLLOW_UP", "NOT_INTERESTED", "BUSY_NO_ANSWER", "WRONG_NUMBER", "ENQUIRY_RESOLVED"
   durationSeconds: number;
   notes?: string;

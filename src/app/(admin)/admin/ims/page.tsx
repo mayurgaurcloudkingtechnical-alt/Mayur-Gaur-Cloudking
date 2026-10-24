@@ -13,7 +13,7 @@ export default async function AdminImsPage() {
     UserRoleCode.ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.COUNSELOR,
-    UserRoleCode.ADMISSION_DESK,
+    UserRoleCode.MANAGER,
   ]);
 
   return (

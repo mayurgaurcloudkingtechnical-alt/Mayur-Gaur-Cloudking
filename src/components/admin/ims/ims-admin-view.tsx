@@ -4,7 +4,12 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { api as trpc } from "@/lib/trpc/react";
 import type { ImsEnquiryRecord } from "@/server/services/ims.service";
-import type { ImsBoqLineItem, ImsCatalogItem, ImsEstimationRule } from "@/lib/constants/ims-catalog";
+import {
+  type ImsBoqLineItem,
+  type ImsCatalogItem,
+  type ImsEstimationRules,
+  DEFAULT_IMS_ESTIMATION_RULES,
+} from "@/lib/constants/ims-catalog";
 import { ImsQuotationPdfModal } from "./ims-quotation-pdf-modal";
 import {
   Server,
@@ -30,6 +35,20 @@ import {
   Lock,
 } from "lucide-react";
 
+const RULE_METADATA: { key: keyof ImsEstimationRules; label: string; description: string; unit: string }[] = [
+  { key: "avgCableMetersPerCamera", label: "Average Cable per Camera", description: "Meters per CCTV camera run", unit: "m" },
+  { key: "avgCableMetersPerNetworkPoint", label: "Average Cable per LAN Point", description: "Meters per structured cabling node", unit: "m" },
+  { key: "avgCableMetersPerBiometric", label: "Average Cable per Biometric Device", description: "Meters per access control device", unit: "m" },
+  { key: "floorCableMultiplierPercent", label: "Floor Multiplier", description: "Extra cable per building floor", unit: "%" },
+  { key: "conduitMetersPerCableMeter", label: "Conduit Ratio", description: "PVC pipe / casing per meter of cable", unit: "m/m" },
+  { key: "bncConnectorsPerHdCamera", label: "BNC Connectors per HD Camera", description: "Connectors required per analog camera", unit: "Nos" },
+  { key: "dcConnectorsPerHdCamera", label: "DC Pins per HD Camera", description: "Power connectors per camera", unit: "Nos" },
+  { key: "rj45JacksPerIpCamera", label: "RJ-45 Connectors per IP Camera", description: "Network terminations per IP camera", unit: "Nos" },
+  { key: "rj45JacksPerNetworkPoint", label: "RJ-45 Connectors per LAN Port", description: "Terminations per workstation node", unit: "Nos" },
+  { key: "switchPortBufferPercent", label: "Switch Port Buffer", description: "Reserve capacity for future expansion", unit: "%" },
+  { key: "defaultGstPercent", label: "Default GST Rate", description: "Goods and Services Tax percentage", unit: "%" },
+];
+
 type AdminTab = "enquiries" | "boq" | "catalogue" | "rules" | "amc";
 
 export function ImsAdminView() {
@@ -50,12 +69,12 @@ export function ImsAdminView() {
   const [assumptionsAndExclusions, setAssumptionsAndExclusions] = useState("");
   const [warrantyAndAmcTerms, setWarrantyAndAmcTerms] = useState("");
   const [paymentTerms, setPaymentTerms] = useState("");
-  const [enquiryStatus, setEnquiryStatus] = useState<ImsEnquiryRecord["status"]>("PROVISIONAL_BOQ_READY");
+  const [enquiryStatus, setEnquiryStatus] = useState<ImsEnquiryRecord["status"]>("BOQ_PREPARED");
 
   // Catalogue Editor State
   const [catalogueDraft, setCatalogueDraft] = useState<ImsCatalogItem[] | null>(null);
   // Rules Editor State
-  const [rulesDraft, setRulesDraft] = useState<ImsEstimationRule[] | null>(null);
+  const [rulesDraft, setRulesDraft] = useState<ImsEstimationRules | null>(null);
 
   // AMC Form State
   const [amcClientName, setAmcClientName] = useState("");
@@ -120,7 +139,7 @@ export function ImsAdminView() {
 
   const { enquiries, catalog, rules, amcContracts, canManagePricing } = data;
   const currentCatalog = catalogueDraft ?? catalog;
-  const currentRules = rulesDraft ?? rules;
+  const currentRules: ImsEstimationRules = rulesDraft ?? (rules as unknown as ImsEstimationRules) ?? DEFAULT_IMS_ESTIMATION_RULES;
 
   const selectedRecord =
     enquiries.find((e) => e.id === selectedRecordId) || enquiries[0] || null;
@@ -171,7 +190,7 @@ export function ImsAdminView() {
       {
         id: `BOQ-CUSTOM-${Date.now()}`,
         sku: `SLG-CUST-${prev.length + 1}`,
-        category: "EQUIPMENT",
+        category: "CONNECTORS_CONDUITS_ACCESSORIES",
         name: "Additional Hardware / Installation Material",
         specification: "Site-specific requirement",
         unit: "Nos",
@@ -244,7 +263,7 @@ export function ImsAdminView() {
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
           <span className="text-xs text-slate-500 font-semibold">Approved Quotations</span>
           <div className="text-2xl font-black text-emerald-600 mt-1">
-            {enquiries.filter((e) => e.quotation.status === "APPROVED_FINAL").length}
+            {enquiries.filter((e) => e.quotation.status === "APPROVED_FINAL_QUOTE").length}
           </div>
           <span className="text-[11px] text-slate-500">Commercial Quotes Ready</span>
         </div>
@@ -358,7 +377,7 @@ export function ImsAdminView() {
                           {rec.customer.city} — {rec.requirements.siteType}
                         </div>
                         <div className="text-slate-500 text-[11px] truncate max-w-xs">
-                          {rec.customer.projectLocation} ({rec.requirements.buildingFloors} Floors)
+                          {rec.requirements.siteAddress || rec.customer.city} ({rec.requirements.buildingFloors} Floors)
                         </div>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {rec.requirements.selectedServices.map((s) => (
@@ -372,26 +391,26 @@ export function ImsAdminView() {
                         </div>
                       </td>
                       <td className="py-3.5 px-4 text-[11px] text-slate-600 space-y-0.5">
-                        {rec.requirements.cameraCount > 0 && (
+                        {(rec.requirements.cameraCount ?? 0) > 0 && (
                           <div>Cameras: {rec.requirements.cameraCount}</div>
                         )}
-                        {rec.requirements.serverCount > 0 && (
+                        {(rec.requirements.serverCount ?? 0) > 0 && (
                           <div>Servers: {rec.requirements.serverCount}</div>
                         )}
-                        {rec.requirements.networkPoints > 0 && (
+                        {(rec.requirements.networkPoints ?? 0) > 0 && (
                           <div>LAN Nodes: {rec.requirements.networkPoints}</div>
                         )}
-                        {rec.requirements.computerCount > 0 && (
+                        {(rec.requirements.computerCount ?? 0) > 0 && (
                           <div>Computers: {rec.requirements.computerCount}</div>
                         )}
-                        {rec.requirements.biometricCount > 0 && (
+                        {(rec.requirements.biometricCount ?? 0) > 0 && (
                           <div>Biometrics: {rec.requirements.biometricCount}</div>
                         )}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
                           className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold ${
-                            rec.quotation.status === "APPROVED_FINAL"
+                            rec.quotation.status === "APPROVED_FINAL_QUOTE"
                               ? "bg-emerald-100 text-emerald-800"
                               : "bg-amber-100 text-amber-800"
                           }`}
@@ -795,8 +814,8 @@ export function ImsAdminView() {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {currentCatalog.map((item, idx) => (
-                  <tr key={item.sku}>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{item.sku}</td>
+                  <tr key={item.id || item.code || item.sku || idx}>
+                    <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{item.code || item.sku}</td>
                     <td className="py-2.5 px-3">
                       <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700 font-semibold text-[10px]">
                         {item.category}
@@ -804,7 +823,7 @@ export function ImsAdminView() {
                     </td>
                     <td className="py-2.5 px-3">
                       <div className="font-bold text-slate-900">{item.name}</div>
-                      <div className="text-[11px] text-slate-500">{item.specification}</div>
+                      <div className="text-[11px] text-slate-500">{item.specification || item.notes}</div>
                     </td>
                     <td className="py-2.5 px-3 text-slate-600">{item.unit}</td>
                     {canManagePricing && (
@@ -838,7 +857,7 @@ export function ImsAdminView() {
                           next[idx] = {
                             ...item,
                             sellingPrice: val,
-                            priceStatus: val === null ? "PENDING_MANAGEMENT_INPUT" : "VERIFIED",
+                            priceStatus: val === null ? "PENDING_MANAGEMENT_INPUT" : "VERIFIED_CONFIGURED",
                           };
                           setCatalogueDraft(next);
                         }}
@@ -880,31 +899,35 @@ export function ImsAdminView() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {currentRules.map((rule, idx) => (
-              <div
-                key={rule.key}
-                className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-center justify-between gap-4"
-              >
-                <div>
-                  <div className="font-bold text-xs text-slate-900">{rule.label}</div>
-                  <div className="text-[11px] text-slate-500 mt-0.5">{rule.description}</div>
+            {RULE_METADATA.map((meta) => {
+              const val = currentRules[meta.key] ?? 0;
+              return (
+                <div
+                  key={meta.key}
+                  className="p-4 rounded-2xl border border-slate-200 bg-slate-50/60 flex items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="font-bold text-xs text-slate-900">{meta.label}</div>
+                    <div className="text-[11px] text-slate-500 mt-0.5">{meta.description}</div>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <input
+                      type="number"
+                      disabled={!canManagePricing}
+                      value={val}
+                      onChange={(e) => {
+                        setRulesDraft({
+                          ...currentRules,
+                          [meta.key]: Number(e.target.value),
+                        });
+                      }}
+                      className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono font-bold text-xs text-center"
+                    />
+                    <span className="text-xs text-slate-500 font-semibold">{meta.unit}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <input
-                    type="number"
-                    disabled={!canManagePricing}
-                    value={rule.value}
-                    onChange={(e) => {
-                      const next = [...currentRules];
-                      next[idx] = { ...rule, value: Number(e.target.value) };
-                      setRulesDraft(next);
-                    }}
-                    className="w-20 px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white font-mono font-bold text-xs text-center"
-                  />
-                  <span className="text-xs text-slate-500 font-semibold">{rule.unit}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1079,7 +1102,7 @@ export function ImsAdminView() {
                         <strong>Renewal Due:</strong> {amc.endDate}
                       </div>
                       <div className="font-mono font-bold text-slate-900">
-                        ₹{amc.annualContractValue.toLocaleString("en-IN")} / yr
+                        ₹{(amc.annualContractValue ?? (amc as any).contractValue ?? 0).toLocaleString("en-IN")} / yr
                       </div>
                     </div>
                   </div>

@@ -53,7 +53,7 @@ async function audit() {
     console.log(`   - accessToken: ${storedConfig.accessToken ? "SET (Length: " + storedConfig.accessToken.length + ")" : "MISSING"}`);
     console.log(`   - wabaId: ${storedConfig.wabaId ? "SET" : "MISSING"}`);
     console.log(`   - displayPhoneNumber: ${storedConfig.displayPhoneNumber || "NOT SET"}`);
-    console.log(`   - isVerified: ${storedConfig.isVerified}`);
+    console.log(`   - isVerified: ${(storedConfig as any).isVerified}`);
   } catch (err: any) {
     console.log("   ❌ Error fetching WhatsApp stored config:", err.message);
   }

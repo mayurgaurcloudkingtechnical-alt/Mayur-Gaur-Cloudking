@@ -979,7 +979,7 @@ export function ManagementControlCenterView({ user }: ManagementControlCenterVie
                                 handleOpenEdit({
                                   recordType: "YOUTUBE_QUEUE",
                                   recordId: item.id,
-                                  title: item.videoTitle,
+                                  title: item.videoTitle || item.lectureTopic || "YouTube Video",
                                   currentValues: {
                                     videoTitle: item.videoTitle,
                                     videoDescription: item.videoDescription,

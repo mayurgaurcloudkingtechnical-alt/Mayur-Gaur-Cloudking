@@ -83,7 +83,8 @@ export interface CallIngestInput {
   contactName: string;
   contactPhone: string;
   callType?: "OUTGOING" | "INCOMING" | "MISSED" | "REJECTED";
-  callStatus?: "CONNECTED" | "BUSY" | "NO_ANSWER" | "FAILED";
+  direction?: "INBOUND" | "OUTBOUND";
+  callStatus?: "CONNECTED" | "BUSY" | "NO_ANSWER" | "FAILED" | "INITIATED";
   disposition: string;
   durationSeconds: number;
   notes?: string;

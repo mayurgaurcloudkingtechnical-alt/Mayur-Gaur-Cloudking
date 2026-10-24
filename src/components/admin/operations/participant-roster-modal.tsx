@@ -133,9 +133,9 @@ export function ParticipantRosterModal({
                               PRESENT
                             </Badge>
                           )}
-                          {p.status === "PARTIAL" && (
+                          {(p.status === "LATE" || (p.status as any) === "PARTIAL") && (
                             <Badge className="bg-amber-950 text-amber-400 border border-amber-800">
-                              PARTIAL
+                              {p.status}
                             </Badge>
                           )}
                           {p.status === "ABSENT" && (

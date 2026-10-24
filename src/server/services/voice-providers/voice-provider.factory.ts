@@ -28,7 +28,7 @@ export class RealTelephonyVoiceProvider implements VoiceProviderAdapter {
     return {
       success: callRes.success,
       providerCallId: callRes.providerCallId,
-      status: callRes.status,
+      status: (callRes.status === "QUEUED" ? "INITIATED" : callRes.status) as any,
       error: callRes.error,
     };
   }

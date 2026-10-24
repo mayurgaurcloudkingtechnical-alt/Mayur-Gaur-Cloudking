@@ -87,7 +87,7 @@ export const imsRouter = router({
             })
           )
           .optional(),
-      })
+      }).passthrough()
     )
     .mutation(async ({ input }) => {
       return ImsService.submitImsRequirement(input);
@@ -107,12 +107,17 @@ export const imsRouter = router({
       ImsService.listProjectsAndAmc(actor),
     ]);
 
+    const canManagePricing = ["SUPER_ADMIN", "ADMIN", "DIRECTOR"].includes(actor.roleCode as string);
+
     return {
       enquiries,
       quotations,
       catalogue,
+      catalog: catalogue,
       rules,
       projectsAmc,
+      amcContracts: projectsAmc,
+      canManagePricing,
     };
   }),
 
@@ -131,7 +136,7 @@ export const imsRouter = router({
           "AMC_ACTIVE",
           "CLOSED",
         ]),
-      })
+      }).passthrough()
     )
     .mutation(async ({ ctx, input }) => {
       return ImsService.updateImsEnquiryStatus(
@@ -154,7 +159,7 @@ export const imsRouter = router({
         paymentTerms: z.string(),
         validityDays: z.number().min(1).max(180).default(15),
         approveNow: z.boolean().optional(),
-      })
+      }).passthrough()
     )
     .mutation(async ({ ctx, input }) => {
       return ImsService.saveQuotation(asAuthUser(ctx.user), input);
@@ -187,7 +192,7 @@ export const imsRouter = router({
         priceStatus: z.enum(["VERIFIED_CONFIGURED", "PENDING_MANAGEMENT_INPUT"]),
         requiresSiteVerificationDefault: z.boolean(),
         notes: z.string().optional(),
-      })
+      }).passthrough()
     )
     .mutation(async ({ ctx, input }) => {
       return ImsService.upsertCatalogueItem(asAuthUser(ctx.user), input);
@@ -207,7 +212,7 @@ export const imsRouter = router({
         rj45JacksPerNetworkPoint: z.number().min(1),
         switchPortBufferPercent: z.number().min(0),
         defaultGstPercent: z.number().min(0).max(28),
-      })
+      }).passthrough()
     )
     .mutation(async ({ ctx, input }) => {
       return ImsService.updateEstimationRules(asAuthUser(ctx.user), input);
@@ -245,9 +250,101 @@ export const imsRouter = router({
         contractValue: z.number().nullable().optional(),
         notes: z.string().optional(),
         updatedAt: z.string(),
-      })
+      }).passthrough()
     )
     .mutation(async ({ ctx, input }) => {
       return ImsService.upsertProjectOrAmc(asAuthUser(ctx.user), input);
+    }),
+
+  updateQuotation: protectedProcedure
+    .input(
+      z.object({
+        enquiryId: z.string(),
+        lineItems: z.array(z.any()),
+        discountAmount: z.number().optional().default(0),
+        validityDays: z.number().optional().default(15),
+        scopeOfWork: z.string().optional().default(""),
+        assumptionsAndExclusions: z.string().optional().default(""),
+        warrantyAndAmcTerms: z.string().optional().default(""),
+        paymentTerms: z.string().optional().default(""),
+        approveNow: z.boolean().optional(),
+      }).passthrough()
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = asAuthUser(ctx.user);
+      const quotation = await ImsService.saveQuotation(actor, {
+        id: input.enquiryId,
+        items: input.lineItems,
+        discountPercent: input.discountAmount ? Math.min(100, Math.max(0, input.discountAmount)) : 0,
+        scopeOfWork: input.scopeOfWork,
+        assumptionsAndExclusions: input.assumptionsAndExclusions,
+        warrantyAndAmcTerms: input.warrantyAndAmcTerms,
+        paymentTerms: input.paymentTerms,
+        validityDays: input.validityDays,
+        approveNow: input.approveNow,
+      });
+      return { success: true, quotation };
+    }),
+
+  saveCatalog: protectedProcedure
+    .input(z.object({ items: z.array(z.any()) }))
+    .mutation(async ({ ctx, input }) => {
+      const actor = asAuthUser(ctx.user);
+      for (const item of input.items) {
+        await ImsService.upsertCatalogueItem(actor, item);
+      }
+      return { success: true };
+    }),
+
+  saveEstimationRules: protectedProcedure
+    .input(z.object({ rules: z.any() }))
+    .mutation(async ({ ctx, input }) => {
+      const actor = asAuthUser(ctx.user);
+      return ImsService.updateEstimationRules(actor, input.rules);
+    }),
+
+  upsertAmcContract: protectedProcedure
+    .input(
+      z.object({
+        clientName: z.string(),
+        company: z.string().optional(),
+        phone: z.string(),
+        email: z.string(),
+        siteLocation: z.string(),
+        servicesScope: z.array(z.string()).optional(),
+        coveredServices: z.array(z.string()).optional(),
+        annualContractValue: z.number().optional().default(0),
+        paymentFrequency: z.string().optional().default("MONTHLY"),
+        visitFrequency: z.string().optional(),
+        nextMaintenanceDate: z.string().optional(),
+        nextPreventiveVisitDate: z.string().optional(),
+        renewalDate: z.string().optional(),
+        startDate: z.string().optional(),
+        endDate: z.string().optional(),
+        assignedEngineer: z.string().optional().default("Support Engineer"),
+        status: z.any().optional(),
+      }).passthrough()
+    )
+    .mutation(async ({ ctx, input }) => {
+      const actor = asAuthUser(ctx.user);
+      return ImsService.upsertProjectOrAmc(actor, {
+        id: `amc-${Date.now()}`,
+        referenceNumber: `AMC-${Date.now().toString(36).toUpperCase()}`,
+        enquiryNumber: `ENQ-AMC`,
+        customerName: input.clientName,
+        companyName: input.company || "",
+        phone: input.phone,
+        email: input.email,
+        siteLocation: input.siteLocation,
+        servicesScope: input.servicesScope || input.coveredServices || [],
+        recordType: "AMC_CONTRACT",
+        status: "AMC_ACTIVE",
+        assignedEngineer: input.assignedEngineer || "Support Engineer",
+        startDate: input.startDate || new Date().toISOString().slice(0, 10),
+        endDate: input.renewalDate || input.endDate || new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10),
+        nextPreventiveMaintenanceDate: input.nextMaintenanceDate || input.nextPreventiveVisitDate,
+        contractValue: input.annualContractValue ?? 0,
+        updatedAt: new Date().toISOString(),
+      });
     }),
 });

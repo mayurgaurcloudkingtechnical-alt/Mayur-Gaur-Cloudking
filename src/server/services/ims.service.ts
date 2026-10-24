@@ -52,10 +52,13 @@ export interface ImsQuotationRecord {
 export interface ImsProjectAmcRecord {
   id: string;
   referenceNumber: string;
+  contractNumber?: string;
   enquiryNumber: string;
   quotationNumber?: string;
   customerName: string;
+  clientName?: string;
   companyName: string;
+  company?: string;
   phone: string;
   email: string;
   siteLocation: string;
@@ -66,16 +69,21 @@ export interface ImsProjectAmcRecord {
   startDate: string;
   endDate: string;
   nextPreventiveMaintenanceDate?: string;
+  nextPreventiveVisitDate?: string;
   totalVisitsPerYear?: number;
   completedVisits?: number;
   contractValue?: number | null;
+  annualContractValue?: number | null;
   notes?: string;
   updatedAt: string;
 }
 
+export type ImsEnquiryRecord = ImsEnquiryExtendedRecord;
+
 export interface ImsEnquiryExtendedRecord {
   id: string;
   enquiryNumber: string;
+  referenceNumber?: string;
   serviceEnquiryId: string;
   quotationId: string;
   quotationNumber: string;
@@ -90,6 +98,14 @@ export interface ImsEnquiryExtendedRecord {
     | "AMC_ACTIVE"
     | "CLOSED";
   requirements: ImsRequirementInput;
+  customer?: {
+    name: string;
+    company?: string;
+    city: string;
+    phone: string;
+    email: string;
+  };
+  quotation?: any;
   createdAt: string;
   updatedAt: string;
 }
@@ -392,7 +408,39 @@ export class ImsService {
 
   static async listImsEnquiries(user: AuthenticatedUser) {
     this.assertAccess(user, false);
-    return this.getSetting<ImsEnquiryExtendedRecord[]>(KEY_ENQUIRIES, []);
+    const [enquiries, quotations] = await Promise.all([
+      this.getSetting<ImsEnquiryExtendedRecord[]>(KEY_ENQUIRIES, []),
+      this.getSetting<ImsQuotationRecord[]>(KEY_QUOTATIONS, []),
+    ]);
+
+    return enquiries.map((e) => {
+      const q = quotations.find((quot) => quot.id === e.quotationId || quot.enquiryNumber === e.enquiryNumber);
+      return {
+        ...e,
+        referenceNumber: e.enquiryNumber,
+        customer: {
+          name: e.requirements?.fullName || "Prospective Client",
+          company: e.requirements?.companyName,
+          city: e.requirements?.city || "Prayagraj",
+          phone: e.requirements?.phone || "",
+          email: e.requirements?.email || "",
+        },
+        quotation: q || {
+          id: e.quotationId,
+          quotationNumber: e.quotationNumber,
+          status: "DRAFT",
+          lineItems: [],
+          subtotalExclTax: 0,
+          gstTotal: 0,
+          grandTotal: 0,
+          discountPercent: 0,
+          scopeOfWork: "",
+          assumptionsAndExclusions: "",
+          warrantyAndAmcTerms: "",
+          paymentTerms: "",
+        },
+      };
+    });
   }
 
   static async updateImsEnquiryStatus(

@@ -561,6 +561,8 @@ export const IMS_SERVICES_LIST: ImsServiceDefinition[] = [
 // CONFIGURABLE ESTIMATION RULES ENGINE
 // ============================================================================
 
+export type ImsEstimationRule = ImsEstimationRules;
+
 export interface ImsEstimationRules {
   avgCableMetersPerCamera: number;
   avgCableMetersPerNetworkPoint: number;
@@ -606,13 +608,17 @@ export type ImsCatalogueCategory =
   | "SURVEY_LOGISTICS"
   | "AMC_SUPPORT";
 
+export type ImsCatalogItem = ImsCatalogueItem;
+
 export interface ImsCatalogueItem {
   id: string;
   code: string;
+  sku?: string;
   name: string;
   category: ImsCatalogueCategory;
-  unit: "Nos" | "Meters" | "Roll (305m)" | "Points" | "Lot" | "Visit" | "Year";
+  unit: "Nos" | "Meters" | "Roll (305m)" | "Points" | "Lot" | "Visit" | "Year" | string;
   hsnSacCode: string;
+  specification?: string;
   supplierCost: number | null; // Confidential purchase cost in INR (null if pending)
   sellingPrice: number | null; // Configurable standard unit selling price in INR (null if pending management input)
   gstPercent: number;
@@ -989,14 +995,21 @@ export const DEFAULT_IMS_CATALOGUE_ITEMS: ImsCatalogueItem[] = [
 
 export interface ImsBoqLineItem {
   id: string;
-  catalogueCode: string;
-  description: string;
+  catalogueCode?: string;
+  sku?: string;
+  description?: string;
+  name?: string;
+  specification?: string;
   category: ImsCatalogueCategory;
   quantity: number;
   unit: string;
-  hsnSacCode: string;
-  supplierUnitCost: number | null;
+  hsnSacCode?: string;
+  supplierUnitCost?: number | null;
+  supplierCost?: number | null;
   unitPrice: number | null; // null if pending management verification
+  lineSubtotal?: number | null;
+  lineGstAmount?: number;
+  lineTotal?: number;
   gstPercent: number;
   requiresSiteVerification: boolean;
   pricePending: boolean;
@@ -1012,23 +1025,26 @@ export interface ImsRequirementInput {
   phone: string;
   city: string;
   siteAddress: string;
+  projectLocation?: string;
   siteType: string;
   buildingFloors: number;
   approxCableLengthMeters?: number;
-  // Service-specific quantities
   ipCameraCount?: number;
   hdCameraCount?: number;
+  cameraCount?: number;
   recordingRetentionDays?: number;
   serverCount?: number;
   serverType?: string;
   computerCount?: number;
   upsRequired?: boolean;
   networkPointsCount?: number;
+  networkPoints?: number;
   wifiAccessPointsCount?: number;
   biometricCount?: number;
   doorAccessCount?: number;
   videoDoorPhoneCount?: number;
   preferredBrands?: string;
+  preferredEquipment?: string;
   technicalRequirements?: string;
   timeline?: string;
   budgetRange?: string;

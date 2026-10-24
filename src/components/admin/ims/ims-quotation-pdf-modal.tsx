@@ -133,20 +133,20 @@ export function ImsQuotationPdfModal({ record, onClose }: ImsQuotationPdfModalPr
                 Prepared For (Client Details)
               </h3>
               <p className="font-bold text-slate-900 text-base">
-                {customer.company || customer.name}
+                {customer?.company || customer?.name || "Client"}
               </p>
-              {customer.company && (
-                <p className="text-xs text-slate-700">Attn: {customer.name}</p>
+              {customer?.company && (
+                <p className="text-xs text-slate-700">Attn: {customer?.name}</p>
               )}
-              <p className="text-xs text-slate-600 mt-1">Email: {customer.email}</p>
-              <p className="text-xs text-slate-600">Phone: {customer.phone}</p>
+              <p className="text-xs text-slate-600 mt-1">Email: {customer?.email}</p>
+              <p className="text-xs text-slate-600">Phone: {customer?.phone}</p>
             </div>
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
                 Project Location & Site Parameters
               </h3>
               <p className="font-semibold text-slate-900 text-xs">
-                Location: {customer.projectLocation}, {customer.city}
+                Location: {customer?.city || "Site"}
               </p>
               <p className="text-xs text-slate-600 mt-1">
                 Premises Type: {requirements.siteType} ({requirements.buildingFloors} Floor
@@ -192,7 +192,7 @@ export function ImsQuotationPdfModal({ record, onClose }: ImsQuotationPdfModalPr
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {quotation.lineItems.map((item, index) => (
+                  {quotation.lineItems.map((item: any, index: number) => (
                     <tr key={item.id} className="align-top">
                       <td className="py-2.5 px-3 font-mono text-slate-500">{index + 1}</td>
                       <td className="py-2.5 px-3">
