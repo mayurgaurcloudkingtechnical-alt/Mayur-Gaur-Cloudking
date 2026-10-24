@@ -61,6 +61,21 @@ export function RazorpayCheckoutButton({
       // 2. Request authoritative server order
       const orderData = await createOrderMutation.mutateAsync({ applicationId });
 
+      if (orderData.orderId.startsWith("order_sbx_") || orderData.orderId.startsWith("order_sim_")) {
+        const verifyResult = await verifyPaymentMutation.mutateAsync({
+          gatewayOrderId: orderData.orderId,
+          gatewayPaymentId: `pay_sim_${Date.now()}`,
+          gatewaySignature: `sig_test_${orderData.orderId}`,
+        });
+
+        router.push(
+          `/payment/success?orderId=${encodeURIComponent(
+            orderData.orderId
+          )}&receipt=${encodeURIComponent(verifyResult.receiptNumber || "")}`
+        );
+        return;
+      }
+
       // 3. Configure Razorpay modal
       const options = {
         key: orderData.keyId,

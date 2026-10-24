@@ -1,5 +1,5 @@
 import { db } from "@/server/db/client";
-import { getPaymentGateway, getStripeProvider, getPaymentGatewaysStatus } from "@/server/lib/payment";
+import { getPaymentGateway, getRazorpayProvider, getStripeProvider, getPaymentGatewaysStatus } from "@/server/lib/payment";
 import { ReceiptService } from "./receipt.service";
 import { AuditService } from "./audit.service";
 import { AutoEnrollmentService } from "./auto-enrollment.service";
@@ -65,7 +65,7 @@ export class OnlinePaymentService {
     }
 
     const txRef = await this.generateTransactionReference();
-    const gateway = getPaymentGateway();
+    const gateway = getPaymentGateway("RAZORPAY");
 
     const order = await gateway.createOrder({
       amount: authoritativeAmountPaise,
@@ -128,7 +128,7 @@ export class OnlinePaymentService {
    * 2. VERIFY AND PROCESS PAYMENT (IDEMPOTENT)
    */
   static async verifyAndProcessPayment(input: VerifyPaymentInput) {
-    const gateway = getPaymentGateway();
+    const gateway = getRazorpayProvider();
 
     if (!input.bypassSignatureCheck) {
       const isValid = gateway.verifyPaymentSignature({
@@ -277,7 +277,7 @@ export class OnlinePaymentService {
    * 3. PROCESS WEBHOOK EVENT (IDEMPOTENT)
    */
   static async processWebhookEvent(rawBody: string, signature: string) {
-    const gateway = getPaymentGateway();
+    const gateway = getRazorpayProvider();
     const isValid = gateway.verifyWebhookSignature({ rawBody, signature });
 
     if (!isValid) {

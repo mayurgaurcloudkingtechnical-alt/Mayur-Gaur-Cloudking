@@ -21,25 +21,22 @@ export function getRazorpayProvider(): RazorpayProvider {
 
 /**
  * Returns the authoritative payment gateway according to priority and configuration.
- * Preference: STRIPE -> RAZORPAY -> Fallback
+ * SoftLab Global Indian Rupee (INR) priority: RAZORPAY -> STRIPE -> Fallback
  */
 export function getPaymentGateway(preferred?: "STRIPE" | "RAZORPAY" | "AUTO"): PaymentGateway {
   const stripe = getStripeProvider();
   const razorpay = getRazorpayProvider();
 
-  const providerEnv = (process.env.PAYMENT_PROVIDER || "STRIPE").toUpperCase();
+  const providerEnv = (process.env.PAYMENT_PROVIDER || "RAZORPAY").toUpperCase();
   const target = (preferred && preferred !== "AUTO") ? preferred : providerEnv;
 
-  if (target === "RAZORPAY") {
-    if (razorpay.isConfigured()) return razorpay;
+  if (target === "STRIPE") {
     if (stripe.isConfigured()) return stripe;
     return razorpay;
   }
 
-  // Default to Stripe
-  if (stripe.isConfigured()) return stripe;
-  if (razorpay.isConfigured()) return razorpay;
-  return stripe;
+  // Primary gateway: Razorpay
+  return razorpay;
 }
 
 export function getPaymentGatewaysStatus() {

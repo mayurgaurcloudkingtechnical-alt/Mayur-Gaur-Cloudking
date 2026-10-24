@@ -328,6 +328,9 @@ export class CrmApplicationService {
             qualification: input.highestQualification?.trim() || null,
             source: input.source || LeadSource.WALK_IN,
             status: LeadStatus.ADMITTED,
+            admissionStatus: "ENROLLED",
+            lmsStatus: "ENROLLED",
+            paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
             qualityScore: "HOT",
             interestedCourseId: input.courseId,
             providerType: isUniversity ? "UNIVERSITY" : "SOFTLAB",
@@ -348,6 +351,11 @@ export class CrmApplicationService {
           where: { id: lead.id },
           data: {
             status: LeadStatus.ADMITTED,
+            admissionStatus: "ENROLLED",
+            lmsStatus: "ENROLLED",
+            paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
+            assignedCounselorId: user.id,
+            assignedToId: user.id,
             ...(isUniversity
               ? {
                   providerType: "UNIVERSITY",
@@ -366,6 +374,11 @@ export class CrmApplicationService {
         where: { id: leadId },
         data: {
           status: LeadStatus.ADMITTED,
+          admissionStatus: "ENROLLED",
+          lmsStatus: "ENROLLED",
+          paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
+          assignedCounselorId: user.id,
+          assignedToId: user.id,
           ...(isUniversity
             ? {
                 providerType: "UNIVERSITY",
@@ -919,7 +932,16 @@ export class CrmApplicationService {
    * Lists admission applications with role-based scoping.
    */
   static async listApplications(user: AuthenticatedUser, input: ListApplicationsInput) {
-    const hasReadAll = hasPermission(user.permissions, "admissions:read") &&
+    const isSeniorAuthority = [
+      UserRoleCode.SUPER_ADMIN,
+      UserRoleCode.DIRECTOR,
+      UserRoleCode.ADMIN,
+      UserRoleCode.MANAGER,
+    ].includes(user.roleCode as any);
+
+    const hasReadAll =
+      isSeniorAuthority ||
+      hasPermission(user.permissions, "admissions:read") ||
       hasPermission(user.permissions, "leads:read_all");
 
     const where: Prisma.AdmissionApplicationWhereInput = {};
@@ -928,6 +950,7 @@ export class CrmApplicationService {
       where.OR = [
         { counselorId: user.id },
         { lead: { assignedToId: user.id } },
+        { lead: { assignedCounselorId: user.id } },
       ];
     }
 

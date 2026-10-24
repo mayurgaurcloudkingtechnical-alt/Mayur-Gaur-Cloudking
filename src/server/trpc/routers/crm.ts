@@ -186,9 +186,29 @@ export const crmRouter = router({
         },
       }),
       db.admissionApplication.count({
-        where: hasReadAll ? {} : { counselorId: ctx.user.id },
+        where: hasReadAll
+          ? {}
+          : {
+              OR: [
+                { counselorId: ctx.user.id },
+                { lead: { assignedCounselorId: ctx.user.id } },
+                { lead: { assignedToId: ctx.user.id } },
+              ],
+            },
       }),
-      db.lead.count({ where: { ...whereLead, status: LeadStatus.ADMITTED } }),
+      db.lead.count({
+        where: hasReadAll
+          ? { status: LeadStatus.ADMITTED }
+          : {
+              OR: [
+                { assignedToId: ctx.user.id },
+                { assignedCounselorId: ctx.user.id },
+                { applications: { some: { counselorId: ctx.user.id } } },
+                { createdById: ctx.user.id },
+              ],
+              status: LeadStatus.ADMITTED,
+            },
+      }),
       db.paymentTransaction.aggregate({
         where: {
           status: "SUCCESS",
