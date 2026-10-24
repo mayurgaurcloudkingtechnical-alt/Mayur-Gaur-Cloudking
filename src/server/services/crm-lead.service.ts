@@ -105,6 +105,13 @@ export interface AssignLeadInput {
   assignedToId: string | null;
 }
 
+export interface TransferLeadToCounselorInput {
+  leadId: string;
+  counselorId: string;
+  transferReason: string;
+  newStatus?: LeadStatus;
+}
+
 export function normalizePhone(phone: string): string {
   const digits = phone.replace(/\D/g, "");
   if (digits.length === 12 && digits.startsWith("91")) {
@@ -618,6 +625,207 @@ export class CrmLeadService {
     });
 
     return updatedLead;
+  }
+
+  /**
+   * Transfers/escalates a lead to an active Academic Counselor.
+   * Authorized for Telecaller, Counselor, Manager, Admin, and Super Admin.
+   * Validates target counselor is active, updates ownership, logs immutable
+   * audit trail and lead activity, and dispatches in-app notification.
+   */
+  static async transferLeadToCounselor(user: AuthenticatedUser, input: TransferLeadToCounselorInput) {
+    const isAuthorizedRole = (
+      [
+        UserRoleCode.TELECALLER,
+        UserRoleCode.COUNSELOR,
+        UserRoleCode.MANAGER,
+        UserRoleCode.ADMIN,
+        UserRoleCode.SUPER_ADMIN,
+        UserRoleCode.DIRECTOR,
+      ] as string[]
+    ).includes(user.roleCode);
+
+    if (!isAuthorizedRole) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You are not authorized to transfer leads.",
+      });
+    }
+
+    const lead = await db.lead.findUnique({
+      where: { id: input.leadId },
+      include: {
+        assignedCounselor: true,
+        assignedTo: true,
+        assignedTelecaller: true,
+      },
+    });
+
+    if (!lead) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Lead with ID '${input.leadId}' not found.`,
+      });
+    }
+
+    // Role-based lead access check:
+    // If Telecaller or Counselor: lead must be assigned to them, created by them, or unassigned.
+    const isGlobalManager = (
+      [
+        UserRoleCode.MANAGER,
+        UserRoleCode.ADMIN,
+        UserRoleCode.SUPER_ADMIN,
+        UserRoleCode.DIRECTOR,
+      ] as string[]
+    ).includes(user.roleCode);
+
+    if (!isGlobalManager) {
+      const isMyLead =
+        lead.assignedToId === user.id ||
+        lead.assignedCounselorId === user.id ||
+        lead.assignedTelecallerId === user.id ||
+        lead.createdById === user.id ||
+        (!lead.assignedToId && !lead.assignedCounselorId && !lead.assignedTelecallerId);
+
+      if (!isMyLead) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You can only transfer leads assigned to or created by you.",
+        });
+      }
+    }
+
+    // Validate target counselor exists, is ACTIVE, and is a COUNSELOR
+    const targetCounselor = await db.user.findFirst({
+      where: {
+        id: input.counselorId,
+        roleCode: UserRoleCode.COUNSELOR,
+        status: "ACTIVE",
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        callingNumber: true,
+        activeLeadsCount: true,
+      },
+    });
+
+    if (!targetCounselor) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "The selected counselor is not active or eligible to receive leads.",
+      });
+    }
+
+    if (lead.assignedCounselorId === targetCounselor.id && lead.assignedToId === targetCounselor.id) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: `Lead is already assigned to Counselor ${targetCounselor.firstName} ${targetCounselor.lastName}.`,
+      });
+    }
+
+    // Determine new status:
+    // If user specified newStatus, use it. Otherwise, if lead was NEW, move to CONTACTED or FOLLOW_UP.
+    const resolvedStatus = input.newStatus || (lead.status === LeadStatus.NEW ? LeadStatus.CONTACTED : lead.status);
+
+    // Atomic database update
+    const updatedLead = await db.$transaction(async (tx) => {
+      // 1. Update Lead record
+      const updated = await tx.lead.update({
+        where: { id: lead.id },
+        data: {
+          assignedCounselorId: targetCounselor.id,
+          assignedToId: targetCounselor.id,
+          // Preserve original telecaller if telecaller was assigned or transferring
+          assignedTelecallerId: lead.assignedTelecallerId || (user.roleCode === UserRoleCode.TELECALLER ? user.id : null),
+          lastHandledById: user.id,
+          status: resolvedStatus,
+        },
+        include: {
+          assignedCounselor: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+          assignedTo: { select: { id: true, firstName: true, lastName: true, email: true } },
+        },
+      });
+
+      // 2. Increment target counselor active leads count
+      await tx.user.update({
+        where: { id: targetCounselor.id },
+        data: { activeLeadsCount: { increment: 1 } },
+      });
+
+      // 3. Create Lead Activity Log
+      await tx.leadActivity.create({
+        data: {
+          leadId: lead.id,
+          userId: user.id,
+          activityType: "LEAD_TRANSFERRED_TO_COUNSELOR",
+          disposition: "COUNSELOR_HANDOVER",
+          notes: `Transferred to Counselor ${targetCounselor.firstName} ${targetCounselor.lastName} by ${user.firstName} ${user.lastName} (${user.roleCode}). Reason: ${input.transferReason.trim()}`,
+        },
+      });
+
+      // 4. In-App Notification for Counselor
+      await tx.notification.create({
+        data: {
+          userId: targetCounselor.id,
+          title: "New Lead Transferred",
+          message: `Lead "${lead.fullName}" (${lead.phone}) was transferred to you by ${user.firstName} ${user.lastName}. Reason: ${input.transferReason.trim()}`,
+          type: NotificationType.SYSTEM,
+          priority: NotificationPriority.HIGH,
+        },
+      });
+
+      return updated;
+    }, {
+      timeout: 30000,
+      maxWait: 15000,
+    });
+
+    // 5. Immutable Audit Log
+    await AuditService.log({
+      actorId: user.id,
+      action: "LEAD_TRANSFERRED_TO_COUNSELOR",
+      resourceType: "Lead",
+      resourceId: lead.id,
+      previousData: {
+        assignedCounselorId: lead.assignedCounselorId,
+        assignedToId: lead.assignedToId,
+        status: lead.status,
+      },
+      newData: {
+        assignedCounselorId: targetCounselor.id,
+        assignedToId: targetCounselor.id,
+        status: resolvedStatus,
+        transferReason: input.transferReason.trim(),
+        transferredBy: `${user.firstName} ${user.lastName} (${user.roleCode})`,
+      },
+    });
+
+    // Notify event bus for real-time SSE
+    crmEventBus.publish({
+      type: "LEAD_ASSIGNED",
+      leadId: lead.id,
+      actorId: user.id,
+      actorName: `${user.firstName} ${user.lastName}`,
+      recipientUserIds: [targetCounselor.id],
+      payload: {
+        assignedCounselorId: targetCounselor.id,
+        transferReason: input.transferReason.trim(),
+      },
+    });
+
+    return {
+      success: true,
+      leadId: updatedLead.id,
+      leadName: updatedLead.fullName,
+      counselorName: `${targetCounselor.firstName} ${targetCounselor.lastName}`,
+      status: resolvedStatus,
+      message: `Lead successfully transferred to Counselor ${targetCounselor.firstName} ${targetCounselor.lastName}.`,
+    };
   }
 
   /**

@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 
 export function TrainerDashboardView() {
-  const [activeTab, setActiveTab] = useState<"metrics" | "teaching" | "tracking">("metrics");
+  const [activeTab, setActiveTab] = useState<"metrics" | "teaching" | "tracking">("teaching");
 
   const { data: metricsData, isLoading: isMetricsLoading, refetch: refetchMetrics } =
     api.dashboard.getCorePerformanceMetrics.useQuery(undefined, {
@@ -66,21 +66,21 @@ export function TrainerDashboardView() {
   };
 
   const kpi = metricsData?.kpi || {
-    activeBatches: 8,
-    batchesThisMonth: 2,
-    totalStudents: 348,
-    studentsThisMonth: 18,
-    moduleCourses: 37,
-    careerPrograms: 7,
-    certificateCourses: 14,
-    totalLeads: 389,
-    newLeadsThisMonth: 42,
-    enquiries: 214,
-    enrolments: 128,
-    placedCount: 92,
-    placementRate: "84.2",
-    dropouts: 6,
-    delayedBatches: 1,
+    activeBatches: 0,
+    batchesThisMonth: 0,
+    totalStudents: 0,
+    studentsThisMonth: 0,
+    moduleCourses: 0,
+    careerPrograms: 0,
+    certificateCourses: 0,
+    totalLeads: 0,
+    newLeadsThisMonth: 0,
+    enquiries: 0,
+    enrolments: 0,
+    placedCount: 0,
+    placementRate: "0.0",
+    dropouts: 0,
+    delayedBatches: 0,
   };
 
   const trainerBatches = trainerData?.batches || [];
@@ -655,7 +655,7 @@ export function TrainerDashboardView() {
           </div>
 
           {/* Assigned Batches Cards */}
-          {trainerBatches.length > 0 && (
+          {trainerBatches.length > 0 ? (
             <div className="space-y-3">
               <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">Your Assigned Cohorts</h3>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -687,6 +687,14 @@ export function TrainerDashboardView() {
                   </div>
                 ))}
               </div>
+            </div>
+          ) : (
+            <div className="bg-white p-6 rounded-xl border border-dashed border-slate-300 text-center space-y-2">
+              <Users className="h-8 w-8 text-slate-400 mx-auto" />
+              <h4 className="font-bold text-slate-800 text-sm">No Batches Assigned Yet</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                You currently do not have any teaching cohorts assigned to your faculty profile. Once an academic administrator assigns you to a batch, your cohort roster, curriculum, and class schedule will appear here.
+              </p>
             </div>
           )}
 

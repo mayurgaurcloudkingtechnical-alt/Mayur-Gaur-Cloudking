@@ -8,7 +8,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { api } from "@/lib/trpc/react";
 import { BatchStatus, DeliveryMode } from "@prisma/client";
 import { Plus, Minus, Edit2, Users, ClipboardCheck, Eye } from "lucide-react";
-import { CreateBatchDialog } from "@/components/admin/batches/create-batch-dialog";
 import { EditBatchDialog } from "@/components/admin/batches/edit-batch-dialog";
 
 export function TrainerBatchesView() {
@@ -30,7 +29,6 @@ export function TrainerBatchesView() {
   });
 
   const [page, setPage] = React.useState(1);
-  const [createOpen, setCreateOpen] = React.useState(false);
   const [editingBatch, setEditingBatch] = React.useState<any | null>(null);
   const [expandedIds, setExpandedIds] = React.useState<Set<string>>(new Set());
 
@@ -116,16 +114,9 @@ export function TrainerBatchesView() {
       {/* Top Header matching Batches.pdf (Page 3 & 4) */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Batches</h1>
-          <p className="text-xs text-slate-500">Institutional cohorts, session schedules, and faculty assignment</p>
+          <h1 className="text-xl font-bold text-slate-900 tracking-tight">Assigned Batches</h1>
+          <p className="text-xs text-slate-500">Course cohorts and teaching schedules assigned to your faculty profile</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setCreateOpen(true)}
-          className="inline-flex items-center gap-1.5 bg-[#0088cc] hover:bg-[#0077b3] text-white font-bold text-xs px-4 py-2 rounded shadow-sm uppercase tracking-wide transition-colors"
-        >
-          <Plus className="w-3.5 h-3.5 stroke-[3]" /> ADD NEW
-        </button>
       </div>
 
       {/* Filter Card matching Batches.pdf specifications */}
@@ -232,9 +223,9 @@ export function TrainerBatchesView() {
         </div>
       ) : batches.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded border border-dashed border-slate-300 bg-white p-12 text-center">
-          <p className="font-semibold text-slate-700">No batches found</p>
-          <p className="text-xs text-slate-500 mt-1">
-            Try clearing your filters or create a new batch cohort.
+          <p className="font-semibold text-slate-700">No Assigned Batches Found</p>
+          <p className="text-xs text-slate-500 mt-1 max-w-sm">
+            You currently have no batches assigned to your faculty profile. Once an academic administrator assigns you to a course cohort, it will appear here.
           </p>
         </div>
       ) : (
@@ -418,12 +409,6 @@ export function TrainerBatchesView() {
       )}
 
       {/* Dialogs */}
-      <CreateBatchDialog
-        open={createOpen}
-        onOpenChange={setCreateOpen}
-        onSuccess={() => refetch()}
-      />
-
       <EditBatchDialog
         batch={editingBatch}
         open={Boolean(editingBatch)}

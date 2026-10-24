@@ -32,6 +32,7 @@ import {
   Trash2,
   Phone,
   MessageSquare,
+  UserCheck,
 } from "lucide-react";
 import { CreateLeadDialog } from "./create-lead-dialog";
 import { PipelineBoardView } from "./pipeline-board-view";
@@ -39,6 +40,7 @@ import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { StudentEnquiryDialog, StudentEnquiryData } from "./student-enquiry-dialog";
 import { LeadAutoConnectDialog } from "./lead-auto-connect-dialog";
 import { LeadQualificationDialog } from "./lead-qualification-dialog";
+import { TransferLeadDialog } from "./transfer-lead-dialog";
 import { ShieldCheck } from "lucide-react";
 import { formatISTDateTime, formatISTDate } from "@/lib/utils/date-formatter";
 
@@ -55,6 +57,8 @@ export function CounselorLeadsView({
   const [createLeadOpen, setCreateLeadOpen] = useState(false);
   const [enquiryOpen, setEnquiryOpen] = useState(false);
   const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [selectedLeadForTransfer, setSelectedLeadForTransfer] = useState<any>(null);
   const [autoConnectOpen, setAutoConnectOpen] = useState(false);
   const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
@@ -70,8 +74,22 @@ export function CounselorLeadsView({
   const [testLeadFeedback, setTestLeadFeedback] = useState<string | null>(null);
 
   const utils = api.useUtils();
+  const { data: authUser } = api.auth.me.useQuery();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
   const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
+
+  const userRole = authUser?.roleCode || myProfile?.roleCode;
+  const canConvertAdmission =
+    userRole === "COUNSELOR" ||
+    userRole === "MANAGER" ||
+    userRole === "ADMIN" ||
+    userRole === "SUPER_ADMIN" ||
+    userRole === "DIRECTOR";
+  const canDeleteLead =
+    userRole === "MANAGER" ||
+    userRole === "ADMIN" ||
+    userRole === "SUPER_ADMIN" ||
+    userRole === "DIRECTOR";
 
   const deleteLeadMutation = api.crm.deleteLead.useMutation({
     onSuccess: () => {
@@ -300,24 +318,8 @@ export function CounselorLeadsView({
               {copiedKey ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
               <span>Google Key</span>
             </button>
-
-            <Button
-              size="sm"
-              onClick={handleSimulateGoogleLead}
-              className="bg-[#0088cc] hover:bg-[#0077b3] text-white text-xs font-bold h-7 px-3 flex items-center gap-1"
-            >
-              <Zap className="w-3 h-3 text-amber-300" />
-              <span>Test Google Lead</span>
-            </Button>
           </div>
         </div>
-
-        {testLeadFeedback && (
-          <div className="mt-3 p-2 bg-emerald-500/20 border border-emerald-400/40 rounded text-xs text-emerald-200 flex items-center gap-2">
-            <Check className="w-4 h-4 text-emerald-300 shrink-0" />
-            <span>{testLeadFeedback}</span>
-          </div>
-        )}
       </div>
 
       {/* Controls Bar */}
@@ -760,31 +762,54 @@ export function CounselorLeadsView({
                             <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">
                               <Link href={`${basePath}/${lead.id}`}>View & Log</Link>
                             </Button>
-                            <Button
-                              size="sm"
-                              onClick={() => {
-                                setSelectedLeadForAdmission(lead);
-                                setDirectAdmissionOpen(true);
-                              }}
-                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
-                            >
-                              <GraduationCap className="h-3 w-3" />
-                              <span>{lead.status === "ADMITTED" ? "Manage" : "Admit"}</span>
-                            </Button>
+
+                            {/* Transfer Lead to Counselor Action */}
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => {
-                                if (confirm(`Permanently delete lead "${lead.fullName}" (${lead.phone})? All activities, followups, and applications will be removed.`)) {
-                                  deleteLeadMutation.mutate({ leadId: lead.id });
-                                }
+                                setSelectedLeadForTransfer(lead);
+                                setTransferOpen(true);
                               }}
-                              disabled={deleteLeadMutation.isPending}
-                              className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 p-1.5"
-                              title="Delete Lead"
+                              className="h-7 px-2 text-[11px] border-purple-200 text-purple-700 hover:bg-purple-50 font-semibold flex items-center gap-1"
+                              title="Transfer to Academic Counselor"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
+                              <UserCheck className="h-3 w-3 text-purple-600" />
+                              <span>Transfer</span>
                             </Button>
+
+                            {/* Admission Enrollment — Strictly Restricted to Authorized Counselor/Admin Roles */}
+                            {canConvertAdmission && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedLeadForAdmission(lead);
+                                  setDirectAdmissionOpen(true);
+                                }}
+                                className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
+                              >
+                                <GraduationCap className="h-3 w-3" />
+                                <span>{lead.status === "ADMITTED" ? "Manage" : "Admit"}</span>
+                              </Button>
+                            )}
+
+                            {/* Lead Deletion — Strictly Restricted to Management Roles */}
+                            {canDeleteLead && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  if (confirm(`Permanently delete lead "${lead.fullName}" (${lead.phone})? All activities, followups, and applications will be removed.`)) {
+                                    deleteLeadMutation.mutate({ leadId: lead.id });
+                                  }
+                                }}
+                                disabled={deleteLeadMutation.isPending}
+                                className="h-7 text-xs border-red-200 text-red-600 hover:bg-red-50 p-1.5"
+                                title="Delete Lead"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -878,6 +903,24 @@ export function CounselorLeadsView({
         open={qualificationOpen}
         onOpenChange={setQualificationOpen}
         lead={selectedLeadForQualification}
+        onSuccess={() => {
+          refetch();
+          utils.crm.getStats.invalidate();
+        }}
+      />
+
+      {/* Transfer Lead to Counselor Modal */}
+      <TransferLeadDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        leadId={selectedLeadForTransfer?.id || ""}
+        leadName={selectedLeadForTransfer?.fullName || ""}
+        leadPhone={selectedLeadForTransfer?.phone}
+        currentCounselorName={
+          selectedLeadForTransfer?.assignedCounselor?.firstName
+            ? `${selectedLeadForTransfer.assignedCounselor.firstName} ${selectedLeadForTransfer.assignedCounselor.lastName || ""}`
+            : null
+        }
         onSuccess={() => {
           refetch();
           utils.crm.getStats.invalidate();

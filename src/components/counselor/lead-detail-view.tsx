@@ -7,11 +7,12 @@ import { api } from "@/lib/trpc/react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2, CreditCard, Bot, PhoneCall } from "lucide-react";
+import { Phone, Mail, MapPin, Calendar, Clock, FilePlus, MessageSquare, History, ShieldAlert, GraduationCap, Printer, CheckCircle2, Trash2, CreditCard, Bot, PhoneCall, UserCheck } from "lucide-react";
 import { LeadStatus, FollowUpType } from "@prisma/client";
 import { LogFollowUpDialog } from "./log-follow-up-dialog";
 import { DirectAdmissionDialog } from "./direct-admission-dialog";
 import { LeadQualificationDialog } from "./lead-qualification-dialog";
+import { TransferLeadDialog } from "./transfer-lead-dialog";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 
 interface LeadDetailViewProps {
@@ -22,13 +23,24 @@ interface LeadDetailViewProps {
 export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProps) {
   const [logOpen, setLogOpen] = useState(false);
   const [appOpen, setAppOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [qualificationOpen, setQualificationOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
 
   const utils = api.useUtils();
+  const { data: authUser } = api.auth.me.useQuery();
   const { data, isLoading, error } = api.crm.getLeadDetails.useQuery({ leadId });
   const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
+
+  const userRole = authUser?.roleCode || myProfile?.roleCode;
+  const canConvertAdmission =
+    userRole === "COUNSELOR" ||
+    userRole === "MANAGER" ||
+    userRole === "ADMIN" ||
+    userRole === "SUPER_ADMIN" ||
+    userRole === "DIRECTOR";
+
   const { data: staffList = [] } = api.crm.listCounselors.useQuery(undefined, {
     enabled: canAssign,
   });
@@ -353,14 +365,28 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
                 <span>Log Interaction / Call</span>
               </Button>
 
+              {/* Dedicated Lead Transfer to Counselor Action */}
               <Button
                 size="sm"
-                onClick={() => setAppOpen(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+                onClick={() => setTransferOpen(true)}
+                className="bg-purple-700 hover:bg-purple-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+                title="Transfer lead to an assigned Academic Counselor"
               >
-                <GraduationCap className="h-4 w-4" />
-                <span>{lead.status === "ADMITTED" ? "Manage Admission & Fee Ledger" : "Convert Lead to Admission / Enroll"}</span>
+                <UserCheck className="h-3.5 w-3.5" />
+                <span>Transfer to Counselor</span>
               </Button>
+
+              {/* Admission Conversion — Strictly restricted to authorized Counselor, Admissions & Management Roles */}
+              {canConvertAdmission && (
+                <Button
+                  size="sm"
+                  onClick={() => setAppOpen(true)}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs"
+                >
+                  <GraduationCap className="h-4 w-4" />
+                  <span>{lead.status === "ADMITTED" ? "Manage Admission & Fee Ledger" : "Convert Lead to Admission / Enroll"}</span>
+                </Button>
+              )}
 
               {latestPayment && (
                 <Button
@@ -695,6 +721,22 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
         onOpenChange={setAppOpen}
         initialLeadId={lead.id}
         initialLead={lead}
+        onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
+      />
+
+      <TransferLeadDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        leadId={lead.id}
+        leadName={lead.fullName}
+        leadPhone={lead.phone}
+        currentCounselorName={
+          (lead as any).assignedCounselor
+            ? `${(lead as any).assignedCounselor.firstName} ${(lead as any).assignedCounselor.lastName || ""}`
+            : (lead as any).assignedTo
+            ? `${(lead as any).assignedTo.firstName} ${(lead as any).assignedTo.lastName || ""}`
+            : null
+        }
         onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
       />
 

@@ -177,10 +177,10 @@ export class CrmApplicationService {
    */
   static async createApplication(user: AuthenticatedUser, input: CreateApplicationInput) {
     const canCreate = hasPermission(user.permissions, "admissions:create");
-    if (!canCreate) {
+    if (user.roleCode === "TELECALLER" || !canCreate) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You lack permission to create admission applications.",
+        message: "Telecallers and unauthorized roles lack permission to create admission applications. Please transfer qualified leads to an Academic Counselor.",
       });
     }
 
@@ -285,10 +285,10 @@ export class CrmApplicationService {
    */
   static async createDirectAdmission(user: AuthenticatedUser, input: CreateDirectAdmissionInput) {
     const canCreate = hasPermission(user.permissions, "admissions:create");
-    if (!canCreate) {
+    if (user.roleCode === "TELECALLER" || !canCreate) {
       throw new TRPCError({
         code: "FORBIDDEN",
-        message: "You lack permission to create admission applications.",
+        message: "Telecallers and unauthorized roles lack permission to create admission applications. Please transfer qualified leads to an Academic Counselor.",
       });
     }
 

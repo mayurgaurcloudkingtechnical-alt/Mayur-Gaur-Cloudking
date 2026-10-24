@@ -687,6 +687,23 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
   return (
     <Dialog open={open} onOpenChange={(val) => { if (!val) handleResetForm(); }}>
       <div className="max-h-[85vh] overflow-y-auto px-1">
+        {authUser?.roleCode === "TELECALLER" ? (
+          <div className="p-8 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full bg-red-100 flex items-center justify-center text-red-600">
+              <AlertTriangle className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">Access Restricted</h3>
+              <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                Telecallers do not have permission to create direct admissions or collect fees. Please transfer qualified prospects to an Academic Counselor.
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+          </div>
+        ) : (
+          <>
         {/* =================================================================== */}
         {/* VIEW 1: DUAL FEE RECEIPT MODAL */}
         {/* =================================================================== */}
@@ -1837,6 +1854,8 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
               </DialogFooter>
             </form>
           </div>
+        )}
+          </>
         )}
       </div>
     </Dialog>

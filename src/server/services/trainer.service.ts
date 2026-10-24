@@ -17,13 +17,6 @@ export class TrainerService {
       trainerProfile = await ctx.db.trainerProfile.findFirst();
     }
 
-    if (!trainerProfile && !isSuperAdmin) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "Faculty trainer profile record not found. Please contact administration.",
-      });
-    }
-
     return { trainerProfile, isSuperAdmin };
   }
 
@@ -32,6 +25,13 @@ export class TrainerService {
    */
   static async verifyTrainerBatchAccess(ctx: any, batchId: string) {
     const { trainerProfile, isSuperAdmin } = await this.getTrainerProfile(ctx);
+
+    if (!trainerProfile && !isSuperAdmin) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "You do not have an active trainer profile or batch assignments.",
+      });
+    }
 
     const batch = await ctx.db.batch.findUnique({
       where: { id: batchId },
@@ -63,6 +63,16 @@ export class TrainerService {
    */
   static async getDashboardOverview(ctx: any) {
     const { trainerProfile, isSuperAdmin } = await this.getTrainerProfile(ctx);
+    if (!trainerProfile && !isSuperAdmin) {
+      return {
+        assignedBatchCount: 0,
+        activeStudentsCount: 0,
+        scheduledClassCount: 0,
+        attendanceLoggedCount: 0,
+        batches: [],
+        upcomingClasses: [],
+      };
+    }
     const trainerId = trainerProfile?.id;
 
     const batchWhere = isSuperAdmin
@@ -145,6 +155,9 @@ export class TrainerService {
    */
   static async getAssignedBatches(ctx: any, filterStatus?: BatchStatus) {
     const { trainerProfile, isSuperAdmin } = await this.getTrainerProfile(ctx);
+    if (!trainerProfile && !isSuperAdmin) {
+      return [];
+    }
     const trainerId = trainerProfile?.id;
 
     const where: any = {};

@@ -61,21 +61,6 @@ export function MarketingAnalyticsView() {
   });
 
   const [copiedWebhook, setCopiedWebhook] = useState(false);
-  const [simulatedFeedback, setSimulatedFeedback] = useState<string | null>(null);
-
-  const simulateMutation = api.crm.simulateMetaLead.useMutation({
-    onSuccess: (res: any) => {
-      setSimulatedFeedback(
-        `Live FB Lead Ingested (ID: ${res.leadId || "Active"}). Routed to ${res.assignedRole || "Telecaller"} & triggered 15-sec instant AI responder.`
-      );
-      utils.crm.getMarketingAnalytics.invalidate();
-      setTimeout(() => setSimulatedFeedback(null), 7000);
-    },
-    onError: (err: any) => {
-      setSimulatedFeedback(`Simulation failed: ${err.message}`);
-      setTimeout(() => setSimulatedFeedback(null), 7000);
-    },
-  });
 
   const platforms = analytics?.platforms;
   const recentActivities = analytics?.recentActivities || [];
@@ -359,18 +344,6 @@ export function MarketingAnalyticsView() {
         </CardHeader>
 
         <CardContent className="p-4 space-y-4">
-          {simulatedFeedback && (
-            <div
-              className={`p-3 rounded-md text-xs font-medium ${
-                simulatedFeedback.startsWith("Live")
-                  ? "bg-emerald-50 text-emerald-800 border border-emerald-200"
-                  : "bg-red-50 text-red-800 border border-red-200"
-              }`}
-            >
-              {simulatedFeedback}
-            </div>
-          )}
-
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
             <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs space-y-1">
               <span className="text-[11px] font-medium text-slate-500">Facebook Page</span>
@@ -407,48 +380,18 @@ export function MarketingAnalyticsView() {
           <div className="flex flex-wrap items-center justify-between gap-3 pt-1 text-xs text-slate-600 bg-white/80 p-3 rounded-lg border border-blue-100">
             <div className="space-y-0.5">
               <div className="font-semibold text-slate-900 flex items-center gap-1.5">
-                <Zap className="h-3.5 w-3.5 text-amber-500" />
-                Live Ingestion & Telecaller Dispatch Simulator
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600" />
+                Live Campaign Webhook Listener Active
               </div>
               <p className="text-[11px] text-slate-500">
-                Generate a live prospect inquiry tied directly to Boost Ad <code>#1324192984113691</code> to test fair round-robin dispatch.
+                Official Meta Graph API webhook endpoint receives genuine inbound inquiries from Facebook & Instagram Boost Ads in real time.
               </p>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button
-                size="sm"
-                disabled={simulateMutation.isPending}
-                onClick={() => {
-                  simulateMutation.mutate({
-                    fullName: `FB Boost Prospect (${Math.floor(100 + Math.random() * 900)})`,
-                    phone: `919408${Math.floor(1000 + Math.random() * 9000)}`,
-                    city: "Prayagraj",
-                    source: "META_ADS_FB",
-                    notes: "Facebook Ad Center Boost #1324192984113691 - Course Inquiry Form",
-                  });
-                }}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white h-8 text-xs font-semibold"
-              >
-                {simulateMutation.isPending ? "Ingesting..." : "Simulate Live Facebook Lead"}
-              </Button>
-              <Button
-                size="sm"
-                disabled={simulateMutation.isPending}
-                onClick={() => {
-                  simulateMutation.mutate({
-                    fullName: `Instagram Prospect (${Math.floor(100 + Math.random() * 900)})`,
-                    phone: `919408${Math.floor(1000 + Math.random() * 9000)}`,
-                    city: "Prayagraj",
-                    source: "META_ADS_IG",
-                    notes: "Instagram DM / Reel Inquiry from @softlabglobal9 - Student Course Form",
-                  });
-                }}
-                className="bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white h-8 text-xs font-semibold flex items-center gap-1.5"
-              >
-                <Instagram className="h-3.5 w-3.5" />
-                {simulateMutation.isPending ? "Ingesting..." : "Simulate Instagram Lead"}
-              </Button>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className="text-emerald-700 bg-emerald-50 border-emerald-200">
+                Live Webhooks Active
+              </Badge>
             </div>
           </div>
         </CardContent>

@@ -15,8 +15,6 @@ import {
   Webhook,
   Copy,
   Check,
-  Play,
-  Loader2,
   Phone,
   Clock,
   Sparkles,
@@ -29,24 +27,9 @@ import { LeadSource } from "@prisma/client";
 export function MarketingIntegrationsView() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [testSuccessMsg, setTestSuccessMsg] = useState<string | null>(null);
 
   const utils = api.useUtils();
   const { data, isLoading } = api.crm.getMarketingIntegrationStatus.useQuery();
-
-  const testMutation = api.crm.testIngestLead.useMutation({
-    onSuccess: (res) => {
-      setTestSuccessMsg(`Successfully ingested simulated lead (ID: ${res.leadId})! Check Live Inbound Stream below.`);
-      utils.crm.getMarketingIntegrationStatus.invalidate();
-      utils.crm.listLeads.invalidate();
-      utils.crm.getStats.invalidate();
-      utils.crm.getPipelineOverview.invalidate();
-      setTimeout(() => setTestSuccessMsg(null), 6000);
-    },
-    onError: (err) => {
-      alert(`Test ingestion failed: ${err.message}`);
-    },
-  });
 
   const getFullUrl = (path: string) => {
     if (typeof window !== "undefined") {
@@ -70,28 +53,6 @@ export function MarketingIntegrationsView() {
 
   const channelCounts = data?.channelCounts || {};
   const recentLeads = data?.recentLeads || [];
-
-  const handleRunTest = (platform: "JUSTDIAL" | "META" | "GOOGLE_ADS" | "WHATSAPP" | "UNIVERSAL") => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const mockNames: Record<string, string> = {
-      JUSTDIAL: `Justdial Prospect ${randomSuffix}`,
-      META: `Meta FB Lead ${randomSuffix}`,
-      GOOGLE_ADS: `Google Search Inquirer ${randomSuffix}`,
-      WHATSAPP: `WhatsApp Prospect ${randomSuffix}`,
-      UNIVERSAL: `Webhook Landing Lead ${randomSuffix}`,
-    };
-
-    testMutation.mutate({
-      platform,
-      fullName: mockNames[platform],
-      phone: `98765${randomSuffix}0`,
-      email: `${platform.toLowerCase()}.${randomSuffix}@example.com`,
-      city: "Prayagraj",
-      courseName: "Full Stack Web Development & Cloud DevOps",
-      campaignName: `${platform} Live Ads Campaign 2026`,
-      notes: `Automated test lead generated from SoftLab Global Marketing Panel.`,
-    });
-  };
 
   const channels = [
     {
@@ -207,22 +168,6 @@ export function MarketingIntegrationsView() {
         </div>
       </div>
 
-      {/* Success Alert Banner on Test Ingestion */}
-      {testSuccessMsg && (
-        <div className="rounded-lg bg-emerald-500/15 border border-emerald-500/30 p-4 text-emerald-900 flex items-center justify-between text-xs font-medium animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center gap-2">
-            <Check className="h-4 w-4 text-emerald-600 flex-shrink-0" />
-            <span>{testSuccessMsg}</span>
-          </div>
-          <button
-            onClick={() => setTestSuccessMsg(null)}
-            className="text-emerald-700 hover:text-emerald-900 font-bold ml-4"
-          >
-            ✕
-          </button>
-        </div>
-      )}
-
       {/* Grid of Webhook Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {channels.map((ch) => (
@@ -300,27 +245,16 @@ export function MarketingIntegrationsView() {
                 </div>
               )}
 
-              {/* 1-Click Test Ingestion Simulator Button */}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => handleRunTest(ch.platform)}
-                disabled={testMutation.isPending}
-                className="w-full text-xs font-semibold h-8 text-slate-700 hover:text-emerald-700 hover:border-emerald-300"
-              >
-                {testMutation.isPending ? (
-                  <>
-                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                    Simulating Webhook...
-                  </>
-                ) : (
-                  <>
-                    <Play className="mr-1.5 h-3.5 w-3.5 text-emerald-600" />
-                    Send Test {ch.name.split(" ")[0]} Lead
-                  </>
-                )}
-              </Button>
+              {/* Active Webhook Status */}
+              <div className="flex items-center justify-between p-2 rounded-lg bg-emerald-50/70 border border-emerald-100 text-emerald-800">
+                <span className="text-[11px] font-semibold flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                  Listener Active & Listening
+                </span>
+                <span className="text-[10px] font-mono text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                  Ready
+                </span>
+              </div>
             </CardContent>
           </Card>
         ))}

@@ -64,13 +64,14 @@ export async function POST(req: NextRequest) {
       (typeof body.lead_id === "string" && body.lead_id.toLowerCase().includes("tester"))
     );
 
-    // Handle Google Ads test / handshake verification ping (when saving webhook in Google Ads UI)
-    if (!body.user_column_data && !body.fullName && !body.name && !body.phone) {
+    // Handle Google Ads test / handshake verification ping (when saving webhook or testing in Google Ads UI)
+    // Strictly acknowledge 200 OK without creating any dummy records in production database
+    if (isTest || (!body.user_column_data && !body.fullName && !body.name && !body.phone)) {
       return NextResponse.json({
         status: "success",
         code: 200,
         isTest: true,
-        message: "Google Ads Lead Form Webhook handshake verified successfully.",
+        message: "Google Ads Lead Form Webhook handshake verified successfully. No database records created per strict production manual-creation policy.",
       });
     }
 

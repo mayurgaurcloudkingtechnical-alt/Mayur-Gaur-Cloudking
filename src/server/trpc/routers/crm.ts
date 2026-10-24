@@ -299,6 +299,23 @@ export const crmRouter = router({
     }),
 
   /**
+   * Transfers an eligible prospect lead to an active Academic Counselor.
+   * Enforces role check, target counselor activity validation, and immutable audit logging.
+   */
+  transferLeadToCounselor: requireRoleProcedure(crmRoles)
+    .input(
+      z.object({
+        leadId: z.string(),
+        counselorId: z.string(),
+        transferReason: z.string().min(3, "Please provide a reason for the transfer"),
+        newStatus: z.nativeEnum(LeadStatus).optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmLeadService.transferLeadToCounselor(asAuthUser(ctx.user), input);
+    }),
+
+  /**
    * Lists available counselors and telecallers with communication lines and lead capacity.
    */
   listCounselors: requireRoleProcedure(crmRoles).query(async () => {
@@ -466,54 +483,15 @@ export const crmRouter = router({
   }),
 
   /**
-   * Ingests or simulates a test lead from the active Facebook Boost Ad.
+   * Permanently disabled in production per strict manual-creation policy.
    */
   simulateMetaLead: requireRoleProcedure(crmRoles)
-    .input(
-      z.object({
-        fullName: z.string().min(2).default("Meta Prospect"),
-        phone: z.string().min(10).default("9876500001"),
-        email: z.string().email().optional(),
-        city: z.string().optional().default("Prayagraj"),
-        notes: z.string().optional(),
-        source: z.enum(["META_ADS_FB", "META_ADS_IG"]).optional().default("META_ADS_FB"),
-      })
-    )
-    .mutation(async ({ input, ctx }) => {
-      const { LeadRouterService } = await import("@/server/services/lead-router.service");
-      const { AiChatbotService } = await import("@/server/services/ai-chatbot.service");
-
-      const isInstagram = input.source === "META_ADS_IG";
-      const leadSource = isInstagram ? LeadSource.META_ADS_IG : LeadSource.META_ADS_FB;
-      const defaultCampaign = isInstagram
-        ? "Instagram Profile & Reels (@softlabglobal9)"
-        : META_ADS_CONFIG.ACTIVE_BOOST.campaignName;
-      const defaultCreative = isInstagram
-        ? "Instagram DM & Lead Form (@softlabglobal9)"
-        : META_ADS_CONFIG.ACTIVE_BOOST.adCreativeName;
-      const defaultNotes = isInstagram
-        ? `Simulated Inquiry from Instagram @softlabglobal9 (Reel/DM). Ingested by ${ctx.user.firstName || "Staff"}.`
-        : `Simulated Lead from FB Boost ID: ${META_ADS_CONFIG.ACTIVE_BOOST.boostId}. Ingested by ${ctx.user.firstName || "Staff"}.`;
-
-      const result = await LeadRouterService.ingestLead({
-        fullName: input.fullName,
-        phone: input.phone,
-        email: input.email || `${isInstagram ? "ig" : "meta"}.${Date.now()}@example.com`,
-        city: input.city || "Prayagraj",
-        source: leadSource,
-        campaignName: defaultCampaign,
-        adCreativeName: defaultCreative,
-        notes: input.notes || defaultNotes,
-        qualityScore: "WARM",
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Automated simulation of demo records is permanently disabled in production per strict manual-creation policy.",
       });
-
-      if (result.leadId) {
-        AiChatbotService.triggerInstantWelcome(result.leadId).catch((err) =>
-          console.error("Failed to trigger instant bot for simulated lead:", err)
-        );
-      }
-
-      return result;
     }),
 
   /**
@@ -1026,41 +1004,14 @@ export const crmRouter = router({
   }),
 
   /**
-   * Test simulator to verify webhook ingestion directly from the UI.
+   * Permanently disabled in production per strict manual-creation policy.
    */
   testIngestLead: requireRoleProcedure(crmRoles)
-    .input(
-      z.object({
-        platform: z.enum(["JUSTDIAL", "META", "GOOGLE_ADS", "WHATSAPP", "UNIVERSAL"]),
-        fullName: z.string(),
-        phone: z.string(),
-        email: z.string().optional(),
-        city: z.string().optional(),
-        courseName: z.string().optional(),
-        campaignName: z.string().optional(),
-        notes: z.string().optional(),
-      })
-    )
-    .mutation(async ({ input }) => {
-      const sourceMap: Record<string, LeadSource> = {
-        JUSTDIAL: LeadSource.JUSTDIAL,
-        META: LeadSource.META_ADS_FB,
-        GOOGLE_ADS: LeadSource.GOOGLE_ADS,
-        WHATSAPP: LeadSource.WHATSAPP,
-        UNIVERSAL: LeadSource.WEBSITE,
-      };
-
-      const source = sourceMap[input.platform] || LeadSource.WEBSITE;
-
-      return CrmIngestionService.ingestLead({
-        fullName: input.fullName,
-        phone: input.phone,
-        email: input.email,
-        city: input.city || "Prayagraj",
-        source,
-        interestedCourseName: input.courseName || "Full Stack Web Development",
-        campaignName: input.campaignName || `Test Campaign ${input.platform}`,
-        notes: input.notes || `Simulated live lead from ${input.platform} testing panel.`,
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Automated simulation of test leads is permanently disabled in production per strict manual-creation policy.",
       });
     }),
 

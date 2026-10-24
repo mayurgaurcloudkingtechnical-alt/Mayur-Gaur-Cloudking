@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { requireRole } from "@/server/auth/rbac";
 import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
@@ -13,6 +14,10 @@ export default async function CounselorDashboardPage() {
     UserRoleCode.MANAGER,
     UserRoleCode.SUPER_ADMIN,
   ]);
+
+  if (user.roleCode === UserRoleCode.TELECALLER) {
+    redirect("/telecaller/dashboard");
+  }
 
   const roleRecord = await db.role.findUnique({
     where: { code: user.roleCode },

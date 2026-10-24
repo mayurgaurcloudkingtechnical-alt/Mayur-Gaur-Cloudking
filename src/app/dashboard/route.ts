@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
   if (role === "TRAINER") {
     return NextResponse.redirect(new URL("/trainer/dashboard", req.url));
   }
-  if (role === "COUNSELOR" || role === "TELECALLER") {
+  if (role === "TELECALLER") {
+    return NextResponse.redirect(new URL("/telecaller/dashboard", req.url));
+  }
+  if (role === "COUNSELOR") {
     return NextResponse.redirect(new URL("/counselor/dashboard", req.url));
   }
   if (role === "ACCOUNTANT") {

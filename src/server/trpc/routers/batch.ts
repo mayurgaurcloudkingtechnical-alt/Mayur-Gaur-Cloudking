@@ -191,7 +191,6 @@ export const batchRouter = router({
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.ADMIN,
-    UserRoleCode.TRAINER,
   ])
     .input(
       z.object({

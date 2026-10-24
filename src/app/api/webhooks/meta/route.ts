@@ -113,6 +113,16 @@ export async function POST(req: NextRequest) {
             body.is_test
           );
 
+          // Acknowledge Meta test ping without creating dummy records in production database
+          if (isTest) {
+            results.push({
+              leadId: `test_ack_${leadgenId}`,
+              isTest: true,
+              message: "Test handshake verified. No records created per strict production manual-creation policy.",
+            });
+            continue;
+          }
+
           let extractedLead: any = null;
 
           // If field_data array is directly attached (some test harnesses or bridge tools)
@@ -196,6 +206,15 @@ export async function POST(req: NextRequest) {
     // CASE B: Direct Lead Payload (Lead Ads Testing Tool, Bridge Integrations, Manual Test)
     // --------------------------------------------------------------------------
     const isTest = Boolean(body.is_test || body.lead_id === "test");
+
+    if (isTest) {
+      return NextResponse.json({
+        status: "success",
+        code: 200,
+        isTest: true,
+        message: "Meta Lead Ads test ping acknowledged successfully. No database records created per strict production manual-creation policy.",
+      });
+    }
 
     const extractedFromDirect = MetaLeadAdsService.parseLeadgenData({
       id: body.id || body.leadgen_id || body.lead_id || `direct_${Date.now()}`,

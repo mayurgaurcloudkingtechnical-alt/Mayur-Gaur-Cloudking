@@ -23,10 +23,9 @@ import {
   AlertCircle,
   ExternalLink,
   Zap,
-  GraduationCap,
 } from "lucide-react";
 import { META_ADS_CONFIG } from "@/server/config/meta-ads.config";
-import { DirectAdmissionDialog } from "../counselor/direct-admission-dialog";
+import { TransferLeadDialog } from "../counselor/transfer-lead-dialog";
 import { LeadAutoConnectDialog } from "../counselor/lead-auto-connect-dialog";
 import { CallyzerWorkstationWidget } from "@/components/callyzer/callyzer-workstation-widget";
 import { ReportingHierarchyBanner } from "@/components/common/reporting-hierarchy-banner";
@@ -46,13 +45,9 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
   const [activeTab, setActiveTab] = useState<"META" | "WEBSITE" | "ALL">("META");
-  const [escalatingLeadId, setEscalatingLeadId] = useState<string | null>(null);
-  const [selectedCounselorId, setSelectedCounselorId] = useState<string>("");
-  const [escalationNotes, setEscalationNotes] = useState("");
-
-  const [directAdmissionOpen, setDirectAdmissionOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [selectedLeadForTransfer, setSelectedLeadForTransfer] = useState<any>(null);
   const [autoConnectOpen, setAutoConnectOpen] = useState(false);
-  const [selectedLeadForAdmission, setSelectedLeadForAdmission] = useState<any>(null);
 
   const utils = api.useUtils();
   const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
@@ -92,38 +87,12 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   }, [refetch, utils]);
 
   const { data: stats } = api.crm.getStats.useQuery();
-  const { data: counselors = [] } = api.crm.listCounselors.useQuery();
 
   // Rapid Disposition Mutation
   const dispositionMutation = api.crm.logDisposition.useMutation({
     onSuccess: () => {
       utils.crm.listLeads.invalidate();
       utils.crm.getStats.invalidate();
-    },
-  });
-
-  // Escalate to Counselor Mutation
-  const escalateMutation = api.crm.escalateToCounselor.useMutation({
-    onSuccess: () => {
-      setEscalatingLeadId(null);
-      setEscalationNotes("");
-      utils.crm.listLeads.invalidate();
-      utils.crm.getStats.invalidate();
-    },
-  });
-
-  const [simulatedMessage, setSimulatedMessage] = useState<string | null>(null);
-
-  const simulateMutation = api.crm.simulateMetaLead.useMutation({
-    onSuccess: (res: any) => {
-      setSimulatedMessage(`Live Lead ${res.leadId || "Active"} received from FB Boost!`);
-      utils.crm.listLeads.invalidate();
-      utils.crm.getStats.invalidate();
-      setTimeout(() => setSimulatedMessage(null), 5000);
-    },
-    onError: (err: any) => {
-      setSimulatedMessage(`Error: ${err.message}`);
-      setTimeout(() => setSimulatedMessage(null), 5000);
     },
   });
 
@@ -143,10 +112,6 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
     }
     return true;
   });
-
-  const activeCounselorList = counselors.filter(
-    (c) => c.roleCode === "COUNSELOR" && c.isLeadAccepting
-  );
 
   const handleQuickDisposition = (leadId: string, disposition: string, newStatus?: LeadStatus) => {
     dispositionMutation.mutate({
@@ -320,24 +285,6 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
             </div>
 
             <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={simulateMutation.isPending}
-                onClick={() => {
-                  simulateMutation.mutate({
-                    fullName: `FB Lead (Candidate ${Math.floor(100 + Math.random() * 900)})`,
-                    phone: `919408${Math.floor(1000 + Math.random() * 9000)}`,
-                    city: "Prayagraj",
-                    notes: "Direct Facebook Boost Ad Inquiry",
-                  });
-                }}
-                className="h-7 text-xs border-indigo-200 text-indigo-700 hover:bg-indigo-100 bg-white"
-              >
-                <Zap className="h-3 w-3 mr-1 text-amber-500" />
-                {simulateMutation.isPending ? "Simulating..." : "Test Inbound Lead"}
-              </Button>
-
               <a
                 href={META_ADS_CONFIG.ACTIVE_BOOST.adCenterManageUrl}
                 target="_blank"
@@ -352,12 +299,6 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                 </Button>
               </a>
             </div>
-          </div>
-        )}
-
-        {simulatedMessage && (
-          <div className="bg-emerald-50 text-emerald-800 text-xs px-4 py-2 border-b border-emerald-200 font-medium">
-            {simulatedMessage}
           </div>
         )}
 
@@ -560,28 +501,18 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                             Busy/NA
                           </Button>
 
-                          {/* 1-Click Redirect to Admission Application */}
+                          {/* Escalate / Transfer to Counselor Button */}
                           <Button
                             size="sm"
                             onClick={() => {
-                              setSelectedLeadForAdmission(lead);
-                              setDirectAdmissionOpen(true);
+                              setSelectedLeadForTransfer(lead);
+                              setTransferOpen(true);
                             }}
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white h-7 px-2 text-[10px] gap-1 shadow-xs font-semibold"
-                            title="Redirect directly to Admission Application"
-                          >
-                            <GraduationCap className="h-3 w-3" />
-                            <span>Admit</span>
-                          </Button>
-
-                          {/* Escalate to Counselor Button */}
-                          <Button
-                            size="sm"
-                            onClick={() => setEscalatingLeadId(lead.id)}
-                            className="bg-purple-700 hover:bg-purple-800 text-white h-7 px-2 text-[10px] gap-1 shadow-sm"
+                            className="bg-purple-700 hover:bg-purple-800 text-white h-7 px-2 text-[10px] gap-1 shadow-sm font-semibold"
+                            title="Transfer Lead to Academic Counselor"
                           >
                             <UserCheck className="h-3 w-3" />
-                            To Counselor
+                            <span>To Counselor</span>
                           </Button>
                         </div>
                       </td>
@@ -594,88 +525,20 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
         </CardContent>
       </Card>
 
-      {/* Escalation Modal */}
-      {escalatingLeadId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <Card className="w-full max-w-md border-slate-200 bg-white shadow-xl">
-            <CardHeader className="p-4 border-b border-slate-100">
-              <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <UserCheck className="h-4 w-4 text-purple-600" />
-                Escalate Lead to Senior Counselor
-              </CardTitle>
-              <CardDescription className="text-xs text-slate-500">
-                Transfer qualified prospect for Demo Scheduling and Admission Closing.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Select Active Counselor
-                </label>
-                <select
-                  value={selectedCounselorId}
-                  onChange={(e) => setSelectedCounselorId(e.target.value)}
-                  className="w-full h-9 rounded-md border border-slate-300 text-xs px-2.5 bg-white"
-                >
-                  <option value="">-- Choose Available Counselor --</option>
-                  {activeCounselorList.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName} ({c.activeLeadsCount} active leads)
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Handover Notes for Counselor
-                </label>
-                <textarea
-                  placeholder="e.g. Student interested in CCNA offline weekend batch. Wants demo on Saturday."
-                  value={escalationNotes}
-                  onChange={(e) => setEscalationNotes(e.target.value)}
-                  className="w-full h-20 rounded-md border border-slate-300 text-xs p-2 bg-white resize-none"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setEscalatingLeadId(null)}
-                  className="h-8 text-xs"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!selectedCounselorId || escalateMutation.isPending}
-                  onClick={() => {
-                    if (escalatingLeadId && selectedCounselorId) {
-                      escalateMutation.mutate({
-                        leadId: escalatingLeadId,
-                        counselorId: selectedCounselorId,
-                        notes: escalationNotes,
-                      });
-                    }
-                  }}
-                  className="bg-purple-700 hover:bg-purple-800 text-white h-8 text-xs"
-                >
-                  {escalateMutation.isPending ? "Transferring..." : "Confirm Escalation"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Direct Admission Dialog */}
-      <DirectAdmissionDialog
-        open={directAdmissionOpen}
-        onOpenChange={setDirectAdmissionOpen}
-        initialLeadId={selectedLeadForAdmission?.id}
-        initialLead={selectedLeadForAdmission}
+      {/* Transfer Lead to Counselor Modal */}
+      <TransferLeadDialog
+        open={transferOpen}
+        onOpenChange={setTransferOpen}
+        leadId={selectedLeadForTransfer?.id || ""}
+        leadName={selectedLeadForTransfer?.fullName || ""}
+        leadPhone={selectedLeadForTransfer?.phone}
+        currentCounselorName={
+          selectedLeadForTransfer?.assignedCounselor?.firstName
+            ? `${selectedLeadForTransfer.assignedCounselor.firstName} ${selectedLeadForTransfer.assignedCounselor.lastName || ""}`
+            : null
+        }
         onSuccess={() => {
+          refetch();
           utils.crm.listLeads.invalidate();
           utils.crm.getStats.invalidate();
         }}

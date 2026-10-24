@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { TRPCError } from "@trpc/server";
 import { router, protectedProcedure, requireRoleProcedure } from "../init";
 import { UserRoleCode } from "@prisma/client";
 import { LiveTrackingService } from "@/server/services/live-tracking.service";
@@ -67,16 +68,15 @@ export const dashboardRouter = router({
   }),
 
   /**
-   * One-click simulation of external platform webhooks & ingestions
+   * Permanently disabled in production per strict manual-creation policy.
    */
   simulateEvent: requireRoleProcedure(executiveRoles)
-    .input(
-      z.object({
-        platform: z.enum(["meta", "google", "justdial", "whatsapp", "razorpay"]),
-      })
-    )
-    .mutation(async ({ input }) => {
-      return LiveTrackingService.simulatePlatformEvent(input.platform);
+    .input(z.any())
+    .mutation(async () => {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Automated simulation of platform events is permanently disabled in production per strict manual-creation policy.",
+      });
     }),
 
   /**
