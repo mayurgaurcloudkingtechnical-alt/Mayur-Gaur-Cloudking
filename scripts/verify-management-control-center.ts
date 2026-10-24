@@ -199,7 +199,7 @@ async function runVerification() {
   });
   assert(
     resolvedAlert.status === AlertStatus.RESOLVED &&
-      resolvedAlert.resolutionNotes?.includes("Verified faculty"),
+      Boolean(resolvedAlert.resolutionNotes?.includes("Verified faculty")),
     "Scenario 10: Alert resolved with mandatory operational resolution notes"
   );
   passes++;

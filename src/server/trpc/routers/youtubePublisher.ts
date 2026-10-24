@@ -13,44 +13,107 @@ const ADMIN_ROLES = [
 
 export const youtubePublisherRouter = router({
   /**
-   * Get queue summary telemetry & status
+   * Get queue summary telemetry & detailed connection diagnostics
    */
   getPublishingStatus: requireRoleProcedure(ADMIN_ROLES).query(async () => {
-    const config = await YouTubePublishingService.getOAuthConfig();
-
-    const [totalQueued, totalPublished, totalFailed, totalBlockedPrivacy] = await Promise.all([
-      db.youTubePublishQueue.count({ where: { status: { in: ["QUEUED", "PROCESSING"] } } }),
-      db.youTubePublishQueue.count({ where: { status: "PUBLISHED" } }),
-      db.youTubePublishQueue.count({ where: { status: "FAILED" } }),
-      db.classRecording.count({ where: { youTubePublishStatus: "BLOCKED_PRIVACY" } }),
-    ]);
-
-    const isConnected = !!(config.clientId && config.refreshToken);
+    const diagnostics = await YouTubePublishingService.getDetailedDiagnostics();
 
     return {
-      isConnected,
-      channelId: config.channelId || "Not Connected",
-      channelTitle: config.channelTitle,
-      defaultPrivacy: config.defaultPrivacy || "UNLISTED",
-      autoPublishEnabled: config.autoPublishEnabled,
-      stats: {
-        totalQueued,
-        totalPublished,
-        totalFailed,
-        totalBlockedPrivacy,
-      },
+      isConnected: diagnostics.status === "CONNECTED",
+      status: diagnostics.status,
+      statusReason: diagnostics.statusReason,
+      diagnosticCategory: diagnostics.diagnosticCategory,
+      diagnosticCategoryDescription: diagnostics.diagnosticCategoryDescription,
+      channelId: diagnostics.channelId || "Not Connected",
+      channelTitle: diagnostics.channelTitle,
+      channelThumbnailUrl: diagnostics.channelThumbnailUrl,
+      defaultPrivacy: diagnostics.defaultPrivacy,
+      autoPublishEnabled: diagnostics.autoPublishEnabled,
+      redirectUri: diagnostics.redirectUri,
+      tokenRefreshStatus: diagnostics.tokenRefreshStatus,
+      apiConnectivity: diagnostics.apiConnectivity,
+      uploadCapability: diagnostics.uploadCapability,
+      lastHealthCheckAt: diagnostics.lastHealthCheckAt,
+      lastError: diagnostics.lastError,
+      hasClientId: diagnostics.hasClientId,
+      hasClientSecret: diagnostics.hasClientSecret,
+      hasRefreshToken: diagnostics.hasRefreshToken,
+      stats: diagnostics.queueStats,
     };
   }),
 
   /**
-   * List recent queue items
+   * Generates Google OAuth 2.0 authorization URL for official channel consent
+   */
+  getOAuthConnectUrl: requireRoleProcedure([
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+  ])
+    .input(z.object({ origin: z.string().optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      return YouTubePublishingService.generateOAuthAuthorizationUrl({
+        origin: input?.origin,
+        userId: ctx.user.id,
+      });
+    }),
+
+  /**
+   * Safely tests live Google OAuth token refresh and YouTube Channel connectivity
+   */
+  testConnection: requireRoleProcedure(ADMIN_ROLES).mutation(async () => {
+    return YouTubePublishingService.testConnection();
+  }),
+
+  /**
+   * Disconnects official YouTube channel and clears tokens
+   */
+  disconnectChannel: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN]).mutation(
+    async ({ ctx }) => {
+      return YouTubePublishingService.disconnectChannel(ctx.user.id);
+    }
+  ),
+
+  /**
+   * List recent queue items with optional status filtering
    */
   listQueueItems: requireRoleProcedure(ADMIN_ROLES)
-    .input(z.object({ limit: z.number().int().min(1).max(50).default(20) }))
+    .input(
+      z.object({
+        limit: z.number().int().min(1).max(50).default(20),
+        status: z.string().optional(),
+      })
+    )
     .query(async ({ input }) => {
+      const where: any = {};
+      if (input.status && input.status !== "ALL") {
+        where.status = input.status;
+      }
       return db.youTubePublishQueue.findMany({
+        where,
         orderBy: { createdAt: "desc" },
         take: input.limit,
+      });
+    }),
+
+  /**
+   * Updates metadata or privacy setting for a queued video
+   */
+  updateQueueItem: requireRoleProcedure(ADMIN_ROLES)
+    .input(
+      z.object({
+        itemId: z.string(),
+        videoTitle: z.string().min(5).max(100).optional(),
+        videoDescription: z.string().max(5000).optional(),
+        tags: z.array(z.string()).optional(),
+        targetPrivacy: z.enum(["PRIVATE", "UNLISTED", "PUBLIC"]).optional(),
+        isApproved: z.boolean().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return YouTubePublishingService.updateQueueItem({
+        ...input,
+        actorId: ctx.user.id,
       });
     }),
 
@@ -60,6 +123,41 @@ export const youtubePublisherRouter = router({
   processQueueNow: requireRoleProcedure(ADMIN_ROLES).mutation(async () => {
     return YouTubePublishingService.processPublishQueue(5);
   }),
+
+  /**
+   * Toggle pause/resume on background queue processing
+   */
+  toggleQueueWorker: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
+    .input(z.object({ paused: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const existing = await db.systemSetting.findUnique({
+        where: { key: "youtube_oauth_config" },
+      });
+      const currentVal = typeof existing?.value === "object" ? (existing.value as any) : {};
+      const updated = {
+        ...currentVal,
+        autoPublishEnabled: !input.paused,
+        updatedAt: new Date().toISOString(),
+        updatedBy: ctx.user.id,
+      };
+
+      await db.systemSetting.upsert({
+        where: { key: "youtube_oauth_config" },
+        create: {
+          key: "youtube_oauth_config",
+          category: "INTEGRATIONS",
+          value: updated,
+          isSecret: true,
+          updatedBy: ctx.user.id,
+        },
+        update: {
+          value: updated,
+          updatedBy: ctx.user.id,
+        },
+      });
+
+      return { success: true, autoPublishEnabled: !input.paused };
+    }),
 
   /**
    * Manually retry a failed item
@@ -75,7 +173,7 @@ export const youtubePublisherRouter = router({
     }),
 
   /**
-   * Save or update YouTube OAuth2 configuration in system settings
+   * Save or update YouTube OAuth2 configuration in database system settings
    */
   saveOAuthConfig: requireRoleProcedure([UserRoleCode.SUPER_ADMIN, UserRoleCode.ADMIN])
     .input(
@@ -85,8 +183,8 @@ export const youtubePublisherRouter = router({
         refreshToken: z.string().optional(),
         channelId: z.string().optional(),
         channelTitle: z.string().optional(),
-        defaultPrivacy: z.enum(["PRIVATE", "UNLISTED", "PUBLIC"]).default("UNLISTED"),
-        autoPublishEnabled: z.boolean().default(false),
+        defaultPrivacy: z.enum(["PRIVATE", "UNLISTED", "PUBLIC"]).default("PRIVATE"),
+        autoPublishEnabled: z.boolean().default(true),
       })
     )
     .mutation(async ({ ctx, input }) => {
@@ -94,10 +192,16 @@ export const youtubePublisherRouter = router({
         where: { key: "youtube_oauth_config" },
       });
 
-      const currentVal = typeof existing?.value === "object" ? existing.value : {};
+      const currentVal = typeof existing?.value === "object" ? (existing.value as any) : {};
       const merged = {
         ...currentVal,
-        ...input,
+        ...(input.clientId ? { clientId: input.clientId.trim() } : {}),
+        ...(input.clientSecret ? { clientSecret: input.clientSecret.trim() } : {}),
+        ...(input.refreshToken ? { refreshToken: input.refreshToken.trim() } : {}),
+        ...(input.channelId ? { channelId: input.channelId.trim() } : {}),
+        ...(input.channelTitle ? { channelTitle: input.channelTitle.trim() } : {}),
+        defaultPrivacy: input.defaultPrivacy,
+        autoPublishEnabled: input.autoPublishEnabled,
         updatedAt: new Date().toISOString(),
         updatedBy: ctx.user.id,
       };
@@ -117,6 +221,6 @@ export const youtubePublisherRouter = router({
         },
       });
 
-      return { success: true, channelTitle: input.channelTitle };
+      return { success: true, channelTitle: merged.channelTitle };
     }),
 });
