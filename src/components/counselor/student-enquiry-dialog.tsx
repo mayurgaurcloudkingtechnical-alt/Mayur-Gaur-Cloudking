@@ -401,7 +401,55 @@ export function StudentEnquiryDialog({
   };
 
   const handlePrint = () => {
-    window.print();
+    if (typeof window === "undefined") return;
+    const el = printAreaRef.current;
+    if (!el) {
+      window.print();
+      return;
+    }
+
+    const printWindow = window.open("", "_blank", "width=900,height=750");
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    const innerHtml = el.innerHTML;
+    printWindow.document.open();
+    printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Student Enquiry Form - ${formData.enquiryNo} - ${formData.fullName || "SoftLab"}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @page { size: A4 portrait; margin: 8mm 10mm; }
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; background: #fff; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    @media print {
+      body { width: 100%; }
+      .no-print { display: none !important; }
+    }
+  </style>
+</head>
+<body class="p-4">
+  <div class="max-w-4xl mx-auto space-y-4">
+    ${innerHtml}
+  </div>
+  <script>
+    window.onload = function() {
+      setTimeout(function() {
+        window.focus();
+        window.print();
+        window.close();
+      }, 400);
+    };
+  </script>
+</body>
+</html>`);
+    printWindow.document.close();
   };
 
   return (

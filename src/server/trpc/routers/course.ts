@@ -14,6 +14,184 @@ function slugify(text: string): string {
 }
 
 export const courseRouter = router({
+  /**
+   * Dedicated Student Marketplace query:
+   * Returns approved, published SoftLab Global courses with curriculum preview,
+   * pricing, duration breakdown, and current student enrollment state.
+   */
+  getMarketplaceCourses: protectedProcedure
+    .input(
+      z
+        .object({
+          durationFilter: z.enum(["ALL", "3_MONTHS", "6_MONTHS", "OTHER"]).optional(),
+          search: z.string().optional(),
+          level: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      // 1. Get current student profile to determine existing enrollments
+      const studentProfile = await ctx.db.studentProfile.findUnique({
+        where: { userId: ctx.user.id },
+        include: {
+          enrollments: {
+            where: { status: "ACTIVE" },
+            select: {
+              id: true,
+              courseId: true,
+              status: true,
+              enrolledAt: true,
+              batch: { select: { id: true, name: true, startDate: true } },
+            },
+          },
+        },
+      });
+
+      const enrolledCourseMap = new Map<string, { id: string; batchName?: string; enrolledAt?: Date }>();
+      if (studentProfile) {
+        for (const enr of studentProfile.enrollments) {
+          enrolledCourseMap.set(enr.courseId, {
+            id: enr.id,
+            batchName: enr.batch?.name,
+            enrolledAt: enr.enrolledAt,
+          });
+        }
+      }
+
+      // 2. Build where filter: only PUBLISHED SoftLab Global courses (no draft, no archived, no unauthorized)
+      const where: Prisma.CourseWhereInput = {
+        status: ContentStatus.PUBLISHED,
+        deletedAt: null,
+        providerType: "SOFTLAB",
+      };
+
+      if (input?.search && input.search.trim()) {
+        const q = input.search.trim();
+        where.OR = [
+          { title: { contains: q, mode: "insensitive" } },
+          { slug: { contains: q, mode: "insensitive" } },
+          { courseCode: { contains: q, mode: "insensitive" } },
+          { summary: { contains: q, mode: "insensitive" } },
+        ];
+      }
+
+      if (input?.level && input.level !== "ALL") {
+        where.level = { contains: input.level, mode: "insensitive" };
+      }
+
+      // Duration filters
+      if (input?.durationFilter === "3_MONTHS") {
+        // 3-month courses (~12 weeks)
+        where.durationWeeks = { gte: 10, lte: 14 };
+      } else if (input?.durationFilter === "6_MONTHS") {
+        // 6-month courses (~24 weeks)
+        where.durationWeeks = { gte: 20, lte: 26 };
+      } else if (input?.durationFilter === "OTHER") {
+        where.NOT = [
+          { durationWeeks: { gte: 10, lte: 14 } },
+          { durationWeeks: { gte: 20, lte: 26 } },
+        ];
+      }
+
+      const courses = await ctx.db.course.findMany({
+        where,
+        orderBy: [{ sortOrder: "asc" }, { durationWeeks: "asc" }, { title: "asc" }],
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          courseCode: true,
+          summary: true,
+          description: true,
+          thumbnailUrl: true,
+          durationWeeks: true,
+          baseFee: true,
+          discountedFee: true,
+          level: true,
+          language: true,
+          eligibility: true,
+          providerType: true,
+          providerName: true,
+          placementInfo: true,
+          mode: true,
+          branch: true,
+          modules: {
+            where: { status: ContentStatus.PUBLISHED, deletedAt: null },
+            orderBy: { sortOrder: "asc" },
+            select: {
+              id: true,
+              title: true,
+              sortOrder: true,
+              _count: {
+                select: { lessons: true },
+              },
+            },
+          },
+        },
+      });
+
+      return courses.map((c) => {
+        const enrollmentInfo = enrolledCourseMap.get(c.id);
+        const originalFeePaise = c.baseFee;
+        const finalPayablePaise = c.discountedFee && c.discountedFee > 0 ? c.discountedFee : originalFeePaise;
+        const discountPaise = originalFeePaise > finalPayablePaise ? originalFeePaise - finalPayablePaise : 0;
+        const totalLessons = c.modules.reduce((sum, m) => sum + m._count.lessons, 0);
+
+        return {
+          ...c,
+          originalFeePaise,
+          discountPaise,
+          finalPayablePaise,
+          totalModules: c.modules.length,
+          totalLessons,
+          isEnrolled: Boolean(enrollmentInfo),
+          enrollmentId: enrollmentInfo?.id || null,
+          batchName: enrollmentInfo?.batchName || null,
+          enrolledAt: enrollmentInfo?.enrolledAt || null,
+        };
+      });
+    }),
+
+  listAllForSelect: protectedProcedure
+    .input(
+      z
+        .object({
+          providerType: z.string().optional(),
+          programCategory: z.string().optional(),
+        })
+        .optional()
+    )
+    .query(async ({ ctx, input }) => {
+      const where: Prisma.CourseWhereInput = {
+        status: ContentStatus.PUBLISHED,
+        deletedAt: null,
+      };
+
+      if (input?.providerType) {
+        where.providerType = input.providerType;
+      }
+      if (input?.programCategory) {
+        where.programCategory = input.programCategory;
+      }
+
+      return ctx.db.course.findMany({
+        where,
+        orderBy: { title: "asc" },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          courseCode: true,
+          baseFee: true,
+          providerType: true,
+          providerName: true,
+          programCategory: true,
+          durationWeeks: true,
+          level: true,
+        },
+      });
+    }),
+
   list: protectedProcedure
     .input(
       z.object({
@@ -21,7 +199,7 @@ export const courseRouter = router({
         status: z.nativeEnum(ContentStatus).optional(),
         archivedOnly: z.boolean().optional(),
         page: z.number().int().min(1).default(1),
-        pageSize: z.number().int().min(1).max(50).default(10),
+        pageSize: z.number().int().min(1).max(100).default(10),
       })
     )
     .query(async ({ ctx, input }) => {

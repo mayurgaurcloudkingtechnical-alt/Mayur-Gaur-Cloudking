@@ -63,11 +63,23 @@ export function DailyReportsView({ user }: { user: any }) {
   const utils = api.useUtils();
 
   // Reporting managers for filtering (Super Admin, Director, Admin)
-  const { data: reportingManagers } = api.staffErp.listReportingManagers.useQuery();
+  const { data: reportingManagers } = api.staffErp.listReportingManagers.useQuery(undefined, {
+    enabled: isManagerOrAdmin,
+    retry: false,
+  });
 
-  // Find staff profile for the logged-in user
-  const { data: staffList } = api.staffErp.listStaff.useQuery();
-  const currentStaff = staffList?.items?.find((s) => s.userId === user.id);
+  // Dedicated self-profile query accessible to all staff members (Counselors, Telecallers, Trainers, etc.)
+  const { data: myProfile } = api.staffErp.getMyProfile.useQuery(undefined, {
+    retry: false,
+  });
+
+  // Staff list for managers / admins only
+  const { data: staffList } = api.staffErp.listStaff.useQuery(undefined, {
+    enabled: isManagerOrAdmin,
+    retry: false,
+  });
+
+  const currentStaff = myProfile || staffList?.items?.find((s) => s.userId === user.id);
 
   // Prefilled report data
   const { data: prefillData, isLoading: prefillLoading } =

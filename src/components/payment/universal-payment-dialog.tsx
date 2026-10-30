@@ -97,81 +97,64 @@ export function UniversalPaymentDialog({
         provider: selectedProvider,
       });
 
-      // 2. Handle Stripe checkout redirection or simulated checkout
+      // 2. Handle Stripe checkout redirection
       if (order.provider === "STRIPE") {
         if (order.checkoutUrl && order.checkoutUrl.startsWith("http")) {
           window.location.href = order.checkoutUrl;
           return;
         }
 
-        // Test/simulated payment completion
-        const verifyRes = await verifyFeePaymentMutation.mutateAsync({
-          gatewayOrderId: order.orderId,
-          gatewayPaymentId: `pay_sim_${Date.now()}`,
-          gatewaySignature: `sig_test_${order.orderId}`,
-        });
-
-        setReceiptNumber(verifyRes.receiptNumber);
-        setPaymentSuccess(true);
-        onSuccess();
+        throw new Error("Stripe checkout session could not be initialized. Please choose Razorpay to pay securely via UPI, Cards, NetBanking or EMI.");
       } else {
         // Razorpay checkout
         const scriptLoaded = await loadRazorpayScript();
-        const isSandboxOrder = order.orderId?.startsWith("order_sbx_") || order.orderId?.startsWith("order_sim_");
-
-        if (scriptLoaded && typeof window !== "undefined" && (window as any).Razorpay && !isSandboxOrder) {
-          try {
-            const rzp = new (window as any).Razorpay({
-              key: order.keyId,
-              amount: order.amount,
-              currency: order.currency,
-              name: "SOFTLAB GLOBAL",
-              description: order.description,
-              order_id: order.orderId,
-              modal: {
-                ondismiss: () => {
-                  setIsProcessing(false);
-                },
-              },
-              handler: async (resp: any) => {
-                try {
-                  setIsProcessing(true);
-                  const verifyRes = await verifyFeePaymentMutation.mutateAsync({
-                    gatewayOrderId: resp.razorpay_order_id,
-                    gatewayPaymentId: resp.razorpay_payment_id,
-                    gatewaySignature: resp.razorpay_signature,
-                  });
-                  setReceiptNumber(verifyRes.receiptNumber);
-                  setPaymentSuccess(true);
-                  onSuccess();
-                } catch (err: any) {
-                  setErrorMessage(err.message || "Payment verification failed.");
-                } finally {
-                  setIsProcessing(false);
-                }
-              },
-            });
-            rzp.on("payment.failed", (resp: any) => {
-              setIsProcessing(false);
-              setErrorMessage(resp.error?.description || "Payment failed.");
-            });
-            rzp.open();
-            return;
-          } catch (modalErr) {
-            console.warn("[UniversalPaymentDialog] Razorpay modal open failed, falling back to instant settlement:", modalErr);
-          }
+        if (!scriptLoaded || typeof window === "undefined" || !(window as any).Razorpay) {
+          setIsProcessing(false);
+          setErrorMessage("Failed to load Razorpay payment gateway SDK. Please check your internet connection.");
+          return;
         }
 
-        // Sandbox / simulation fallback for Razorpay
-        const verifyRes = await verifyFeePaymentMutation.mutateAsync({
-          gatewayOrderId: order.orderId,
-          gatewayPaymentId: `pay_sim_${Date.now()}`,
-          gatewaySignature: `sig_test_${order.orderId}`,
-        });
-
-        setReceiptNumber(verifyRes.receiptNumber);
-        setPaymentSuccess(true);
-        onSuccess();
+        try {
+          const rzp = new (window as any).Razorpay({
+            key: order.keyId,
+            amount: order.amount,
+            currency: order.currency,
+            name: "SOFTLAB GLOBAL",
+            description: order.description,
+            order_id: order.orderId,
+            modal: {
+              ondismiss: () => {
+                setIsProcessing(false);
+                setErrorMessage("Payment was cancelled. No charges were deducted.");
+              },
+            },
+            handler: async (resp: any) => {
+              try {
+                setIsProcessing(true);
+                const verifyRes = await verifyFeePaymentMutation.mutateAsync({
+                  gatewayOrderId: resp.razorpay_order_id,
+                  gatewayPaymentId: resp.razorpay_payment_id,
+                  gatewaySignature: resp.razorpay_signature,
+                });
+                setReceiptNumber(verifyRes.receiptNumber);
+                setPaymentSuccess(true);
+                onSuccess();
+              } catch (err: any) {
+                setErrorMessage(err.message || "Payment verification failed.");
+              } finally {
+                setIsProcessing(false);
+              }
+            },
+          });
+          rzp.on("payment.failed", (resp: any) => {
+            setIsProcessing(false);
+            setErrorMessage(resp.error?.description || "Payment transaction was declined.");
+          });
+          rzp.open();
+        } catch (modalErr: any) {
+          setIsProcessing(false);
+          setErrorMessage(modalErr?.message || "Failed to launch Razorpay gateway window.");
+        }
       }
     } catch (err: any) {
       console.error("Payment initiation error:", err);
