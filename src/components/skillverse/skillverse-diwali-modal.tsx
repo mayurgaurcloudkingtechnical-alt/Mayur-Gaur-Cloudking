@@ -496,12 +496,13 @@ export function SkillverseDiwaliModal() {
                           <option value="Class 11">Class 11</option>
                           <option value="Class 12">Class 12</option>
                           <option value="Dropper / 12th Pass">Dropper / 12th Pass</option>
+                          <option value="Graduation / Professional">B.Com / BBA / MBA / Working Professional</option>
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-300 mb-1">
-                          Board of Education <span className="text-amber-400">*</span>
+                          Board of Education / Stream <span className="text-amber-400">*</span>
                         </label>
                         <select
                           value={board}
@@ -512,6 +513,7 @@ export function SkillverseDiwaliModal() {
                           <option value="ICSE / ISC">ICSE / ISC Board</option>
                           <option value="UP Board">UP Board (State)</option>
                           <option value="Other Board">Other State Board</option>
+                          <option value="University / Professional Track">Higher Education / Professional Track</option>
                         </select>
                       </div>
 
@@ -524,6 +526,7 @@ export function SkillverseDiwaliModal() {
                           onChange={(e) => setPreferredProgram(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-400"
                         >
+                          <option value="sap-s4hana-finance-controlling-fico">💼 SAP S/4HANA Finance & Controlling (SAP FICO)</option>
                           <option value="school-foundation-8-10">🏫 School Foundation (Classes 8, 9 & 10)</option>
                           <option value="senior-science-pcm-11-12">🔬 Senior Science PCM / PCB (Classes 11 & 12)</option>
                           <option value="jee-main-preparation">⚙️ IIT-JEE Main & Advanced Foundation Track</option>
