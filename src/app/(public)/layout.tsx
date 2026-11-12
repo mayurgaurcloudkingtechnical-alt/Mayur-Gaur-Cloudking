@@ -44,8 +44,8 @@ export default async function PublicLayout({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
       />
-      <TopAnnouncementBar />
       <DiwaliSlidingBanner />
+      <TopAnnouncementBar />
       <PublicNavbar userRole={session?.user?.roleCode ?? null} />
       <main className="flex-1">{children}</main>
       <PublicFooter />

@@ -33,8 +33,8 @@ export function DiwaliFlyerCard({
       {/* Main Authentic Flyer Graphic */}
       <div className="relative w-full aspect-square max-h-[380px] sm:max-h-[460px] overflow-hidden bg-slate-950 flex items-center justify-center">
         <img
-          src="/images/diwali-dhamaka-2026-flyer.jpg"
-          alt="SoftLab Global Diwali Festive Offer - Up to 45% Off On Every Course Admissions"
+          src={DIWALI_CAMPAIGN_2026.flyerPath}
+          alt="SoftLab Global Chhath Puja Special Offer - Flat 35% Discount On All IT & Software Courses"
           className="w-full h-full object-contain"
         />
       </div>

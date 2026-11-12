@@ -10,23 +10,13 @@ export function DiwaliLmsBanner() {
   const [detailsOpen, setDetailsOpen] = React.useState(false);
   const isActive = isDiwaliCampaignActive();
 
+  // Always keep ribbon visible on refresh / page load
   React.useEffect(() => {
-    try {
-      if (sessionStorage.getItem("slg_diwali_lms_dismissed") === "1") {
-        setIsDismissed(true);
-      }
-    } catch {
-      // Ignore
-    }
+    setIsDismissed(false);
   }, []);
 
   const handleDismiss = () => {
     setIsDismissed(true);
-    try {
-      sessionStorage.setItem("slg_diwali_lms_dismissed", "1");
-    } catch {
-      // Ignore
-    }
   };
 
   if (!isActive) return null;
@@ -40,28 +30,28 @@ export function DiwaliLmsBanner() {
             type="button"
             onClick={() => setIsDismissed(false)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-600 to-amber-500 text-white font-bold text-xs shadow-lg border border-amber-300 hover:scale-105 transition-all cursor-pointer"
-            title="Re-open Diwali Offer Concession Notice"
+            title="Re-open Chhath Puja Concession Notice"
           >
-            <span>🪔</span>
-            <span>Diwali Offer (45% OFF)</span>
+            <span>🌅</span>
+            <span>छठ पूजा Offer (35% OFF)</span>
           </button>
         </div>
       ) : (
         <aside
           role="region"
-          aria-label="Staff Diwali Concession Announcement"
-          className="bg-gradient-to-r from-[#200A30] via-[#160623] to-[#200A30] text-amber-100 border-b border-amber-500/40 px-3 sm:px-6 py-2 shadow-xs transition-all"
+          aria-label="Staff Chhath Puja Concession Announcement"
+          className="bg-gradient-to-r from-[#071630] via-[#0E3A6E] to-[#071630] text-amber-100 border-b-2 border-amber-400/80 px-3 sm:px-6 py-2.5 shadow-md transition-all"
         >
           <div className="mx-auto max-w-7xl flex flex-wrap items-center justify-between gap-2.5 text-xs">
             {/* Announcement Text */}
             <div className="flex items-center gap-2 min-w-0">
-              <span className="text-base select-none">🪔</span>
+              <span className="text-base select-none">🌅</span>
               <div className="flex flex-wrap items-center gap-1.5 font-medium">
                 <span className="font-extrabold text-amber-300 uppercase tracking-wide">
                   {DIWALI_CAMPAIGN_2026.headline}:
                 </span>
                 <span className="text-white font-semibold">
-                  Up to 45% Festive Concession Active on All Masterclasses &amp; University Programs
+                  Flat 35% Festive Concession Active on All IT &amp; Software Courses
                 </span>
                 <span className="text-[11px] text-amber-300/80 bg-amber-950/70 px-2 py-0.5 rounded-md border border-amber-500/30">
                   Valid till {DIWALI_CAMPAIGN_2026.expiryDateFormatted}
@@ -106,7 +96,7 @@ export function DiwaliLmsBanner() {
             onClick={() => setDetailsOpen(false)}
             aria-hidden="true"
           />
-          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-[#140620] text-white p-6 shadow-2xl border-2 border-amber-500/50 space-y-4 animate-in fade-in zoom-in-95">
+          <div className="relative z-10 w-full max-w-lg rounded-2xl bg-[#0b192c] text-white p-6 shadow-2xl border-2 border-amber-500/50 space-y-4 animate-in fade-in zoom-in-95">
             <button
               type="button"
               onClick={() => setDetailsOpen(false)}
@@ -119,7 +109,7 @@ export function DiwaliLmsBanner() {
             <div className="space-y-1 pr-8">
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold">
                 <Sparkles className="w-3.5 h-3.5 text-amber-300" />
-                <span>SOFTLAB GLOBAL • DIWALI OFFER 2026</span>
+                <span>SOFTLAB GLOBAL • CHHATH PUJA OFFER 2026</span>
               </div>
               <h3 className="text-xl font-black text-amber-300">
                 Festive Concession Policy &amp; Slabs
@@ -132,31 +122,31 @@ export function DiwaliLmsBanner() {
             <div className="space-y-2 text-xs">
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
                 <div className="font-bold text-amber-300 flex items-center justify-between">
-                  <span>Full Stack AI, Data Science &amp; Cloud</span>
-                  <span className="text-emerald-400 font-extrabold text-sm">UP TO 45% CONCESSION</span>
+                  <span>AI/ML, Data Science, Full Stack &amp; Cloud</span>
+                  <span className="text-emerald-400 font-extrabold text-sm">FLAT 35% DISCOUNT</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  Applicable on upfront or 2-installment registrations confirmed prior to 10 November 2026.
+                  Pre-approved for Counselors and Sales Team without requiring Higher Authority review until 20 November 2026.
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
                 <div className="font-bold text-amber-300 flex items-center justify-between">
-                  <span>Cyber Security &amp; Python Bootcamp</span>
-                  <span className="text-emerald-400 font-extrabold text-sm">UP TO 35% CONCESSION</span>
+                  <span>Cyber Security &amp; Networking (CCNA/CCNP)</span>
+                  <span className="text-emerald-400 font-extrabold text-sm">FLAT 35% DISCOUNT</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  Includes certification vouchers, in-house live studio access, and 100% placement track.
+                  Includes in-house live studio access, hands-on lab infrastructure, and 100% placement track.
                 </p>
               </div>
 
               <div className="p-3 rounded-xl bg-white/5 border border-white/10 space-y-1">
                 <div className="font-bold text-amber-300 flex items-center justify-between">
-                  <span>Dr. Preeti Global University Programs</span>
-                  <span className="text-emerald-400 font-extrabold text-sm">SCHOLARSHIP MERIT SLAB</span>
+                  <span>Higher Discount (&gt; 35%) Requests</span>
+                  <span className="text-amber-400 font-extrabold text-sm">SANCTION REQUIRED</span>
                 </div>
                 <p className="text-[11px] text-slate-300">
-                  BCA, MCA, and B.Tech direct academic admissions with university concession vouchers.
+                  Any concession strictly above 35% routes to Higher Authority (Admin / Director) review queue. After 20 November, threshold reverts to 10%.
                 </p>
               </div>
             </div>
@@ -164,7 +154,7 @@ export function DiwaliLmsBanner() {
             <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/30 text-[11px] text-amber-200/90 space-y-1">
               <p className="font-bold text-amber-300">Counselor Instructions:</p>
               <p>
-                All leads generated from website or WhatsApp with campaign tag <code>Diwali Offer 2026</code> must be handled within 15 minutes. Record concession codes in the application fee invoice notes.
+                All leads generated from website or WhatsApp with campaign tag <code>Chhath Puja Offer 2026</code> must be engaged promptly. Record concession codes in the application fee invoice notes.
               </p>
             </div>
 

@@ -70,6 +70,11 @@ export interface CreateDirectAdmissionInput {
   discountValue?: number;
   discountAmount?: number;
   discountReason?: string;
+  globalCertificationFee?: number;
+  slgKitFee?: number;
+  gstAmount?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
   finalFee?: number;
   paidAmount?: number;
   paymentPlan?: "LUMPSUM" | "EMI";
@@ -94,6 +99,8 @@ export interface CreateDirectAdmissionInput {
   universityFee?: number;
   deliveryMode?: DeliveryMode;
   center?: string;
+  counselorId?: string; // Counselor Reference / Attributed Counselor
+  requestDiscountApproval?: boolean; // True when counselor submits admission for higher authority discount approval
 }
 
 export interface UpdateApplicationInput {
@@ -169,6 +176,86 @@ export class CrmApplicationService {
       if (!existing) return code;
     }
     return `APP-${year}-${Date.now().toString().slice(-4)}`;
+  }
+
+  /**
+   * Generates or retrieves a guaranteed collision-proof Student ID card.
+   * Handles unique constraints, concurrent requests, and sequential numbering with retry.
+   */
+  private static async issueCollisionProofIdCard(
+    tx: any,
+    studentProfileId: string,
+    applicantName: string,
+    courseTitle: string,
+    isUniversity: boolean,
+    univProg: string | null,
+    univName: string | null,
+    year: number
+  ) {
+    const existing = await tx.studentIdCard.findUnique({
+      where: { studentId: studentProfileId },
+    });
+    if (existing) {
+      return existing;
+    }
+
+    const validUntil = new Date();
+    validUntil.setFullYear(validUntil.getFullYear() + 1);
+
+    const qrCodeData = JSON.stringify({
+      studentId: studentProfileId,
+      name: applicantName.trim(),
+      course: isUniversity ? (univProg || courseTitle) : courseTitle,
+      provider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
+      validUntil: validUntil.toISOString().slice(0, 10),
+    });
+
+    const prefix = `SLG-IDC-${year}-`;
+    const count = await tx.studentIdCard.count();
+
+    for (let attempt = 1; attempt <= 15; attempt++) {
+      let candidate = `${prefix}${String(count + attempt).padStart(5, "0")}`;
+      
+      const alreadyTaken = await tx.studentIdCard.findUnique({
+        where: { cardNumber: candidate },
+        select: { id: true },
+      });
+
+      if (alreadyTaken) {
+        const rand = Math.floor(1000 + Math.random() * 9000);
+        candidate = `${prefix}${Date.now().toString().slice(-4)}${rand}`;
+      }
+
+      try {
+        const idCard = await tx.studentIdCard.upsert({
+          where: { studentId: studentProfileId },
+          update: {
+            validUntil,
+            qrCodeData,
+            status: "ACTIVE",
+            educationProvider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
+            universityName: univName,
+            universityProgram: univProg,
+          },
+          create: {
+            studentId: studentProfileId,
+            cardNumber: candidate,
+            validUntil,
+            qrCodeData,
+            status: "ACTIVE",
+            educationProvider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
+            universityName: univName,
+            universityProgram: univProg,
+          },
+        });
+        return idCard;
+      } catch (err: any) {
+        if (err.code === "P2002" && attempt < 15) {
+          continue;
+        }
+        throw err;
+      }
+    }
   }
 
   /**
@@ -312,6 +399,40 @@ export class CrmApplicationService {
     const univExamFee = isUniversity ? (input.universityExaminationFee ?? course.examinationFee ?? 100000) : null;
     const univFee = isUniversity ? (input.universityFee ?? course.universityFeeYear ?? course.baseFee ?? null) : null;
 
+    // Counselor Reference / Attribution:
+    // If counselorId is provided by higher authority, attribute to that counselor.
+    // If current user is a Counselor, attribute to current user.
+    const effectiveCounselorId = input.counselorId || (user.roleCode === UserRoleCode.COUNSELOR ? user.id : undefined);
+
+    const isHigherAuthority =
+      user.roleCode === UserRoleCode.SUPER_ADMIN ||
+      user.roleCode === UserRoleCode.DIRECTOR ||
+      user.roleCode === UserRoleCode.ADMIN ||
+      hasPermission(user.permissions, "admissions:approve_discount");
+
+    const computedTotalFee = (input.totalCourseFee && input.totalCourseFee > 0)
+      ? Math.floor(input.totalCourseFee)
+      : (course.baseFee || 3500000);
+    const computedDiscount = input.discountAmount ? Math.floor(input.discountAmount) : 0;
+    const globalCertFee = input.globalCertificationFee ?? 0;
+    const slgKitFee = input.slgKitFee ?? 0;
+    const finalDiscountedFee = input.finalFee ?? Math.max(0, computedTotalFee - computedDiscount);
+    const computedNet = finalDiscountedFee;
+    const discountPercent = computedTotalFee > 0 ? (computedDiscount / computedTotalFee) * 100 : 0;
+
+    // Promotional Festive Offer Policy (Chhath Puja Special Offer 2026):
+    // Until 20th November 2026 23:59:59 IST, counselors / sales team can grant up to 35% discount directly.
+    // Above 35% discount requires Higher Authority approval.
+    // After 20th November 2026, standard counselor limit is 10%. Any discount above 10% requires Higher Authority approval.
+    const promotionalCutoff = new Date("2026-11-20T23:59:59.999+05:30").getTime();
+    const isPromotionalPeriod = Date.now() <= promotionalCutoff;
+    const maxAllowedDiscountPercent = isPromotionalPeriod ? 35 : 10;
+
+    // Determine if Higher Authority approval is required
+    const requiresDiscountApproval =
+      Boolean(input.requestDiscountApproval) ||
+      (!isHigherAuthority && discountPercent > maxAllowedDiscountPercent);
+
     // Lead handling
     let leadId = input.leadId;
     if (!leadId) {
@@ -327,9 +448,9 @@ export class CrmApplicationService {
             city: input.city?.trim() || null,
             qualification: input.highestQualification?.trim() || null,
             source: input.source || LeadSource.WALK_IN,
-            status: LeadStatus.ADMITTED,
-            admissionStatus: "ENROLLED",
-            lmsStatus: "ENROLLED",
+            status: requiresDiscountApproval ? LeadStatus.PROPOSAL_SENT : LeadStatus.ADMITTED,
+            admissionStatus: requiresDiscountApproval ? "PENDING_APPROVAL" : "ENROLLED",
+            lmsStatus: requiresDiscountApproval ? "PENDING" : "ENROLLED",
             paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
             qualityScore: "HOT",
             interestedCourseId: input.courseId,
@@ -341,8 +462,8 @@ export class CrmApplicationService {
             notes: isUniversity
               ? `Direct university admission initiated for ${univProg} (${univSpec || "General"}).`
               : "Direct admission application initiated from Admissions Desk.",
-            assignedToId: user.id,
-            assignedCounselorId: user.id,
+            assignedToId: effectiveCounselorId || user.id,
+            assignedCounselorId: effectiveCounselorId || user.id,
             createdById: user.id,
           },
         });
@@ -350,12 +471,12 @@ export class CrmApplicationService {
         await db.lead.update({
           where: { id: lead.id },
           data: {
-            status: LeadStatus.ADMITTED,
-            admissionStatus: "ENROLLED",
-            lmsStatus: "ENROLLED",
+            status: requiresDiscountApproval ? LeadStatus.PROPOSAL_SENT : LeadStatus.ADMITTED,
+            admissionStatus: requiresDiscountApproval ? "PENDING_APPROVAL" : "ENROLLED",
+            lmsStatus: requiresDiscountApproval ? "PENDING" : "ENROLLED",
             paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
-            assignedCounselorId: user.id,
-            assignedToId: user.id,
+            assignedCounselorId: effectiveCounselorId || user.id,
+            assignedToId: effectiveCounselorId || user.id,
             ...(isUniversity
               ? {
                   providerType: "UNIVERSITY",
@@ -373,12 +494,12 @@ export class CrmApplicationService {
       await db.lead.update({
         where: { id: leadId },
         data: {
-          status: LeadStatus.ADMITTED,
-          admissionStatus: "ENROLLED",
-          lmsStatus: "ENROLLED",
+          status: requiresDiscountApproval ? LeadStatus.PROPOSAL_SENT : LeadStatus.ADMITTED,
+          admissionStatus: requiresDiscountApproval ? "PENDING_APPROVAL" : "ENROLLED",
+          lmsStatus: requiresDiscountApproval ? "PENDING" : "ENROLLED",
           paymentStatus: (input.paidAmount || 0) >= (input.totalCourseFee || 0) ? "COMPLETED" : (input.paidAmount || 0) > 0 ? "PARTIAL" : "NONE",
-          assignedCounselorId: user.id,
-          assignedToId: user.id,
+          assignedCounselorId: effectiveCounselorId || user.id,
+          assignedToId: effectiveCounselorId || user.id,
           ...(isUniversity
             ? {
                 providerType: "UNIVERSITY",
@@ -390,6 +511,109 @@ export class CrmApplicationService {
             : {}),
         },
       });
+    }
+
+    // Branch A: Higher Discount / Approval Required
+    if (requiresDiscountApproval) {
+      const applicationNumber = await this.generateAppNumber();
+      const decisionReason = JSON.stringify({
+        policyVersion: "V2_STANDARD_APPROVED",
+        requiresDiscountApproval: true,
+        approvalStatus: "PENDING_HIGHER_APPROVAL",
+        submittedByCounselorId: user.id,
+        submittedByCounselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        assignedCounselorId: effectiveCounselorId || user.id,
+        totalCourseFee: computedTotalFee,
+        discountType: input.discountType || "FIXED",
+        discountValue: input.discountValue || 0,
+        discountAmount: computedDiscount,
+        discountPercent: Math.round(discountPercent),
+        discountReason: input.discountReason || `Special Counselor Discount (${Math.round(discountPercent)}% requested)`,
+        globalCertificationFee: globalCertFee,
+        slgKitFee,
+        taxableBase: finalDiscountedFee,
+        gstRate: isUniversity ? "0%" : (input.gstAmount ? "18%" : "0%"),
+        gstAmount: input.gstAmount || 0,
+        cgstAmount: input.cgstAmount || (input.gstAmount ? Math.floor(input.gstAmount / 2) : 0),
+        sgstAmount: input.sgstAmount || (input.gstAmount ? Math.floor(input.gstAmount / 2) : 0),
+        finalFee: computedNet,
+        paidAmount: input.paidAmount || 0,
+        paymentPlan: input.paymentPlan || "LUMPSUM",
+        paymentType: input.paymentType || "OFFLINE",
+        paymentMethod: input.paymentMethod || "CASH",
+        paymentReference: input.paymentReference || "",
+        installmentCount: input.installmentCount || (input.installments ? input.installments.length : 1),
+        installments: input.installments || [],
+        remarks: input.remarks || "",
+        isUniversity,
+        universityName: univName,
+        universityProgram: univProg,
+        universitySpecialization: univSpec,
+      });
+
+      const application = await db.admissionApplication.create({
+        data: {
+          applicationNumber,
+          leadId,
+          courseId: input.courseId,
+          batchId: input.batchId || null,
+          counselorId: effectiveCounselorId || user.id,
+          stage: ApplicationStage.UNDER_REVIEW,
+          applicantName: input.applicantName.trim(),
+          applicantEmail: cleanEmail,
+          applicantPhone: cleanPhone,
+          dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
+          gender: input.gender?.trim() || null,
+          address: input.address?.trim() || null,
+          city: input.city?.trim() || null,
+          state: input.state?.trim() || null,
+          pincode: input.pincode?.trim() || null,
+          highestQualification: input.highestQualification?.trim() || null,
+          fatherName: input.fatherName?.trim() || null,
+          motherName: input.motherName?.trim() || null,
+          whatsappNumber: input.whatsappNumber?.trim() || null,
+          alternatePhone: input.alternatePhone?.trim() || null,
+          schoolOrCollege: input.schoolOrCollege?.trim() || null,
+          passingYear: input.passingYear?.trim() || null,
+          percentageOrCgpa: input.percentageOrCgpa?.trim() || null,
+          photoUrl: input.photoUrl || null,
+          deliveryMode: input.deliveryMode || DeliveryMode.OFFLINE,
+          center: input.center?.trim() || "SOFTLAB GLOBAL Main Campus, Prayagraj",
+          decisionReason,
+          providerType: isUniversity ? "UNIVERSITY" : "SOFTLAB",
+          providerName: isUniversity ? (course.providerName || "Dr. Preeti Global University") : "SoftLab Global",
+          universityName: univName,
+          universityProgram: univProg,
+          universitySpecialization: univSpec,
+          admissionSession: admSession,
+          universityRegistrationFee: univRegFee,
+          universityExaminationFee: univExamFee,
+          universityFee: univFee,
+        },
+      });
+
+      await AuditService.log({
+        actorId: user.id,
+        action: "ADMISSION_SUBMITTED_FOR_HIGHER_DISCOUNT_APPROVAL",
+        resourceType: "AdmissionApplication",
+        resourceId: application.id,
+        newData: {
+          applicationNumber,
+          applicantName: input.applicantName.trim(),
+          discountPercent: Math.round(discountPercent),
+          discountAmount: computedDiscount,
+          counselorId: user.id,
+        },
+      });
+
+      return {
+        success: true,
+        requiresApproval: true,
+        id: application.id,
+        application,
+        credentials: null,
+        message: "Admission application confirmed and submitted for Higher Authority discount approval. Student login details and receipt will be dispatched upon approval.",
+      };
     }
 
     // Execute atomic transaction for Phase 7 & 8 & 9 & 10 & 11
@@ -499,14 +723,25 @@ export class CrmApplicationService {
         ? Math.floor(input.totalCourseFee)
         : (course.baseFee || 3500000);
       const computedDiscount = input.discountAmount ? Math.floor(input.discountAmount) : 0;
-      const computedNet = Math.max(0, computedTotalFee - computedDiscount);
+      const globalCertFee = input.globalCertificationFee ?? 0;
+      const slgKitFee = input.slgKitFee ?? 0;
+      const finalDiscountedFee = input.finalFee ?? Math.max(0, computedTotalFee - computedDiscount);
+      const computedNet = finalDiscountedFee;
 
       const decisionReason = JSON.stringify({
+        policyVersion: "V2_STANDARD_APPROVED",
         totalCourseFee: computedTotalFee,
         discountType: input.discountType || "FIXED",
         discountValue: input.discountValue || 0,
         discountAmount: computedDiscount,
         discountReason: input.discountReason || "",
+        globalCertificationFee: globalCertFee,
+        slgKitFee,
+        taxableBase: finalDiscountedFee,
+        gstRate: isUniversity ? "0%" : (input.gstAmount ? "18%" : "0%"),
+        gstAmount: input.gstAmount || 0,
+        cgstAmount: input.cgstAmount || (input.gstAmount ? Math.floor(input.gstAmount / 2) : 0),
+        sgstAmount: input.sgstAmount || (input.gstAmount ? Math.floor(input.gstAmount / 2) : 0),
         finalFee: computedNet,
         paidAmount: input.paidAmount || 0,
         paymentPlan: input.paymentPlan || "LUMPSUM",
@@ -526,7 +761,7 @@ export class CrmApplicationService {
           leadId,
           courseId: input.courseId,
           batchId: input.batchId || null,
-          counselorId: user.id,
+          counselorId: effectiveCounselorId || user.id,
           stage: ApplicationStage.CONVERTED,
           applicantName: input.applicantName.trim(),
           applicantEmail: cleanEmail,
@@ -605,7 +840,7 @@ export class CrmApplicationService {
         });
       }
 
-      const netPayable = Math.max(0, totalCourseFee - discountPaise);
+      const netPayable = computedNet;
       const paidPaise = input.paidAmount ? Math.floor(input.paidAmount) : 0;
       const pendingPaise = Math.max(0, netPayable - paidPaise);
       const paymentStatus = pendingPaise === 0
@@ -626,31 +861,35 @@ export class CrmApplicationService {
             courseId: input.courseId,
             batchId: input.batchId || null,
             totalCourseFee,
+            registrationFee: slgKitFee,
+            softlabServiceFee: globalCertFee,
             discountAmount: discountPaise,
             netPayableAmount: netPayable,
             paidAmount: paidPaise,
             pendingAmount: pendingPaise,
             paymentStatus,
             status: "ACTIVE",
-            createdById: user.id,
-            remarks: input.remarks || input.discountReason || null,
+            createdById: effectiveCounselorId || user.id,
+            remarks: decisionReason,
             examinationFee: univExamFee ?? 0,
             universityFee: univFee ?? 0,
           },
         });
       } else {
         const newPaid = feeStructure.paidAmount + paidPaise;
-        const newPending = Math.max(0, feeStructure.netPayableAmount - newPaid);
+        const newPending = Math.max(0, netPayable - newPaid);
         feeStructure = await tx.feeStructure.update({
           where: { id: feeStructure.id },
           data: {
             totalCourseFee,
+            registrationFee: slgKitFee,
+            softlabServiceFee: globalCertFee,
             discountAmount: discountPaise,
             netPayableAmount: netPayable,
             paidAmount: newPaid,
             pendingAmount: newPending,
             paymentStatus: newPending === 0 ? FeePaymentStatus.PAID : FeePaymentStatus.PARTIAL,
-            remarks: input.remarks || input.discountReason || feeStructure.remarks,
+            remarks: decisionReason,
             ...(isUniversity
               ? {
                   examinationFee: univExamFee ?? 0,
@@ -661,9 +900,18 @@ export class CrmApplicationService {
         });
       }
 
-      // 5b. Fee Installments (EMI Slot Management & Lumpsum Partial Milestone)
+      // 5b. Fee Installments (Fully Dynamic Installment Schedule)
       const createdInstallments: any[] = [];
-      if ((input.paymentPlan === "EMI" || input.paymentPlan === "LUMPSUM") && input.installments && input.installments.length > 0) {
+      if (input.installments && input.installments.length > 0) {
+        // Required Validation: Total of all installments must equal netPayable exactly
+        const sumInstallments = input.installments.reduce((sum, inst) => sum + Math.floor(inst.amount), 0);
+        if (sumInstallments !== netPayable) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Installments schedule total (₹${(sumInstallments / 100).toLocaleString("en-IN")}) must exactly equal Final Discounted Fee (₹${(netPayable / 100).toLocaleString("en-IN")}). Difference: ₹${((netPayable - sumInstallments) / 100).toLocaleString("en-IN")}.`,
+          });
+        }
+
         let remainingPaidAllocation = paidPaise;
 
         // Clean up any existing installments for this feeStructure if recreating
@@ -674,6 +922,12 @@ export class CrmApplicationService {
         for (let i = 0; i < input.installments.length; i++) {
           const inst = input.installments[i];
           const instAmount = Math.floor(inst.amount);
+          if (instAmount <= 0) {
+            throw new TRPCError({
+              code: "BAD_REQUEST",
+              message: `Installment #${inst.installmentNumber || i + 1} must have a positive amount greater than zero.`,
+            });
+          }
           let instPaid = 0;
           let instStatus: InstallmentStatus = InstallmentStatus.PENDING;
 
@@ -698,10 +952,70 @@ export class CrmApplicationService {
               dueDate: new Date(inst.dueDate),
               status: instStatus,
               paidAt: instPaid > 0 ? new Date() : null,
-              notes: inst.notes?.trim() || (i === 0 && instPaid > 0 ? "Down-payment / 1st EMI collected at admission" : null),
+              notes: inst.notes?.trim() || (i === 0 && instPaid > 0 ? "Down-payment collected at admission" : `Installment #${inst.installmentNumber || i + 1}`),
             },
           });
           createdInstallments.push(createdInst);
+        }
+      } else {
+        // Auto-provision standard installments balancing netPayable
+        await tx.feeInstallment.deleteMany({
+          where: { feeStructureId: feeStructure.id },
+        });
+
+        if (paidPaise >= netPayable) {
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: feeStructure.id,
+              installmentNumber: 1,
+              amount: netPayable,
+              paidAmount: netPayable,
+              dueDate: new Date(),
+              status: InstallmentStatus.PAID,
+              paidAt: new Date(),
+              notes: "Full Admission Settlement (One-Time)",
+            },
+          });
+        } else if (paidPaise > 0) {
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: feeStructure.id,
+              installmentNumber: 1,
+              amount: paidPaise,
+              paidAmount: paidPaise,
+              dueDate: new Date(),
+              status: InstallmentStatus.PAID,
+              paidAt: new Date(),
+              notes: "Slot 1 (Admission Down-Payment)",
+            },
+          });
+          const due30 = new Date();
+          due30.setDate(due30.getDate() + 30);
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: feeStructure.id,
+              installmentNumber: 2,
+              amount: pendingPaise,
+              paidAmount: 0,
+              dueDate: due30,
+              status: InstallmentStatus.PENDING,
+              notes: "Remaining Outstanding Fee",
+            },
+          });
+        } else {
+          const due30 = new Date();
+          due30.setDate(due30.getDate() + 30);
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: feeStructure.id,
+              installmentNumber: 1,
+              amount: netPayable,
+              paidAmount: 0,
+              dueDate: due30,
+              status: InstallmentStatus.PENDING,
+              notes: "Payable Tuition",
+            },
+          });
         }
       }
 
@@ -733,36 +1047,17 @@ export class CrmApplicationService {
         });
       }
 
-      // 7. Student ID Card
-      let idCard = await tx.studentIdCard.findUnique({
-        where: { studentId: studentProfile.id },
-      });
-
-      if (!idCard) {
-        const idCardCount = await tx.studentIdCard.count();
-        const cardNumber = `SLG-IDC-${year}-${(idCardCount + 1).toString().padStart(5, "0")}`;
-        const validUntil = new Date();
-        validUntil.setFullYear(validUntil.getFullYear() + 1);
-
-        idCard = await tx.studentIdCard.create({
-          data: {
-            studentId: studentProfile.id,
-            cardNumber,
-            validUntil,
-            qrCodeData: JSON.stringify({
-              studentId: studentProfile.studentId,
-              name: input.applicantName.trim(),
-              course: isUniversity ? (univProg || course.title) : course.title,
-              provider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
-              validUntil: validUntil.toISOString().slice(0, 10),
-            }),
-            status: "ACTIVE",
-            educationProvider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
-            universityName: univName,
-            universityProgram: univProg,
-          },
-        });
-      }
+      // 7. Student ID Card (Guaranteed Collision-Proof)
+      const idCard = await this.issueCollisionProofIdCard(
+        tx,
+        studentProfile.id,
+        input.applicantName,
+        course.title,
+        isUniversity,
+        univProg,
+        univName,
+        year
+      );
 
       // 8. Audit Log
       await tx.auditLog.create({
@@ -1183,6 +1478,473 @@ export class CrmApplicationService {
    */
   static async convertApplicationToStudent(user: AuthenticatedUser, applicationId: string) {
     return CrmConversionService.convertApplicationToStudent(user, applicationId);
+  }
+
+  /**
+   * Approves an admission application with a higher discount, finalizing student account,
+   * fee structure, installments, ID card, and dispatching credentials and receipt via Email & WhatsApp.
+   */
+  static async approveAdmissionWithDiscount(
+    user: AuthenticatedUser,
+    input: { applicationId: string; approvalNotes?: string; approvedDiscountAmount?: number }
+  ) {
+    const isHigherAuthority =
+      user.roleCode === UserRoleCode.SUPER_ADMIN ||
+      user.roleCode === UserRoleCode.DIRECTOR ||
+      user.roleCode === UserRoleCode.ADMIN ||
+      hasPermission(user.permissions, "admissions:approve_discount");
+
+    if (!isHigherAuthority) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only Higher Authorities (Super Admin, Director, Admin) have permission to approve admission discounts.",
+      });
+    }
+
+    const application = await db.admissionApplication.findUnique({
+      where: { id: input.applicationId },
+      include: {
+        course: true,
+        batch: true,
+        lead: true,
+        counselor: { select: { id: true, firstName: true, lastName: true, email: true, phone: true } },
+      },
+    });
+
+    if (!application) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Application '${input.applicationId}' not found.`,
+      });
+    }
+
+    if (application.stage === ApplicationStage.CONVERTED && application.convertedStudentProfileId) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This application has already been converted to an active student record.",
+      });
+    }
+
+    let parsedTerms: any = {};
+    try {
+      if (application.decisionReason && application.decisionReason.trim().startsWith("{")) {
+        parsedTerms = JSON.parse(application.decisionReason);
+      }
+    } catch {}
+
+    const course = application.course;
+    const isUniversity = course.providerType === "UNIVERSITY" || application.providerType === "UNIVERSITY";
+    const univName = application.universityName || course.universityName || null;
+    const univProg = application.universityProgram || course.title || null;
+    const univSpec = application.universitySpecialization || course.specialization || null;
+    const admSession = application.admissionSession || course.admissionSession || "2025-2026";
+    const univRegFee = application.universityRegistrationFee ?? 0;
+    const univExamFee = application.universityExaminationFee ?? 0;
+    const univFee = application.universityFee ?? 0;
+
+    const totalCourseFee = parsedTerms.totalCourseFee || course.baseFee || 3500000;
+    const discountPaise = input.approvedDiscountAmount !== undefined
+      ? Math.floor(input.approvedDiscountAmount)
+      : (parsedTerms.discountAmount || 0);
+    const globalCertFee = parsedTerms.globalCertificationFee || 0;
+    const slgKitFee = parsedTerms.slgKitFee || 0;
+    const gstAmount = parsedTerms.gstAmount || 0;
+    const finalFee = Math.max(0, totalCourseFee - discountPaise + globalCertFee + slgKitFee + gstAmount);
+    const paidPaise = input.approvedDownPayment !== undefined
+      ? Math.floor(input.approvedDownPayment)
+      : (parsedTerms.paidAmount || 0);
+    const pendingPaise = Math.max(0, finalFee - paidPaise);
+    const paymentMethod: PaymentMethod = (parsedTerms.paymentMethod as PaymentMethod) || PaymentMethod.CASH;
+
+    const year = new Date().getFullYear();
+    const tempPassword = `SoftLab@${year}!${randomBytes(3).toString("hex")}`;
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const nameParts = application.applicantName.trim().split(" ");
+    const firstName = nameParts[0] || "Student";
+    const lastName = nameParts.slice(1).join(" ") || "Learner";
+    const cleanEmail = normalizeEmail(application.applicantEmail);
+    const cleanPhone = normalizePhone(application.applicantPhone);
+
+    const result = await db.$transaction(async (tx) => {
+      // 1. User
+      let targetUser = await tx.user.findUnique({ where: { email: cleanEmail } });
+      if (!targetUser) {
+        targetUser = await tx.user.create({
+          data: {
+            email: cleanEmail,
+            phone: cleanPhone,
+            passwordHash,
+            firstName,
+            lastName,
+            avatarUrl: application.photoUrl || null,
+            roleCode: UserRoleCode.STUDENT,
+          },
+        });
+      } else {
+        await tx.user.update({
+          where: { id: targetUser.id },
+          data: {
+            passwordHash,
+            ...(application.photoUrl ? { avatarUrl: application.photoUrl } : {}),
+          },
+        });
+      }
+
+      // 2. StudentProfile
+      let studentProfile = await tx.studentProfile.findUnique({
+        where: { userId: targetUser.id },
+      });
+
+      if (!studentProfile) {
+        const studentCount = await tx.studentProfile.count();
+        let studentCode = "";
+        for (let i = 1; i <= 50; i++) {
+          const candidate = `SG-${year}-${(studentCount + i).toString().padStart(5, "0")}`;
+          const existing = await tx.studentProfile.findUnique({
+            where: { studentId: candidate },
+            select: { id: true },
+          });
+          if (!existing) {
+            studentCode = candidate;
+            break;
+          }
+        }
+        if (!studentCode) {
+          studentCode = `SG-${year}-${Date.now().toString().slice(-5)}`;
+        }
+
+        studentProfile = await tx.studentProfile.create({
+          data: {
+            userId: targetUser.id,
+            studentId: studentCode,
+            dateOfBirth: application.dateOfBirth,
+            gender: application.gender,
+            address: application.address,
+            city: application.city,
+            state: application.state,
+            pincode: application.pincode,
+            highestDegree: application.highestQualification,
+            fatherName: application.fatherName,
+            motherName: application.motherName,
+            whatsappNumber: application.whatsappNumber,
+            alternatePhone: application.alternatePhone,
+            schoolOrCollege: application.schoolOrCollege,
+            passingYear: application.passingYear,
+            percentageOrCgpa: application.percentageOrCgpa,
+            center: application.center || "SOFTLAB GLOBAL Main Campus, Prayagraj",
+            educationProvider: isUniversity ? "Dr. Preeti Global University" : "SOFTLAB GLOBAL",
+            universityName: univName,
+            universityProgram: univProg,
+            universitySpecialization: univSpec,
+            universityAdmissionSession: admSession,
+            universityPortalStatus: isUniversity ? "PROVISIONED" : null,
+            photoUrl: application.photoUrl || null,
+          },
+        });
+      }
+
+      // 3. Enrollment
+      let enrollment = await tx.enrollment.findUnique({
+        where: {
+          studentId_courseId: {
+            studentId: studentProfile.id,
+            courseId: application.courseId,
+          },
+        },
+      });
+
+      if (!enrollment) {
+        enrollment = await tx.enrollment.create({
+          data: {
+            studentId: studentProfile.id,
+            courseId: application.courseId,
+            batchId: application.batchId || null,
+            status: EnrollmentStatus.ACTIVE,
+          },
+        });
+      }
+
+      // 4. FeeStructure
+      const paymentStatus = pendingPaise === 0
+        ? FeePaymentStatus.PAID
+        : paidPaise > 0
+          ? FeePaymentStatus.PARTIAL
+          : FeePaymentStatus.PENDING;
+
+      const updatedRemarks = JSON.stringify({
+        ...parsedTerms,
+        policyVersion: "V2_STANDARD_APPROVED",
+        approvalStatus: "APPROVED_BY_HIGHER_AUTHORITY",
+        approvedById: user.id,
+        approvedByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+        approvedAt: new Date().toISOString(),
+        approvalNotes: input.approvalNotes || "Discount approved by Higher Authority",
+      });
+
+      let feeStructure = await tx.feeStructure.findUnique({
+        where: { enrollmentId: enrollment.id },
+      });
+
+      if (!feeStructure) {
+        feeStructure = await tx.feeStructure.create({
+          data: {
+            studentId: studentProfile.id,
+            enrollmentId: enrollment.id,
+            courseId: application.courseId,
+            batchId: application.batchId || null,
+            totalCourseFee,
+            registrationFee: slgKitFee,
+            softlabServiceFee: globalCertFee,
+            discountAmount: discountPaise,
+            netPayableAmount: finalFee,
+            paidAmount: paidPaise,
+            pendingAmount: pendingPaise,
+            paymentStatus,
+            status: "ACTIVE",
+            createdById: application.counselorId || user.id,
+            remarks: updatedRemarks,
+            examinationFee: univExamFee,
+            universityFee: univFee,
+          },
+        });
+      }
+
+      // 5. FeeInstallments
+      if (parsedTerms.installments && parsedTerms.installments.length > 0) {
+        await tx.feeInstallment.deleteMany({ where: { feeStructureId: feeStructure.id } });
+        for (const inst of parsedTerms.installments) {
+          await tx.feeInstallment.create({
+            data: {
+              feeStructureId: feeStructure.id,
+              installmentNumber: inst.installmentNumber,
+              amount: inst.amount,
+              dueDate: new Date(inst.dueDate),
+              status: inst.paidAmount && inst.paidAmount >= inst.amount ? "PAID" : "PENDING",
+              paidAmount: inst.paidAmount || 0,
+              notes: inst.notes || `Agreed Installment #${inst.installmentNumber}`,
+            },
+          });
+        }
+      }
+
+      // 6. PaymentTransaction
+      let receiptNumber: string | null = null;
+      let paymentRecord: any = null;
+      if (paidPaise > 0) {
+        receiptNumber = await ReceiptService.generateReceiptNumber();
+        const randTxn = Math.floor(100000 + Math.random() * 900000);
+        const transactionReference = parsedTerms.paymentReference?.trim() || `PAY-${year}-${randTxn}`;
+
+        paymentRecord = await tx.paymentTransaction.create({
+          data: {
+            transactionReference,
+            feeStructureId: feeStructure.id,
+            studentId: studentProfile.id,
+            enrollmentId: enrollment.id,
+            admissionId: application.id,
+            amount: paidPaise,
+            paymentMethod,
+            status: "SUCCESS",
+            receiptNumber,
+            receivedById: user.id,
+            remarks: `Initial admission payment (Approved by ${user.firstName} ${user.lastName})`,
+            paidAt: new Date(),
+          },
+        });
+      }
+
+      // 7. StudentIdCard (Guaranteed Collision-Proof)
+      const idCard = await this.issueCollisionProofIdCard(
+        tx,
+        studentProfile.id,
+        application.applicantName,
+        course.title,
+        isUniversity,
+        univProg,
+        univName,
+        year
+      );
+
+      // 8. Update Application & Lead
+      const updatedApplication = await tx.admissionApplication.update({
+        where: { id: application.id },
+        data: {
+          stage: ApplicationStage.CONVERTED,
+          reviewerId: user.id,
+          convertedStudentProfileId: studentProfile.id,
+          decisionReason: updatedRemarks,
+        },
+      });
+
+      await tx.lead.update({
+        where: { id: application.leadId },
+        data: {
+          status: LeadStatus.ADMITTED,
+          admissionStatus: "ENROLLED",
+          lmsStatus: "ENROLLED",
+          paymentStatus: paidPaise >= finalFee ? "COMPLETED" : paidPaise > 0 ? "PARTIAL" : "NONE",
+        },
+      });
+
+      // 9. Audit Log
+      await tx.auditLog.create({
+        data: {
+          actorId: user.id,
+          action: "ADMISSION_DISCOUNT_APPROVED_AND_FINALIZED",
+          resourceType: "AdmissionApplication",
+          resourceId: application.id,
+          newData: {
+            approvedBy: user.email,
+            applicationNumber: application.applicationNumber,
+            studentId: studentProfile.studentId,
+            receiptNumber,
+            finalFee,
+            discountPaise,
+          },
+        },
+      });
+
+      return {
+        application: updatedApplication,
+        studentProfile,
+        targetUser,
+        feeStructure,
+        paymentRecord,
+        receiptNumber,
+        tempPassword,
+      };
+    }, { maxWait: 15000, timeout: 30000 });
+
+    // 10. Communications Dispatch: Email + WhatsApp to Student
+    EmailService.sendAdmissionConfirmation({
+      to: cleanEmail,
+      studentName: application.applicantName.trim(),
+      studentId: result.studentProfile.studentId,
+      admissionNumber: application.applicationNumber,
+      courseName: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+      batchName: application.batch ? application.batch.name : undefined,
+    }).catch((e) => console.error("[Admission Email Error]", e));
+
+    EmailService.sendStudentCredentials({
+      to: cleanEmail,
+      studentName: application.applicantName.trim(),
+      studentId: result.studentProfile.studentId,
+      loginEmail: cleanEmail,
+      temporaryPassword: result.tempPassword,
+    }).catch((e) => console.error("[Credentials Email Error]", e));
+
+    StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
+      studentName: application.applicantName.trim(),
+      studentEmail: cleanEmail,
+      studentPhone: cleanPhone,
+      studentId: result.studentProfile.studentId,
+      admissionNumber: application.applicationNumber,
+      courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+      specialization: univSpec || course.specialization,
+      providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
+      temporaryPassword: result.tempPassword,
+      loginEmail: cleanEmail,
+      counselorName: application.counselor ? `${application.counselor.firstName} ${application.counselor.lastName}` : "Admissions Desk",
+      counselorPhone: application.counselor?.phone || undefined,
+      leadId: application.leadId,
+    }).catch((e) => console.error("[StudentAdmissionNotification Error]", e));
+
+    if (result.receiptNumber && paidPaise > 0) {
+      EmailService.sendFeeReceipt({
+        to: cleanEmail,
+        studentName: application.applicantName.trim(),
+        studentId: result.studentProfile.studentId,
+        receiptNumber: result.receiptNumber,
+        amountPaidPaise: paidPaise,
+        pendingAmountPaise: pendingPaise,
+        paymentMethod,
+        courseName: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+      }).catch((e) => console.error("[Fee Receipt Email Error]", e));
+    }
+
+    return {
+      success: true,
+      message: `Admission successfully approved and finalized! Credentials and receipt dispatched to student.`,
+      credentials: {
+        studentId: result.studentProfile.studentId,
+        admissionNumber: application.applicationNumber,
+        email: cleanEmail,
+        temporaryPassword: result.tempPassword,
+      },
+      receiptNumber: result.receiptNumber,
+    };
+  }
+
+  /**
+   * Rejects a higher discount request for an admission application.
+   */
+  static async rejectAdmissionDiscount(
+    user: AuthenticatedUser,
+    input: { applicationId: string; rejectionReason: string }
+  ) {
+    const isHigherAuthority =
+      user.roleCode === UserRoleCode.SUPER_ADMIN ||
+      user.roleCode === UserRoleCode.DIRECTOR ||
+      user.roleCode === UserRoleCode.ADMIN ||
+      hasPermission(user.permissions, "admissions:approve_discount");
+
+    if (!isHigherAuthority) {
+      throw new TRPCError({
+        code: "FORBIDDEN",
+        message: "Only Higher Authorities have permission to reject admission discount requests.",
+      });
+    }
+
+    const application = await db.admissionApplication.findUnique({
+      where: { id: input.applicationId },
+      include: { counselor: true },
+    });
+
+    if (!application) {
+      throw new TRPCError({ code: "NOT_FOUND", message: "Application not found." });
+    }
+
+    let parsedTerms: any = {};
+    try {
+      if (application.decisionReason && application.decisionReason.trim().startsWith("{")) {
+        parsedTerms = JSON.parse(application.decisionReason);
+      }
+    } catch {}
+
+    const updatedRemarks = JSON.stringify({
+      ...parsedTerms,
+      approvalStatus: "REJECTED_BY_HIGHER_AUTHORITY",
+      rejectedById: user.id,
+      rejectedByName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+      rejectedAt: new Date().toISOString(),
+      rejectionReason: input.rejectionReason,
+    });
+
+    const updated = await db.admissionApplication.update({
+      where: { id: input.applicationId },
+      data: {
+        stage: ApplicationStage.REJECTED,
+        reviewerId: user.id,
+        decisionReason: updatedRemarks,
+      },
+    });
+
+    await AuditService.log({
+      actorId: user.id,
+      action: "ADMISSION_DISCOUNT_REJECTED",
+      resourceType: "AdmissionApplication",
+      resourceId: application.id,
+      newData: {
+        rejectedBy: user.email,
+        reason: input.rejectionReason,
+      },
+    });
+
+    return {
+      success: true,
+      message: "Discount request rejected.",
+      application: updated,
+    };
   }
 
   /**

@@ -81,7 +81,7 @@ export function DiwaliOfferModal() {
     formData.set("trainingMode", (formData.get("trainingMode") as string) || "HYBRID");
     formData.set(
       "notes",
-      `Diwali Offer 2026 (Up to 45% Off) | Action: ${ctaType} | Selected Course: ${selectedCourse}`
+      `Chhath Puja Special Offer 2026 (Flat 35% Discount) | Action: ${ctaType} | Selected Course: ${selectedCourse}`
     );
 
     try {
@@ -109,7 +109,7 @@ export function DiwaliOfferModal() {
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="SoftLab Global Diwali Offer 2026"
+      aria-label="SoftLab Global Chhath Puja Offer 2026"
       className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/75 p-3 sm:p-4 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200"
     >
       {/* Backdrop click to dismiss */}
@@ -120,13 +120,13 @@ export function DiwaliOfferModal() {
       />
 
       {/* Modal Card - Sits strictly above the Career Counseling Enquiry Popup */}
-      <div className="relative z-10 w-full max-w-xl sm:max-w-2xl rounded-3xl bg-[#0D0414] text-white border-2 border-amber-500/70 shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-200">
+      <div className="relative z-10 w-full max-w-xl sm:max-w-2xl rounded-3xl bg-[#071630] text-white border-2 border-amber-500/70 shadow-2xl overflow-hidden my-auto animate-in zoom-in-95 duration-200">
         {/* Bold Black Close Button - High contrast, always clearly visible */}
         <button
           type="button"
           onClick={handleClose}
           className="absolute right-3 top-3 z-50 flex h-9 w-9 items-center justify-center rounded-full bg-black hover:bg-zinc-800 text-white border-2 border-white shadow-2xl transition-all cursor-pointer focus:outline-none hover:scale-105 active:scale-95"
-          aria-label="Close Diwali Offer Flyer"
+          aria-label="Close Chhath Puja Offer Flyer"
           title="Close Offer & View Enquiry Form"
         >
           <X className="h-5 w-5 text-white stroke-[3]" />
@@ -134,20 +134,20 @@ export function DiwaliOfferModal() {
 
         {viewMode === "FLYER" ? (
           /* ==================================================================== */
-          /* VIEW 1: AUTHENTIC REFERENCE DIWALI FLYER PRESENTATION                */
+          /* VIEW 1: AUTHENTIC REFERENCE CHHATH PUJA FLYER PRESENTATION           */
           /* ==================================================================== */
           <div className="flex flex-col">
             {/* Header Mini Ribbon */}
-            <div className="bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 px-4 py-1.5 text-center text-slate-950 font-black text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-sm pr-12">
+            <div className="bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 px-4 py-1.5 text-center text-slate-950 font-black text-[11px] sm:text-xs tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-sm pr-12">
               <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-              <span>DIWALI FESTIVE OFFER 2026 • UP TO 45% OFF ON ALL COURSES</span>
+              <span>छठ पूजा SPECIAL OFFER 2026 • FLAT 35% DISCOUNT ON ALL IT COURSES</span>
             </div>
 
-            {/* Visual Authentic Diwali Flyer Graphic */}
+            {/* Visual Authentic Chhath Puja Flyer Graphic */}
             <div className="relative w-full aspect-square max-h-[440px] sm:max-h-[500px] overflow-hidden bg-slate-950 flex items-center justify-center">
               <img
-                src="/images/diwali-dhamaka-2026-flyer.jpg"
-                alt="SoftLab Global Diwali Festive Offer - Up to 45% Off On Every Course Admissions"
+                src="/images/chhath-puja-2026-flyer.jpg"
+                alt="SoftLab Global Chhath Puja Special Offer - Flat 35% Discount On All IT & Software Courses"
                 className="w-full h-full object-contain"
               />
             </div>
@@ -159,10 +159,10 @@ export function DiwaliOfferModal() {
                 <button
                   type="button"
                   onClick={handleApplyNow}
-                  className="w-full sm:flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-black text-sm tracking-wide shadow-lg shadow-red-900/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border border-yellow-400"
+                  className="w-full sm:flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-orange-600 via-amber-600 to-yellow-600 hover:from-orange-500 hover:to-amber-500 text-slate-950 font-black text-sm tracking-wide shadow-lg shadow-orange-950/40 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer border border-yellow-300"
                 >
-                  <Sparkles className="w-4 h-4 text-yellow-300" />
-                  <span>ADMISSIONS OPEN NOW — APPLY</span>
+                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  <span>ENROL NOW & SAVE 35%</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
@@ -186,7 +186,7 @@ export function DiwaliOfferModal() {
 
                 <div className="flex items-center gap-3">
                   <a
-                    href="https://wa.me/919196596975?text=Hello%20SoftLab%20Global!%20I%20am%20interested%20in%20the%20Diwali%20Festive%20Offer%20(Up%20to%2045%25%20Off)."
+                    href="https://wa.me/919196596975?text=Hello%20SoftLab%20Global!%20I%20am%20interested%20in%20the%20Chhath%20Puja%20Special%20Offer%20(Flat%2035%25%20Discount)."
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold"

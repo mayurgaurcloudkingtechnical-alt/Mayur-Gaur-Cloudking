@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LeadSource, PaymentMethod } from "@prisma/client";
@@ -37,6 +38,10 @@ import {
   MessageSquare,
   ExternalLink,
   Award,
+  Percent,
+  Trash2,
+  Plus,
+  Clock,
 } from "lucide-react";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { StudentIdCardView, StudentIdCardData } from "@/components/common/student-id-card-view";
@@ -124,10 +129,15 @@ export function DirectAdmissionDialog({
   // Financial & Discount
   const [source, setSource] = useState<LeadSource>(LeadSource.WALK_IN);
   const [selectedLeadId, setSelectedLeadId] = useState<string>("");
+  const [counselorId, setCounselorId] = useState<string>("");
+  const [requestDiscountApproval, setRequestDiscountApproval] = useState<boolean>(false);
   const [customTotalFee, setCustomTotalFee] = useState<number | "">("");
   const [discountType, setDiscountType] = useState<"PERCENTAGE" | "FIXED">("PERCENTAGE");
   const [discountValue, setDiscountValue] = useState<number>(0);
   const [discountReason, setDiscountReason] = useState<string>("");
+  const [includeGlobalCertification, setIncludeGlobalCertification] = useState<boolean>(false);
+  const [includeKitFee, setIncludeKitFee] = useState<boolean>(false);
+  const [includeGst, setIncludeGst] = useState<boolean>(false);
 
   // Payment Options (Lumpsum vs EMI & Offline vs Online)
   const [paymentPlan, setPaymentPlan] = useState<"LUMPSUM" | "EMI">("LUMPSUM");
@@ -183,8 +193,12 @@ export function DirectAdmissionDialog({
   );
   const batches = batchesData?.batches || [];
 
-  const { data: leadsData } = api.crm.listLeads.useQuery({ limit: 100 });
+  const { data: leadsData } = api.crm.listLeads.useQuery({ limit: 50 });
   const leads = leadsData?.leads || [];
+
+  const { data: counselorsList = [] } = api.crm.listCounselors.useQuery(undefined, {
+    enabled: isSuperAdminOrDirector,
+  });
 
   const selectedCourse = courses.find((c: any) => c.id === courseId);
   const isUniversity = providerMode === "UNIVERSITY" || selectedCourse?.providerType === "UNIVERSITY";
@@ -199,10 +213,31 @@ export function DirectAdmissionDialog({
       ? Math.round((courseFeeInr * (discountValue || 0)) / 100)
       : Math.min(courseFeeInr, discountValue || 0);
 
-  const finalFeeInr = Math.max(0, courseFeeInr - discountAmountInr);
+  // CANONICAL P0 ADMISSION FEE CALCULATION (Controlled by Sales Team):
+  // 1. Original Course Fee
+  // - 2. Sales Team Entered/Approved Discount
+  // = 3. Final Discounted Course Fee (Net Course Fee)
+  // + 4. Additional Pass-Through Charges (Kit ₹1,000 / Global Cert ₹3,500)
+  // + 5. Applicable Tax (GST 18%)
+  // = 6. Final Student Payable Amount
+  // - 7. Agreed Down Payment
+  // = 8. Remaining Outstanding Fee
+  const netCourseFeeInr = Math.max(0, courseFeeInr - discountAmountInr);
+  const globalCertFeeInr = includeGlobalCertification ? 3500 : 0;
+  const kitFeeInr = includeKitFee ? 1000 : 0;
+  const additionalChargesInr = globalCertFeeInr + kitFeeInr;
+  const taxableBaseInr = netCourseFeeInr + additionalChargesInr;
+  const gstAmountInr = includeGst ? Math.round(taxableBaseInr * 0.18) : 0;
+  const finalFeeInr = netCourseFeeInr + additionalChargesInr + gstAmountInr;
   const pendingAmountInr = Math.max(0, finalFeeInr - (paidAmount || 0));
+  const remainingOutstandingFeeInr = pendingAmountInr;
   const discountPercentCalculated = courseFeeInr > 0 ? Math.round((discountAmountInr / courseFeeInr) * 100) : 0;
-  const isDiscountOverLimit = discountPercentCalculated > 45 && !isSuperAdminOrDirector;
+  const isPromotionalPeriod = Date.now() <= new Date("2026-11-20T23:59:59.999+05:30").getTime();
+  const maxAllowedCounselorDiscountPct = isPromotionalPeriod ? 35 : 10;
+  const isCounselor = authUser?.roleCode === "COUNSELOR" || authUser?.roleCode === "TELECALLER";
+  const isHigherDiscount = discountPercentCalculated > maxAllowedCounselorDiscountPct;
+  const isDiscountOverLimit = isHigherDiscount && !isSuperAdminOrDirector;
+  const requiresApproval = isCounselor && (isHigherDiscount || requestDiscountApproval);
 
   // Auto-fill course baseFee into customTotalFee when course changes
   const handleCourseSelect = (selectedId: string) => {
@@ -286,140 +321,134 @@ export function DirectAdmissionDialog({
     return new Date().toISOString().split("T")[0];
   }, []);
 
-  const maxLumpsumDueDateStr = React.useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 45);
-    return d.toISOString().split("T")[0];
-  }, []);
-
-  // Helper to generate EMI schedule based on Down Payment and Tenure (1 to 10 months)
-  const generateEmiSchedule = React.useCallback((totalFee: number, downPayment: number, tenure: number) => {
-    const validTenure = Math.max(1, Math.min(10, tenure));
-    const validDownPayment = Math.max(0, Math.min(totalFee, downPayment));
-    const remaining = Math.max(0, totalFee - validDownPayment);
-    const schedule: Array<{
-      installmentNumber: number;
-      amount: number;
-      dueDate: string;
-      notes: string;
-    }> = [];
-    const today = new Date();
-
-    // Slot 1: Down Payment (Admission Handover)
-    schedule.push({
-      installmentNumber: 1,
-      amount: validDownPayment,
-      dueDate: today.toISOString().split("T")[0],
-      notes: "Slot 1 (Admission Down-Payment)",
-    });
-
-    if (remaining > 0) {
-      const perMonth = Math.floor(remaining / validTenure);
-      let allocated = 0;
-
-      for (let i = 1; i <= validTenure; i++) {
-        const dueDate = new Date(today);
-        dueDate.setDate(today.getDate() + (i * 30));
-        const isLast = i === validTenure;
-        const amount = isLast ? (remaining - allocated) : perMonth;
-        allocated += perMonth;
-
-        schedule.push({
-          installmentNumber: i + 1,
-          amount: Math.max(0, amount),
-          dueDate: dueDate.toISOString().split("T")[0],
-          notes: `EMI Slot ${i} of ${validTenure} (Due in ${i * 30} days)`,
-        });
-      }
-    }
-    return schedule;
-  }, []);
-
-  // Helper to generate Lumpsum schedule (supports full payment or partial down-payment with remaining balance within 45 days)
-  const generateLumpsumSchedule = React.useCallback((totalFee: number, downPayment: number, dueDateStr?: string) => {
-    const validDownPayment = Math.max(0, Math.min(totalFee, downPayment));
-    const remaining = Math.max(0, totalFee - validDownPayment);
-    const schedule: Array<{
-      installmentNumber: number;
-      amount: number;
-      dueDate: string;
-      notes: string;
-    }> = [];
-    const today = new Date();
-
-    // Slot 1: Down payment / amount paid today
-    schedule.push({
-      installmentNumber: 1,
-      amount: validDownPayment,
-      dueDate: today.toISOString().split("T")[0],
-      notes: remaining === 0 ? "Full Lumpsum Admission Fee" : "Slot 1 (Admission Down-Payment)",
-    });
-
-    if (remaining > 0) {
-      let targetDueDate = dueDateStr;
-      if (!targetDueDate) {
-        const d = new Date(today);
-        d.setDate(today.getDate() + 30);
-        targetDueDate = d.toISOString().split("T")[0];
-      }
-      schedule.push({
-        installmentNumber: 2,
-        amount: remaining,
-        dueDate: targetDueDate,
-        notes: "Remaining Lumpsum Balance (Due within 45 days)",
-      });
-    }
-    return schedule;
-  }, []);
-
-  // Dynamic Down Payment change handler: immediately updates paidAmount and recalculates remaining slots
+  // Update Slot 1 (Down Payment) when paidAmount changes
   const handleDownPaymentChange = React.useCallback((val: number) => {
     const safeVal = Math.max(0, val);
     setPaidAmount(safeVal);
-    if (paymentPlan === "EMI") {
-      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, safeVal, installmentCount));
-    } else if (paymentPlan === "LUMPSUM") {
-      setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, safeVal, lumpsumRemainingDueDate));
-    }
-  }, [finalFeeInr, paymentPlan, installmentCount, lumpsumRemainingDueDate, generateEmiSchedule, generateLumpsumSchedule]);
-
-  const handleSelectPaymentPlan = (plan: "LUMPSUM" | "EMI") => {
-    setPaymentPlan(plan);
-    if (plan === "EMI") {
-      const dp = (paidAmount >= finalFeeInr || paidAmount === 0) ? 0 : paidAmount;
-      setPaidAmount(dp);
-      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, dp, installmentCount));
-    } else {
-      const dp = paidAmount === 0 ? finalFeeInr : paidAmount;
-      setPaidAmount(dp);
-      setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, dp, lumpsumRemainingDueDate));
-    }
-  };
-
-  const handleTenureChange = (count: number) => {
-    const safeCount = Math.max(1, Math.min(10, count));
-    setInstallmentCount(safeCount);
-    if (paymentPlan === "EMI") {
-      setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, paidAmount, safeCount));
-    }
-  };
-
-  // Recalculate EMI Slots whenever finalFeeInr changes
-  React.useEffect(() => {
-    if (finalFeeInr > 0) {
-      if (paymentPlan === "EMI") {
-        const safeDp = Math.min(paidAmount, finalFeeInr);
-        setInstallmentsSchedule(generateEmiSchedule(finalFeeInr, safeDp, installmentCount));
-      } else if (paymentPlan === "LUMPSUM") {
-        if (paidAmount === 0 || paidAmount > finalFeeInr) {
-          setPaidAmount(finalFeeInr);
-          setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, finalFeeInr, lumpsumRemainingDueDate));
-        } else {
-          setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, paidAmount, lumpsumRemainingDueDate));
-        }
+    setInstallmentsSchedule((prev) => {
+      if (prev.length === 0) {
+        return [
+          {
+            installmentNumber: 1,
+            amount: safeVal,
+            dueDate: todayDateStr,
+            notes: "Slot 1 (Admission Down-Payment)",
+          },
+        ];
       }
+      const updated = [...prev];
+      updated[0] = {
+        ...updated[0],
+        amount: safeVal,
+      };
+      return updated;
+    });
+  }, [todayDateStr]);
+
+  // Synchronize Slot 1 (Down Payment) when finalFeeInr initializes or changes
+  React.useEffect(() => {
+    setInstallmentsSchedule((prev) => {
+      if (prev.length === 0) {
+        return [
+          {
+            installmentNumber: 1,
+            amount: paidAmount,
+            dueDate: todayDateStr,
+            notes: "Slot 1 (Admission Down-Payment)",
+          },
+        ];
+      }
+      return prev;
+    });
+  }, [finalFeeInr, todayDateStr]);
+
+  // Add a new installment row to the agreed schedule
+  const handleAddInstallment = () => {
+    const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const remainingUnscheduled = Math.max(0, finalFeeInr - totalScheduled);
+    const nextSlotNum = installmentsSchedule.length + 1;
+    const lastDateStr = installmentsSchedule.length > 0
+      ? installmentsSchedule[installmentsSchedule.length - 1].dueDate
+      : todayDateStr;
+    const nextDate = new Date(lastDateStr);
+    nextDate.setDate(nextDate.getDate() + 30);
+
+    setInstallmentsSchedule([
+      ...installmentsSchedule,
+      {
+        installmentNumber: nextSlotNum,
+        amount: remainingUnscheduled,
+        dueDate: nextDate.toISOString().split("T")[0],
+        notes: `Installment #${nextSlotNum}`,
+      },
+    ]);
+  };
+
+  // Remove an installment row (only future slots, index > 0)
+  const handleRemoveInstallment = (index: number) => {
+    if (index === 0) return; // Slot 1 is Down Payment, cannot be deleted
+    const filtered = installmentsSchedule.filter((_, i) => i !== index);
+    const reindexed = filtered.map((slot, i) => ({
+      ...slot,
+      installmentNumber: i + 1,
+      notes: i === 0 ? "Slot 1 (Admission Down-Payment)" : (slot.notes?.startsWith("Installment #") ? `Installment #${i + 1}` : slot.notes),
+    }));
+    setInstallmentsSchedule(reindexed);
+  };
+
+  // Auto-balance the exact difference on the last installment
+  const handleAutoBalanceLast = () => {
+    if (installmentsSchedule.length <= 1) return;
+    const totalWithoutLast = installmentsSchedule.slice(0, -1).reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const needed = Math.max(0, finalFeeInr - totalWithoutLast);
+    const updated = [...installmentsSchedule];
+    updated[updated.length - 1].amount = needed;
+    setInstallmentsSchedule(updated);
+  };
+
+  // Optional helper tool: divide remaining balance across N future installments
+  const handleSplitRemainingEqually = (numInstallments: number) => {
+    const parts = Math.max(1, numInstallments);
+    const remaining = Math.max(0, finalFeeInr - paidAmount);
+    const perPart = Math.floor(remaining / parts);
+    let allocated = 0;
+    const newSchedule = [
+      {
+        installmentNumber: 1,
+        amount: paidAmount,
+        dueDate: todayDateStr,
+        notes: "Slot 1 (Admission Down-Payment)",
+      },
+    ];
+    const baseDate = new Date();
+    for (let i = 1; i <= parts; i++) {
+      const isLast = i === parts;
+      const amt = isLast ? (remaining - allocated) : perPart;
+      allocated += perPart;
+      const d = new Date(baseDate);
+      d.setDate(d.getDate() + (i * 30));
+      newSchedule.push({
+        installmentNumber: i + 1,
+        amount: amt,
+        dueDate: d.toISOString().split("T")[0],
+        notes: `Installment #${i + 1}`,
+      });
     }
-  }, [finalFeeInr]);
+    setInstallmentsSchedule(newSchedule);
+  };
+
+  // Reset to full lumpsum payment
+  const handleSetFullSettlement = () => {
+    setPaidAmount(finalFeeInr);
+    setInstallmentsSchedule([
+      {
+        installmentNumber: 1,
+        amount: finalFeeInr,
+        dueDate: todayDateStr,
+        notes: "Full Admission Settlement (One-Time)",
+      },
+    ]);
+  };
 
   // Photo Upload Handler
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -470,6 +499,12 @@ export function DirectAdmissionDialog({
       utils.admin.listStudents.invalidate();
 
       setCreatedResult(res);
+
+      // If admission requires higher authority approval, don't dispatch direct credentials yet
+      if (res.requiresApproval) {
+        if (onSuccess && res.application?.id) onSuccess(res.application.id);
+        return;
+      }
 
       // Auto-Dispatch 1: Send credentials directly to the student's personal WhatsApp number
       const studPhone = ((res.credentials as any)?.phone || applicantPhone || whatsappNumber || "").replace(/\D/g, "");
@@ -537,36 +572,31 @@ export function DirectAdmissionDialog({
 
     // Down Payment validation
     if (paidAmount > finalFeeInr) {
-      setErrorMsg(`Down payment (₹${paidAmount.toLocaleString("en-IN")}) cannot exceed the total payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+      setErrorMsg(`Down payment (₹${paidAmount.toLocaleString("en-IN")}) cannot exceed the Final Discounted Fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
       return;
     }
 
-    // EMI Tenure validation (1 to 10 months)
-    if (paymentPlan === "EMI" && (installmentCount < 1 || installmentCount > 10)) {
-      setErrorMsg("EMI duration must be between 1 and 10 months.");
+    // Required Arithmetic Validation:
+    // Total of Down Payment + All Scheduled Installments = Final Discounted Fee.
+    const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+    const scheduleDiff = finalFeeInr - totalScheduled;
+    if (scheduleDiff !== 0) {
+      setErrorMsg(
+        scheduleDiff > 0
+          ? `Schedule mismatch: Scheduled total (₹${totalScheduled.toLocaleString("en-IN")}) is ₹${scheduleDiff.toLocaleString("en-IN")} short of Final Discounted Fee (₹${finalFeeInr.toLocaleString("en-IN")}). Please balance the installments.`
+          : `Schedule mismatch: Scheduled total (₹${totalScheduled.toLocaleString("en-IN")}) exceeds Final Discounted Fee (₹${finalFeeInr.toLocaleString("en-IN")}) by ₹${Math.abs(scheduleDiff).toLocaleString("en-IN")}. Please correct the installment amounts.`
+      );
       return;
     }
 
-    // Lumpsum 45-day validation
-    if (paymentPlan === "LUMPSUM" && paidAmount < finalFeeInr) {
-      const todayMs = new Date().setHours(0, 0, 0, 0);
-      const dueMs = new Date(lumpsumRemainingDueDate).setHours(0, 0, 0, 0);
-      const diffDays = Math.ceil((dueMs - todayMs) / (1000 * 60 * 60 * 24));
-      if (diffDays > 45) {
-        setErrorMsg("Lumpsum remaining balance due date cannot exceed 45 days from admission date.");
+    // Prevent negative or zero future installments
+    for (const inst of installmentsSchedule) {
+      if (inst.amount < 0) {
+        setErrorMsg(`Installment #${inst.installmentNumber} cannot have a negative amount.`);
         return;
       }
-      if (diffDays < 0) {
-        setErrorMsg("Lumpsum remaining balance due date cannot be in the past.");
-        return;
-      }
-    }
-
-    // Total Installments Sum validation
-    if (finalFeeInr > 0 && installmentsSchedule.length > 0) {
-      const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
-      if (totalScheduled !== finalFeeInr) {
-        setErrorMsg(`Total of all installment slots (₹${totalScheduled.toLocaleString("en-IN")}) must equal the final payable fee (₹${finalFeeInr.toLocaleString("en-IN")}).`);
+      if (inst.installmentNumber > 1 && inst.amount === 0) {
+        setErrorMsg(`Future Installment #${inst.installmentNumber} cannot be zero. Please remove it or enter an agreed amount.`);
         return;
       }
     }
@@ -594,18 +624,23 @@ export function DirectAdmissionDialog({
       photoUrl: photoUrl || undefined,
       leadId: selectedLeadId || undefined,
       source,
-      totalCourseFee: courseFeeInr * 100,
+      totalCourseFee: Math.round(courseFeeInr * 100),
       discountType: discountValue > 0 ? discountType : undefined,
-      discountValue: discountValue > 0 ? discountValue : undefined,
-      discountAmount: discountAmountInr > 0 ? discountAmountInr * 100 : undefined,
+      discountValue: discountValue > 0 ? Number(discountValue) : undefined,
+      discountAmount: discountAmountInr > 0 ? Math.round(discountAmountInr * 100) : 0,
       discountReason: discountReason.trim() || undefined,
-      finalFee: finalFeeInr * 100,
-      paidAmount: paidAmount > 0 ? paidAmount * 100 : undefined,
-      paymentPlan,
-      installmentCount: paymentPlan === "EMI" ? installmentCount : undefined,
+      globalCertificationFee: Math.round(globalCertFeeInr * 100),
+      slgKitFee: Math.round(kitFeeInr * 100),
+      gstAmount: Math.round(gstAmountInr * 100),
+      cgstAmount: Math.round((gstAmountInr * 100) / 2),
+      sgstAmount: Math.round((gstAmountInr * 100) / 2),
+      finalFee: Math.round(finalFeeInr * 100),
+      paidAmount: Math.round((paidAmount || 0) * 100),
+      paymentPlan: installmentsSchedule.length > 1 ? "EMI" : "LUMPSUM",
+      installmentCount: installmentsSchedule.length,
       installments: installmentsSchedule.length > 0 ? installmentsSchedule.map((s) => ({
         installmentNumber: s.installmentNumber,
-        amount: Math.round(s.amount * 100),
+        amount: Math.round(Number(s.amount) * 100),
         dueDate: new Date(s.dueDate),
         notes: s.notes,
       })) : undefined,
@@ -622,6 +657,8 @@ export function DirectAdmissionDialog({
       universityRegistrationFee: isUniversity ? (selectedCourse?.registrationFee ?? 100000) : undefined,
       universityExaminationFee: isUniversity ? (selectedCourse?.examinationFee ?? 100000) : undefined,
       universityFee: isUniversity ? (selectedCourse?.universityFeeYear ?? selectedCourse?.baseFee ?? undefined) : undefined,
+      counselorId: isSuperAdminOrDirector && counselorId ? counselorId : undefined,
+      requestDiscountApproval: requiresApproval,
     });
   };
 
@@ -729,9 +766,93 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
         )}
 
         {/* =================================================================== */}
-        {/* VIEW 3: SUCCESSFUL ADMISSION CONFIRMATION & CREDENTIALS */}
+        {/* VIEW 3: SUCCESSFUL ADMISSION CONFIRMATION & CREDENTIALS / APPROVAL VIEW */}
         {/* =================================================================== */}
         {createdResult && !viewingReceipt && !viewingIdCard && (
+          createdResult.requiresApproval ? (
+            <div className="space-y-4 p-4 text-slate-900">
+              <DialogHeader>
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                    <Clock className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-base font-bold text-slate-900">
+                      Admission Submitted for Higher Authority Approval
+                    </DialogTitle>
+                    <DialogDescription className="text-xs text-slate-500">
+                      Application <span className="font-mono font-bold text-slate-800">{createdResult.application?.applicationNumber}</span> has been logged under review.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              <div className="bg-amber-50/80 border border-amber-200 rounded-lg p-4 space-y-3">
+                <div className="flex items-center gap-2 text-xs font-bold text-amber-900 pb-2 border-b border-amber-200">
+                  <ShieldCheck className="h-4 w-4 text-amber-700" />
+                  <span>Special Discount Approval Requested</span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Applicant Name</span>
+                    <span className="font-semibold text-slate-900">{applicantName}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Target Program</span>
+                    <span className="font-semibold text-slate-900">{selectedCourse?.title}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Original Course Fee</span>
+                    <span className="font-semibold text-slate-800">₹{courseFeeInr.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Requested Discount</span>
+                    <span className="font-bold text-emerald-700">
+                      ₹{discountAmountInr.toLocaleString("en-IN")} ({discountPercentCalculated}%)
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Agreed Final Payable</span>
+                    <span className="font-bold text-slate-900">₹{finalFeeInr.toLocaleString("en-IN")}</span>
+                  </div>
+                  <div>
+                    <span className="text-slate-500 text-[11px] block">Agreed Down Payment</span>
+                    <span className="font-bold text-emerald-800">₹{paidAmount.toLocaleString("en-IN")}</span>
+                  </div>
+                </div>
+                {discountReason && (
+                  <div className="pt-2 border-t border-amber-200 text-xs">
+                    <span className="text-slate-500 text-[11px] block">Counselor Justification / Reason:</span>
+                    <span className="italic text-slate-700 font-medium">"{discountReason}"</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 text-xs text-blue-900 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <CheckCircle2 className="h-4 w-4 text-blue-600 shrink-0" />
+                  <span>Automatic Post-Approval Dispatch Configured</span>
+                </p>
+                <p className="text-[11px] text-blue-700">
+                  As soon as the Director or Super Admin approves this admission from their desk, the student profile, LMS account credentials, official fee receipt, and student ID card will be automatically generated and dispatched via <strong>Email & WhatsApp</strong> to the student.
+                </p>
+              </div>
+
+              <DialogFooter className="pt-3 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setCreatedResult(null);
+                    onOpenChange(false);
+                  }}
+                  className="text-xs h-8"
+                >
+                  Close Desk
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
           <div className="space-y-4 p-2 text-slate-900">
             <DialogHeader>
               <div className="flex items-center gap-2">
@@ -940,6 +1061,13 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                       universityFee: createdResult.isUniversity ? (selectedCourse?.universityFeeYear ?? selectedCourse?.baseFee) : undefined,
                       totalFee: courseFeeInr * 100,
                       discountAmount: discountAmountInr * 100,
+                      globalCertificationFee: 0,
+                      slgKitFee: 0,
+                      taxableAmount: finalFeeInr * 100,
+                      cgstAmount: 0,
+                      sgstAmount: 0,
+                      totalGstAmount: 0,
+                      sacCode: "999293",
                       netPayable: finalFeeInr * 100,
                       amountPaid: paidAmount * 100,
                       pendingAmount: pendingAmountInr * 100,
@@ -969,6 +1097,7 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
               </Button>
             </DialogFooter>
           </div>
+          )
         )}
 
         {/* =================================================================== */}
@@ -1008,6 +1137,31 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                     {leads.map((l: any) => (
                       <option key={l.id} value={l.id}>
                         {l.fullName} ({l.phone}) — {l.course?.title || "General Enquiry"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Counselor Reference (Ref) for Higher Authorities */}
+              {isSuperAdminOrDirector && (
+                <div className="space-y-1 bg-amber-50/70 p-2.5 rounded-lg border border-amber-200">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-[11px] font-bold text-amber-900 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-amber-700" />
+                      <span>Counselor Reference (Ref) / Attributed Counselor</span>
+                    </Label>
+                    <span className="text-[10px] text-amber-700 font-medium">Attributed to Counselor</span>
+                  </div>
+                  <select
+                    value={counselorId}
+                    onChange={(e) => setCounselorId(e.target.value)}
+                    className="flex h-8 w-full rounded-md border border-amber-300 bg-white px-2 py-1 text-xs text-slate-900 focus:border-amber-500 focus:ring-1 focus:ring-amber-500"
+                  >
+                    <option value="">-- Direct Admission (Higher Authority / Desk Direct) --</option>
+                    {counselorsList.map((c: any) => (
+                      <option key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName} ({c.email}) — [{c.roleCode}]
                       </option>
                     ))}
                   </select>
@@ -1437,32 +1591,34 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                   )}
                 </div>
 
-                {/* Top Metrics Cards */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs">
-                  <div>
-                    <span className="text-slate-500 block text-[10px] font-semibold uppercase">Total Program Fee</span>
-                    <span className="font-bold text-slate-900 font-mono text-sm">
-                      ₹{courseFeeInr.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[10px] font-semibold uppercase">Total Discount</span>
-                    <span className="font-bold text-emerald-700 font-mono text-sm">
-                      -₹{discountAmountInr.toLocaleString("en-IN")}
-                      {discountPercentCalculated > 0 && ` (${discountPercentCalculated}%)`}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[10px] font-semibold uppercase">Net Payable</span>
-                    <span className="font-bold text-blue-700 font-mono text-sm">
-                      ₹{finalFeeInr.toLocaleString("en-IN")}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-500 block text-[10px] font-semibold uppercase">Balance After Today</span>
-                    <span className={`font-bold font-mono text-sm ${pendingAmountInr > 0 ? "text-amber-700" : "text-emerald-700"}`}>
-                      ₹{pendingAmountInr.toLocaleString("en-IN")}
-                    </span>
+                {/* Top Metrics Cards with Inbuilt 18% GST, Certification & Kit Fee Breakdown */}
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-xs">
+                    <div>
+                      <span className="text-slate-500 block text-[10px] font-semibold uppercase">Base Tuition Fee</span>
+                      <span className="font-bold text-slate-900 font-mono text-sm">
+                        ₹{courseFeeInr.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px] font-semibold uppercase">Total Discount</span>
+                      <span className="font-bold text-emerald-700 font-mono text-sm">
+                        -₹{discountAmountInr.toLocaleString("en-IN")}
+                        {discountPercentCalculated > 0 && ` (${discountPercentCalculated}%)`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px] font-semibold uppercase">Net Payable (Incl. 18% GST)</span>
+                      <span className="font-bold text-blue-700 font-mono text-sm">
+                        ₹{finalFeeInr.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 block text-[10px] font-semibold uppercase">Balance After Today</span>
+                      <span className={`font-bold font-mono text-sm ${pendingAmountInr > 0 ? "text-amber-700" : "text-emerald-700"}`}>
+                        ₹{pendingAmountInr.toLocaleString("en-IN")}
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -1497,11 +1653,13 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                       )}
                     </div>
 
-                    {/* Quick Discount Selector Buttons 5% to 45% */}
+                    {/* Quick Discount Selector Buttons 5% to 35% (Festive Chhath Puja Offer) */}
                     <div className="space-y-1">
                       <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-between">
                         <span>Quick Discount:</span>
-                        <span className="text-emerald-700 font-bold">5% to 45% Auto-Deduct</span>
+                        <span className="text-emerald-700 font-bold">
+                          {isPromotionalPeriod ? "🌅 Chhath Puja Offer: Flat 35% Auto-Deduct" : "Standard Limit: Up to 10%"}
+                        </span>
                       </div>
                       <div className="flex flex-wrap gap-1">
                         {[5, 10, 15, 20, 25, 30, 35, 40, 45].map((pct) => (
@@ -1511,17 +1669,23 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                             onClick={() => {
                               setDiscountType("PERCENTAGE");
                               setDiscountValue(pct);
-                              if (!discountReason || discountReason.includes("Scholarship")) {
-                                setDiscountReason(`Special Counselor Scholarship (${pct}% Off)`);
+                              if (!discountReason || discountReason.includes("Scholarship") || discountReason.includes("Offer")) {
+                                setDiscountReason(
+                                  pct === 35
+                                    ? "🌅 Chhath Puja Special Festive Concession (35% Off)"
+                                    : `Special Counselor Scholarship (${pct}% Off)`
+                                );
                               }
                             }}
                             className={`px-1.5 py-0.5 text-[10px] rounded font-bold border transition ${
                               discountType === "PERCENTAGE" && discountValue === pct
                                 ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                                : pct === 35
+                                ? "bg-amber-100 text-amber-900 border-amber-300 hover:bg-amber-200"
                                 : "bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100"
                             }`}
                           >
-                            {pct}%
+                            {pct === 35 ? "35% (Chhath Offer)" : `${pct}%`}
                           </button>
                         ))}
                       </div>
@@ -1542,7 +1706,7 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                         max={discountType === "PERCENTAGE" ? 100 : courseFeeInr}
                         value={discountValue}
                         onChange={(e) => setDiscountValue(Number(e.target.value))}
-                        placeholder={discountType === "PERCENTAGE" ? "5 - 45%" : "Flat Discount ₹"}
+                        placeholder={discountType === "PERCENTAGE" ? "e.g. 35%" : "Flat Discount ₹"}
                         className="h-8 text-xs font-mono font-bold"
                       />
                     </div>
@@ -1558,7 +1722,7 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                       Discount Reason / Approval
                     </Label>
                     <Input
-                      placeholder="e.g. Merit scholarship, Early bird, Director approved"
+                      placeholder="e.g. Chhath Puja Festive Offer, Merit scholarship, Director approved"
                       value={discountReason}
                       onChange={(e) => setDiscountReason(e.target.value)}
                       className="h-8 text-xs"
@@ -1566,183 +1730,362 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                     {isDiscountOverLimit ? (
                       <div className="flex items-center gap-1 text-[10px] text-amber-700 font-semibold mt-0.5">
                         <AlertTriangle className="h-3 w-3 shrink-0" />
-                        <span>Exceeds 45% Counselor limit (Requires Director Reason)</span>
+                        <span>Exceeds {maxAllowedCounselorDiscountPct}% Counselor limit (Requires Director Reason)</span>
                       </div>
                     ) : (
-                      <span className="text-[10px] text-slate-400 block">Counselor approved scholarship up to 45%</span>
+                      <span className="text-[10px] text-slate-400 block">
+                        {isPromotionalPeriod ? "Chhath Puja festive concession up to 35% pre-approved" : "Counselor approved scholarship up to 10%"}
+                      </span>
+                    )}
+
+                    {isCounselor && (
+                      <div className="pt-2">
+                        <label className="flex items-start gap-2 p-2 rounded-lg border border-amber-200 bg-amber-50/70 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={requiresApproval}
+                            onChange={(e) => setRequestDiscountApproval(e.target.checked)}
+                            className="mt-0.5 h-3.5 w-3.5 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <div className="text-[11px] text-amber-900 leading-tight">
+                            <span className="font-bold flex items-center gap-1">
+                              <ShieldCheck className="h-3.5 w-3.5 text-amber-700 shrink-0" />
+                              <span>
+                                {isHigherDiscount
+                                  ? `⚡ Higher Authority Approval Required (${discountPercentCalculated}% > ${maxAllowedCounselorDiscountPct}% limit)`
+                                  : "Submit for Higher Authority Discount Approval"}
+                              </span>
+                            </span>
+                            <span className="text-[10px] text-amber-700 block mt-0.5">
+                              {isHigherDiscount
+                                ? `Discounts above counselor limit (${maxAllowedCounselorDiscountPct}% until 10th Nov, 10% standard) require Director / Admin approval. Login credentials, receipt & WhatsApp dispatch automatically upon approval.`
+                                : "Check this to route this application for Director / Super Admin discount sanction before issuing student credentials."}
+                            </span>
+                          </div>
+                        </label>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Payment Plan Selector: Lumpsum vs EMI Slots */}
-                <div className="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                {/* Additional Pass-through Charges & Tax Configuration (P0 Section 4 Policy) */}
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
                   <div className="flex items-center justify-between">
-                    <Label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                      <Layers className="h-3.5 w-3.5 text-blue-600" />
-                      <span>Payment Structure / Fee Collection Plan *</span>
+                    <Label className="text-[11px] font-bold text-slate-800 uppercase tracking-wide">
+                      Additional Pass-Through Charges & Tax Options (Separately Itemized)
                     </Label>
-                    <span className="text-[10px] text-slate-500 font-medium">
-                      Select Lumpsum (One-Time) or EMI Installments (Up to 10 Months)
-                    </span>
+                    <span className="text-[10px] text-slate-400">Policy: Configurable per candidate terms</span>
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => handleSelectPaymentPlan("LUMPSUM")}
-                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                        paymentPlan === "LUMPSUM"
-                          ? "bg-slate-900 text-white border-slate-900 shadow-xs"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span>Lumpsum (One-Time Payment)</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSelectPaymentPlan("EMI")}
-                      className={`py-2 px-3 rounded-lg border text-xs font-semibold flex items-center justify-center gap-1.5 transition ${
-                        paymentPlan === "EMI"
-                          ? "bg-blue-600 text-white border-blue-700 shadow-xs"
-                          : "bg-white text-slate-700 border-slate-300 hover:bg-blue-50"
-                      }`}
-                    >
-                      <CalendarIcon className="h-3.5 w-3.5" />
-                      <span>EMI Slot (Up to 10 Months)</span>
-                    </button>
-                  </div>
-
-                  {/* Lumpsum Remaining Balance (Due within 45 Days) */}
-                  {paymentPlan === "LUMPSUM" && paidAmount < finalFeeInr && (
-                    <div className="pt-2 border-t border-slate-200 space-y-2">
-                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-amber-900 flex items-center gap-1.5">
-                            <CalendarIcon className="h-3.5 w-3.5 text-amber-700" />
-                            <span>Lumpsum Remaining Balance (Due within 45 Days)</span>
-                          </span>
-                          <span className="font-mono font-bold text-amber-800 text-sm">
-                            ₹{(finalFeeInr - paidAmount).toLocaleString("en-IN")}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-amber-800">
-                          Under Lumpsum policy, remaining balance after down payment must be cleared within maximum 45 days.
-                        </p>
-                        <div className="flex items-center gap-2 pt-1">
-                          <Label className="text-[11px] font-semibold text-amber-900 shrink-0">
-                            Balance Due Date:
-                          </Label>
-                          <input
-                            type="date"
-                            min={todayDateStr}
-                            max={maxLumpsumDueDateStr}
-                            value={lumpsumRemainingDueDate}
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              setLumpsumRemainingDueDate(val);
-                              setInstallmentsSchedule(generateLumpsumSchedule(finalFeeInr, paidAmount, val));
-                            }}
-                            className="h-7 px-2 border border-amber-300 rounded text-xs bg-white text-slate-800 font-medium"
-                          />
-                          <span className="text-[10px] text-amber-600">
-                            (Max allowed: {maxLumpsumDueDateStr})
-                          </span>
-                        </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                    <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${includeGlobalCertification ? "bg-indigo-50 border-indigo-300 text-indigo-900 font-semibold" : "bg-white border-slate-200 text-slate-700"}`}>
+                      <input
+                        type="checkbox"
+                        checked={includeGlobalCertification}
+                        onChange={(e) => setIncludeGlobalCertification(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                      />
+                      <div>
+                        <span>Global Certification</span>
+                        <span className="block text-[10px] text-indigo-700 font-mono">+₹3,500</span>
                       </div>
-                    </div>
-                  )}
+                    </label>
 
-                  {/* EMI Slot Configuration Box */}
-                  {paymentPlan === "EMI" && (
-                    <div className="pt-2 border-t border-slate-200 space-y-2.5">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                        <span className="text-[11px] font-bold text-slate-700">
-                          Select EMI Duration (1 to 10 Months):
+                    <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${includeKitFee ? "bg-indigo-50 border-indigo-300 text-indigo-900 font-semibold" : "bg-white border-slate-200 text-slate-700"}`}>
+                      <input
+                        type="checkbox"
+                        checked={includeKitFee}
+                        onChange={(e) => setIncludeKitFee(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                      />
+                      <div>
+                        <span>SoftLab Welcome Kit</span>
+                        <span className="block text-[10px] text-indigo-700 font-mono">+₹1,000</span>
+                      </div>
+                    </label>
+
+                    <label className={`flex items-center gap-2 p-2 rounded border cursor-pointer transition-colors ${includeGst ? "bg-indigo-50 border-indigo-300 text-indigo-900 font-semibold" : "bg-white border-slate-200 text-slate-700"}`}>
+                      <input
+                        type="checkbox"
+                        checked={includeGst}
+                        onChange={(e) => setIncludeGst(e.target.checked)}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+                      />
+                      <div>
+                        <span>GST Tax (18%)</span>
+                        <span className="block text-[10px] text-indigo-700 font-mono">
+                          {includeGst ? `+₹${gstAmountInr.toLocaleString("en-IN")}` : "Exempt / Unbilled"}
                         </span>
-                        <div className="flex flex-wrap gap-1">
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((count) => (
-                            <button
-                              key={count}
-                              type="button"
-                              onClick={() => handleTenureChange(count)}
-                              className={`px-2 py-1 text-xs rounded font-bold border transition ${
-                                installmentCount === count
-                                  ? "bg-blue-600 text-white border-blue-700 shadow-xs"
-                                  : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
-                              }`}
-                            >
-                              {count}M
-                            </button>
-                          ))}
-                        </div>
                       </div>
+                    </label>
+                  </div>
+                </div>
 
-                      {/* Interactive Installments Schedule Table */}
-                      <div className="border border-slate-200 rounded-lg overflow-hidden bg-white">
-                        <table className="w-full text-xs">
-                          <thead className="bg-slate-100 text-slate-600 font-semibold">
-                            <tr>
-                              <th className="py-1.5 px-3 text-left">Slot</th>
-                              <th className="py-1.5 px-3 text-left">Due Date</th>
-                              <th className="py-1.5 px-3 text-right">Amount (₹)</th>
-                              <th className="py-1.5 px-3 text-left">Notes / Terms</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100 font-mono">
-                            {installmentsSchedule.map((slot, index) => (
-                              <tr key={slot.installmentNumber} className={index === 0 ? "bg-emerald-50/50" : ""}>
-                                <td className="py-2 px-3 font-bold text-slate-800">
-                                  {index === 0 ? (
-                                    <span className="inline-flex items-center gap-1 text-emerald-800 font-sans text-[11px] font-bold">
-                                      Slot 1 (Admission Down-Payment)
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-600 font-sans text-[11px]">
-                                      Slot {slot.installmentNumber}
-                                    </span>
-                                  )}
-                                </td>
-                                <td className="py-2 px-3">
-                                  <input
-                                    type="date"
-                                    value={slot.dueDate}
-                                    onChange={(e) => {
-                                      const updated = [...installmentsSchedule];
-                                      updated[index].dueDate = e.target.value;
-                                      setInstallmentsSchedule(updated);
-                                    }}
-                                    className="h-7 px-2 border rounded text-xs bg-white text-slate-800"
-                                  />
-                                </td>
-                                <td className="py-2 px-3 text-right">
-                                  <input
-                                    type="number"
-                                    min={0}
-                                    value={slot.amount}
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value) || 0;
-                                      if (index === 0) {
-                                        handleDownPaymentChange(val);
-                                      } else {
-                                        const updated = [...installmentsSchedule];
-                                        updated[index].amount = val;
-                                        setInstallmentsSchedule(updated);
-                                      }
-                                    }}
-                                    className="h-7 w-24 px-2 border rounded text-xs text-right font-bold text-slate-900 bg-white"
-                                  />
-                                </td>
-                                <td className="py-2 px-3 font-sans text-[10px] text-slate-500">
-                                  {slot.notes}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                {/* Dynamic Commercial Fee Summary Card */}
+                <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-4 rounded-xl shadow-sm space-y-3">
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                      <IndianRupee className="h-4 w-4" />
+                      Canonical Commercial Fee Calculation
+                    </span>
+                    <Badge variant="outline" className="text-[10px] text-white border-white/30 font-mono">
+                      Base - Discount + Charges + Tax
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 text-center">
+                    <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+                      <div className="text-[10px] text-slate-300">Base Course Fee</div>
+                      <div className="text-xs font-bold font-mono text-white mt-0.5">
+                        ₹{courseFeeInr.toLocaleString("en-IN")}
                       </div>
                     </div>
-                  )}
+                    <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+                      <div className="text-[10px] text-amber-300">Sales Discount</div>
+                      <div className="text-xs font-bold font-mono text-amber-400 mt-0.5">
+                        -₹{discountAmountInr.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+                      <div className="text-[10px] text-emerald-300">Net Course Fee</div>
+                      <div className="text-xs font-bold font-mono text-emerald-400 mt-0.5">
+                        ₹{netCourseFeeInr.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div className="bg-white/5 rounded-lg p-2 border border-white/10">
+                      <div className="text-[10px] text-indigo-300">Charges + GST</div>
+                      <div className="text-xs font-bold font-mono text-indigo-300 mt-0.5">
+                        +₹{(additionalChargesInr + gstAmountInr).toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div className="bg-emerald-500/20 rounded-lg p-2 border border-emerald-400/40">
+                      <div className="text-[10px] text-emerald-300 font-semibold">Final Payable</div>
+                      <div className="text-sm font-black font-mono text-emerald-300 mt-0.5">
+                        ₹{finalFeeInr.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                    <div className="bg-blue-500/20 rounded-lg p-2 border border-blue-400/40">
+                      <div className="text-[10px] text-blue-300 font-semibold">Remaining Due</div>
+                      <div className="text-sm font-black font-mono text-blue-300 mt-0.5">
+                        ₹{remainingOutstandingFeeInr.toLocaleString("en-IN")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Completely Dynamic Agreed Installment Schedule */}
+                <div className="space-y-3 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <Label className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <Layers className="h-4 w-4 text-emerald-600" />
+                        <span>Agreed Payment Schedule & Installment Breakdown</span>
+                      </Label>
+                      <p className="text-[11px] text-slate-500">
+                        Custom dates, equal or unequal amounts agreed with student. No forced fixed EMI schedules.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={handleAddInstallment}
+                        className="h-7 text-xs bg-white text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1 font-semibold"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add Installment
+                      </Button>
+
+                      {remainingOutstandingFeeInr > 0 && (
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleSplitRemainingEqually(Number(e.target.value));
+                              e.target.value = "";
+                            }
+                          }}
+                          defaultValue=""
+                          className="h-7 px-2 text-xs rounded border border-slate-300 bg-white text-slate-700 font-medium"
+                        >
+                          <option value="" disabled>Quick Split Remaining...</option>
+                          <option value="2">Split across 2 Months</option>
+                          <option value="3">Split across 3 Months</option>
+                          <option value="4">Split across 4 Months</option>
+                          <option value="5">Split across 5 Months</option>
+                          <option value="6">Split across 6 Months</option>
+                          <option value="8">Split across 8 Months</option>
+                          <option value="10">Split across 10 Months</option>
+                          <option value="12">Split across 12 Months</option>
+                        </select>
+                      )}
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleSetFullSettlement}
+                        className="h-7 text-xs text-slate-600 hover:text-slate-900"
+                      >
+                        Full Lumpsum
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Installments Table */}
+                  <div className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-xs">
+                    <table className="w-full text-xs">
+                      <thead className="bg-slate-100 text-slate-700 font-semibold">
+                        <tr>
+                          <th className="py-2 px-3 text-left w-36">Slot / Milestone</th>
+                          <th className="py-2 px-3 text-left w-40">Agreed Due Date</th>
+                          <th className="py-2 px-3 text-right w-36">Agreed Amount (₹)</th>
+                          <th className="py-2 px-3 text-left">Terms / Purpose Notes</th>
+                          <th className="py-2 px-3 text-center w-12">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-mono">
+                        {installmentsSchedule.map((slot, index) => {
+                          const isDownPayment = index === 0;
+                          return (
+                            <tr key={slot.installmentNumber} className={isDownPayment ? "bg-emerald-50/40" : "hover:bg-slate-50/50"}>
+                              <td className="py-2 px-3 font-bold text-slate-800">
+                                {isDownPayment ? (
+                                  <Badge className="bg-emerald-100 text-emerald-800 border-emerald-300 text-[10px] font-sans font-bold hover:bg-emerald-100">
+                                    Slot 1 (Down Payment)
+                                  </Badge>
+                                ) : (
+                                  <span className="text-slate-700 font-sans text-xs font-semibold">
+                                    Installment #{slot.installmentNumber}
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="date"
+                                  value={slot.dueDate}
+                                  onChange={(e) => {
+                                    const updated = [...installmentsSchedule];
+                                    updated[index].dueDate = e.target.value;
+                                    setInstallmentsSchedule(updated);
+                                  }}
+                                  className="h-7 px-2 border border-slate-300 rounded text-xs bg-white text-slate-800 w-full"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-right">
+                                <input
+                                  type="number"
+                                  min={0}
+                                  value={slot.amount}
+                                  onChange={(e) => {
+                                    const val = Math.max(0, Number(e.target.value) || 0);
+                                    if (isDownPayment) {
+                                      handleDownPaymentChange(val);
+                                    } else {
+                                      const updated = [...installmentsSchedule];
+                                      updated[index].amount = val;
+                                      setInstallmentsSchedule(updated);
+                                    }
+                                  }}
+                                  className="h-7 w-28 px-2 border border-slate-300 rounded text-xs text-right font-bold text-slate-900 bg-white"
+                                />
+                              </td>
+                              <td className="py-2 px-3">
+                                <input
+                                  type="text"
+                                  value={slot.notes || ""}
+                                  placeholder={isDownPayment ? "Admission down payment" : `Installment #${slot.installmentNumber} note`}
+                                  onChange={(e) => {
+                                    const updated = [...installmentsSchedule];
+                                    updated[index].notes = e.target.value;
+                                    setInstallmentsSchedule(updated);
+                                  }}
+                                  className="h-7 px-2 border border-slate-200 rounded text-xs bg-white text-slate-700 w-full font-sans"
+                                />
+                              </td>
+                              <td className="py-2 px-3 text-center">
+                                {!isDownPayment ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveInstallment(index)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                    title="Remove this installment"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                ) : (
+                                  <span className="text-[10px] text-slate-300 font-sans">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Arithmetic Validation Status Banner */}
+                  {(() => {
+                    const totalScheduled = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+                    const scheduleDiff = finalFeeInr - totalScheduled;
+                    if (scheduleDiff === 0) {
+                      return (
+                        <div className="flex items-center justify-between p-2.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                            <span className="font-semibold">
+                              Schedule Perfectly Balanced: Total Scheduled (₹{totalScheduled.toLocaleString("en-IN")}) = Final Discounted Fee (₹{finalFeeInr.toLocaleString("en-IN")}).
+                            </span>
+                          </div>
+                          <Badge variant="outline" className="bg-emerald-100 text-emerald-800 border-emerald-300 font-mono text-[10px]">
+                            Exact 100% Match
+                          </Badge>
+                        </div>
+                      );
+                    } else if (scheduleDiff > 0) {
+                      return (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                            <span>
+                              <strong>Under-Allocated:</strong> Scheduled ₹{totalScheduled.toLocaleString("en-IN")} of ₹{finalFeeInr.toLocaleString("en-IN")}. Difference: <strong>₹{scheduleDiff.toLocaleString("en-IN")}</strong> remaining to be scheduled.
+                            </span>
+                          </div>
+                          {installmentsSchedule.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAutoBalanceLast}
+                              className="h-7 text-xs bg-amber-700 hover:bg-amber-800 text-white shrink-0 font-semibold"
+                            >
+                              Auto-add ₹{scheduleDiff.toLocaleString("en-IN")} to Last Slot
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-300 text-rose-900 text-xs">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
+                            <span>
+                              <strong>Over-Allocated:</strong> Scheduled ₹{totalScheduled.toLocaleString("en-IN")} exceeds Final Discounted Fee (₹{finalFeeInr.toLocaleString("en-IN")}) by <strong>₹{Math.abs(scheduleDiff).toLocaleString("en-IN")}</strong>. Please reduce installment amounts.
+                            </span>
+                          </div>
+                          {installmentsSchedule.length > 1 && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleAutoBalanceLast}
+                              className="h-7 text-xs bg-rose-700 hover:bg-rose-800 text-white shrink-0 font-semibold"
+                            >
+                              Trim from Last Slot
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    }
+                  })()}
                 </div>
 
                 {/* Payment Mode & Amount Paid Today */}
@@ -1787,11 +2130,11 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                         className="h-8 text-xs font-mono font-bold text-emerald-700 bg-emerald-50/50 border-emerald-300"
                       />
                       <span className="text-[10px] text-slate-400 block">
-                        {paymentPlan === "EMI"
-                          ? "Actual down payment (Slot 1); balance splits across EMI months"
-                          : paidAmount < finalFeeInr
-                          ? "Down payment today; balance must be paid within 45 days"
-                          : "Full one-time fee payment"}
+                        {paidAmount >= finalFeeInr
+                          ? "Full one-time fee payment (100% cleared)"
+                          : paidAmount > 0
+                          ? `Down payment received today (Remaining balance ₹${(finalFeeInr - paidAmount).toLocaleString("en-IN")} scheduled across future slots)`
+                          : "Zero down payment today (full balance scheduled across installments)"}
                       </span>
                     </div>
 
@@ -1834,24 +2177,42 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                 </div>
               </div>
 
-              <DialogFooter className="pt-3 border-t">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => onOpenChange(false)}
-                  className="text-xs h-8"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || isUploadingPhoto}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-semibold gap-1.5"
-                >
-                  {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  <span>Generate Admission & Activate Account</span>
-                </Button>
-              </DialogFooter>
+              {(() => {
+                const totalScheduledVal = installmentsSchedule.reduce((sum, s) => sum + (Number(s.amount) || 0), 0);
+                const isMismatched = finalFeeInr > 0 && totalScheduledVal !== finalFeeInr;
+                return (
+                  <DialogFooter className="pt-3 border-t">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => onOpenChange(false)}
+                      className="text-xs h-8"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="submit"
+                      disabled={createMutation.isPending || isUploadingPhoto || isMismatched}
+                      className={`text-xs h-8 font-semibold gap-1.5 ${
+                        isMismatched
+                          ? "bg-slate-300 text-slate-500 cursor-not-allowed"
+                          : requiresApproval
+                          ? "bg-amber-600 hover:bg-amber-700 text-white"
+                          : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      }`}
+                    >
+                      {createMutation.isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      <span>
+                        {isMismatched
+                          ? "Schedule Mismatched (Balance to Submit)"
+                          : requiresApproval
+                          ? "Confirm & Submit for Higher Authority Approval"
+                          : "Generate Admission & Activate Account"}
+                      </span>
+                    </Button>
+                  </DialogFooter>
+                );
+              })()}
             </form>
           </div>
         )}
