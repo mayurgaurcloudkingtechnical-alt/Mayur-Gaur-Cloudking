@@ -1714,6 +1714,83 @@ export const INITIAL_SKILLVERSE_COURSES: SkillverseCourseItem[] = [
     syllabusRevisionDate: "2026-10-01",
     status: "PUBLISHED",
   },
+  {
+    id: "CRS-SAP-FICO",
+    code: "SV-SAP-FICO",
+    slug: "sap-s4hana-finance-controlling-fico",
+    title: "SAP S/4HANA Finance & Controlling (SAP FICO) Professional Program",
+    category: "COMMUNICATION_CAREER",
+    categoryLabel: "Enterprise ERP & Finance",
+    eligibleGrades: [
+      "B.Com / M.Com",
+      "BBA / MBA Finance",
+      "CA / CMA / CS",
+      "Finance Executives & Accounts Professionals",
+      "Graduates & Career Switchers",
+    ],
+    applicableBoards: ["Higher Education & Professional Track", "Corporate ERP Certification"],
+    deliveryModes: ["HYBRID", "OFFLINE", "ONLINE"],
+    durationLabel: "3 Months (120–140 Hours)",
+    durationMonths: 3,
+    teachingHours: 135,
+    pricingType: "STANDALONE",
+    priceInr: 29999, // ₹45,000 regular fee with ₹17,000 launch offer (Payable ₹29,999)
+    billingCycle: "ONE_TIME",
+    gstPercent: 18,
+    installmentAvailable: true,
+    batchCapacity: 20,
+    defaultTimetable: "Mon–Fri | 1.5–2 Hours/day (Evening) OR Weekend Intensive (Sat–Sun 4 Hours/day)",
+    prerequisites:
+      "Basic understanding of accounting principles or graduation in commerce/business/finance (B.Com, M.Com, BBA, MBA, CA/CMA aspirants) or working experience in accounts.",
+    shortSummary:
+      "A structured 3-month job-oriented program covering Accounting Fundamentals, SAP S/4HANA Financial Accounting (FI), Controlling (CO), 6 practical projects, and a final corporate financial capstone case study.",
+    description:
+      "The SAP S/4HANA Finance & Controlling (SAP FICO) Professional Program at SLG SKILLVERSE is an intensive, job-oriented curriculum designed for finance graduates, accountants, and working professionals. Covering everything from core accounting and ERP enterprise structures to General Ledger, Accounts Payable, Accounts Receivable, Asset Accounting, Cost Centre Accounting, Profit Centre Accounting, and FI-CO integration, this program prepares you for high-growth corporate roles including SAP FICO End User, Finance Executive, AP/AR Specialist, and Junior SAP Consultant.",
+    learningOutcomes: [
+      "Master core accounting principles, journal entries, ledgers, financial statements (P&L, Balance Sheet, Cash Flow), and Indian compliance overview (GST & TDS).",
+      "Navigate SAP S/4HANA enterprise ERP and master modern SAP Fiori Launchpad workflows.",
+      "Configure and operate SAP Financial Accounting (FI): Enterprise Structure, Chart of Accounts, General Ledger (GL), Accounts Payable (AP), Accounts Receivable (AR), Bank Accounting, and Asset Accounting.",
+      "Execute SAP Controlling (CO): Cost Element Accounting, Cost Centre Accounting (CCA), Profit Centre Accounting (PCA), Internal Orders, and Cost Allocations.",
+      "Understand Product Costing (CO-PC), Profitability Analysis (CO-PA), and real-time FI-CO integration.",
+      "Complete 6 guided practical enterprise projects and an end-to-end company financial case study with month-end closing procedures.",
+    ],
+    modules: [
+      {
+        title: "Month 1: Accounting Fundamentals & ERP Foundation (Weeks 1–4)",
+        teachingHours: 45,
+        lessons: [
+          "Week 1: Introduction to accounting & finance principles, golden rules, journal entries, ledgers, trial balance, and accounting standards.",
+          "Week 2: Profit & Loss Account, Balance Sheet, Cash Flow Statement, accrual accounting, and basic internal financial controls.",
+          "Week 3: Working Capital Management — Accounts Payable (AP) fundamentals, Accounts Receivable (AR) fundamentals, and Bank Reconciliation Statement (BRS).",
+          "Week 4: GST fundamentals, introductory TDS concepts in Indian business, Introduction to Enterprise Resource Planning (ERP), evolution of SAP, SAP S/4HANA architecture, and SAP Fiori navigation.",
+        ],
+      },
+      {
+        title: "Month 2: SAP Financial Accounting (FI) (Weeks 5–8)",
+        teachingHours: 45,
+        lessons: [
+          "Week 5: SAP Enterprise Structure (Company Code, Business Area, Fiscal Year Variant, Posting Periods), Chart of Accounts, and account groups.",
+          "Week 6: General Ledger (GL) Accounting — Master data, document types, number ranges, posting keys, debit/credit postings, park and post workflows, and document reversal.",
+          "Week 7: Business Partner (BP) concept in S/4HANA — Vendor master data, Accounts Payable (AP) invoice processing, vendor credit memos, Automatic Payment Program (F110), Customer master data, Accounts Receivable (AR) invoicing, incoming payment clearing, and dunning procedure.",
+          "Week 8: Bank Accounting — House Banks, account IDs, electronic/manual bank statement (BRS) processing; Asset Accounting — Asset classes, chart of depreciation, acquisition, retirement, transfer, and monthly depreciation run (AFAB); Month-end closing overview.",
+        ],
+      },
+      {
+        title: "Month 3: SAP Controlling (CO) & Practical Projects (Weeks 9–12)",
+        teachingHours: 45,
+        lessons: [
+          "Week 9: Introduction to Management Controlling (CO) & relationship with FI, Controlling Area setup, Cost Element Accounting (primary and secondary cost elements), and Cost Centre Accounting (CCA) master data & standard hierarchy.",
+          "Week 10: Profit Centre Accounting (PCA) master data, segment reporting, Internal Orders (real vs statistical orders, budgeting, and month-end settlement), and Cost Allocation (distribution & assessment cycles).",
+          "Week 11: Product Costing (CO-PC) fundamentals, Profitability Analysis (CO-PA) multi-dimensional reporting overview, FI-CO real-time integration, and Financial Statement Version (FSV) generation.",
+          "Week 12: 6 Guided Practical Projects (P2P, O2C, Asset Life Cycle, Cost Centre Budgeting, BRS, FSV) + Final End-to-End Capstone Company Financial Case Study (Alpha Manufacturing Ltd.) + Technical Mock Interview, Resume Tailoring & Placement Guidance.",
+        ],
+      },
+    ],
+    assessmentPattern:
+      "Accounting Fundamentals (15%), SAP FI Practical Operations (30%), SAP CO Practical Implementation (20%), Weekly Lab Assignments & Quizzes (10%), End-to-End Capstone Project Presentation (20%), Viva Voce & Technical Mock Interview (5%)",
+    syllabusRevisionDate: "2026-11-06",
+    status: "PUBLISHED",
+  },
 ];
 
 export interface SkillverseDiagnosticQuestion {

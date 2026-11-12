@@ -52,6 +52,7 @@ const ACADEMIC_LINKS = [
 ];
 
 const FUTURE_SKILLS_LINKS = [
+  { href: "/skillverse/sap-s4hana-finance-controlling-fico", label: "💼 SAP S/4HANA FICO (3 Months)" },
   { href: "/skillverse/computer-digital-skills", label: "Computer & Digital Skills" },
   { href: "/skillverse/ai-and-coding", label: "AI Literacy & Coding (Python/Web)" },
   { href: "/skillverse/robotics-and-stem", label: "Robotics & STEM Projects" },

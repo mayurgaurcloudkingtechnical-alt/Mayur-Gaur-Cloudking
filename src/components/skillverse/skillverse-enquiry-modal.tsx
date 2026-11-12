@@ -34,9 +34,8 @@ export function openSkillverseEnquiryModal(detail?: { courseSlug?: string; grade
 
 export function SkillverseEnquiryModal() {
   const pathname = usePathname();
-  const isDiwaliActive = isDiwaliCampaignActive();
-  // When Diwali Offer is active, festive modal takes priority. Otherwise open regular enquiry modal.
-  const [isOpen, setIsOpen] = useState(!isDiwaliActive);
+  // Open on initial load / refresh so enquiry modal is ready and present underneath the festive offer
+  const [isOpen, setIsOpen] = useState(true);
   const [submittedData, setSubmittedData] = useState<{
     referenceNumber: string;
     studentName: string;
@@ -67,11 +66,11 @@ export function SkillverseEnquiryModal() {
 
     if (isStaffPortal) {
       setIsOpen(false);
-    } else if (!isDiwaliActive) {
-      // Re-open on refresh / navigation across public pages when Diwali campaign is not active
+    } else {
+      // Re-open on refresh / navigation across public pages
       setIsOpen(true);
     }
-  }, [pathname, isDiwaliActive]);
+  }, [pathname]);
 
   // Listen for manual trigger events from "Book Demo" or "Enquire Now" buttons
   useEffect(() => {
@@ -152,7 +151,7 @@ export function SkillverseEnquiryModal() {
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="fixed left-4 bottom-5 z-[9990] inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] text-white text-xs font-bold shadow-2xl hover:scale-105 transition-all border-2 border-white/40 cursor-pointer animate-pulse"
+          className="fixed left-4 bottom-20 z-[9990] inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-[#0052CC] via-[#0077FF] to-[#16A34A] text-white text-xs font-bold shadow-2xl hover:scale-105 transition-all border-2 border-white/40 cursor-pointer animate-pulse"
           title="Open Skillverse Admission & Demo Enquiry Form"
         >
           <Sparkles className="w-4 h-4 text-yellow-300" />
@@ -165,7 +164,7 @@ export function SkillverseEnquiryModal() {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
+          className="fixed inset-0 z-[99990] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm overflow-y-auto"
         >
           {/* Backdrop click to dismiss */}
           <div
@@ -175,7 +174,7 @@ export function SkillverseEnquiryModal() {
           />
 
           {/* Modal Dialog Card */}
-          <div className="relative z-[100000] w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
+          <div className="relative z-[99991] w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden my-auto">
             {/* Header Ribbon */}
             <div className="bg-gradient-to-r from-[#071630] via-[#0B2247] to-[#0D3823] text-white p-5 sm:p-6 relative border-b border-white/10">
               {/* Close Button - Bold black button with maximum visibility */}
@@ -383,6 +382,7 @@ export function SkillverseEnquiryModal() {
                           <option value="IIT-JEE Prep">IIT-JEE Main & Advanced</option>
                           <option value="NEET Prep">NEET-UG Medical</option>
                           <option value="AI & Coding">AI & Coding Lab (Classes 8–12)</option>
+                          <option value="Graduation / Professional">Graduation / Professional (SAP FICO Track)</option>
                         </select>
                       </div>
                     </div>
@@ -390,7 +390,7 @@ export function SkillverseEnquiryModal() {
                     {/* School Board */}
                     <div>
                       <label className="block text-xs font-bold text-slate-700 mb-1">
-                        School Board <span className="text-rose-500">*</span>
+                        School Board / Background <span className="text-rose-500">*</span>
                       </label>
                       <div className="relative">
                         <Building className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
@@ -403,6 +403,7 @@ export function SkillverseEnquiryModal() {
                           <option value="ICSE">ICSE / ISC Board</option>
                           <option value="UP Board">UP Board (State Board)</option>
                           <option value="Other">Other State Board</option>
+                          <option value="University / Professional Track">Higher Education / Professional Track</option>
                         </select>
                       </div>
                     </div>
@@ -417,6 +418,7 @@ export function SkillverseEnquiryModal() {
                         onChange={(e) => setPreferredProgram(e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white text-slate-800"
                       >
+                        <option value="sap-s4hana-finance-controlling-fico">💼 SAP S/4HANA Finance & Controlling (SAP FICO)</option>
                         <option value="school-foundation-8-10">School Foundation (Classes 8–10)</option>
                         <option value="senior-secondary-11-12">Senior Secondary (Classes 11–12)</option>
                         <option value="iit-jee-foundation">IIT-JEE Foundation & Extension</option>
