@@ -8,6 +8,8 @@ import { randomBytes } from "crypto";
 import { EmailService } from "./email.service";
 import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AttendanceIntegrationService } from "./attendance-integration.service";
+import { VerificationEngineService } from "./verification/verification-engine.service";
+import { CentralNotificationEngine } from "./central-notification-engine.service";
 
 export interface OnboardEmployeeInput {
   existingUserId?: string; // Link existing platform user (from User Management)
@@ -352,28 +354,48 @@ export class StaffOnboardingService {
     // Initialize Default Leave Balances
     await AttendanceIntegrationService.getOrCreateLeaveBalances(result.staffProfile.id);
 
-    // Send Credentials Email if enabled
-    if (input.sendInviteEmail !== false) {
-      EmailService.sendStaffCredentials({
-        to: primaryEmail,
-        staffName: `${input.firstName.trim()} ${input.lastName.trim()}`,
-        employeeId,
-        loginEmail: primaryEmail,
-        temporaryPassword: tempPassword,
-        roleName: input.roleCode,
-        designation: input.designation.trim(),
-      }).catch((err) => console.error("[StaffOnboardingService] Email notification error:", err));
+    // Statutory KYC & Identity Verification
+    if (input.panNumber && input.panNumber.trim()) {
+      try {
+        await VerificationEngineService.verifyPan({
+          entityType: "StaffProfile",
+          entityId: result.staffProfile.id,
+          panNumber: input.panNumber.trim().toUpperCase(),
+          declaredName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+        }, actor);
+      } catch (err) {
+        console.warn(`[StaffOnboarding] Statutory PAN verification init warning:`, err);
+      }
     }
 
-    // Send Welcome WhatsApp Message with Login Credentials
-    const waPhone = input.whatsappNumber?.trim() || cleanPhone;
-    if (waPhone) {
-      const waMessage = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${input.firstName.trim()} ${input.lastName.trim()}*,\n\nCongratulations on joining the SoftLab Global enterprise team as *${input.designation.trim()}* in the *${input.department}* Department!\n\n🔑 *YOUR OFFICIAL LOGIN CREDENTIALS*:\n• Employee ID: \`${employeeId}\`\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: \`${primaryEmail}\`\n• Temporary Password: \`${tempPassword}\`\n\n📌 Please log in to complete your attendance punch and access your intelligent daily work planner.\n\nWarm regards,\n*HR & Executive Management*\n*SOFTLAB GLOBAL*\n🌐 www.softlabglobal.com`;
+    if (input.bankAccountNumber && input.bankIfsc) {
+      try {
+        await VerificationEngineService.verifyBankAccount({
+          entityType: "StaffProfile",
+          entityId: result.staffProfile.id,
+          accountNumber: input.bankAccountNumber.trim(),
+          ifsc: input.bankIfsc.trim().toUpperCase(),
+          declaredName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+        }, actor);
+      } catch (err) {
+        console.warn(`[StaffOnboarding] Statutory Bank verification init warning:`, err);
+      }
+    }
 
-      WhatsAppBusinessService.sendMessage({
-        toPhone: waPhone,
-        text: waMessage,
-      }).catch((err: any) => console.error("[StaffOnboardingService] WhatsApp notification error:", err));
+    // Dispatch Enterprise Onboarding Notifications (Official Email + Personal Email + WhatsApp)
+    if (input.sendInviteEmail !== false) {
+      CentralNotificationEngine.notifyStaffOnboarded({
+        staffId: result.staffProfile.id,
+        employeeId,
+        fullName: `${input.firstName.trim()} ${input.lastName.trim()}`,
+        officialEmail: primaryEmail,
+        personalEmail: input.personalEmail?.trim() || undefined,
+        whatsappNumber: input.whatsappNumber?.trim() || cleanPhone || undefined,
+        department: String(input.department),
+        designation: input.designation.trim(),
+        roleCode: String(input.roleCode),
+        actorId: actor.id,
+      }).catch((err) => console.error("[StaffOnboardingService] Central notification error:", err));
     }
 
     return {
@@ -431,42 +453,30 @@ export class StaffOnboardingService {
     const primaryEmail = staff.user.email;
     const phone = staff.personalPhone || staff.user.phone || staff.user.whatsappNumber;
 
-    // Send Email
-    const emailResult = await EmailService.sendStaffCredentials({
-      to: primaryEmail,
-      staffName: fullName,
+    // Send Enterprise Dual-Email & WhatsApp Notifications
+    const dispatchRes = await CentralNotificationEngine.notifyStaffOnboarded({
+      staffId: staff.id,
       employeeId: staff.employeeId,
-      loginEmail: primaryEmail,
-      temporaryPassword: tempPassword,
-      roleName: staff.user.roleCode,
+      fullName,
+      officialEmail: primaryEmail,
+      personalEmail: staff.personalEmail || undefined,
+      whatsappNumber: phone || undefined,
+      department: String(staff.department),
       designation: staff.designation,
-    }).catch((err) => {
-      console.error("[StaffOnboardingService] Resend email error:", err);
-      return { sent: false, reason: err?.message as string | undefined };
+      roleCode: String(staff.user.roleCode),
+      actorId: actor.id,
     });
 
-    // Send WhatsApp
-    let waResult: { success: boolean; error?: string } = { success: false, error: "No phone number on profile" };
-    if (phone) {
-      const waMessage = `🌟 *WELCOME TO SOFTLAB GLOBAL* 🌟\n\nDear *${fullName}*,\n\nYour official portal credentials for SoftLab Global (${staff.designation}):\n\n• Employee ID: \`${staff.employeeId}\`\n• Staff Portal: https://lms.softlabglobal.com\n• Username / Email: \`${primaryEmail}\`\n• Temporary Password: \`${tempPassword}\`\n\nWarm regards,\n*HR & Executive Management*\n*SOFTLAB GLOBAL*`;
-      waResult = await WhatsAppBusinessService.sendMessage({
-        toPhone: phone,
-        text: waMessage,
-      }).catch((err: any) => {
-        console.error("[StaffOnboardingService] Resend WhatsApp error:", err);
-        return { success: false, error: err?.message };
-      });
-    }
-
-    const emailSent = !!(emailResult as any)?.sent;
-    const whatsappSent = !!waResult.success;
+    const emailSent = dispatchRes.sentCount > 0;
+    const whatsappSent = dispatchRes.details.some((d) => d.channel === "WHATSAPP" && d.status === "SENT");
     return {
-      success: emailSent || whatsappSent,
+      success: dispatchRes.sentCount > 0,
+      sentCount: dispatchRes.sentCount,
+      failedCount: dispatchRes.failedCount,
+      details: dispatchRes.details,
       emailSent,
       whatsappSent,
-      emailError: emailSent ? undefined : (emailResult as any)?.reason,
-      whatsappError: whatsappSent ? undefined : waResult.error,
-      message: `Email: ${emailSent ? "SENT" : `FAILED (${(emailResult as any)?.reason || "unknown"})`} | WhatsApp: ${whatsappSent ? "SENT" : `FAILED (${waResult.error || "unknown"})`}`,
+      message: `Dispatched ${dispatchRes.sentCount} notifications (${dispatchRes.failedCount} failures/simulated)`,
       temporaryPassword: tempPassword,
     };
   }

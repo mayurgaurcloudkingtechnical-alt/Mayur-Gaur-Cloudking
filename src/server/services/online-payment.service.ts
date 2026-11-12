@@ -236,6 +236,38 @@ export class OnlinePaymentService {
         },
       });
 
+      // Statutory GST Invoice generation & Double-Entry GL posting
+      let invoiceNumber = "Generated";
+      try {
+        const { GstBillingService } = await import("./gst-billing.service");
+        const customerName = existingTx.admission?.applicantName || "Admitted Student";
+        const customerEmail = existingTx.admission?.applicantEmail || null;
+        const customerPhone = existingTx.admission?.applicantPhone || null;
+        const courseTitle = existingTx.admission?.course.title || "Tuition & Training Program";
+
+        const settledInvoice = await GstBillingService.ensureAndSettleInvoiceForPayment(tx, {
+          paymentTransactionId: updatedPayment.id,
+          amountPaise: updatedPayment.amount,
+          paymentMethod: updatedPayment.paymentMethod,
+          paymentReference: receiptNumber,
+          paidAt: now,
+          admissionId: existingTx.admissionId,
+          feeStructureId,
+          studentId: studentProfileId,
+          customerName,
+          customerEmail,
+          customerPhone,
+          customerState: "Uttar Pradesh",
+          customerStateCode: "09",
+          courseTitle,
+          hsnSacCode: "999293",
+          isTaxInclusive: true,
+        });
+        invoiceNumber = settledInvoice.invoiceNumber;
+      } catch (gstErr) {
+        console.error("[OnlinePaymentService] GST Invoice settlement error (non-fatal):", gstErr);
+      }
+
       await AuditService.log({
         action: "PAYMENT_CAPTURED",
         resourceType: "PaymentTransaction",
@@ -245,6 +277,7 @@ export class OnlinePaymentService {
           gatewayPaymentId: input.gatewayPaymentId,
           receiptNumber,
           amount: updatedPayment.amount,
+          invoiceNumber,
         },
       });
 
@@ -261,6 +294,29 @@ export class OnlinePaymentService {
         resourceId: updatedPayment.id,
         newData: { receiptNumber },
       });
+
+      // Transactional email notification via dedicated sender
+      try {
+        const { IntelligentNotificationEngine } = await import("./intelligent-notification-engine.service");
+        await IntelligentNotificationEngine.dispatchEvent({
+          eventType: "NEW_STUDENT_ADMISSION",
+          entityId: existingTx.admissionId || updatedPayment.id,
+          primaryRecipientEmail: existingTx.admission?.applicantEmail || undefined,
+          primaryRecipientName: existingTx.admission?.applicantName || "Student",
+          counselorId: existingTx.admission?.counselorId,
+          amountPaise: updatedPayment.amount,
+          payload: {
+            studentName: existingTx.admission?.applicantName || "Student",
+            studentId: studentProfileId || "SG-STUDENT",
+            courseTitle: existingTx.admission?.course.title || "Course Program",
+            receiptNumber,
+            amountPaise: updatedPayment.amount,
+            invoiceNumber,
+          },
+        });
+      } catch (notifErr) {
+        console.warn("[OnlinePaymentService] Notification dispatch failed (non-fatal):", notifErr);
+      }
 
       return {
         success: true,
@@ -314,12 +370,36 @@ export class OnlinePaymentService {
       const paymentId = pEntity?.id || `pay_${Date.now()}`;
 
       if (orderId) {
-        await this.verifyAndProcessPayment({
-          gatewayOrderId: orderId,
-          gatewayPaymentId: paymentId,
-          gatewaySignature: signature,
-          bypassSignatureCheck: true,
+        const txRecord = await db.paymentTransaction.findFirst({
+          where: {
+            OR: [
+              { gatewayOrderId: orderId },
+              { gatewayPaymentId: paymentId },
+            ],
+          },
         });
+
+        if (txRecord) {
+          if (txRecord.status === PaymentTransactionStatus.SUCCESS) {
+            return { received: true, alreadyProcessed: true };
+          }
+
+          if (txRecord.admissionId) {
+            await this.verifyAndProcessPayment({
+              gatewayOrderId: orderId,
+              gatewayPaymentId: paymentId,
+              gatewaySignature: signature,
+              bypassSignatureCheck: true,
+            });
+          } else {
+            await this.verifyAndProcessFeePayment({
+              gatewayOrderId: orderId,
+              gatewayPaymentId: paymentId,
+              gatewaySignature: signature,
+              bypassSignatureCheck: true,
+            });
+          }
+        }
       }
     } else if (payload.event === "payment.failed") {
       const pEntity = payload.payload?.payment?.entity;
@@ -631,22 +711,50 @@ export class OnlinePaymentService {
         });
       }
 
-      // 3. Update Installment Milestone if linked
-      if (txRecord.installmentId && txRecord.installment) {
-        const instPaid = txRecord.installment.paidAmount + txRecord.amount;
-        const instStatus =
-          instPaid >= txRecord.installment.amount
-            ? InstallmentStatus.PAID
-            : InstallmentStatus.PARTIAL;
+      // 3. Update Installments (Exact matching + chronological allocation of any remainder)
+      if (txRecord.feeStructureId && txRecord.feeStructure?.installments) {
+        let remainingToAllocate = txRecord.amount;
+        if (txRecord.installmentId) {
+          const targetInst = txRecord.feeStructure.installments.find((i) => i.id === txRecord.installmentId);
+          if (targetInst) {
+            const unpaid = targetInst.amount - targetInst.paidAmount;
+            const alloc = Math.min(remainingToAllocate, unpaid);
+            const newPaid = targetInst.paidAmount + alloc;
+            const newStatus = newPaid >= targetInst.amount ? InstallmentStatus.PAID : InstallmentStatus.PARTIAL;
+            await tx.feeInstallment.update({
+              where: { id: targetInst.id },
+              data: {
+                paidAmount: newPaid,
+                status: newStatus,
+                paidAt: newStatus === InstallmentStatus.PAID ? now : null,
+              },
+            });
+            remainingToAllocate -= alloc;
+          }
+        }
 
-        await tx.feeInstallment.update({
-          where: { id: txRecord.installmentId },
-          data: {
-            paidAmount: instPaid,
-            status: instStatus,
-            paidAt: now,
-          },
-        });
+        if (remainingToAllocate > 0) {
+          const sortedInsts = [...txRecord.feeStructure.installments].sort((a, b) => a.installmentNumber - b.installmentNumber);
+          for (const inst of sortedInsts) {
+            if (remainingToAllocate <= 0) break;
+            if (inst.id === txRecord.installmentId) continue;
+            const unpaid = inst.amount - inst.paidAmount;
+            if (unpaid > 0) {
+              const alloc = Math.min(remainingToAllocate, unpaid);
+              const newPaid = inst.paidAmount + alloc;
+              const newStatus = newPaid >= inst.amount ? InstallmentStatus.PAID : InstallmentStatus.PARTIAL;
+              await tx.feeInstallment.update({
+                where: { id: inst.id },
+                data: {
+                  paidAmount: newPaid,
+                  status: newStatus,
+                  paidAt: newStatus === InstallmentStatus.PAID ? now : null,
+                },
+              });
+              remainingToAllocate -= alloc;
+            }
+          }
+        }
       }
 
       await AuditService.log({
@@ -660,6 +768,61 @@ export class OnlinePaymentService {
           installmentId: txRecord.installmentId,
         },
       });
+
+      // Statutory GST Invoice and General Ledger posting
+      let invoiceNumber = "Generated";
+      try {
+        const { GstBillingService } = await import("./gst-billing.service");
+        const studentName = (txRecord as any).feeStructure?.student?.user
+          ? `${(txRecord as any).feeStructure.student.user.firstName} ${(txRecord as any).feeStructure.student.user.lastName}`.trim()
+          : "Student";
+        const studentEmail = (txRecord as any).feeStructure?.student?.user?.email || null;
+        const courseTitle = (txRecord as any).feeStructure?.course?.title || "Tuition Fee Installment";
+
+        const settledInvoice = await GstBillingService.ensureAndSettleInvoiceForPayment(tx, {
+          paymentTransactionId: updatedTx.id,
+          amountPaise: updatedTx.amount,
+          paymentMethod: updatedTx.paymentMethod,
+          paymentReference: receiptNumber,
+          paidAt: now,
+          feeStructureId: txRecord.feeStructureId,
+          installmentId: txRecord.installmentId,
+          studentId: txRecord.studentId,
+          customerName: studentName,
+          customerEmail: studentEmail,
+          courseTitle,
+          hsnSacCode: "999293",
+          isTaxInclusive: true,
+        });
+        invoiceNumber = settledInvoice.invoiceNumber;
+      } catch (gstErr) {
+        console.error("[OnlinePaymentService] Fee GST settlement error (non-fatal):", gstErr);
+      }
+
+      // Dispatch receipt notification
+      try {
+        const { IntelligentNotificationEngine } = await import("./intelligent-notification-engine.service");
+        const studentUser = (txRecord as any).feeStructure?.student?.user;
+        if (studentUser?.email) {
+          await IntelligentNotificationEngine.dispatchEvent({
+            eventType: "PAYMENT_CAPTURED",
+            entityId: updatedTx.id,
+            primaryRecipientEmail: studentUser.email,
+            primaryRecipientName: `${studentUser.firstName} ${studentUser.lastName}`.trim(),
+            amountPaise: updatedTx.amount,
+            payload: {
+              name: `${studentUser.firstName} ${studentUser.lastName}`.trim(),
+              reference: receiptNumber,
+              receiptNumber,
+              invoiceNumber,
+              courseTitle: (txRecord as any).feeStructure?.course?.title || "Course",
+              message: `Official Payment Receipt: ₹${(updatedTx.amount / 100).toLocaleString("en-IN")} received for ${(txRecord as any).feeStructure?.course?.title || "Course Tuition"} (Receipt: ${receiptNumber}, Invoice: ${invoiceNumber}).`,
+            },
+          });
+        }
+      } catch (notifErr) {
+        console.warn("[OnlinePaymentService] Notification error (non-fatal):", notifErr);
+      }
 
       return {
         success: true,
@@ -766,5 +929,100 @@ export class OnlinePaymentService {
    */
   static getGatewayStatus() {
     return getPaymentGatewaysStatus();
+  }
+
+  /**
+   * 9. INITIATE PAYMENT FOR ISSUED GST INVOICE
+   */
+  static async createInvoicePaymentOrder(input: {
+    invoiceNumber: string;
+    amountPaise?: number;
+  }) {
+    const invoice = await db.gstInvoice.findUnique({
+      where: { invoiceNumber: input.invoiceNumber },
+      include: { items: true },
+    });
+
+    if (!invoice) {
+      throw new TRPCError({
+        code: "NOT_FOUND",
+        message: `Invoice '${input.invoiceNumber}' not found.`,
+      });
+    }
+
+    if (invoice.status === "PAID" as any) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This invoice has already been fully paid and settled.",
+      });
+    }
+
+    if (invoice.status === "CANCELLED" as any) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "This invoice has been cancelled.",
+      });
+    }
+
+    if (invoice.balanceAmountPaise <= 0) {
+      throw new TRPCError({
+        code: "BAD_REQUEST",
+        message: "No outstanding balance remaining on this invoice.",
+      });
+    }
+
+    const payablePaise = input.amountPaise && input.amountPaise > 0
+      ? Math.min(input.amountPaise, invoice.balanceAmountPaise)
+      : invoice.balanceAmountPaise;
+
+    const txRef = await this.generateTransactionReference();
+    const gateway = getRazorpayProvider();
+
+    const order = await gateway.createOrder({
+      amount: payablePaise,
+      currency: "INR",
+      receipt: txRef,
+      description: `Payment for Invoice ${invoice.invoiceNumber}`,
+      notes: {
+        invoiceId: invoice.id,
+        invoiceNumber: invoice.invoiceNumber,
+        customerName: invoice.customerName,
+      },
+    });
+
+    const paymentTx = await db.paymentTransaction.create({
+      data: {
+        transactionReference: txRef,
+        amount: payablePaise,
+        currency: "INR",
+        paymentMethod: PaymentMethod.RAZORPAY,
+        status: PaymentTransactionStatus.PENDING,
+        invoiceId: invoice.id,
+        studentId: invoice.studentId || null,
+        admissionId: invoice.admissionId || null,
+        feeStructureId: invoice.feeStructureId || null,
+        gateway: gateway.providerName,
+        gatewayOrderId: order.orderId,
+        remarks: `Online payment order for ${invoice.invoiceNumber}`,
+      },
+    });
+
+    const keyId =
+      order.keyId ||
+      process.env.RAZORPAY_KEY_ID ||
+      process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
+      "rzp_test_TgDdjsEItAotKI";
+
+    return {
+      keyId,
+      orderId: order.orderId,
+      amount: payablePaise,
+      currency: "INR",
+      invoiceNumber: invoice.invoiceNumber,
+      customerName: invoice.customerName,
+      customerEmail: invoice.customerEmail,
+      customerPhone: invoice.customerPhone,
+      transactionReference: txRef,
+    };
   }
 }

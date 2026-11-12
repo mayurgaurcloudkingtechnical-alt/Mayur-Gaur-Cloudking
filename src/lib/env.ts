@@ -32,10 +32,10 @@ const envSchema = z.object({
   NEXT_PUBLIC_SUPPORT_PHONE: z.string().optional().default("9196596975"),
   NEXT_PUBLIC_SUPPORT_EMAIL: z.string().optional().default("info@softlabglobal.com"),
   PAYMENT_PROVIDER: z.string().optional().default("RAZORPAY"),
-  RAZORPAY_KEY_ID: z.string().optional().default("rzp_test_TgDdjsEItAotKI"),
-  RAZORPAY_KEY_SECRET: z.string().optional().default("UyMVJ9QKKOporzcaaW7Vl3kn"),
-  RAZORPAY_WEBHOOK_SECRET: z.string().optional().default("UyMVJ9QKKOporzcaaW7Vl3kn"),
-  NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().optional().default("rzp_test_TgDdjsEItAotKI"),
+  RAZORPAY_KEY_ID: z.string().optional().default("rzp_live_TtiVjZsYU4u6yI"),
+  RAZORPAY_KEY_SECRET: z.string().optional().default("nk890Xco6v1UayrJBKsgabs1"),
+  RAZORPAY_WEBHOOK_SECRET: z.string().optional().default("nk890Xco6v1UayrJBKsgabs1"),
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: z.string().optional().default("rzp_live_TtiVjZsYU4u6yI"),
 });
 
 export const env = envSchema.parse({
@@ -56,8 +56,8 @@ export const env = envSchema.parse({
   NEXT_PUBLIC_SUPPORT_PHONE: process.env.NEXT_PUBLIC_SUPPORT_PHONE || "9196596975",
   NEXT_PUBLIC_SUPPORT_EMAIL: cleanEmail(process.env.NEXT_PUBLIC_SUPPORT_EMAIL, "info@softlabglobal.com"),
   PAYMENT_PROVIDER: process.env.PAYMENT_PROVIDER || "RAZORPAY",
-  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TgDdjsEItAotKI",
-  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "UyMVJ9QKKOporzcaaW7Vl3kn",
-  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "UyMVJ9QKKOporzcaaW7Vl3kn",
-  NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_test_TgDdjsEItAotKI",
+  RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_live_TtiVjZsYU4u6yI",
+  RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET || "nk890Xco6v1UayrJBKsgabs1",
+  RAZORPAY_WEBHOOK_SECRET: process.env.RAZORPAY_WEBHOOK_SECRET || "nk890Xco6v1UayrJBKsgabs1",
+  NEXT_PUBLIC_RAZORPAY_KEY_ID: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID || "rzp_live_TtiVjZsYU4u6yI",
 });

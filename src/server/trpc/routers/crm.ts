@@ -251,7 +251,7 @@ export const crmRouter = router({
         pipelineStage: z.string().optional(),
         serviceCategory: z.string().optional(),
         page: z.number().int().min(1).default(1),
-        limit: z.number().int().min(1).max(50).default(20),
+        limit: z.number().int().min(1).max(200).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -529,7 +529,7 @@ export const crmRouter = router({
         courseId: z.string().optional(),
         search: z.string().optional(),
         page: z.number().int().min(1).default(1),
-        limit: z.number().int().min(1).max(50).default(20),
+        limit: z.number().int().min(1).max(200).default(20),
       })
     )
     .query(async ({ ctx, input }) => {
@@ -607,7 +607,7 @@ export const crmRouter = router({
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
         paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
-        installmentCount: z.number().min(1).max(10).optional(),
+        installmentCount: z.number().min(1).optional(),
         installments: z
           .array(
             z.object({
@@ -881,10 +881,15 @@ export const crmRouter = router({
         discountValue: z.number().min(0).optional(),
         discountAmount: z.number().min(0).optional(),
         discountReason: z.string().optional(),
+        globalCertificationFee: z.number().min(0).optional(),
+        slgKitFee: z.number().min(0).optional(),
+        gstAmount: z.number().min(0).optional(),
+        cgstAmount: z.number().min(0).optional(),
+        sgstAmount: z.number().min(0).optional(),
         finalFee: z.number().min(0).optional(),
         paidAmount: z.number().min(0).optional(),
         paymentPlan: z.enum(["LUMPSUM", "EMI"]).optional(),
-        installmentCount: z.number().min(1).max(10).optional(),
+        installmentCount: z.number().min(1).optional(),
         installments: z
           .array(
             z.object({
@@ -909,10 +914,44 @@ export const crmRouter = router({
         universityFee: z.number().optional(),
         deliveryMode: z.nativeEnum(DeliveryMode).optional(),
         center: z.string().optional(),
+        counselorId: z.string().optional(),
+        requestDiscountApproval: z.boolean().optional(),
       })
     )
     .mutation(async ({ ctx, input }) => {
       return CrmApplicationService.createDirectAdmission(asAuthUser(ctx.user), input as any);
+    }),
+
+  /**
+   * Approves a pending discount admission application submitted by a counselor.
+   * Converts the application, provisions student profile, LMS account, fee structure,
+   * installments, ID card, and dispatches credentials + receipt via Email & WhatsApp.
+   */
+  approveAdmissionWithDiscount: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        approvalNotes: z.string().optional(),
+        approvedDiscountAmount: z.number().optional(),
+        approvedDownPayment: z.number().optional(),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.approveAdmissionWithDiscount(asAuthUser(ctx.user), input);
+    }),
+
+  /**
+   * Rejects a higher discount request for an admission application.
+   */
+  rejectAdmissionDiscount: requireRoleProcedure(admissionRoles)
+    .input(
+      z.object({
+        applicationId: z.string(),
+        rejectionReason: z.string().min(3, "Rejection reason required"),
+      })
+    )
+    .mutation(async ({ ctx, input }) => {
+      return CrmApplicationService.rejectAdmissionDiscount(asAuthUser(ctx.user), input);
     }),
 
   /**
@@ -1508,7 +1547,7 @@ export const crmRouter = router({
       z
         .object({
           page: z.number().int().min(1).default(1),
-          limit: z.number().int().min(1).max(50).default(20),
+          limit: z.number().int().min(1).max(200).default(20),
         })
         .optional()
     )
@@ -1630,7 +1669,7 @@ export const crmRouter = router({
     .input(
       z.object({
         mode: z.enum(["WHATSAPP", "AI_CALLING", "BOTH"]).default("BOTH"),
-        limit: z.number().int().min(1).max(50).default(20),
+        limit: z.number().int().min(1).max(200).default(20),
         courseId: z.string().optional(),
       })
     )

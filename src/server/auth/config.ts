@@ -69,19 +69,30 @@ export const authConfig: NextAuthConfig = {
         token.phone = user.phone;
         token.callingNumber = user.callingNumber;
         token.whatsappNumber = user.whatsappNumber;
+        token.tenantId = (user as any).tenantId || null;
+        token.tenantBranchId = (user as any).tenantBranchId || null;
+        token.tenantDepartmentId = (user as any).tenantDepartmentId || null;
+        token.reportingManagerId = (user as any).reportingManagerId || null;
       }
       return token;
     },
     async session({ session, token }) {
-      if (token && session.user) {
-        session.user.id = token.id as string;
-        session.user.roleCode = token.roleCode as UserRoleCode;
-        session.user.permissions = (token.permissions as string[]) || [];
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.phone = token.phone as string | null | undefined;
-        session.user.callingNumber = token.callingNumber as string | null | undefined;
-        session.user.whatsappNumber = token.whatsappNumber as string | null | undefined;
+      if (token) {
+        session.user = {
+          ...(session.user || {}),
+          id: (token.id as string) || (token.sub as string),
+          roleCode: token.roleCode as UserRoleCode,
+          permissions: (token.permissions as string[]) || [],
+          firstName: token.firstName as string,
+          lastName: token.lastName as string,
+          phone: token.phone as string | null | undefined,
+          callingNumber: token.callingNumber as string | null | undefined,
+          whatsappNumber: token.whatsappNumber as string | null | undefined,
+          tenantId: (token.tenantId as string) || null,
+          tenantBranchId: (token.tenantBranchId as string) || null,
+          tenantDepartmentId: (token.tenantDepartmentId as string) || null,
+          reportingManagerId: (token.reportingManagerId as string) || null,
+        } as any;
       }
       return session;
     },

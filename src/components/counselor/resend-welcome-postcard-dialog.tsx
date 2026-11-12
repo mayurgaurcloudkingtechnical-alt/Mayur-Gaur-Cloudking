@@ -21,6 +21,10 @@ import {
   Lock,
   KeyRound,
   GraduationCap,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
 } from "lucide-react";
 
 interface ResendWelcomePostcardDialogProps {
@@ -39,6 +43,7 @@ export function ResendWelcomePostcardDialog({
   onSuccess,
 }: ResendWelcomePostcardDialogProps) {
   const [activeTab, setActiveTab] = useState<"preview" | "whatsapp" | "history">("preview");
+  const [expandedPostcard, setExpandedPostcard] = useState(true);
   const [channelEmail, setChannelEmail] = useState(true);
   const [channelWhatsApp, setChannelWhatsApp] = useState(true);
   const [credentialMode, setCredentialMode] = useState<"KEEP_EXISTING" | "GENERATE_TEMPORARY">("KEEP_EXISTING");
@@ -172,7 +177,7 @@ export function ResendWelcomePostcardDialog({
         aria-hidden="true"
       />
 
-      <div className="relative z-10 w-full max-w-4xl max-h-[92vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95">
+      <div className="relative z-10 w-full max-w-5xl h-[94vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-200 overflow-hidden my-auto animate-in fade-in zoom-in-95">
         {/* Header Bar */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -203,7 +208,13 @@ export function ResendWelcomePostcardDialog({
         </div>
 
         {/* Scrollable Modal Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <div
+          className="flex-1 overflow-y-auto p-6 space-y-5"
+          style={{
+            scrollbarWidth: "thin",
+            scrollbarColor: "#059669 #f1f5f9",
+          }}
+        >
           {/* Recipient & Current Status Banner */}
           {isStatusLoading ? (
             <div className="flex items-center justify-center p-8 bg-slate-50 rounded-xl border border-slate-200">
@@ -511,38 +522,100 @@ export function ResendWelcomePostcardDialog({
               </div>
 
               {activeTab === "preview" && previewData && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const printWindow = window.open("", "_blank");
-                    if (printWindow) {
-                      printWindow.document.write(previewData.postcardHtml);
-                      printWindow.document.close();
-                      printWindow.focus();
-                      setTimeout(() => printWindow.print(), 250);
-                    }
-                  }}
-                  className="text-xs text-slate-600 hover:text-slate-900 font-medium flex items-center gap-1 mb-1"
-                >
-                  <Printer className="h-3.5 w-3.5 text-slate-500" />
-                  <span>Print Postcard</span>
-                </button>
+                <div className="flex items-center gap-2 mb-1">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedPostcard(!expandedPostcard)}
+                    className="text-xs text-slate-700 hover:text-slate-900 font-semibold flex items-center gap-1 bg-white px-2.5 py-1 rounded border border-slate-300 shadow-2xs"
+                    title="Toggle between full expanded view and compact scrollable box"
+                  >
+                    {expandedPostcard ? (
+                      <>
+                        <Minimize2 className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Compact Box</span>
+                      </>
+                    ) : (
+                      <>
+                        <Maximize2 className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Expand Full Message</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const fullWindow = window.open("", "_blank");
+                      if (fullWindow) {
+                        fullWindow.document.write(previewData.postcardHtml);
+                        fullWindow.document.close();
+                      }
+                    }}
+                    className="text-xs text-emerald-700 hover:text-emerald-900 font-semibold flex items-center gap-1 bg-emerald-50 px-2.5 py-1 rounded border border-emerald-200"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>Full Screen Preview</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const printWindow = window.open("", "_blank");
+                      if (printWindow) {
+                        printWindow.document.write(previewData.postcardHtml);
+                        printWindow.document.close();
+                        printWindow.focus();
+                        setTimeout(() => printWindow.print(), 250);
+                      }
+                    }}
+                    className="text-xs text-slate-700 hover:text-slate-900 font-medium flex items-center gap-1 bg-white px-2.5 py-1 rounded border border-slate-300"
+                  >
+                    <Printer className="h-3.5 w-3.5 text-slate-500" />
+                    <span>Print Postcard</span>
+                  </button>
+                </div>
               )}
             </div>
 
             {/* Tab 1: Rendered HTML Email Postcard */}
             {activeTab === "preview" && (
-              <div className="p-4 bg-slate-100 flex justify-center max-h-[420px] overflow-y-auto">
+              <div
+                className={`p-4 bg-slate-100 flex flex-col items-center ${
+                  expandedPostcard
+                    ? "min-h-[520px]"
+                    : "min-h-[480px] max-h-[65vh] overflow-y-auto border-y border-slate-200"
+                } transition-all`}
+                style={{
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#059669 #f1f5f9",
+                }}
+              >
+                {!expandedPostcard && (
+                  <div className="w-full max-w-3xl mb-2 py-1 px-3 bg-emerald-50 border border-emerald-200 rounded-md text-[11px] text-emerald-800 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <ChevronDown className="h-3.5 w-3.5 text-emerald-600 animate-bounce" />
+                      Scroll down inside this box to view fee breakdown, portal credentials, and campus details.
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedPostcard(true)}
+                      className="text-[10px] text-emerald-700 font-bold underline hover:text-emerald-900"
+                    >
+                      Expand All
+                    </button>
+                  </div>
+                )}
+
                 {isPreviewLoading ? (
                   <div className="p-8 flex items-center justify-center text-slate-500 text-xs">
-                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    <Loader2 className="h-5 w-5 animate-spin mr-2 text-emerald-600" />
                     Generating live postcard preview...
                   </div>
                 ) : previewData ? (
-                  <div className="w-full max-w-2xl bg-white shadow-sm rounded-lg overflow-hidden border border-slate-200">
+                  <div className="w-full max-w-3xl bg-white shadow-md rounded-xl overflow-hidden border border-slate-200">
                     <div
                       dangerouslySetInnerHTML={{ __html: previewData.postcardHtml }}
-                      className="p-2"
+                      className="p-4"
                     />
                   </div>
                 ) : (
@@ -553,20 +626,40 @@ export function ResendWelcomePostcardDialog({
 
             {/* Tab 2: Formatted WhatsApp Message Preview */}
             {activeTab === "whatsapp" && (
-              <div className="p-6 bg-slate-100 flex justify-center max-h-[420px] overflow-y-auto">
+              <div className="p-6 bg-slate-100 flex flex-col items-center min-h-[500px] max-h-[72vh] overflow-y-auto">
                 {isPreviewLoading ? (
                   <div className="p-8 flex items-center justify-center text-slate-500 text-xs">
                     <Loader2 className="h-5 w-5 animate-spin mr-2" />
                     Generating WhatsApp preview...
                   </div>
                 ) : previewData ? (
-                  <div className="w-full max-w-md bg-[#e5ddd5] p-4 rounded-2xl shadow-inner border border-slate-300">
-                    <div className="bg-white rounded-lg p-3.5 shadow-sm text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed border-l-4 border-emerald-600">
-                      {previewData.whatsappMessageText}
+                  <div className="w-full max-w-md space-y-3">
+                    <div className="bg-[#e5ddd5] p-4 rounded-2xl shadow-inner border border-slate-300">
+                      <div className="bg-white rounded-lg p-3.5 shadow-sm text-xs text-slate-800 whitespace-pre-wrap font-sans leading-relaxed border-l-4 border-emerald-600">
+                        {previewData.whatsappMessageText}
+                      </div>
+                      <div className="mt-2 text-right text-[11px] text-slate-500 flex items-center justify-end gap-1">
+                        <span>WhatsApp Cloud API Standard Format</span>
+                        <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                      </div>
                     </div>
-                    <div className="mt-2 text-right text-[11px] text-slate-500 flex items-center justify-end gap-1">
-                      <span>WhatsApp Cloud API Standard Format</span>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={() => {
+                          const phone = (statusData as any)?.rawPhone || (statusData as any)?.phone || "";
+                          const clean = phone.replace(/\D/g, "");
+                          const full = clean.length === 10 ? `91${clean}` : clean;
+                          const url = `https://api.whatsapp.com/send?${full ? `phone=${full}&` : ""}text=${encodeURIComponent(previewData.whatsappMessageText)}`;
+                          window.open(url, "_blank");
+                        }}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 font-bold gap-1.5 shadow-sm"
+                      >
+                        <MessageSquare className="h-3.5 w-3.5" />
+                        <span>Open in WhatsApp Web / App</span>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -577,7 +670,7 @@ export function ResendWelcomePostcardDialog({
 
             {/* Tab 3: Dispatch & Timeline Audit History */}
             {activeTab === "history" && (
-              <div className="p-4 max-h-[420px] overflow-y-auto space-y-3">
+              <div className="p-4 min-h-[400px] max-h-[72vh] overflow-y-auto space-y-3">
                 {statusData?.dispatchHistory && statusData.dispatchHistory.length > 0 ? (
                   <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg overflow-hidden">
                     {statusData.dispatchHistory.map((item) => (

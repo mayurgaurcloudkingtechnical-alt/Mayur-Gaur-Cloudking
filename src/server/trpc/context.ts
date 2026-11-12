@@ -12,6 +12,11 @@ export interface ContextUser {
   lastName: string;
   roleCode: UserRoleCode;
   permissions: string[];
+  phone?: string | null;
+  tenantId?: string | null;
+  tenantBranchId?: string | null;
+  tenantDepartmentId?: string | null;
+  reportingManagerId?: string | null;
 }
 
 export interface Context {
@@ -52,6 +57,11 @@ export async function createTRPCContext(opts?: FetchCreateContextFnOptions): Pro
           lastName: dbUser.lastName,
           roleCode: dbUser.roleCode,
           permissions: dbUser.role.permissions,
+          phone: dbUser.phone,
+          tenantId: dbUser.tenantId,
+          tenantBranchId: dbUser.tenantBranchId,
+          tenantDepartmentId: dbUser.tenantDepartmentId,
+          reportingManagerId: dbUser.reportingManagerId,
         };
 
         return {

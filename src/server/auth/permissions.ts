@@ -1,4 +1,4 @@
-﻿export interface PermissionDefinition {
+export interface PermissionDefinition {
   id: string;
   name: string;
   category: string;
@@ -148,6 +148,28 @@ export const PERMISSION_CATEGORIES: PermissionCategory[] = [
       { id: "audit.view", name: "View Audit Logs", category: "settings", description: "Inspect system security and change trail" },
       { id: "reports.view", name: "View Reports", category: "settings", description: "View business intelligence analytics" },
       { id: "reports.export", name: "Export Reports", category: "settings", description: "Export CSV/Excel audit reports" },
+    ],
+  },
+  {
+    id: "slg",
+    name: "SLG Call Intelligence & Governance",
+    description: "Manage telephony intelligence, employee productivity, devices, and organizational reporting",
+    permissions: [
+      { id: "slg.dashboard.view", name: "View Dashboard", category: "slg", description: "Access Call Intelligence dashboard" },
+      { id: "slg.calls.view_all", name: "View All Calls", category: "slg", description: "View all tenant calls" },
+      { id: "slg.calls.view_branch", name: "View Branch Calls", category: "slg", description: "View calls within assigned branch campus" },
+      { id: "slg.calls.view_department", name: "View Dept Calls", category: "slg", description: "View calls within assigned department" },
+      { id: "slg.calls.view_team", name: "View Team Calls", category: "slg", description: "View calls of subordinate reporting tree" },
+      { id: "slg.calls.view_own", name: "View Own Calls", category: "slg", description: "View individual call activity only" },
+      { id: "slg.recordings.listen", name: "Listen Recordings", category: "slg", description: "Stream authorized call audio" },
+      { id: "slg.recordings.download", name: "Download Recordings", category: "slg", description: "Export audio recordings" },
+      { id: "slg.reports.submit", name: "Submit Daily Report", category: "slg", description: "Author daily performance report" },
+      { id: "slg.reports.review", name: "Review Reports", category: "slg", description: "Approve or request revisions on team reports" },
+      { id: "slg.devices.register", name: "Register Device", category: "slg", description: "Bind mobile/desktop hardware" },
+      { id: "slg.devices.manage", name: "Manage Devices", category: "slg", description: "Approve, revoke, or block employee devices" },
+      { id: "slg.employees.onboard", name: "Onboard Staff", category: "slg", description: "Onboard staff to Call Intelligence" },
+      { id: "slg.employees.manage", name: "Manage Hierarchy", category: "slg", description: "Assign branches, departments, and managers" },
+      { id: "slg.employees.suspend", name: "Suspend Staff", category: "slg", description: "Suspend Call Intelligence access and revoke sessions" },
     ],
   },
 ];

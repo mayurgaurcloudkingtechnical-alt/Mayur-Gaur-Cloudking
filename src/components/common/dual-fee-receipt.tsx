@@ -41,6 +41,14 @@ export interface DualReceiptData {
   universitySpecialization?: string;
   feeStructureId?: string;
   paymentId?: string;
+  globalCertificationFee?: number;
+  slgKitFee?: number;
+  taxableAmount?: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  totalGstAmount?: number;
+  sacCode?: string;
 }
 
 interface DualFeeReceiptProps {
@@ -152,6 +160,27 @@ export function DualFeeReceipt({ data, onClose, onSaved }: DualFeeReceiptProps) 
   // Recalculate pending & words when fees change
   const netPayableRupees = Math.max(0, totalFees - totalDiscount);
   const computedWords = customWords.trim() || rupeesToWords(totalPaid);
+
+  // Inbuilt GST (18%), SAC 999293
+  const sacCode = data.sacCode || "999293";
+  const isUniversity = data.providerType === "UNIVERSITY";
+
+  // Inbuilt 18% GST (Calculated ONCE on the total net fee)
+  const isInterState = Boolean(data.igstAmount && data.igstAmount > 0);
+  const cgstRate = isUniversity || isInterState ? 0 : 9;
+  const sgstRate = isUniversity || isInterState ? 0 : 9;
+  const igstRate = isInterState ? 18 : 0;
+  const totalTaxRate = cgstRate + sgstRate + igstRate;
+
+  // Taxable Base is net fee divided by (1 + taxRate/100). Tax + Base = Total Net Fee exactly.
+  const taxableBase = totalTaxRate > 0 ? Math.round(netPayableRupees / (1 + totalTaxRate / 100)) : netPayableRupees;
+  const totalGst = netPayableRupees - taxableBase;
+  const cgstAmount = cgstRate > 0 ? Math.round(totalGst / 2) : 0;
+  const sgstAmount = sgstRate > 0 ? (totalGst - cgstAmount) : 0;
+  const igstAmount = igstRate > 0 ? totalGst : 0;
+
+  // Total Amount After Tax MUST match the student's Total Net Fee (netPayableRupees)!
+  const totalAmountAfterTax = netPayableRupees;
 
   const handleTotalFeesChange = (val: number) => {
     setTotalFees(val);
@@ -586,17 +615,17 @@ ${innerHtml}
           <tr className="border-b-2 border-black font-bold h-6">
             <th className="border-r border-black p-1 w-6">#</th>
             <th className="border-r border-black p-1 text-left">Particulars</th>
-            <th className="border-r border-black p-1 w-10">SAC</th>
+            <th className="border-r border-black p-1 w-12 font-mono">SAC</th>
             <th className="border-r border-black p-1 w-10">CGST</th>
-            <th className="border-r border-black p-1 w-10">CGST</th>
-            <th className="border-r border-black p-1 w-12">scst/</th>
-            <th className="border-r border-black p-1 w-10">IGST</th>
+            <th className="border-r border-black p-1 w-12">CGST Amt</th>
+            <th className="border-r border-black p-1 w-10">SGST</th>
+            <th className="border-r border-black p-1 w-12">SGST Amt</th>
             <th className="border-r border-black p-1 w-10">IGST</th>
             <th className="p-1 w-28 text-right pr-2">Amount</th>
           </tr>
         </thead>
         <tbody>
-          {/* Row 1: Registration/Enrollment Payment */}
+          {/* Row 1: Course Tuition & Program Fee */}
           <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">1</td>
             <td className="border-r border-black p-0.5 text-left font-medium">
@@ -607,70 +636,71 @@ ${innerHtml}
                   className="h-4 text-[9.5px] p-0.5 border-none bg-white"
                 />
               ) : (
-                particulars
+                particulars || "Course Tuition & Professional Training"
               )}
             </td>
-            <td className="border-r border-black p-0.5">-</td>
-            <td className="border-r border-black p-0.5">0</td>
-            <td className="border-r border-black p-0.5">0</td>
-            <td className="border-r border-black p-0.5">0</td>
-            <td className="border-r border-black p-0.5">0</td>
-            <td className="border-r border-black p-0.5">0</td>
+            <td className="border-r border-black p-0.5 font-mono">{sacCode}</td>
+            <td className="border-r border-black p-0.5 font-mono">{cgstRate}%</td>
+            <td className="border-r border-black p-0.5 font-mono">
+              {cgstAmount > 0 ? cgstAmount.toLocaleString("en-IN") : "0"}
+            </td>
+            <td className="border-r border-black p-0.5 font-mono">{sgstRate}%</td>
+            <td className="border-r border-black p-0.5 font-mono">
+              {sgstAmount > 0 ? sgstAmount.toLocaleString("en-IN") : "0"}
+            </td>
+            <td className="border-r border-black p-0.5 font-mono">{igstAmount > 0 ? `${igstRate}%` : "0"}</td>
             <td className="p-0.5 text-right pr-2 font-mono">
-              {isEditing ? (
-                <Input
-                  type="number"
-                  value={registrationPayment}
-                  onChange={(e) => setRegistrationPayment(parseFloat(e.target.value) || 0)}
-                  className="h-4 text-[9.5px] font-mono text-right p-0.5 w-20 ml-auto bg-white border-black"
-                />
-              ) : registrationPayment > 0 ? (
-                registrationPayment.toLocaleString("en-IN") + ".00/-"
-              ) : (
-                "0"
-              )}
+              {taxableBase.toLocaleString("en-IN")}.00/-
             </td>
           </tr>
 
-          {/* Row 2: Empty Spacer */}
+          {/* Row 2: Reserved line */}
           <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">2</td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="p-0.5"></td>
+            <td className="border-r border-black p-0.5 text-left font-medium text-slate-400">
+              -
+            </td>
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="p-0.5 text-right pr-2 font-mono">
+              0.00/-
+            </td>
           </tr>
 
-          {/* Row 3: Total Amount Before */}
+          {/* Row 3: Reserved line */}
           <tr className="border-b border-black h-5">
             <td className="border-r border-black p-0.5">3</td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td colSpan={3} className="border-r border-black p-0.5 text-right font-semibold pr-2">
-              Total Amount Before
+            <td className="border-r border-black p-0.5 text-left font-medium text-slate-400">
+              -
             </td>
-            <td className="p-0.5 text-right pr-2 font-mono font-bold">
-              {totalPaid.toLocaleString("en-IN")}.00/-
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="border-r border-black p-0.5 font-mono">-</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="border-r border-black p-0.5 font-mono">0</td>
+            <td className="p-0.5 text-right pr-2 font-mono">
+              0.00/-
             </td>
           </tr>
 
-          {/* Row 4: Empty */}
-          <tr className="border-b border-black h-5">
+          {/* Row 4: Total Amount Before Tax */}
+          <tr className="border-b border-black h-5 bg-slate-50/50">
             <td className="border-r border-black p-0.5">4</td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
             <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="border-r border-black p-0.5"></td>
-            <td className="p-0.5 text-right pr-2 font-mono">0</td>
+            <td colSpan={3} className="border-r border-black p-0.5 text-right font-semibold pr-2">
+              Total Amount Before Tax
+            </td>
+            <td className="p-0.5 text-right pr-2 font-mono font-bold">
+              {taxableBase.toLocaleString("en-IN")}.00/-
+            </td>
           </tr>
 
           {/* Row 5: Total Fees & SGST */}
@@ -692,14 +722,16 @@ ${innerHtml}
               )}
             </td>
             <td colSpan={3} className="border-r border-black p-0.5 text-right font-semibold pr-2">
-              Add SGST/UTGST
+              Add SGST/UTGST ({sgstRate}%)
             </td>
-            <td className="p-0.5 text-right pr-2 font-mono">0</td>
+            <td className="p-0.5 text-right pr-2 font-mono font-bold">
+              {sgstAmount.toLocaleString("en-IN")}.00/-
+            </td>
           </tr>
 
-          {/* Row 7: Total Discount & GST */}
+          {/* Row 6: Total Discount & Total Amount GST */}
           <tr className="border-b border-black h-5">
-            <td className="border-r border-black p-0.5">7</td>
+            <td className="border-r border-black p-0.5">6</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2">
               Total Discount
             </td>
@@ -716,14 +748,16 @@ ${innerHtml}
               )}
             </td>
             <td colSpan={3} className="border-r border-black p-0.5 text-right font-semibold pr-2">
-              Total Amount GST
+              Total Amount GST (18%)
             </td>
-            <td className="p-0.5 text-right pr-2 font-mono">0</td>
+            <td className="p-0.5 text-right pr-2 font-mono font-bold">
+              {totalGst.toLocaleString("en-IN")}.00/-
+            </td>
           </tr>
 
-          {/* Row 6: Total Paid & IGST */}
+          {/* Row 7: Total Paid & CGST */}
           <tr className="border-b border-black h-5">
-            <td className="border-r border-black p-0.5">6</td>
+            <td className="border-r border-black p-0.5">7</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2">
               Total Paid
             </td>
@@ -740,13 +774,15 @@ ${innerHtml}
               )}
             </td>
             <td colSpan={3} className="border-r border-black p-0.5 text-right font-semibold pr-2">
-              Add IGST
+              Add CGST ({cgstRate}%)
             </td>
-            <td className="p-0.5 text-right pr-2 font-mono">0</td>
+            <td className="p-0.5 text-right pr-2 font-mono font-bold">
+              {cgstAmount.toLocaleString("en-IN")}.00/-
+            </td>
           </tr>
 
           {/* Row 8: Total Outstanding & Total Amount After Tax */}
-          <tr className="border-b border-black font-bold h-5">
+          <tr className="border-b border-black font-bold h-5 bg-slate-50/50">
             <td className="border-r border-black p-0.5">8</td>
             <td className="border-r border-black p-0.5 text-left font-bold px-2 text-rose-700">
               Total Outstanding
@@ -767,7 +803,7 @@ ${innerHtml}
               Total Amount After Tax
             </td>
             <td className="p-0.5 text-right pr-2 font-mono font-black text-black">
-              {totalPaid.toLocaleString("en-IN")}.00/-
+              {totalAmountAfterTax.toLocaleString("en-IN")}.00/-
             </td>
           </tr>
         </tbody>

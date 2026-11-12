@@ -113,6 +113,13 @@ export function PaymentsTable({ initialStudentId }: PaymentsTableProps) {
           transactionReference: res.payment.transactionReference,
           feeStructureId: res.payment.feeStructureId || undefined,
           paymentId: res.payment.id || identifier,
+          globalCertificationFee: res.financials.globalCertFeePaise || 0,
+          slgKitFee: res.financials.slgKitFeePaise || 0,
+          taxableAmount: res.financials.taxableBasePaise || 0,
+          cgstAmount: res.financials.cgstPaise || 0,
+          sgstAmount: res.financials.sgstPaise || 0,
+          totalGstAmount: res.financials.totalGstPaise || 0,
+          sacCode: res.financials.sacCode || "999293",
         });
       }
     } catch (err: any) {

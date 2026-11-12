@@ -36,8 +36,16 @@ import { mockInterviewRouter } from "./mockInterview";
 import { recruiterInterviewRouter } from "./recruiterInterview";
 import { youtubePublisherRouter } from "./youtubePublisher";
 import { managementRouter } from "./management";
+import { verificationRouter } from "./verification";
+import { slgCallIntelligenceRouter } from "./slg-call-intelligence";
+import { slgIdentityRouter } from "./slg-identity";
+import { slgDevicesRouter } from "./slg-devices";
 
 export const appRouter = router({
+  slgCallIntelligence: slgCallIntelligenceRouter,
+  slgIdentity: slgIdentityRouter,
+  slgDevices: slgDevicesRouter,
+  verification: verificationRouter,
   management: managementRouter,
   classroom: classroomRouter,
   mockInterview: mockInterviewRouter,

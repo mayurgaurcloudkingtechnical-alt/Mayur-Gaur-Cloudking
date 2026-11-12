@@ -36,6 +36,14 @@ export interface FormattedReceiptData {
     totalPaidSoFarPaise: number;
     pendingAmountPaise: number;
     amountInWords: string;
+    globalCertFeePaise?: number;
+    slgKitFeePaise?: number;
+    taxableBasePaise?: number;
+    cgstPaise?: number;
+    sgstPaise?: number;
+    igstPaise?: number;
+    totalGstPaise?: number;
+    sacCode?: string;
   };
   payment: {
     id?: string;
@@ -269,10 +277,21 @@ export class ReceiptService {
     const totalCourseFee =
       feeStructure?.totalCourseFee ||
       course?.baseFee ||
-      payment.amount;
+      payment.amount ||
+      0;
 
     const discount = feeStructure?.discountAmount || 0;
-    const netPayable = feeStructure?.netPayableAmount || Math.max(0, totalCourseFee - discount);
+    const globalCertFeePaise: number = Number((feeStructure as any)?.softlabServiceFee || (feeStructure as any)?.globalCertificationFee || 0);
+    const slgKitFeePaise: number = Number((feeStructure as any)?.registrationFee || (feeStructure as any)?.slgKitFee || 0);
+    const netCourseFeePaise = Math.max(0, totalCourseFee - discount);
+
+    // Inbuilt 18% GST (Calculated ONCE on the total net fee)
+    const taxableBasePaise: number = Math.round(netCourseFeePaise / 1.18);
+    const totalGstPaise: number = Math.max(0, netCourseFeePaise - taxableBasePaise);
+    const cgstPaise: number = Math.round(totalGstPaise / 2);
+    const sgstPaise: number = totalGstPaise - cgstPaise;
+
+    const netPayable = feeStructure?.netPayableAmount || netCourseFeePaise;
 
     // Remaining outstanding fee properly subtracting all previous collections plus this payment
     const pendingAmountPaise = Math.max(0, netPayable - totalPaidSoFarPaise);
@@ -306,6 +325,13 @@ export class ReceiptService {
         totalPaidSoFarPaise,
         pendingAmountPaise,
         amountInWords: this.amountInWords(payment.amount),
+        globalCertFeePaise,
+        slgKitFeePaise,
+        taxableBasePaise,
+        cgstPaise,
+        sgstPaise,
+        totalGstPaise,
+        sacCode: "999293",
       },
       payment: {
         id: payment.id,

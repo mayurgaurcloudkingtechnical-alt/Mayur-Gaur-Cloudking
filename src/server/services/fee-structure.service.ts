@@ -3,9 +3,11 @@ import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { AuditService } from "@/server/services/audit.service";
 import { TRPCError } from "@trpc/server";
 import { FeePaymentStatus, FeeStructureStatus, Prisma } from "@prisma/client";
+import { CentralFeeCalculatorService } from "./central-fee-calculator.service";
 
 export interface CreateFeeStructureInput {
   enrollmentId: string;
+  totalCourseFee?: number; // In Paise (Entered by Sales Team)
   registrationFee?: number; // In Paise
   discountAmount?: number; // In Paise
   scholarshipAmount?: number; // In Paise
@@ -42,21 +44,49 @@ export interface UpdateFeeStructureInput {
 }
 
 export class FeeStructureService {
+  public static readonly GLOBAL_CERTIFICATION_FEE = 350000; // ₹3,500 in Paise
+  public static readonly SLG_KIT_FEE = 100000; // ₹1,000 in Paise (One-time)
+  public static readonly GST_RATE = 0.18; // 18% GST (9% CGST + 9% SGST)
+  public static readonly SAC_CODE = "999293";
+
   /**
-   * Calculates financial totals in integer Paise with non-negative validation.
+   * Calculates financial totals in integer Paise with non-negative validation,
+   * including mandatory 18% GST, ₹3,500 Global Certification Fee, and ₹1,000 SLG Kit Fee.
    */
   static calculateNetPayable(params: {
     totalCourseFee: number;
-    registrationFee: number;
+    registrationFee?: number;
     discountAmount: number;
     scholarshipAmount: number;
-  }): { netPayable: number; isValid: boolean } {
-    const gross = params.totalCourseFee + params.registrationFee;
-    const deductions = params.discountAmount + params.scholarshipAmount;
-    const net = gross - deductions;
+    globalCertFee?: number;
+    kitFee?: number;
+    applyGst?: boolean;
+    otherCharges?: number;
+  }): {
+    taxableBase: number;
+    gstAmount: number;
+    cgstAmount: number;
+    sgstAmount: number;
+    netPayable: number;
+    isValid: boolean;
+  } {
+    const res = CentralFeeCalculatorService.calculate({
+      baseCourseFee: params.totalCourseFee,
+      discountAmount: params.discountAmount,
+      scholarshipAmount: params.scholarshipAmount,
+      globalCertificationFee: params.globalCertFee,
+      kitFee: params.kitFee ?? params.registrationFee,
+      otherCharges: params.otherCharges,
+      applyGst: params.applyGst,
+    });
+
     return {
-      netPayable: net,
-      isValid: net >= 0 && params.discountAmount >= 0 && params.scholarshipAmount >= 0 && params.registrationFee >= 0,
+      taxableBase: res.taxableBase,
+      gstAmount: res.gstAmount,
+      cgstAmount: res.cgstAmount,
+      sgstAmount: res.sgstAmount,
+      netPayable: res.finalPayable,
+      isValid: res.finalPayable >= 0 && (params.discountAmount || 0) >= 0 && (params.scholarshipAmount || 0) >= 0,
     };
   }
 
@@ -100,17 +130,11 @@ export class FeeStructureService {
       });
     }
 
-    const totalCourseFee = enrollment.course.baseFee;
+    const totalCourseFee = input.totalCourseFee && input.totalCourseFee > 0 ? Math.floor(input.totalCourseFee) : enrollment.course.baseFee;
     const registrationFee = Math.max(0, Math.floor(input.registrationFee || 0));
     const discountAmount = Math.max(0, Math.floor(input.discountAmount || 0));
     const scholarshipAmount = Math.max(0, Math.floor(input.scholarshipAmount || 0));
-
-    const { netPayable, isValid } = this.calculateNetPayable({
-      totalCourseFee,
-      registrationFee,
-      discountAmount,
-      scholarshipAmount,
-    });
+    const netPayable = Math.max(0, totalCourseFee + registrationFee - discountAmount - scholarshipAmount);
 
     if (!isValid || netPayable < 0) {
       throw new TRPCError({
@@ -131,6 +155,22 @@ export class FeeStructureService {
     }
 
     return await db.$transaction(async (tx) => {
+      const breakdownRemarks = JSON.stringify({
+        baseFee: totalCourseFee,
+        discount: discountAmount,
+        scholarship: scholarshipAmount,
+        globalCertificationFee: this.GLOBAL_CERTIFICATION_FEE,
+        slgKitFee: this.SLG_KIT_FEE,
+        taxableBase: taxableBase,
+        gstRate: "18%",
+        cgst: cgstAmount,
+        sgst: sgstAmount,
+        gstTotal: gstAmount,
+        grossPayable: netPayable,
+        sacCode: this.SAC_CODE,
+        userRemarks: input.remarks?.trim() || null,
+      });
+
       const feeStructure = await tx.feeStructure.create({
         data: {
           studentId: enrollment.studentId,
@@ -138,7 +178,8 @@ export class FeeStructureService {
           courseId: enrollment.courseId,
           batchId: enrollment.batchId,
           totalCourseFee,
-          registrationFee,
+          registrationFee: registrationFee,
+          softlabServiceFee: 0,
           discountAmount,
           scholarshipAmount,
           netPayableAmount: netPayable,
@@ -146,7 +187,7 @@ export class FeeStructureService {
           pendingAmount: netPayable,
           paymentStatus: netPayable === 0 ? FeePaymentStatus.PAID : FeePaymentStatus.PENDING,
           status: FeeStructureStatus.ACTIVE,
-          remarks: input.remarks?.trim() || null,
+          remarks: breakdownRemarks,
           createdById: user.id,
         },
       });
@@ -303,7 +344,27 @@ export class FeeStructureService {
       }),
     ]);
 
-    return { items, total, page, limit, totalPages: Math.ceil(total / limit) };
+    const enrichedItems = items.map((fee) => {
+      const snap = CentralFeeCalculatorService.parseFeeStructureSnapshot(fee);
+      return {
+        ...fee,
+        baseCourseFee: snap.baseCourseFee,
+        discountAmount: snap.discountAmount,
+        discountedCourseFee: snap.discountedCourseFee,
+        kitFee: snap.kitFee,
+        globalCertificationFee: snap.globalCertificationFee,
+        otherCharges: snap.otherCharges,
+        totalAdditionalCharges: snap.totalAdditionalCharges,
+        gstAmount: snap.gstAmount,
+        finalPayable: snap.finalPayable,
+        paidAmount: snap.paidAmount,
+        pendingAmount: snap.pendingAmount,
+        policyVersion: snap.policyVersion,
+        isHistoricalAdjusted: snap.isHistoricalAdjusted,
+      };
+    });
+
+    return { items: enrichedItems, total, page, limit, totalPages: Math.ceil(total / limit) };
   }
 
   /**
@@ -492,7 +553,7 @@ export class FeeStructureService {
         ],
       };
 
-      const [myFeeAggr, myPaymentAggr, recentPayments, pendingStudents] = await Promise.all([
+      const [myFeeAggr, myPaymentAggr, recentPayments, pendingStudents, myAllStructures] = await Promise.all([
         db.feeStructure.aggregate({
           where: feeWhere,
           _sum: {
@@ -528,17 +589,57 @@ export class FeeStructureService {
             batch: { select: { name: true, code: true } },
           },
         }),
+        db.feeStructure.findMany({
+          where: feeWhere,
+          select: {
+            totalCourseFee: true,
+            discountAmount: true,
+            registrationFee: true,
+            softlabServiceFee: true,
+            otherCharges: true,
+            netPayableAmount: true,
+            paidAmount: true,
+            pendingAmount: true,
+            remarks: true,
+          },
+        }),
       ]);
 
+      let myOriginalCourseFee = 0;
+      let myDiscountGiven = 0;
+      let myNetCourseRevenue = 0;
+      let myTotalBilling = 0;
+      let myTotalPending = 0;
+
+      for (const fs of myAllStructures) {
+        const snap = CentralFeeCalculatorService.parseFeeStructureSnapshot(fs);
+        myOriginalCourseFee += snap.baseCourseFee;
+        myDiscountGiven += snap.discountAmount;
+        myNetCourseRevenue += snap.discountedCourseFee;
+        myTotalBilling += snap.finalPayable;
+        myTotalPending += snap.pendingAmount;
+      }
+
       const myCollected = myPaymentAggr._sum.amount || 0;
-      const myReceivable = myFeeAggr._sum.netPayableAmount || 0;
-      const myOutstanding = myFeeAggr._sum.pendingAmount || 0;
+      const myReceivable = myTotalBilling;
+      const myOutstanding = myTotalPending;
       const collectionRate = myReceivable > 0 ? Math.round((myCollected / myReceivable) * 100) : 100;
 
       return {
         isRestrictedView: true,
+        originalCourseFee: myOriginalCourseFee,
+        discountGiven: myDiscountGiven,
+        netDiscountedCourseRevenue: myNetCourseRevenue,
+        gstLiability: 0,
+        globalCertificationCharges: 0,
+        kitCharges: 0,
+        otherCharges: 0,
+        totalStudentBilling: myTotalBilling,
+        actualPaymentsCollected: myCollected,
+        outstandingReceivables: myOutstanding,
+        adjustmentsWaivers: 0,
         totalBusiness: 0, // Total company revenue hidden
-        totalDiscount: myFeeAggr._sum.discountAmount || 0,
+        totalDiscount: myDiscountGiven,
         totalReceivable: myReceivable,
         totalCollected: myCollected, // Only counselor's own collections!
         myCollection: myCollected,
@@ -553,7 +654,7 @@ export class FeeStructureService {
     }
 
     // Company Finance Admins (Super Admin, Director, Admin, Accountant, Manager)
-    const [aggregates, overdueInstallments, partialCount, recentPayments, pendingStudents] = await Promise.all([
+    const [aggregates, overdueInstallments, partialCount, recentPayments, pendingStudents, allStructures] = await Promise.all([
       db.feeStructure.aggregate({
         where: { status: FeeStructureStatus.ACTIVE },
         _sum: {
@@ -593,13 +694,53 @@ export class FeeStructureService {
           batch: { select: { name: true, code: true } },
         },
       }),
+      db.feeStructure.findMany({
+        where: { status: FeeStructureStatus.ACTIVE },
+        select: {
+          totalCourseFee: true,
+          discountAmount: true,
+          registrationFee: true,
+          softlabServiceFee: true,
+          otherCharges: true,
+          netPayableAmount: true,
+          paidAmount: true,
+          pendingAmount: true,
+          remarks: true,
+        },
+      }),
     ]);
 
-    const totalBusiness = aggregates._sum.netPayableAmount || 0;
-    const totalDiscount = aggregates._sum.discountAmount || 0;
-    const totalReceivable = aggregates._sum.netPayableAmount || 0;
-    const totalCollected = aggregates._sum.paidAmount || 0;
-    const totalOutstanding = aggregates._sum.pendingAmount || 0;
+    let originalCourseFee = 0;
+    let discountGiven = 0;
+    let netDiscountedCourseRevenue = 0;
+    let globalCertificationCharges = 0;
+    let kitCharges = 0;
+    let otherCharges = 0;
+    let gstLiability = 0;
+    let totalStudentBilling = 0;
+    let actualPaymentsCollected = 0;
+    let outstandingReceivables = 0;
+    let adjustmentsWaivers = 0;
+
+    for (const fs of allStructures) {
+      const snap = CentralFeeCalculatorService.parseFeeStructureSnapshot(fs);
+      originalCourseFee += snap.baseCourseFee;
+      discountGiven += snap.discountAmount;
+      netDiscountedCourseRevenue += snap.discountedCourseFee;
+      globalCertificationCharges += snap.globalCertificationFee;
+      kitCharges += snap.kitFee;
+      otherCharges += snap.otherCharges;
+      gstLiability += snap.gstAmount;
+      totalStudentBilling += snap.finalPayable;
+      actualPaymentsCollected += snap.paidAmount;
+      outstandingReceivables += snap.pendingAmount;
+    }
+
+    const totalBusiness = netDiscountedCourseRevenue; // Net Course Revenue! Never misleadingly includes tax or pass-through
+    const totalDiscount = discountGiven;
+    const totalReceivable = totalStudentBilling;
+    const totalCollected = actualPaymentsCollected;
+    const totalOutstanding = outstandingReceivables;
 
     const overdueAmount = overdueInstallments.reduce((acc, inst) => {
       const remaining = inst.amount - inst.paidAmount;
@@ -610,6 +751,20 @@ export class FeeStructureService {
 
     return {
       isRestrictedView: false,
+      // Section 5 Reporting Metrics:
+      originalCourseFee, // A. Original Course Fee
+      discountGiven, // B. Discount Given
+      netDiscountedCourseRevenue, // C. Net Discounted Course Revenue (Pure Course Revenue!)
+      gstLiability, // D. GST Collected / Tax Liability
+      globalCertificationCharges, // E. Global Certification Charges
+      kitCharges, // F. Kit Charges
+      otherCharges, // G. Other Additional Charges
+      totalStudentBilling, // H. Total Student Billing
+      actualPaymentsCollected, // I. Actual Payments Collected
+      outstandingReceivables, // J. Outstanding Receivables
+      adjustmentsWaivers, // K. Refunds and Approved Adjustments
+
+      // Legacy / compatibility aliases:
       totalBusiness,
       totalDiscount,
       totalReceivable,

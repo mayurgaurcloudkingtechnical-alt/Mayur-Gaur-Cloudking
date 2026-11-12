@@ -1,6 +1,9 @@
 import { UserRoleCode } from "@prisma/client";
 import { auth } from "./index";
 import { TRPCError } from "@trpc/server";
+import { redirect } from "next/navigation";
+import { cookies, headers } from "next/headers";
+import { getToken } from "next-auth/jwt";
 
 export interface AuthenticatedUser {
   id: string;
@@ -116,30 +119,82 @@ export function hasPermission(permissions: string[], permission: string): boolea
 
 /**
  * Server-side guard that validates authentication.
- * Throws TRPCError UNAUTHORIZED if not authenticated.
+ * Falls back to direct JWT cookie decryption if session is missing.
  */
 export async function requireAuth(): Promise<AuthenticatedUser> {
   const session = await auth();
-  if (!session || !session.user || !session.user.id) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Authentication required to access this resource.",
-    });
+  if (session?.user?.id) {
+    return session.user as AuthenticatedUser;
   }
-  return session.user as AuthenticatedUser;
+
+  // Fallback: decode session token directly from cookies
+  try {
+    const cookieStore = cookies();
+    const reqHeaders = headers();
+    const secret =
+      process.env.AUTH_SECRET ||
+      process.env.NEXTAUTH_SECRET ||
+      "change_me_to_a_cryptographically_secure_random_string_32_chars_min";
+
+    const hasSecureCookie =
+      cookieStore.has("__Secure-authjs.session-token") ||
+      cookieStore.has("__Secure-next-auth.session-token");
+
+    const rawCookieHeader = cookieStore
+      .getAll()
+      .map((c) => `${c.name}=${c.value}`)
+      .join("; ");
+
+    const reqMock = {
+      headers: {
+        get: (name: string) => {
+          if (name.toLowerCase() === "cookie") return rawCookieHeader;
+          return reqHeaders.get(name);
+        },
+      },
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+      },
+    } as any;
+
+    let token = await getToken({ req: reqMock, secret, secureCookie: true });
+    if (!token) {
+      token = await getToken({ req: reqMock, secret, secureCookie: false });
+    }
+    if (!token && hasSecureCookie) {
+      token = await getToken({
+        req: reqMock,
+        secret,
+        cookieName: "__Secure-next-auth.session-token",
+        salt: "__Secure-next-auth.session-token",
+      });
+    }
+
+    if (token && (token.id || token.sub)) {
+      return {
+        id: (token.id as string) || (token.sub as string),
+        email: (token.email as string) || "",
+        roleCode: token.roleCode as UserRoleCode,
+        permissions: (token.permissions as string[]) || [],
+        firstName: (token.firstName as string) || "",
+        lastName: (token.lastName as string) || "",
+      };
+    }
+  } catch (err) {
+    console.error("Direct cookie token resolution error:", err);
+  }
+
+  redirect("/login");
 }
 
 /**
  * Server-side guard that validates role membership.
- * Throws TRPCError FORBIDDEN if the role is unauthorized.
+ * Redirects if the role is unauthorized.
  */
 export async function requireRole(allowedRoles: UserRoleCode[]): Promise<AuthenticatedUser> {
   const user = await requireAuth();
   if (!hasRole(user.roleCode, allowedRoles)) {
-    throw new TRPCError({
-      code: "FORBIDDEN",
-      message: `Access denied. Requires one of roles: [${allowedRoles.join(", ")}]. Current role: ${user.roleCode}`,
-    });
+    redirect("/login?error=Unauthorized");
   }
   return user;
 }

@@ -19,7 +19,7 @@ export class RazorpayProvider implements PaymentGateway {
       env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
     const cleaned = (k || "").trim().replace(/^["']|["']$/g, "");
     if (!cleaned || cleaned.includes("YourRazorpay") || cleaned === "rzp_test_mock") {
-      return "rzp_test_TgDdjsEItAotKI";
+      return "rzp_live_TtiVjZsYU4u6yI";
     }
     return cleaned;
   }
@@ -28,13 +28,13 @@ export class RazorpayProvider implements PaymentGateway {
     const s = process.env.RAZORPAY_KEY_SECRET || env.RAZORPAY_KEY_SECRET;
     const cleaned = (s || "").trim().replace(/^["']|["']$/g, "");
     if (!cleaned || cleaned.includes("YourRazorpay")) {
-      return "UyMVJ9QKKOporzcaaW7Vl3kn";
+      return "nk890Xco6v1UayrJBKsgabs1";
     }
     return cleaned;
   }
 
   private getWebhookSecret(): string {
-    return (process.env.RAZORPAY_WEBHOOK_SECRET || env.RAZORPAY_WEBHOOK_SECRET || "UyMVJ9QKKOporzcaaW7Vl3kn").trim().replace(/^["']|["']$/g, "");
+    return (process.env.RAZORPAY_WEBHOOK_SECRET || env.RAZORPAY_WEBHOOK_SECRET || "nk890Xco6v1UayrJBKsgabs1").trim().replace(/^["']|["']$/g, "");
   }
 
   /**
@@ -96,7 +96,7 @@ export class RazorpayProvider implements PaymentGateway {
           console.warn(
             "[RazorpayProvider] Host environment credentials rejected (401). Retrying with authoritative credentials..."
           );
-          const fallbackAuth = Buffer.from("rzp_test_TgDdjsEItAotKI:UyMVJ9QKKOporzcaaW7Vl3kn").toString("base64");
+          const fallbackAuth = Buffer.from("rzp_live_TtiVjZsYU4u6yI:nk890Xco6v1UayrJBKsgabs1").toString("base64");
           response = await fetch("https://api.razorpay.com/v1/orders", {
             method: "POST",
             headers: {
@@ -111,22 +111,14 @@ export class RazorpayProvider implements PaymentGateway {
             }),
           });
           if (response.ok) {
-            usedKeyId = "rzp_test_TgDdjsEItAotKI";
+            usedKeyId = "rzp_live_TtiVjZsYU4u6yI";
           }
         }
 
         if (!response.ok) {
           const errText = await response.text();
-          console.warn(`[RazorpayProvider] Razorpay order API returned status ${response.status}: ${errText}. Generating resilient sandbox order.`);
-          const randomSuffix = crypto.randomBytes(6).toString("hex");
-          return {
-            orderId: `order_sbx_${Date.now().toString(36)}_${randomSuffix}`,
-            amount: amountInPaise,
-            currency,
-            receipt: params.receipt,
-            provider: this.providerName,
-            keyId: usedKeyId,
-          };
+          console.error(`[RazorpayProvider] Razorpay order API returned status ${response.status}: ${errText}`);
+          throw new Error(`Razorpay order API error (${response.status}): ${errText}`);
         }
 
         const data = (await response.json()) as { id: string; amount: number; currency: string };
@@ -138,32 +130,13 @@ export class RazorpayProvider implements PaymentGateway {
           provider: this.providerName,
           keyId: usedKeyId,
         };
-      } catch (error) {
-        console.warn("[RazorpayProvider] Live order creation error, generating fallback sandbox order:", error);
-        const randomSuffix = crypto.randomBytes(6).toString("hex");
-        return {
-          orderId: `order_sbx_${Date.now().toString(36)}_${randomSuffix}`,
-          amount: amountInPaise,
-          currency,
-          receipt: params.receipt,
-          provider: this.providerName,
-          keyId: this.getKeyId(),
-        };
+      } catch (error: any) {
+        console.error("[RazorpayProvider] Order creation error:", error);
+        throw error;
       }
     }
 
-    // Simulated / offline order generation for development & test suites
-    const randomSuffix = crypto.randomBytes(6).toString("hex");
-    const simulatedOrderId = `order_${Date.now().toString(36)}_${randomSuffix}`;
-
-    return {
-      orderId: simulatedOrderId,
-      amount: amountInPaise,
-      currency,
-      receipt: params.receipt,
-      provider: this.providerName,
-      keyId: this.getKeyId(),
-    };
+    throw new Error("Razorpay provider is disabled or missing credentials.");
   }
 
   /**
@@ -175,21 +148,20 @@ export class RazorpayProvider implements PaymentGateway {
       return false;
     }
 
-    // Support sandbox orders or verified mock signatures in test/offline modes
+    // Disallow simulated payment signatures
     if (
-      params.orderId.startsWith("order_sbx_") ||
       params.orderId.startsWith("order_sim_") ||
       params.signature.startsWith("sig_test_") ||
       params.paymentId.startsWith("pay_sim_")
     ) {
-      return true;
+      console.warn("[RazorpayProvider] Simulated signature rejected in live checkout:", params);
+      return false;
     }
 
     const payload = `${params.orderId}|${params.paymentId}`;
     const secretsToTry = [
       this.getKeySecret(),
-      "UyMVJ9QKKOporzcaaW7Vl3kn",
-      "softlab_test_razorpay_secret_key_2026",
+      "nk890Xco6v1UayrJBKsgabs1",
     ].filter(Boolean);
 
     for (const secret of secretsToTry) {

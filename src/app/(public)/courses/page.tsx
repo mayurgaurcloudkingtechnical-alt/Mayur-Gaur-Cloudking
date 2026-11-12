@@ -22,7 +22,7 @@ export default async function CoursesPage() {
     where: {
       status: ContentStatus.PUBLISHED,
       deletedAt: null,
-      providerType: { not: "UNIVERSITY" },
+      providerType: "SOFTLAB",
     },
     orderBy: {
       sortOrder: "asc",
@@ -61,7 +61,7 @@ export default async function CoursesPage() {
               {/* Top Pill Badge */}
               <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-cyan-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold uppercase tracking-wider backdrop-blur-md shadow-xs">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>SoftLab Global Tech Academy • 21 Flagship Cohorts</span>
+                <span>SoftLab Global Tech Academy • 48 Professional Programs</span>
               </div>
 
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-white tracking-tight leading-tight">

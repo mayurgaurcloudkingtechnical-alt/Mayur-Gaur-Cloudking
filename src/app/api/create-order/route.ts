@@ -4,7 +4,9 @@ import { env } from "@/lib/env";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => ({}));
-    const { amount, currency = "INR", receipt, notes = {} } = body;
+    const rawAmount = body.amount ?? body.amountPaise;
+    const amount = typeof rawAmount === "string" ? parseFloat(rawAmount) : rawAmount;
+    const { currency = "INR", receipt, notes = {} } = body;
 
     // Validate amount >= 100 paise (₹1)
     if (typeof amount !== "number" || isNaN(amount) || amount < 100) {
@@ -18,18 +20,18 @@ export async function POST(req: NextRequest) {
       process.env.RAZORPAY_KEY_ID ||
       process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID ||
       env.RAZORPAY_KEY_ID ||
-      "rzp_test_TgDdjsEItAotKI"
+      "rzp_live_TtiVjZsYU4u6yI"
     ).trim().replace(/^["']|["']$/g, "");
 
     let keySecret = (
       process.env.RAZORPAY_KEY_SECRET ||
       env.RAZORPAY_KEY_SECRET ||
-      "UyMVJ9QKKOporzcaaW7Vl3kn"
+      "nk890Xco6v1UayrJBKsgabs1"
     ).trim().replace(/^["']|["']$/g, "");
 
     if (!keyId || !keySecret || keyId.includes("YourRazorpay") || keySecret.includes("YourRazorpay")) {
-      keyId = "rzp_test_TgDdjsEItAotKI";
-      keySecret = "UyMVJ9QKKOporzcaaW7Vl3kn";
+      keyId = "rzp_live_TtiVjZsYU4u6yI";
+      keySecret = "nk890Xco6v1UayrJBKsgabs1";
     }
 
     let auth = Buffer.from(`${keyId}:${keySecret}`).toString("base64");
@@ -54,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     if (response.status === 401) {
       console.warn("[CreateOrderAPI] Razorpay rejected host credentials (401). Retrying with authoritative credentials...");
-      const fallbackAuth = Buffer.from("rzp_test_TgDdjsEItAotKI:UyMVJ9QKKOporzcaaW7Vl3kn").toString("base64");
+      const fallbackAuth = Buffer.from("rzp_live_TtiVjZsYU4u6yI:nk890Xco6v1UayrJBKsgabs1").toString("base64");
       response = await fetch("https://api.razorpay.com/v1/orders", {
         method: "POST",
         headers: {
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
         }),
       });
       if (response.ok) {
-        usedKeyId = "rzp_test_TgDdjsEItAotKI";
+        usedKeyId = "rzp_live_TtiVjZsYU4u6yI";
       }
     }
 
@@ -79,18 +81,14 @@ export async function POST(req: NextRequest) {
         .catch(() => ({ error: { description: "Razorpay order creation failed" } }));
       const description =
         errorData?.error?.description || "Razorpay API returned an error.";
-      console.warn(`[CreateOrderAPI] Live API call returned ${response.status} (${description}). Generating resilient sandbox order.`);
+      console.error(`[CreateOrderAPI] Razorpay order call returned ${response.status} (${description})`);
 
-      const sandboxOrderId = `order_sbx_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 8)}`;
       return NextResponse.json(
         {
-          order_id: sandboxOrderId,
-          amount: Math.round(amount),
-          currency: currency.toUpperCase(),
-          key_id: usedKeyId,
-          sandbox: true,
+          error: `Razorpay Gateway Error: ${description}. Please ensure valid active Razorpay API credentials are configured in system settings.`,
+          code: errorData?.error?.code || "GATEWAY_ERROR",
         },
-        { status: 200 }
+        { status: 502 }
       );
     }
 

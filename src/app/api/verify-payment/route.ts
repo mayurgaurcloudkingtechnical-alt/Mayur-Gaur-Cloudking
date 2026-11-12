@@ -25,38 +25,44 @@ export async function POST(req: NextRequest) {
     const keySecret = (
       process.env.RAZORPAY_KEY_SECRET ||
       env.RAZORPAY_KEY_SECRET ||
-      "UyMVJ9QKKOporzcaaW7Vl3kn"
+      "nk890Xco6v1UayrJBKsgabs1"
     ).trim().replace(/^["']|["']$/g, "");
 
     const payload = `${orderId}|${paymentId}`;
-    const secretsToTry = [keySecret, "UyMVJ9QKKOporzcaaW7Vl3kn"].filter(Boolean);
+    const secretsToTry = [keySecret, "nk890Xco6v1UayrJBKsgabs1"].filter(Boolean);
     let isMatch = false;
 
-    // Support sandbox orders or verified test signatures
+    // Reject simulated or fake payment signatures
     if (
-      orderId.startsWith("order_sbx_") ||
       orderId.startsWith("order_sim_") ||
-      signature.startsWith("sig_test_") ||
-      paymentId.startsWith("pay_sim_")
+      paymentId.startsWith("pay_sim_") ||
+      signature.startsWith("sig_test_")
     ) {
-      isMatch = true;
-    } else {
-      for (const sec of secretsToTry) {
-        const generatedSignature = crypto
-          .createHmac("sha256", sec)
-          .update(payload)
-          .digest("hex");
+      console.warn("[VerifyPaymentAPI] Blocked simulated payment attempt:", { orderId, paymentId });
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Simulated or unverified payment bypasses are not permitted.",
+        },
+        { status: 400 }
+      );
+    }
 
-        const sigBuffer = Buffer.from(signature, "utf-8");
-        const genBuffer = Buffer.from(generatedSignature, "utf-8");
+    for (const sec of secretsToTry) {
+      const generatedSignature = crypto
+        .createHmac("sha256", sec)
+        .update(payload)
+        .digest("hex");
 
-        if (
-          sigBuffer.length === genBuffer.length &&
-          crypto.timingSafeEqual(sigBuffer, genBuffer)
-        ) {
-          isMatch = true;
-          break;
-        }
+      const sigBuffer = Buffer.from(signature, "utf-8");
+      const genBuffer = Buffer.from(generatedSignature, "utf-8");
+
+      if (
+        sigBuffer.length === genBuffer.length &&
+        crypto.timingSafeEqual(sigBuffer, genBuffer)
+      ) {
+        isMatch = true;
+        break;
       }
     }
 
@@ -136,7 +142,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Create Payment Transaction
-        await db.paymentTransaction.create({
+        const paymentTx = await db.paymentTransaction.create({
           data: {
             transactionReference,
             amount: amountPaise,
@@ -161,6 +167,56 @@ export async function POST(req: NextRequest) {
             },
           },
         });
+
+        // Ensure statutory GST Invoice is generated and General Ledger is updated
+        let invoiceNumber: string | null = null;
+        try {
+          const { GstBillingService } = await import("@/server/services/gst-billing.service");
+          const invoice = await db.$transaction(async (tx) => {
+            return GstBillingService.ensureAndSettleInvoiceForPayment(tx, {
+              paymentTransactionId: paymentTx.id,
+              amountPaise,
+              paymentMethod: PaymentMethod.RAZORPAY,
+              paymentReference: receiptNumber,
+              paidAt: new Date(),
+              customerName: customerName?.trim() || "Website Learner",
+              customerEmail: customerEmail?.trim() || null,
+              customerPhone: customerPhone?.trim() || null,
+              customerState: "Uttar Pradesh",
+              customerStateCode: "09",
+              courseTitle: courseTitle || "Professional Course Admission",
+              hsnSacCode: "999293",
+              isTaxInclusive: true,
+            });
+          });
+          invoiceNumber = invoice?.invoiceNumber || null;
+        } catch (invErr) {
+          console.error("[VerifyPaymentAPI] Error ensuring GST invoice:", invErr);
+        }
+
+        // Dispatch transactional email via dedicated sender
+        if (customerEmail) {
+          try {
+            const { IntelligentNotificationEngine } = await import("@/server/services/intelligent-notification-engine.service");
+            await IntelligentNotificationEngine.dispatchEvent({
+              eventType: "NEW_STUDENT_ADMISSION",
+              entityId: paymentTx.id,
+              primaryRecipientEmail: customerEmail.trim(),
+              primaryRecipientName: customerName?.trim() || "Learner",
+              amountPaise,
+              payload: {
+                studentName: customerName?.trim() || "Learner",
+                studentId: "SG-ONLINE",
+                courseTitle: courseTitle || "Professional Program",
+                receiptNumber,
+                amountPaise,
+                invoiceNumber: invoiceNumber || "Generated",
+              },
+            });
+          } catch (notifErr) {
+            console.warn("[VerifyPaymentAPI] Notification error:", notifErr);
+          }
+        }
       }
     } catch (dbErr) {
       console.error("[VerifyPaymentAPI] Error recording payment transaction in DB:", dbErr);

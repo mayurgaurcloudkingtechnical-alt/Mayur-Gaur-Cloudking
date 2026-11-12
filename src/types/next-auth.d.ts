@@ -12,6 +12,10 @@ declare module "next-auth" {
       phone?: string | null;
       callingNumber?: string | null;
       whatsappNumber?: string | null;
+      tenantId?: string | null;
+      tenantBranchId?: string | null;
+      tenantDepartmentId?: string | null;
+      reportingManagerId?: string | null;
     } & DefaultSession["user"];
   }
 
@@ -24,6 +28,10 @@ declare module "next-auth" {
     phone?: string | null;
     callingNumber?: string | null;
     whatsappNumber?: string | null;
+    tenantId?: string | null;
+    tenantBranchId?: string | null;
+    tenantDepartmentId?: string | null;
+    reportingManagerId?: string | null;
   }
 }
 
@@ -37,5 +45,9 @@ declare module "next-auth/jwt" {
     phone?: string | null;
     callingNumber?: string | null;
     whatsappNumber?: string | null;
+    tenantId?: string | null;
+    tenantBranchId?: string | null;
+    tenantDepartmentId?: string | null;
+    reportingManagerId?: string | null;
   }
 }

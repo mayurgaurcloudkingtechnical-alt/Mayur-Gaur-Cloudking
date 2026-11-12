@@ -6,25 +6,19 @@ export class HiringAutomationConfigService {
    * Retrieves or initializes default automation configuration
    */
   public static async getConfig() {
-    let config = await db.hiringAutomationConfig.findUnique({
+    return await db.hiringAutomationConfig.upsert({
       where: { id: "default" },
+      update: {},
+      create: {
+        id: "default",
+        trustPolicy: HiringTrustPolicy.REVIEW_FIRST,
+        autoPublishMinScore: 0.85,
+        enableHinglishAi: true,
+        rejectSuspicious: true,
+        maxDailyIngestion: 500,
+        webhookSecret: "slg_hiring_wh_sec_2026",
+      },
     });
-
-    if (!config) {
-      config = await db.hiringAutomationConfig.create({
-        data: {
-          id: "default",
-          trustPolicy: HiringTrustPolicy.REVIEW_FIRST,
-          autoPublishMinScore: 0.85,
-          enableHinglishAi: true,
-          rejectSuspicious: true,
-          maxDailyIngestion: 500,
-          webhookSecret: "slg_hiring_wh_sec_2026",
-        },
-      });
-    }
-
-    return config;
   }
 
   /**

@@ -12,6 +12,7 @@ import { db } from "@/server/db/client";
 import { formatDate } from "@/lib/utils";
 import { INSTAGRAM_CONFIG, META_ADS_CONFIG } from "@/server/config/meta-ads.config";
 import { UnifiedLiveDashboard } from "@/components/admin/dashboard/unified-live-dashboard";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 export default async function AdminDashboardPage() {
   const user = await requireRole([
@@ -53,7 +54,7 @@ export default async function AdminDashboardPage() {
         description="Global institutional mission control, multi-platform telemetry, and real-time live tracking."
         action={
           <Badge variant="default" className="text-xs uppercase bg-slate-900">
-            {user.roleCode.replace(/_/g, " ")} • Mission Control Authority
+            {user?.roleCode ? String(user.roleCode).replace(/_/g, " ") : "ADMIN"} • Mission Control Authority
           </Badge>
         }
       />
@@ -121,7 +122,9 @@ export default async function AdminDashboardPage() {
 
       {/* Unified Multi-Platform Mission Control with Real-Time Live Tracking */}
       <div className="mb-8">
-        <UnifiedLiveDashboard />
+        <ErrorBoundary>
+          <UnifiedLiveDashboard />
+        </ErrorBoundary>
       </div>
 
 

@@ -3,6 +3,7 @@ import { UserRoleCode } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 import { AuditService } from "./audit.service";
+import { CentralNotificationEngine } from "./central-notification-engine.service";
 
 export interface SubmitReportInput {
   staffId: string;
@@ -196,6 +197,11 @@ export class DailyReportService {
         )
       );
     }
+
+    // Automatically trigger notification to all active Higher Authorities (Email + WhatsApp)
+    CentralNotificationEngine.notifyDailyReportSubmitted(report.id, actor).catch((err) =>
+      console.error("[DailyReportNotification Error]", err)
+    );
 
     return db.dailyWorkReport.findUnique({
       where: { id: report.id },

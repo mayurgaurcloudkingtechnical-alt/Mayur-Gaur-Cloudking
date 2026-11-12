@@ -23,16 +23,22 @@ import {
   ChevronRight,
   Printer,
   Briefcase,
+  ShieldCheck,
+  Layers,
+  FileSpreadsheet,
 } from "lucide-react";
 import { FeeStructuresTable } from "./fee-structures-table";
 import { PaymentsTable } from "./payments-table";
 import { RecordPaymentDialog } from "./record-payment-dialog";
 import { GenerateReceiptDialog } from "./generate-receipt-dialog";
+import { OverdueInstallmentsDialog } from "./overdue-installments-dialog";
 
 export function FinanceOverviewView() {
   const [academicYear, setAcademicYear] = useState("2025-26");
   const [activeTab, setActiveTab] = useState<"fees" | "payments">("fees");
   const [generateReceiptOpen, setGenerateReceiptOpen] = useState(false);
+  const [overdueDialogOpen, setOverdueDialogOpen] = useState(false);
+  const [externalFeeStatus, setExternalFeeStatus] = useState<any>(undefined);
   const [selectedFeeStructure, setSelectedFeeStructure] = useState<{
     id: string;
     studentName: string;
@@ -40,6 +46,19 @@ export function FinanceOverviewView() {
   } | null>(null);
 
   const { data: metrics, isLoading, refetch } = api.finance.getOverviewMetrics.useQuery();
+
+  const originalCourseFee = (metrics as any)?.originalCourseFee || 0;
+  const discountGiven = (metrics as any)?.discountGiven || (metrics as any)?.totalDiscount || 0;
+  const netDiscountedCourseRevenue = (metrics as any)?.netDiscountedCourseRevenue || 0;
+  const globalCertificationCharges = (metrics as any)?.globalCertificationCharges || 0;
+  const kitCharges = (metrics as any)?.kitCharges || 0;
+  const otherCharges = (metrics as any)?.otherCharges || 0;
+  const totalAdditionalCharges = (metrics as any)?.totalAdditionalCharges || (globalCertificationCharges + kitCharges + otherCharges);
+  const gstLiability = (metrics as any)?.gstLiability || 0;
+  const totalStudentBilling = (metrics as any)?.totalStudentBilling || (metrics as any)?.totalReceivable || 0;
+  const actualPaymentsCollected = (metrics as any)?.actualPaymentsCollected || metrics?.totalCollected || 0;
+  const outstandingReceivables = (metrics as any)?.outstandingReceivables || metrics?.totalOutstanding || 0;
+  const adjustmentsWaivers = (metrics as any)?.adjustmentsWaivers || 0;
 
   const totalBusiness = (metrics as any)?.totalBusiness || metrics?.totalReceivable || 0;
   const totalDiscount = (metrics as any)?.totalDiscount || 0;
@@ -100,101 +119,172 @@ export function FinanceOverviewView() {
         </div>
       </div>
 
-      {/* 5 KPI Cards: Total Business / My Admissions, Fees Collected / My Collection, Fees Pending, Overdue Fees, Collection Rate */}
+      {/* 5 Interactive Clickable KPI Cards: Total Business / My Admissions, Fees Collected / My Collection, Fees Pending, Overdue Fees, Collection Rate */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {/* Card 1: Total Business (Committed Fees) OR My Admissions */}
         {(metrics as any)?.isRestrictedView ? (
-          <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              setActiveTab("fees");
+              setExternalFeeStatus(undefined);
+              document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30 cursor-pointer transition-all hover:shadow-md hover:border-purple-400 hover:scale-[1.01] active:scale-[0.99] group"
+            title="Click to view all your admitted candidates and fee structures"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">My Admissions</span>
-              <span className="p-2 rounded bg-purple-50 text-purple-600">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-purple-700 transition-colors">
+                My Admissions
+              </span>
+              <span className="p-2 rounded bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
                 <Briefcase className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 text-2xl font-bold text-purple-900">
               {isLoading ? "..." : metrics?.totalEnrolledFees || 0}
             </div>
-            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+            <div className="mt-2 flex items-center justify-between text-xs font-medium text-purple-700">
               <span>Your active admitted candidates</span>
+              <span className="text-[10px] text-purple-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity">View Details →</span>
             </div>
           </div>
         ) : (
-          <div className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30">
+          <div
+            role="button"
+            tabIndex={0}
+            onClick={() => {
+              setActiveTab("fees");
+              setExternalFeeStatus(undefined);
+              document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="bg-white rounded border border-purple-200/80 p-4 shadow-sm relative overflow-hidden bg-gradient-to-br from-white to-purple-50/30 cursor-pointer transition-all hover:shadow-md hover:border-purple-400 hover:scale-[1.01] active:scale-[0.99] group"
+            title="Click to inspect all active student enrollment contracts (Total Business Booked)"
+          >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Business</span>
-              <span className="p-2 rounded bg-purple-50 text-purple-600">
+              <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-purple-700 transition-colors">
+                Total Business
+              </span>
+              <span className="p-2 rounded bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-all">
                 <Briefcase className="h-4 w-4" />
               </span>
             </div>
             <div className="mt-2 text-2xl font-bold text-purple-900">
               {isLoading ? "..." : formatPaiseToRupees(totalBusiness)}
             </div>
-            <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-purple-700">
+            <div className="mt-2 flex items-center justify-between text-xs font-medium text-purple-700">
               <span>{metrics?.totalEnrolledFees || 0} active enrollment contracts</span>
+              <span className="text-[10px] text-purple-500 font-bold opacity-0 group-hover:opacity-100 transition-opacity">View All →</span>
             </div>
           </div>
         )}
 
         {/* Card 2: Fees Collected / My Collections */}
-        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            setActiveTab("payments");
+            document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-emerald-400 hover:scale-[1.01] active:scale-[0.99] group"
+          title="Click to view all verified fee collections and printable receipts"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-emerald-700 transition-colors">
               {(metrics as any)?.isRestrictedView ? "My Collections" : "Fees Collected"}
             </span>
-            <span className="p-2 rounded bg-emerald-50 text-emerald-600">
+            <span className="p-2 rounded bg-emerald-50 text-emerald-600 group-hover:bg-emerald-600 group-hover:text-white transition-all">
               <IndianRupee className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-2 text-2xl font-bold text-emerald-700">
             {isLoading ? "..." : formatPaiseToRupees(totalCollected)}
           </div>
-          <div className="mt-2 flex items-center gap-1.5 text-xs font-medium text-emerald-700">
-            <TrendingUp className="h-3.5 w-3.5" />
-            <span>{(metrics as any)?.isRestrictedView ? "Collected by your counseling desk" : "+14.2% from prior period"}</span>
+          <div className="mt-2 flex items-center justify-between text-xs font-medium text-emerald-700">
+            <span className="flex items-center gap-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              {(metrics as any)?.isRestrictedView ? "Collected by counseling desk" : "+14.2% from prior period"}
+            </span>
+            <span className="text-[10px] text-emerald-600 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Receipts →</span>
           </div>
         </div>
 
         {/* Card 3: Fees Pending / My Pending Collections */}
-        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            setActiveTab("fees");
+            setExternalFeeStatus("PARTIAL");
+            document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-amber-400 hover:scale-[1.01] active:scale-[0.99] group"
+          title="Click to view all students with pending fees and collect balance"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-amber-700 transition-colors">
               {(metrics as any)?.isRestrictedView ? "My Pending Dues" : "Fees Pending"}
             </span>
-            <span className="p-2 rounded bg-amber-50 text-amber-600">
+            <span className="p-2 rounded bg-amber-50 text-amber-600 group-hover:bg-amber-600 group-hover:text-white transition-all">
               <Clock className="h-4 w-4" />
             </span>
           </div>
           <div className="mt-2 text-2xl font-bold text-amber-700">
             {isLoading ? "..." : formatPaiseToRupees(totalOutstanding)}
           </div>
-          <p className="mt-2 text-xs text-slate-500">
-            {(metrics as any)?.isRestrictedView
-              ? "Dues remaining on your admissions"
-              : `${metrics?.partialCount || 0} active installment plans`}
-          </p>
+          <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+            <span>
+              {(metrics as any)?.isRestrictedView
+                ? "Dues remaining on your admissions"
+                : `${metrics?.partialCount || 0} active installment plans`}
+            </span>
+            <span className="text-[10px] text-amber-700 font-bold opacity-0 group-hover:opacity-100 transition-opacity">Collect →</span>
+          </div>
         </div>
 
-        {/* Card 4: Overdue Fees */}
-        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+        {/* Card 4: Overdue Fees (Opens Overdue Defaulters Action Modal with WhatsApp & Email) */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => setOverdueDialogOpen(true)}
+          className="bg-white rounded border-2 border-rose-300 p-4 shadow-sm relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-rose-500 hover:scale-[1.01] active:scale-[0.99] ring-2 ring-rose-100 group bg-gradient-to-br from-white via-white to-rose-50/40"
+          title="Click to inspect students with overdue installments, send WhatsApp & Email notices with late fee alerts"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Overdue Fees</span>
-            <span className="p-2 rounded bg-rose-50 text-rose-600">
+            <span className="text-xs font-bold uppercase tracking-wider text-rose-700 flex items-center gap-1.5">
+              <span>Overdue Fees</span>
+              <Badge className="bg-rose-600 text-white text-[9px] px-1 py-0 animate-pulse">Action</Badge>
+            </span>
+            <span className="p-2 rounded bg-rose-50 text-rose-600 group-hover:bg-rose-600 group-hover:text-white transition-all shadow-xs">
               <AlertCircle className="h-4 w-4" />
             </span>
           </div>
-          <div className="mt-2 text-2xl font-bold text-rose-700">
+          <div className="mt-2 text-2xl font-black text-rose-700">
             {isLoading ? "..." : formatPaiseToRupees(overdueAmount)}
           </div>
-          <p className="mt-2 text-xs text-rose-600 font-medium">
-            Requires follow-up attention
-          </p>
+          <div className="mt-2 flex items-center justify-between text-xs text-rose-600 font-semibold">
+            <span>Requires follow-up attention</span>
+            <span className="text-[10px] text-rose-700 underline font-bold">Open Desk →</span>
+          </div>
         </div>
 
         {/* Card 5: Collection Rate */}
-        <div className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden">
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => {
+            document.getElementById("paid-vs-pending")?.scrollIntoView({ behavior: "smooth" });
+          }}
+          className="bg-white rounded border border-slate-200 p-4 shadow-sm relative overflow-hidden cursor-pointer transition-all hover:shadow-md hover:border-blue-400 hover:scale-[1.01] active:scale-[0.99] group"
+          title="Click to view Paid vs Pending collection rate analytics"
+        >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">Collection Rate</span>
-            <span className="p-2 rounded bg-blue-50 text-blue-600">
+            <span className="text-xs font-semibold uppercase tracking-wider text-slate-500 group-hover:text-blue-700 transition-colors">
+              Collection Rate
+            </span>
+            <span className="p-2 rounded bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
               <TrendingUp className="h-4 w-4" />
             </span>
           </div>
@@ -210,8 +300,128 @@ export function FinanceOverviewView() {
         </div>
       </div>
 
+      {/* Enterprise Revenue & Commercial Integrity Ledger (P0 Section 5 Compliance) */}
+      {!(metrics as any)?.isRestrictedView && (
+        <div className="bg-white rounded-xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b pb-3">
+            <div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-sm font-bold text-slate-900 tracking-tight">
+                  Business Revenue & Commercial Integrity Ledger
+                </h3>
+                <Badge variant="outline" className="bg-emerald-50 text-emerald-800 border-emerald-300 text-[10px] font-mono">
+                  GAAP & Audit Compliant
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Separating core tuition revenue from pass-through charges and statutory tax liability. Zero double counting.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-slate-400 font-mono">Formula: Base - Discount + Charges + Tax</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Pillar 1: Core Course Revenue */}
+            <div className="bg-slate-50/70 rounded-lg p-3.5 border border-slate-200/80 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <Layers className="h-4 w-4 text-emerald-600" />
+                  1. Core Course Revenue
+                </span>
+                <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono">Operating</span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Base Course Fee Committed:</span>
+                  <span className="font-mono font-medium text-slate-900">{formatPaiseToRupees(originalCourseFee)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Sales Discounts Approved:</span>
+                  <span className="font-mono font-medium text-amber-600">
+                    {discountGiven > 0 ? `-${formatPaiseToRupees(discountGiven)}` : "₹0"}
+                  </span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                  <span className="font-bold text-slate-800">True Net Course Revenue:</span>
+                  <span className="font-mono font-black text-emerald-700 text-sm">
+                    {formatPaiseToRupees(netDiscountedCourseRevenue)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pillar 2: Additional Charges & Tax Liability */}
+            <div className="bg-slate-50/70 rounded-lg p-3.5 border border-slate-200/80 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <FileSpreadsheet className="h-4 w-4 text-indigo-600" />
+                  2. Pass-Through & Tax
+                </span>
+                <span className="text-[10px] text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded font-mono">Non-Revenue</span>
+              </div>
+              <div className="space-y-1 text-xs">
+                <div className="flex justify-between text-slate-600 text-[11px]">
+                  <span>• Global Certifications:</span>
+                  <span className="font-mono font-medium">{formatPaiseToRupees(globalCertificationCharges)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600 text-[11px]">
+                  <span>• SoftLab Kit Charges:</span>
+                  <span className="font-mono font-medium">{formatPaiseToRupees(kitCharges)}</span>
+                </div>
+                {otherCharges > 0 && (
+                  <div className="flex justify-between text-slate-600 text-[11px]">
+                    <span>• Other Approved Charges:</span>
+                    <span className="font-mono font-medium">{formatPaiseToRupees(otherCharges)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-600 text-[11px]">
+                  <span>• GST Tax Liability:</span>
+                  <span className="font-mono font-medium">{formatPaiseToRupees(gstLiability)}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                  <span className="font-bold text-slate-800">Total Charges & Tax:</span>
+                  <span className="font-mono font-bold text-indigo-800 text-sm">
+                    {formatPaiseToRupees(totalAdditionalCharges + gstLiability)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Pillar 3: Student Billing & Receivables */}
+            <div className="bg-slate-50/70 rounded-lg p-3.5 border border-slate-200/80 space-y-2.5">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700 uppercase tracking-wider">
+                <span className="flex items-center gap-1.5">
+                  <IndianRupee className="h-4 w-4 text-blue-600" />
+                  3. Collections & Receivables
+                </span>
+                <span className="text-[10px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-mono">Cash Flow</span>
+              </div>
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between text-slate-600">
+                  <span>Total Student Billing:</span>
+                  <span className="font-mono font-semibold text-slate-900">{formatPaiseToRupees(totalStudentBilling)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>Verified Cash Collected:</span>
+                  <span className="font-mono font-bold text-emerald-700">{formatPaiseToRupees(actualPaymentsCollected)}</span>
+                </div>
+                <div className="pt-2 border-t border-slate-200 flex justify-between items-baseline">
+                  <span className="font-bold text-slate-800">Outstanding Receivables:</span>
+                  <span className="font-mono font-black text-rose-600 text-sm">
+                    {formatPaiseToRupees(outstandingReceivables)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3-Panel Split Layout matching EdumonX Image 8 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div id="paid-vs-pending" className="grid grid-cols-1 lg:grid-cols-3 gap-5">
         {/* Panel 1: Paid vs Pending Breakdown Chart / Progress */}
         <div className="bg-white rounded border border-slate-200 p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between border-b pb-3">
@@ -240,9 +450,19 @@ export function FinanceOverviewView() {
               </div>
             </div>
 
-            {/* Breakdown Legend Cards */}
+            {/* Breakdown Legend Cards - Clickable and Interactive */}
             <div className="space-y-2.5 pt-2">
-              <div className="flex items-center justify-between p-2.5 rounded bg-purple-50/60 border border-purple-100 text-xs">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setActiveTab("fees");
+                  setExternalFeeStatus(undefined);
+                  document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="flex items-center justify-between p-2.5 rounded bg-purple-50/60 border border-purple-100 text-xs cursor-pointer hover:bg-purple-100/60 hover:border-purple-300 transition-all"
+                title="Click to view all enrollment fee structures"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
                   <span className="font-semibold text-slate-700">Total Business (Committed)</span>
@@ -250,7 +470,16 @@ export function FinanceOverviewView() {
                 <span className="font-bold text-purple-900">{formatPaiseToRupees(totalBusiness || totalReceivable)}</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded bg-emerald-50/60 border border-emerald-100 text-xs">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setActiveTab("payments");
+                  document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="flex items-center justify-between p-2.5 rounded bg-emerald-50/60 border border-emerald-100 text-xs cursor-pointer hover:bg-emerald-100/60 hover:border-emerald-300 transition-all"
+                title="Click to view all payments and receipts"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
                   <span className="font-semibold text-slate-700">Collected Revenue</span>
@@ -258,7 +487,17 @@ export function FinanceOverviewView() {
                 <span className="font-bold text-emerald-800">{formatPaiseToRupees(totalCollected)}</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded bg-amber-50/60 border border-amber-100 text-xs">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setActiveTab("fees");
+                  setExternalFeeStatus("PARTIAL");
+                  document.getElementById("fee-ledger")?.scrollIntoView({ behavior: "smooth" });
+                }}
+                className="flex items-center justify-between p-2.5 rounded bg-amber-50/60 border border-amber-100 text-xs cursor-pointer hover:bg-amber-100/60 hover:border-amber-300 transition-all"
+                title="Click to view pending student balances"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                   <span className="font-semibold text-slate-700">Pending Balances</span>
@@ -266,7 +505,13 @@ export function FinanceOverviewView() {
                 <span className="font-bold text-amber-800">{formatPaiseToRupees(totalOutstanding)}</span>
               </div>
 
-              <div className="flex items-center justify-between p-2.5 rounded bg-rose-50/60 border border-rose-100 text-xs">
+              <div
+                role="button"
+                tabIndex={0}
+                onClick={() => setOverdueDialogOpen(true)}
+                className="flex items-center justify-between p-2.5 rounded bg-rose-50/60 border border-rose-200 text-xs cursor-pointer hover:bg-rose-100/70 hover:border-rose-400 transition-all"
+                title="Click to open Overdue Dues Desk and dispatch WhatsApp & Email notices"
+              >
                 <div className="flex items-center gap-2">
                   <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
                   <span className="font-semibold text-slate-700">Overdue Installments</span>
@@ -455,8 +700,29 @@ export function FinanceOverviewView() {
           </div>
         </div>
 
-        {activeTab === "fees" ? <FeeStructuresTable /> : <PaymentsTable />}
+        {activeTab === "fees" ? (
+          <FeeStructuresTable
+            externalStatusFilter={externalFeeStatus}
+            onOpenOverdueDesk={() => setOverdueDialogOpen(true)}
+          />
+        ) : (
+          <PaymentsTable />
+        )}
       </div>
+
+      {/* Overdue Installments & Defaulters Action Dialog */}
+      <OverdueInstallmentsDialog
+        open={overdueDialogOpen}
+        onOpenChange={setOverdueDialogOpen}
+        onCollectPayment={(feeStructureId, studentName, amountPaise) => {
+          setSelectedFeeStructure({
+            id: feeStructureId,
+            studentName,
+            pendingAmount: amountPaise,
+          });
+          setOverdueDialogOpen(false);
+        }}
+      />
 
       {/* Record Payment Dialog */}
       {selectedFeeStructure && (

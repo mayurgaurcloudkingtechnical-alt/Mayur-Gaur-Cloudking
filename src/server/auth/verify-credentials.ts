@@ -16,6 +16,10 @@ export interface UserAuthResult {
   phone?: string | null;
   callingNumber?: string | null;
   whatsappNumber?: string | null;
+  tenantId?: string | null;
+  tenantBranchId?: string | null;
+  tenantDepartmentId?: string | null;
+  reportingManagerId?: string | null;
 }
 
 export interface VerifyCredentialsOptions {
@@ -246,5 +250,9 @@ export async function verifyUserCredentials({
     phone: user.phone,
     callingNumber: user.callingNumber || user.phone,
     whatsappNumber: user.whatsappNumber || user.phone,
+    tenantId: user.tenantId,
+    tenantBranchId: user.tenantBranchId,
+    tenantDepartmentId: user.tenantDepartmentId,
+    reportingManagerId: user.reportingManagerId,
   };
 }

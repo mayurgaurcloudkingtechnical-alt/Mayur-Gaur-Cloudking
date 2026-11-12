@@ -40,6 +40,7 @@ interface RazorpayStandardCheckoutProps {
   buttonText?: string;
   className?: string;
   extraVerificationData?: Record<string, any>;
+  onBeforeCheckout?: () => boolean;
   onSuccess?: (data: {
     orderId: string;
     paymentId: string;
@@ -60,6 +61,7 @@ export function RazorpayStandardCheckout({
   buttonText,
   className,
   extraVerificationData,
+  onBeforeCheckout,
   onSuccess,
   onError,
 }: RazorpayStandardCheckoutProps) {
@@ -68,20 +70,53 @@ export function RazorpayStandardCheckout({
   const [successInfo, setSuccessInfo] = useState<{
     orderId: string;
     paymentId: string;
+    receiptNumber?: string | null;
   } | null>(null);
 
   const keyId =
-    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_test_TgDdjsEItAotKI";
+    process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || "rzp_live_TtiVjZsYU4u6yI";
 
   const handleCheckout = async () => {
     try {
-      setLoading(true);
       setErrorMsg(null);
       setSuccessInfo(null);
 
-      await loadRazorpayScript();
+      // STEP 0: Validate Personal & Contact Details
+      if (onBeforeCheckout && !onBeforeCheckout()) {
+        setErrorMsg("Please complete all required fields (Name, Email, 10-digit Phone) before proceeding.");
+        return;
+      }
 
-      // STEP 1: Call Backend to Create Order
+      if (!customerName || customerName.trim().length < 2) {
+        setErrorMsg("Payer / Student Full Name is required (minimum 2 letters).");
+        return;
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!customerEmail || !emailRegex.test(customerEmail.trim())) {
+        setErrorMsg("A valid Email Address is required for payment confirmation.");
+        return;
+      }
+
+      const phoneClean = (customerPhone || "").replace(/\D/g, "");
+      if (!phoneClean || phoneClean.length !== 10) {
+        setErrorMsg("A valid 10-digit Indian Mobile Number is required.");
+        return;
+      }
+
+      if (!amountPaise || amountPaise < 100) {
+        setErrorMsg("Payable amount must be at least ₹1.00.");
+        return;
+      }
+
+      setLoading(true);
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error("Unable to load Razorpay checkout script. Please check your internet connection.");
+      }
+
+      // STEP 1: Call Backend to Create Genuine Razorpay Order
       const orderRes = await fetch("/api/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -91,63 +126,28 @@ export function RazorpayStandardCheckout({
           receipt: `rcpt_${Date.now()}`,
           notes: {
             item: itemName,
-            customerEmail: customerEmail || "",
+            customerName: customerName.trim(),
+            customerEmail: customerEmail.trim(),
+            customerPhone: customerPhone.trim(),
           },
         }),
       });
 
-      if (!orderRes.ok) {
-        const errJson = await orderRes.json().catch(() => ({}));
+      const orderData = await orderRes.json().catch(() => ({}));
+      if (!orderRes.ok || !orderData.order_id) {
         throw new Error(
-          errJson.error || `Failed to create payment order (${orderRes.status})`
+          orderData.error || `Payment gateway rejected order creation (${orderRes.status}).`
         );
       }
 
-      const orderData = await orderRes.json();
       const { order_id, amount, currency } = orderData;
       const activeKey = orderData.key_id || keyId;
 
-      // Check if order is a test/sandbox fallback
-      if (orderData.sandbox || order_id.startsWith("order_sbx_") || !window.Razorpay) {
-        // Complete verification directly for sandbox flow
-        const verifyRes = await fetch("/api/verify-payment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            order_id,
-            payment_id: `pay_sim_${Date.now()}`,
-            signature: `sig_test_${order_id}`,
-            amount: amountPaise,
-            itemName,
-            customerName,
-            customerEmail,
-            customerPhone,
-            ...(extraVerificationData || {}),
-          }),
-        });
-
-        const verifyData = await verifyRes.json();
-        if (!verifyRes.ok || !verifyData.success) {
-          throw new Error(verifyData.error || "Payment verification failed.");
-        }
-
-        setSuccessInfo({
-          orderId: order_id,
-          paymentId: `pay_sim_${Date.now()}`,
-        });
-
-        onSuccess?.({
-          orderId: order_id,
-          paymentId: `pay_sim_${Date.now()}`,
-          signature: `sig_test_${order_id}`,
-          receiptNumber: verifyData.receiptNumber || null,
-          transactionReference: verifyData.transactionReference || null,
-        });
-        setLoading(false);
-        return;
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK is not available in browser. Please disable ad-blockers and try again.");
       }
 
-      // STEP 2: Configure & Open Razorpay Modal
+      // STEP 2: Configure & Open Real Razorpay Modal
       const options = {
         key: activeKey,
         amount: amount,
@@ -156,9 +156,9 @@ export function RazorpayStandardCheckout({
         description: `${itemName} - ${description}`,
         order_id: order_id,
         prefill: {
-          name: customerName || "",
-          email: customerEmail || "",
-          contact: customerPhone || "",
+          name: customerName.trim(),
+          email: customerEmail.trim(),
+          contact: customerPhone.trim(),
         },
         theme: {
           color: "#0f172a",
@@ -166,7 +166,7 @@ export function RazorpayStandardCheckout({
         modal: {
           ondismiss: () => {
             setLoading(false);
-            setErrorMsg("Payment modal closed by user.");
+            setErrorMsg("Payment modal closed by user. No transaction was completed.");
             onError?.("Payment cancelled by user.");
           },
         },
@@ -176,6 +176,8 @@ export function RazorpayStandardCheckout({
           razorpay_signature: string;
         }) {
           try {
+            setLoading(true);
+            setErrorMsg(null);
             // STEP 3: Call Backend to Verify Payment Signature
             const verifyRes = await fetch("/api/verify-payment", {
               method: "POST",
@@ -186,9 +188,9 @@ export function RazorpayStandardCheckout({
                 signature: response.razorpay_signature,
                 amount: amountPaise,
                 itemName,
-                customerName,
-                customerEmail,
-                customerPhone,
+                customerName: customerName.trim(),
+                customerEmail: customerEmail.trim(),
+                customerPhone: customerPhone.trim(),
                 ...(extraVerificationData || {}),
               }),
             });
@@ -197,13 +199,14 @@ export function RazorpayStandardCheckout({
 
             if (!verifyRes.ok || !verifyData.success) {
               throw new Error(
-                verifyData.error || "Cryptographic payment verification failed."
+                verifyData.error || "Cryptographic payment verification failed on server."
               );
             }
 
             setSuccessInfo({
               orderId: response.razorpay_order_id,
               paymentId: response.razorpay_payment_id,
+              receiptNumber: verifyData.receiptNumber || null,
             });
 
             onSuccess?.({
@@ -227,7 +230,7 @@ export function RazorpayStandardCheckout({
 
       const rzpInstance = new window.Razorpay(options);
 
-      // Handle payment failure event
+      // Handle payment failure event from Razorpay
       rzpInstance.on("payment.failed", function (failResponse: any) {
         setLoading(false);
         const failReason =
@@ -238,6 +241,7 @@ export function RazorpayStandardCheckout({
         onError?.(failReason);
       });
 
+      // Launch official Razorpay Checkout Gateway Window
       rzpInstance.open();
     } catch (err: any) {
       console.error("[RazorpayCheckout] Error:", err);

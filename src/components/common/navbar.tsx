@@ -13,6 +13,7 @@ import { GlobalSearchDialog } from "@/components/common/global-search-dialog";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { UserProfileModal } from "@/components/common/user-profile-modal";
 import { api } from "@/lib/trpc/react";
+import { ErrorBoundary } from "@/components/ui/error-boundary";
 
 interface NavbarProps {
   user: {
@@ -56,10 +57,12 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
-          <NotificationBell />
+          <ErrorBoundary fallback={<div className="w-8 h-8" />}>
+            <NotificationBell />
+          </ErrorBoundary>
 
           <Badge variant="default" className="hidden sm:inline-flex uppercase font-mono text-[11px]">
-            {user.roleCode.replace(/_/g, " ")}
+            {user?.roleCode ? String(user.roleCode).replace(/_/g, " ") : "ADMIN"}
           </Badge>
 
           {/* Interactive Profile Area */}
@@ -71,15 +74,15 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
           >
             <div className="hidden md:flex flex-col text-right">
               <span className="text-xs font-semibold text-slate-900 group-hover:text-blue-600 transition leading-none">
-                {user.firstName} {user.lastName}
+                {user?.firstName || "Admin"} {user?.lastName || ""}
               </span>
-              <span className="text-[11px] text-slate-500">{user.email}</span>
+              <span className="text-[11px] text-slate-500">{user?.email || ""}</span>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 overflow-hidden border-2 border-emerald-400 shadow-xs group-hover:ring-2 group-hover:ring-blue-400 transition shrink-0">
               {avatarUrl ? (
                 <img
                   src={avatarUrl}
-                  alt={user.firstName}
+                  alt={user?.firstName || "Profile"}
                   className="w-full h-full object-cover"
                 />
               ) : (

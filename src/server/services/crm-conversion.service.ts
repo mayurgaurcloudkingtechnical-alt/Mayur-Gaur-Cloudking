@@ -83,7 +83,21 @@ export class CrmConversionService {
       if (!studentProfile) {
         const year = new Date().getFullYear();
         const count = await tx.studentProfile.count();
-        const studentCode = `SG-${year}-${(count + 1).toString().padStart(5, "0")}`;
+        let studentCode = "";
+        for (let i = 1; i <= 50; i++) {
+          const candidate = `SG-${year}-${(count + i).toString().padStart(5, "0")}`;
+          const existing = await tx.studentProfile.findUnique({
+            where: { studentId: candidate },
+            select: { id: true },
+          });
+          if (!existing) {
+            studentCode = candidate;
+            break;
+          }
+        }
+        if (!studentCode) {
+          studentCode = `SG-${year}-${Date.now().toString().slice(-5)}`;
+        }
 
         studentProfile = await tx.studentProfile.create({
           data: {
@@ -129,17 +143,22 @@ export class CrmConversionService {
         const course = await tx.course.findUnique({ where: { id: app.courseId } });
         const totalCourseFee = course?.baseFee || 3500000;
         let discountPaise = 0;
+        let explicitFinalFee: number | null = null;
         if (app.decisionReason) {
           try {
             const parsed = JSON.parse(app.decisionReason);
             if (typeof parsed.discountAmount === "number") {
               discountPaise = parsed.discountAmount;
             }
+            if (typeof parsed.finalFee === "number" && parsed.finalFee > 0) {
+              explicitFinalFee = parsed.finalFee;
+            }
           } catch (e) {
             // Not JSON formatted decision reason, ignore
           }
         }
-        const netPayable = Math.max(0, totalCourseFee - discountPaise);
+        const netPayable = explicitFinalFee ?? Math.max(0, totalCourseFee - discountPaise);
+
         feeStructure = await tx.feeStructure.create({
           data: {
             studentId: studentProfile.id,
@@ -147,6 +166,8 @@ export class CrmConversionService {
             courseId: app.courseId,
             batchId: app.batchId || null,
             totalCourseFee,
+            registrationFee: 0,
+            softlabServiceFee: 0,
             discountAmount: discountPaise,
             netPayableAmount: netPayable,
             pendingAmount: netPayable,

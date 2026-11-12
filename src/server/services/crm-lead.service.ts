@@ -2,6 +2,7 @@ import { db } from "@/server/db/client";
 import { AuthenticatedUser, hasPermission } from "@/server/auth/rbac";
 import { RateLimiter } from "@/server/lib/rate-limiter";
 import { AuditService } from "@/server/services/audit.service";
+import { EmailService } from "@/server/services/email.service";
 import { TRPCError } from "@trpc/server";
 import { crmEventBus } from "./crm-event-bus.service";
 import {
@@ -265,6 +266,16 @@ export class CrmLeadService {
       ipAddress,
       userAgent,
     });
+
+    if (cleanEmail) {
+      EmailService.sendLeadWelcomeEmail({
+        to: cleanEmail,
+        name: input.fullName.trim(),
+        phone: cleanPhone,
+        interestedCourse: input.interestedCourseName || input.interestedCourseId || undefined,
+        center: input.city?.trim() || undefined,
+      }).catch((err) => console.error("[LeadService] Failed to dispatch sales welcome email:", err));
+    }
 
     return { success: true, leadId: lead.id };
   }
@@ -1521,6 +1532,16 @@ ${input.notes ? `User Note: ${input.notes}` : ""}`;
         console.error("Failed to notify admins of franchise re-engagement:", err);
       }
 
+      if (cleanEmail) {
+        EmailService.sendFranchiseWelcomeEmail({
+          to: cleanEmail,
+          name: input.fullName.trim(),
+          city: input.city.trim(),
+          state: input.state,
+          phone: cleanPhone,
+        }).catch((err) => console.error("[LeadService] Failed to dispatch franchise re-engagement email:", err));
+      }
+
       const refNo = `SLG-FRN-2026-${existingLead.id.slice(-4).toUpperCase()}`;
       return {
         success: true,
@@ -1618,6 +1639,16 @@ ${input.notes ? `Note: ${input.notes}` : ""}`.trim(),
       }
     } catch (err) {
       console.error("Failed to notify admins of new franchise lead:", err);
+    }
+
+    if (cleanEmail) {
+      EmailService.sendFranchiseWelcomeEmail({
+        to: cleanEmail,
+        name: newLead.fullName,
+        city: input.city.trim(),
+        state: input.state,
+        phone: cleanPhone,
+      }).catch((err) => console.error("[LeadService] Failed to dispatch new franchise welcome email:", err));
     }
 
     const refNo = `SLG-FRN-2026-${newLead.id.slice(-4).toUpperCase()}`;

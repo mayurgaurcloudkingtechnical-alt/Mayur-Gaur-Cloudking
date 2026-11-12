@@ -1,5 +1,6 @@
 import { db } from "@/server/db/client";
-import { StaffDepartment, UserRoleCode, UserStatus, Prisma } from "@prisma/client";
+import { StaffDepartment, UserRoleCode, UserStatus, Prisma, VerificationType } from "@prisma/client";
+import { VerificationEngineService } from "@/server/services/verification/verification-engine.service";
 import { AuditService } from "@/server/services/audit.service";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 import { TRPCError } from "@trpc/server";
@@ -701,6 +702,29 @@ export class StaffProfileService {
         isActive: updated.isActive,
       },
     });
+
+    // Invalidate statutory verification if sensitive identity/payout fields changed
+    if (
+      (input.bankAccountNumber !== undefined && input.bankAccountNumber.trim() !== (existing.bankAccountNumber || "")) ||
+      (input.bankIfsc !== undefined && input.bankIfsc.trim().toUpperCase() !== (existing.bankIfsc || ""))
+    ) {
+      try {
+        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, VerificationType.BANK_ACCOUNT, actor);
+      } catch (err) {
+        console.warn(`[Verification] Bank reverify warning for staff ${staffId}:`, err);
+      }
+    }
+
+    if (
+      input.panNumber !== undefined &&
+      input.panNumber.trim().toUpperCase() !== (existing.panNumber || "")
+    ) {
+      try {
+        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, VerificationType.PAN, actor);
+      } catch (err) {
+        console.warn(`[Verification] PAN reverify warning for staff ${staffId}:`, err);
+      }
+    }
 
     return updated;
   }

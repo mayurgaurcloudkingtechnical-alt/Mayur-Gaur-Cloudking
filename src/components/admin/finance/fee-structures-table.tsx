@@ -20,20 +20,28 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { IndianRupee, Search, CreditCard, Download, Edit, Printer, Loader2, X, Filter, Trash2 } from "lucide-react";
+import { IndianRupee, Search, CreditCard, Download, Edit, Printer, Loader2, X, Filter, Trash2, Eye, FileText, CheckCircle2, AlertCircle } from "lucide-react";
 
 interface FeeStructuresTableProps {
   initialStudentId?: string;
+  externalStatusFilter?: FeePaymentStatus;
+  onOpenOverdueDesk?: () => void;
 }
 
-export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps) {
+export function FeeStructuresTable({ initialStudentId, externalStatusFilter, onOpenOverdueDesk }: FeeStructuresTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentIdFromUrl = searchParams.get("studentId") || initialStudentId;
 
   const [filterStudentId, setFilterStudentId] = useState<string | undefined>(studentIdFromUrl || undefined);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<FeePaymentStatus | undefined>(undefined);
+  const [statusFilter, setStatusFilter] = useState<FeePaymentStatus | undefined>(externalStatusFilter || undefined);
+
+  React.useEffect(() => {
+    if (externalStatusFilter !== undefined) {
+      setStatusFilter(externalStatusFilter);
+    }
+  }, [externalStatusFilter]);
 
   // State for collecting payment
   const [selectedFee, setSelectedFee] = useState<{
@@ -45,6 +53,9 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
 
   // State for editing fee structure
   const [editingFee, setEditingFee] = useState<any | null>(null);
+
+  // State for viewing detailed fee breakdown modal
+  const [breakdownFee, setBreakdownFee] = useState<any | null>(null);
 
   // State for viewing receipt
   const [viewingReceipt, setViewingReceipt] = useState<DualReceiptData | null>(null);
@@ -120,6 +131,13 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
           transactionReference: res.payment.transactionReference,
           feeStructureId: res.payment.feeStructureId || undefined,
           paymentId: res.payment.id || identifier,
+          globalCertificationFee: res.financials.globalCertFeePaise || 0,
+          slgKitFee: res.financials.slgKitFeePaise || 0,
+          taxableAmount: res.financials.taxableBasePaise || 0,
+          cgstAmount: res.financials.cgstPaise || 0,
+          sgstAmount: res.financials.sgstPaise || 0,
+          totalGstAmount: res.financials.totalGstPaise || 0,
+          sacCode: res.financials.sacCode || "999293",
         });
       }
     } catch (err: any) {
@@ -147,12 +165,16 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
       "Student ID",
       "Email",
       "Course",
-      "Base Fee (INR)",
+      "Course Fee (INR)",
       "Discount (INR)",
-      "Payable Fee (INR)",
+      "Net Course Fee (INR)",
+      "Additional Charges (INR)",
+      "GST (INR)",
+      "Final Payable (INR)",
       "Paid Amount (INR)",
       "Pending Balance (INR)",
       "Payment Status",
+      "Policy Version",
       "Remarks",
     ];
     const rows = data.items.map((item: any) => [
@@ -160,13 +182,17 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
       `"${item.student.studentId || ""}"`,
       `"${item.student.user.email}"`,
       `"${item.course.title}"`,
-      (item.totalCourseFee / 100).toFixed(2),
-      (item.discountAmount / 100).toFixed(2),
-      (item.netPayableAmount / 100).toFixed(2),
-      (item.paidAmount / 100).toFixed(2),
-      (item.pendingAmount / 100).toFixed(2),
+      ((item.baseCourseFee ?? item.totalCourseFee) / 100).toFixed(2),
+      ((item.discountAmount || 0) / 100).toFixed(2),
+      ((item.discountedCourseFee ?? Math.max(0, (item.totalCourseFee || 0) - (item.discountAmount || 0))) / 100).toFixed(2),
+      ((item.totalAdditionalCharges || 0) / 100).toFixed(2),
+      ((item.gstAmount || 0) / 100).toFixed(2),
+      ((item.finalPayable ?? item.netPayableAmount) / 100).toFixed(2),
+      ((item.paidAmount || 0) / 100).toFixed(2),
+      ((item.pendingAmount || 0) / 100).toFixed(2),
       `"${item.paymentStatus}"`,
-      `"${item.remarks || ""}"`,
+      `"${item.policyVersion || (item.isHistoricalAdjusted ? "V2_HISTORICAL_ADJUSTED" : "STANDARD")}"`,
+      `"${(item.remarks || "").replace(/"/g, '""')}"`,
     ]);
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
     const encodedUri = encodeURI(csvContent);
@@ -248,6 +274,22 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
 
           <Button
             size="sm"
+            variant={statusFilter === FeePaymentStatus.OVERDUE ? "default" : "outline"}
+            onClick={() => {
+              setStatusFilter(FeePaymentStatus.OVERDUE);
+              if (onOpenOverdueDesk) onOpenOverdueDesk();
+            }}
+            className={`text-xs h-8 ${
+              statusFilter === FeePaymentStatus.OVERDUE
+                ? "bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                : "border-rose-300 text-rose-700 hover:bg-rose-50 font-semibold"
+            }`}
+          >
+            Overdue
+          </Button>
+
+          <Button
+            size="sm"
             variant="outline"
             onClick={exportFeesCSV}
             className="text-xs h-8 border-slate-300 text-slate-700 hover:bg-slate-50 flex items-center gap-1.5"
@@ -265,9 +307,12 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
             <TableRow>
               <TableHead className="text-xs font-semibold text-slate-700">Student</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Course & Cohort</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-700">Total Fee</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Course Fee</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Discount</TableHead>
-              <TableHead className="text-xs font-semibold text-slate-700">Payable</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Net Course Fee</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Additional Charges</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">GST</TableHead>
+              <TableHead className="text-xs font-semibold text-slate-700">Final Payable</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Paid</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Pending</TableHead>
               <TableHead className="text-xs font-semibold text-slate-700">Status</TableHead>
@@ -277,13 +322,13 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={12} className="py-8 text-center text-xs text-slate-400">
                   Loading financial records...
                 </TableCell>
               </TableRow>
             ) : !data || data.items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-xs text-slate-400">
+                <TableCell colSpan={12} className="py-8 text-center text-xs text-slate-400">
                   No fee records found matching criteria.
                 </TableCell>
               </TableRow>
@@ -291,6 +336,14 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
               data.items.map((fee: any) => {
                 const latestPayment = fee.payments && fee.payments.length > 0 ? fee.payments[0] : null;
                 const studentFullName = `${fee.student.user.firstName} ${fee.student.user.lastName}`;
+                const baseFee = fee.baseCourseFee ?? fee.totalCourseFee;
+                const discount = fee.discountAmount || 0;
+                const netCourseFee = fee.discountedCourseFee ?? Math.max(0, baseFee - discount);
+                const addCharges = fee.totalAdditionalCharges || 0;
+                const gst = fee.gstAmount || 0;
+                const finalPayable = fee.finalPayable ?? fee.netPayableAmount;
+                const paid = fee.paidAmount || 0;
+                const pending = fee.pendingAmount || 0;
 
                 return (
                   <TableRow key={fee.id} className="text-xs hover:bg-slate-50/50">
@@ -298,10 +351,10 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                       <div>
                         <p className="font-bold text-slate-900">{studentFullName}</p>
                         <p className="text-[11px] text-slate-500 font-mono">{fee.student.studentId}</p>
-                        {fee.remarks && (
-                          <p className="text-[10px] text-slate-400 italic line-clamp-1 mt-0.5" title={fee.remarks}>
-                            {fee.remarks}
-                          </p>
+                        {fee.isHistoricalAdjusted && (
+                          <Badge variant="outline" className="text-[9px] px-1 py-0 mt-0.5 bg-sky-50 text-sky-700 border-sky-200">
+                            Reconciled (V2)
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
@@ -309,24 +362,57 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                       <p className="font-medium text-slate-800 line-clamp-1">{fee.course.title}</p>
                       <p className="text-[11px] text-slate-400">{fee.batch?.code || "Unassigned Cohort"}</p>
                     </TableCell>
-                    <TableCell className="font-medium text-slate-700">
-                      {formatPaiseToRupees(fee.totalCourseFee)}
+                    <TableCell className="font-medium text-slate-700 font-mono">
+                      {formatPaiseToRupees(baseFee)}
                     </TableCell>
-                    <TableCell className="font-medium text-amber-600">
-                      {fee.discountAmount > 0 ? `-${formatPaiseToRupees(fee.discountAmount)}` : "₹0"}
+                    <TableCell className="font-medium text-amber-600 font-mono">
+                      {discount > 0 ? `-${formatPaiseToRupees(discount)}` : "₹0"}
                     </TableCell>
-                    <TableCell className="font-bold text-slate-900">
-                      {formatPaiseToRupees(fee.netPayableAmount)}
+                    <TableCell className="font-semibold text-slate-800 font-mono">
+                      {formatPaiseToRupees(netCourseFee)}
                     </TableCell>
-                    <TableCell className="text-emerald-700 font-semibold">
-                      {formatPaiseToRupees(fee.paidAmount)}
+                    <TableCell className="font-medium text-slate-600 font-mono">
+                      {addCharges > 0 ? (
+                        <span className="text-indigo-700 font-semibold" title={`Kit: ${formatPaiseToRupees(fee.kitFee || 0)}, Cert: ${formatPaiseToRupees(fee.globalCertificationFee || 0)}, Other: ${formatPaiseToRupees(fee.otherCharges || 0)}`}>
+                          +{formatPaiseToRupees(addCharges)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">₹0</span>
+                      )}
                     </TableCell>
-                    <TableCell className="font-bold text-rose-600">
-                      {formatPaiseToRupees(fee.pendingAmount)}
+                    <TableCell className="font-medium text-slate-600 font-mono">
+                      {gst > 0 ? (
+                        <span className="text-slate-700 font-semibold">
+                          +{formatPaiseToRupees(gst)}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">₹0</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900 font-mono">
+                      {formatPaiseToRupees(finalPayable)}
+                    </TableCell>
+                    <TableCell className="text-emerald-700 font-semibold font-mono">
+                      {formatPaiseToRupees(paid)}
+                    </TableCell>
+                    <TableCell className="font-bold text-rose-600 font-mono">
+                      {formatPaiseToRupees(pending)}
                     </TableCell>
                     <TableCell>{getStatusBadge(fee.paymentStatus)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        {/* Breakdown inspection button */}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setBreakdownFee(fee)}
+                          className="h-7 px-2 text-xs text-indigo-700 hover:bg-indigo-50 font-medium inline-flex items-center gap-1"
+                          title="Inspect canonical fee breakdown & audit log"
+                        >
+                          <Eye className="h-3.5 w-3.5 text-indigo-600" />
+                          <span className="hidden sm:inline">Breakdown</span>
+                        </Button>
+
                         {/* Print Receipt button (if student has paid payments) */}
                         {fee.payments && fee.payments.length === 1 && (
                           <Button
@@ -354,9 +440,9 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                                 studentName: studentFullName,
                                 studentId: fee.student.studentId,
                                 courseTitle: fee.course.title,
-                                totalFee: fee.totalCourseFee,
-                                paidAmount: fee.paidAmount,
-                                pendingAmount: fee.pendingAmount,
+                                totalFee: baseFee,
+                                paidAmount: paid,
+                                pendingAmount: pending,
                                 payments: fee.payments,
                               })
                             }
@@ -378,11 +464,11 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                               studentName: studentFullName,
                               studentId: fee.student.studentId,
                               courseTitle: fee.course.title,
-                              totalCourseFee: fee.totalCourseFee,
-                              discountAmount: fee.discountAmount,
+                              totalCourseFee: baseFee,
+                              discountAmount: discount,
                               scholarshipAmount: fee.scholarshipAmount,
-                              paidAmount: fee.paidAmount,
-                              pendingAmount: fee.pendingAmount,
+                              paidAmount: paid,
+                              pendingAmount: pending,
                               remarks: fee.remarks,
                               installments: fee.installments || [],
                             })
@@ -395,14 +481,14 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                         </Button>
 
                         {/* Collect Fee button if pending balance remains */}
-                        {fee.pendingAmount > 0 && (
+                        {pending > 0 && (
                           <Button
                             size="sm"
                             onClick={() =>
                               setSelectedFee({
                                 id: fee.id,
                                 studentName: studentFullName,
-                                pendingAmountPaise: fee.pendingAmount,
+                                pendingAmountPaise: pending,
                                 installments: (fee.installments || []).map((i: any) => ({
                                   id: i.id,
                                   installmentNumber: i.installmentNumber,
@@ -568,6 +654,200 @@ export function FeeStructuresTable({ initialStudentId }: FeeStructuresTableProps
                 className="text-xs"
               >
                 Close
+              </Button>
+            </DialogFooter>
+          </div>
+        </Dialog>
+      )}
+
+      {/* Detailed Itemized Fee Breakdown & Audit Dialog */}
+      {breakdownFee && (
+        <Dialog
+          open={!!breakdownFee}
+          onOpenChange={(open) => !open && setBreakdownFee(null)}
+        >
+          <div className="space-y-4 max-h-[85vh] overflow-y-auto p-1 text-xs">
+            <DialogHeader>
+              <div className="flex items-center justify-between">
+                <DialogTitle className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <FileText className="h-5 w-5 text-indigo-600" />
+                  <span>Itemized Fee Calculation & Audit Breakdown</span>
+                </DialogTitle>
+                <Badge
+                  variant="outline"
+                  className={
+                    breakdownFee.isHistoricalAdjusted
+                      ? "bg-sky-50 text-sky-800 border-sky-300 font-mono text-[10px]"
+                      : "bg-emerald-50 text-emerald-800 border-emerald-300 font-mono text-[10px]"
+                  }
+                >
+                  {breakdownFee.policyVersion || (breakdownFee.isHistoricalAdjusted ? "V2_HISTORICAL_ADJUSTED" : "V2_STANDARD_APPROVED")}
+                </Badge>
+              </div>
+              <DialogDescription className="text-xs text-slate-500">
+                Candidate: <strong className="text-slate-800">{breakdownFee.student?.user?.firstName} {breakdownFee.student?.user?.lastName}</strong> ({breakdownFee.student?.studentId}) • {breakdownFee.course?.title}
+              </DialogDescription>
+            </DialogHeader>
+
+            {/* Canonical Calculation Flow Card */}
+            <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+              <h4 className="font-bold text-slate-800 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                <span>Canonical Commercial Formula</span>
+              </h4>
+
+              <div className="space-y-2 text-xs">
+                {/* Step 1: Base Fee */}
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <span className="text-slate-600 font-medium">1. Base Course Fee (Sales Entered)</span>
+                  <span className="font-mono font-bold text-slate-900">
+                    {formatPaiseToRupees(breakdownFee.baseCourseFee ?? breakdownFee.totalCourseFee)}
+                  </span>
+                </div>
+
+                {/* Step 2: Approved Discount */}
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <span className="text-slate-600 font-medium">2. Approved Sales Discount</span>
+                  <span className="font-mono font-bold text-amber-600">
+                    -{(breakdownFee.discountAmount || 0) > 0 ? formatPaiseToRupees(breakdownFee.discountAmount) : "₹0"}
+                  </span>
+                </div>
+
+                {/* Step 3: Net Course Fee */}
+                <div className="flex justify-between items-center py-1.5 bg-emerald-50/70 px-2 rounded font-semibold border border-emerald-200">
+                  <span className="text-emerald-900">3. Net Course Fee (Discounted Course Revenue)</span>
+                  <span className="font-mono font-bold text-emerald-800 text-sm">
+                    {formatPaiseToRupees(breakdownFee.discountedCourseFee ?? Math.max(0, (breakdownFee.totalCourseFee || 0) - (breakdownFee.discountAmount || 0)))}
+                  </span>
+                </div>
+
+                {/* Step 4: Additional Pass-Through Charges */}
+                <div className="py-2 space-y-1">
+                  <div className="text-slate-700 font-semibold text-[11px] uppercase tracking-wide">
+                    4. Additional Charges (Separately Identified)
+                  </div>
+                  <div className="pl-3 space-y-1 border-l-2 border-indigo-200 text-[11px]">
+                    <div className="flex justify-between text-slate-600">
+                      <span>• SoftLab Kit Charges:</span>
+                      <span className="font-mono font-medium">
+                        {(breakdownFee.kitFee || 0) > 0 ? formatPaiseToRupees(breakdownFee.kitFee) : "₹0 (Waived/Adjusted)"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-slate-600">
+                      <span>• Global Certification Charges:</span>
+                      <span className="font-mono font-medium">
+                        {(breakdownFee.globalCertificationFee || 0) > 0 ? formatPaiseToRupees(breakdownFee.globalCertificationFee) : "₹0 (Waived/Adjusted)"}
+                      </span>
+                    </div>
+                    {(breakdownFee.otherCharges || 0) > 0 && (
+                      <div className="flex justify-between text-slate-600">
+                        <span>• Other Approved Charges:</span>
+                        <span className="font-mono font-medium">{formatPaiseToRupees(breakdownFee.otherCharges)}</span>
+                      </div>
+                    )}
+                    <div className="flex justify-between text-indigo-800 font-bold pt-1">
+                      <span>Total Additional Charges:</span>
+                      <span className="font-mono">
+                        +{(breakdownFee.totalAdditionalCharges || 0) > 0 ? formatPaiseToRupees(breakdownFee.totalAdditionalCharges) : "₹0"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Step 5: GST / Tax Liability */}
+                <div className="flex justify-between items-center py-1 border-b border-slate-200">
+                  <div>
+                    <span className="text-slate-600 font-medium">5. Applicable Tax (GST)</span>
+                    <span className="text-[10px] text-slate-400 block">Separately accounted tax component</span>
+                  </div>
+                  <span className="font-mono font-bold text-slate-700">
+                    +{(breakdownFee.gstAmount || 0) > 0 ? formatPaiseToRupees(breakdownFee.gstAmount) : "₹0 (Unbilled/Exempt)"}
+                  </span>
+                </div>
+
+                {/* Step 6: Final Student Payable */}
+                <div className="flex justify-between items-center py-2 bg-slate-900 text-white px-3 rounded-lg font-bold">
+                  <span>6. Final Student Payable Amount</span>
+                  <span className="font-mono text-base text-emerald-400">
+                    {formatPaiseToRupees(breakdownFee.finalPayable ?? breakdownFee.netPayableAmount)}
+                  </span>
+                </div>
+
+                {/* Step 7 & 8: Paid & Pending */}
+                <div className="grid grid-cols-2 gap-2 pt-2">
+                  <div className="bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg text-center">
+                    <span className="text-[10px] text-emerald-700 uppercase font-semibold block">7. Verified Payments (Paid)</span>
+                    <span className="font-mono font-bold text-emerald-800 text-sm">
+                      {formatPaiseToRupees(breakdownFee.paidAmount || 0)}
+                    </span>
+                  </div>
+                  <div className="bg-rose-50 border border-rose-200 p-2.5 rounded-lg text-center">
+                    <span className="text-[10px] text-rose-700 uppercase font-semibold block">8. Outstanding Balance (Pending)</span>
+                    <span className="font-mono font-bold text-rose-700 text-sm">
+                      {formatPaiseToRupees(breakdownFee.pendingAmount || 0)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Installments Breakdown */}
+            {breakdownFee.installments && breakdownFee.installments.length > 0 && (
+              <div className="space-y-2">
+                <h4 className="font-bold text-slate-800 text-xs">Payment & Installment Schedule</h4>
+                <div className="border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+                  {breakdownFee.installments.map((inst: any) => (
+                    <div key={inst.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-slate-50">
+                      <div>
+                        <span className="font-bold text-slate-800">
+                          {inst.installmentNumber === 1 && breakdownFee.installments.length === 1
+                            ? "Full Lumpsum Payment"
+                            : `Installment #${inst.installmentNumber}`}
+                        </span>
+                        {inst.dueDate && (
+                          <span className="text-[11px] text-slate-500 font-mono ml-2">
+                            Due: {formatDate(inst.dueDate)}
+                          </span>
+                        )}
+                        {inst.notes && (
+                          <p className="text-[10px] text-slate-400 italic mt-0.5">{inst.notes}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-slate-900">
+                          {formatPaiseToRupees(inst.amount)}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={
+                            inst.status === "PAID"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-300 text-[10px]"
+                              : inst.status === "OVERDUE"
+                              ? "bg-rose-50 text-rose-700 border-rose-300 text-[10px]"
+                              : "bg-slate-50 text-slate-700 border-slate-200 text-[10px]"
+                          }
+                        >
+                          {inst.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="pt-2 flex justify-between items-center border-t border-slate-100">
+              <span className="text-[11px] text-slate-400 font-mono">
+                ID: {breakdownFee.id}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setBreakdownFee(null)}
+                className="text-xs"
+              >
+                Close Breakdown
               </Button>
             </DialogFooter>
           </div>

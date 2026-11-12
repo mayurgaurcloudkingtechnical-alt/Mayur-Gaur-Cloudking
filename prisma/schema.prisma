@@ -263,6 +263,7 @@ model User {
 
   // Finance relations
   createdFeeStructures FeeStructure[]       @relation("FeeStructureCreator")
+  higherAuthority      HigherAuthorityRecipient[] @relation("UserHigherAuthority")
   receivedPayments     PaymentTransaction[] @relation("PaymentReceiver")
 
   // Exam & Certificate relations
@@ -358,6 +359,27 @@ model User {
   requestedCorrections             RecordCorrectionLog[]             @relation("CorrectionRequestedBy")
   approvedCorrections              RecordCorrectionLog[]             @relation("CorrectionApprovedBy")
 
+  // Multi-Tenant SLG Call Intelligence Suite Relations
+  tenantId                         String?
+  tenant                           Tenant?                           @relation("TenantUsers", fields: [tenantId], references: [id], onDelete: SetNull)
+  tenantBranchId                   String?
+  tenantBranch                     TenantBranch?                     @relation("BranchUsers", fields: [tenantBranchId], references: [id], onDelete: SetNull)
+  tenantDepartmentId               String?
+  tenantDepartment                 TenantDepartment?                 @relation("DepartmentUsers", fields: [tenantDepartmentId], references: [id], onDelete: SetNull)
+  reportingManagerId               String?
+  reportingManager                 User?                             @relation("UserHierarchy", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  subordinates                     User[]                            @relation("UserHierarchy")
+  canAccessMobile                  Boolean                           @default(true)
+  canAccessDesktop                 Boolean                           @default(true)
+  slgOnboardedAt                   DateTime?
+  slgOnboardedById                 String?
+  slgCallLogs                      SlgCallLog[]                      @relation("SlgUserCallLogs")
+  slgDailyReports                  SlgDailyReport[]                  @relation("UserDailyReports")
+  slgReviewedReports               SlgDailyReport[]                  @relation("UserReviewedDailyReports")
+  slgDeviceRegistrations           SlgDeviceRegistration[]           @relation("UserDeviceRegistrations")
+  slgAuditLogs                     SlgAuditLog[]                     @relation("UserAuditLogs")
+
+  @@index([tenantId])
   @@index([email])
   @@index([phone])
   @@index([roleCode])
@@ -914,6 +936,7 @@ model Lead {
   convertedFranchise Franchise?             @relation("LeadFranchise")
   callingQueueItems  CallingQueueItem[]
   staffCallLogs      StaffCallLog[]
+  slgCallLogs        SlgCallLog[]
 
   // Omnichannel & Automation Relations
   timelineEvents       CustomerTimelineEvent[]
@@ -1263,6 +1286,10 @@ model PaymentTransaction {
   currency             String                   @default("INR")
   admissionId          String?
   admission            AdmissionApplication?    @relation(fields: [admissionId], references: [id], onDelete: SetNull)
+  invoiceId            String?
+  invoice              GstInvoice?              @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  gatewayFeePaise      Int                      @default(0) // In Paise
+  gatewayTaxPaise      Int                      @default(0) // In Paise
   paidAt               DateTime?
   metadata             Json?
   isHistorical         Boolean                  @default(false)
@@ -1280,6 +1307,7 @@ model PaymentTransaction {
   @@index([gatewayPaymentId])
   @@index([receiptNumber])
   @@index([admissionId])
+  @@index([invoiceId])
   @@map("payment_transactions")
 }
 
@@ -2150,6 +2178,11 @@ model StaffProfile {
   bankAccountNumber     String?
   bankIfsc              String?
   panNumber             String?
+  aadhaarMasked         String?
+  isBankVerified        Boolean         @default(false)
+  isPanVerified         Boolean         @default(false)
+  isAadhaarVerified     Boolean         @default(false)
+  verificationStatus    VerificationStatus @default(NOT_STARTED)
   shiftId               String?
   shift                 StaffShift?     @relation(fields: [shiftId], references: [id], onDelete: SetNull)
   probationMonths       Int?            @default(3)
@@ -4443,5 +4476,1146 @@ model RecordCorrectionLog {
   @@map("record_correction_logs")
 }
 
+// ==============================================================================
+// 25. ACCOUNTS, GST BILLING, EXPENSES & FINANCIAL CONTROLS
+// ==============================================================================
 
+enum GstInvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  PARTIALLY_PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum GstCustomerType {
+  B2C_UNREGISTERED
+  B2B_REGISTERED
+  GOVERNMENT_SEZ
+  OVERSEAS
+}
+
+enum InvoiceItemType {
+  COURSE_TUITION
+  IT_SERVICES
+  SOFTWARE_DEVELOPMENT
+  NETWORK_AMC
+  CONSULTING
+  FRANCHISE_FEE
+  CORPORATE_TRAINING
+  EXAM_CERTIFICATION
+  OTHER
+}
+
+enum VendorBillStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+  PAID
+  PARTIALLY_PAID
+  CANCELLED
+}
+
+enum ItcClaimStatus {
+  NOT_APPLICABLE
+  PENDING_VERIFICATION
+  ELIGIBLE
+  INELIGIBLE
+  CLAIMED
+}
+
+enum ExpenseCategory {
+  RENT_OFFICE
+  SALARIES_PAYROLL
+  MARKETING_ADVERTISING
+  SOFTWARE_CLOUD_SAAS
+  INTERNET_TELEPHONE
+  TRAVEL_CONVEYANCE
+  OFFICE_SUPPLIES_PRINTING
+  EQUIPMENT_IT_HARDWARE
+  VENDOR_SERVICES_AMC
+  EVENT_WORKSHOP_SEMINAR
+  FRANCHISE_BRANCH_EXPENSE
+  ELECTRICITY_UTILITIES
+  LEGAL_PROFESSIONAL_FEES
+  TAXES_STATUTORY
+  REPAIRS_MAINTENANCE
+  OTHER_OPERATING
+}
+
+enum ExpenseApprovalStatus {
+  DRAFT
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum NoteType {
+  CREDIT_NOTE
+  DEBIT_NOTE
+}
+
+enum NotePartyType {
+  CUSTOMER
+  VENDOR
+}
+
+enum NoteStatus {
+  DRAFT
+  ISSUED
+  APPLIED
+  CANCELLED
+}
+
+enum FinancialApprovalType {
+  VENDOR_BILL
+  EXPENSE_CLAIM
+  CREDIT_NOTE
+  DEBIT_NOTE
+  FEE_CONCESSION
+  REFUND
+}
+
+enum FinancialApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+enum GstTaxCategory {
+  STANDARD_TAXABLE
+  APPROVED_SPECIAL_RATE
+  EXEMPT
+  NIL_RATED
+  ZERO_RATED
+  REVERSE_CHARGE
+}
+
+model GstInvoice {
+  id                   String           @id @default(cuid())
+  invoiceNumber        String           @unique // e.g. "SLG-INV-2026-0001"
+  invoiceSeries        String           @default("SLG-INV-2026")
+  sequenceNumber       Int              @default(1)
+  invoiceDate          DateTime         @default(now())
+  dueDate              DateTime
+  status               GstInvoiceStatus @default(DRAFT)
+  customerType         GstCustomerType  @default(B2C_UNREGISTERED)
+  taxCategory          GstTaxCategory   @default(STANDARD_TAXABLE)
+  isTaxInclusive       Boolean          @default(false)
+  customerName         String
+  customerEmail        String?
+  customerPhone        String?
+  customerGstin        String?
+  customerAddress      String?
+  customerCity         String?
+  customerState        String           @default("Uttar Pradesh")
+  customerStateCode    String           @default("09")
+  placeOfSupply        String           @default("09-Uttar Pradesh")
+  isInterState         Boolean          @default(false)
+  companyLegalName     String           @default("SOFTLAB GLOBAL")
+  companyGstin         String           @default("09AAECS8901L1Z9")
+  companyAddress       String           @default("4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, UP - 211011")
+  companyState         String           @default("Uttar Pradesh")
+  companyStateCode     String           @default("09")
+  currency             String           @default("INR")
+
+  subtotalPaise        Int              @default(0) // In Paise
+  discountPaise        Int              @default(0)
+  taxableAmountPaise   Int              @default(0)
+  cgstAmountPaise      Int              @default(0)
+  sgstAmountPaise      Int              @default(0)
+  igstAmountPaise      Int              @default(0)
+  totalTaxPaise        Int              @default(0)
+  roundOffPaise        Int              @default(0)
+  grandTotalPaise      Int              @default(0)
+  paidAmountPaise      Int              @default(0)
+  balanceAmountPaise   Int              @default(0)
+
+  studentId            String?
+  admissionId          String?
+  feeStructureId       String?
+  paymentReference     String?
+  paymentTerms         String?          @default("Due upon receipt")
+  notes                String?          @db.Text
+  termsAndConditions   String?          @db.Text
+  authorizedSignatory  String?          @default("Authorized Signatory, SoftLab Global")
+
+  createdById          String?
+  approvedById         String?
+  issuedAt             DateTime?
+  cancelledAt          DateTime?
+  cancelReason         String?          @db.Text
+
+  items                GstInvoiceItem[]
+  creditDebitNotes     CreditDebitNote[]
+  payments             PaymentTransaction[]
+
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  @@index([invoiceNumber])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([customerGstin])
+  @@index([studentId])
+  @@index([admissionId])
+  @@index([createdById])
+  @@map("gst_invoices")
+}
+
+model GstInvoiceItem {
+  id                 String          @id @default(cuid())
+  invoiceId          String
+  invoice            GstInvoice      @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  itemType           InvoiceItemType @default(COURSE_TUITION)
+  taxCategory        GstTaxCategory  @default(STANDARD_TAXABLE)
+  isTaxInclusive     Boolean         @default(false)
+  exemptionReason    String?
+  description        String
+  hsnSacCode         String          @default("999293") // Default: Commercial Training & Coaching Services
+  quantity           Float           @default(1)
+  unit               String          @default("NOS")
+  ratePaise          Int             // In Paise
+  discountPaise      Int             @default(0)
+  taxableAmountPaise Int
+  gstRate            Float           @default(18.0) // Percentage: 0, 5, 12, 18, 28
+  cgstRate           Float           @default(9.0)
+  cgstAmountPaise    Int             @default(0)
+  sgstRate           Float           @default(9.0)
+  sgstAmountPaise    Int             @default(0)
+  igstRate           Float           @default(0)
+  igstAmountPaise    Int             @default(0)
+  totalAmountPaise   Int
+
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([invoiceId])
+  @@index([hsnSacCode])
+  @@map("gst_invoice_items")
+}
+
+model Vendor {
+  id               String          @id @default(cuid())
+  vendorCode       String          @unique // e.g. "VND-2026-0001"
+  name             String
+  tradeName        String?
+  gstin            String?
+  pan              String?
+  email            String?
+  personalEmail    String?
+  phone            String?
+  whatsappNumber   String?
+  address          String?
+  city             String?
+  state            String?
+  stateCode        String?
+  bankName         String?
+  accountNumber    String?
+  ifscCode         String?
+  category         String          @default("General Vendor")
+  paymentTermsDays Int             @default(30)
+  isGstinVerified  Boolean         @default(false)
+  isPanVerified    Boolean         @default(false)
+  isBankVerified   Boolean         @default(false)
+  verificationStatus VerificationStatus @default(NOT_STARTED)
+  isActive         Boolean         @default(true)
+  notes            String?         @db.Text
+
+  bills            VendorBill[]
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([vendorCode])
+  @@index([gstin])
+  @@index([isActive])
+  @@map("vendors")
+}
+
+model VendorBill {
+  id                  String           @id @default(cuid())
+  billNumber          String           @unique // e.g. "BILL-2026-0001"
+  vendorInvoiceNumber String
+  vendorId            String
+  vendor              Vendor           @relation(fields: [vendorId], references: [id], onDelete: Restrict)
+  invoiceDate         DateTime
+  receivedDate        DateTime         @default(now())
+  dueDate             DateTime
+  costCenter          String?
+  department          String?
+  status              VendorBillStatus @default(DRAFT)
+
+  taxableAmountPaise  Int              @default(0)
+  cgstAmountPaise     Int              @default(0)
+  sgstAmountPaise     Int              @default(0)
+  igstAmountPaise     Int              @default(0)
+  totalTaxPaise       Int              @default(0)
+  totalAmountPaise    Int              @default(0)
+  paidAmountPaise     Int              @default(0)
+  balanceAmountPaise  Int              @default(0)
+
+  isItcEligible       Boolean          @default(false)
+  itcClaimStatus      ItcClaimStatus   @default(PENDING_VERIFICATION)
+  duplicateHash       String?          @unique // md5(vendorId + vendorInvoiceNumber + invoiceDate + totalAmountPaise)
+  attachmentUrl       String?
+  notes               String?          @db.Text
+
+  submittedById       String?
+  approvedById        String?
+  approvedAt          DateTime?
+  approvalNotes       String?          @db.Text
+  paidAt              DateTime?
+  paymentReference    String?
+
+  creditDebitNotes    CreditDebitNote[]
+  expenses            Expense[]
+
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+
+  @@index([billNumber])
+  @@index([vendorId])
+  @@index([status])
+  @@index([invoiceDate])
+  @@index([dueDate])
+  @@index([submittedById])
+  @@map("vendor_bills")
+}
+
+model Expense {
+  id               String                @id @default(cuid())
+  expenseNumber    String                @unique // e.g. "EXP-2026-0001"
+  title            String
+  category         ExpenseCategory       @default(OTHER_OPERATING)
+  amountPaise      Int                   // In Paise
+  expenseDate      DateTime              @default(now())
+  department       String?
+  costCenter       String?
+  paymentMethod    PaymentMethod         @default(BANK_TRANSFER)
+  paidTo           String
+  status           ExpenseApprovalStatus @default(SUBMITTED)
+  isClaim          Boolean               @default(false) // Staff reimbursement claim
+
+  vendorBillId     String?
+  vendorBill       VendorBill?           @relation(fields: [vendorBillId], references: [id], onDelete: SetNull)
+
+  receiptUrl       String?
+  notes            String?               @db.Text
+  submittedById    String?
+  approvedById     String?
+  approvedAt       DateTime?
+  approvalNotes    String?               @db.Text
+  paidAt           DateTime?
+  paymentReference String?
+
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([expenseNumber])
+  @@index([category])
+  @@index([status])
+  @@index([expenseDate])
+  @@index([department])
+  @@index([submittedById])
+  @@map("expenses")
+}
+
+model CreditDebitNote {
+  id                 String        @id @default(cuid())
+  noteNumber         String        @unique // e.g. "CN-2026-0001" or "DN-2026-0001"
+  noteType           NoteType      @default(CREDIT_NOTE)
+  partyType          NotePartyType @default(CUSTOMER)
+  gstInvoiceId       String?
+  gstInvoice         GstInvoice?   @relation(fields: [gstInvoiceId], references: [id], onDelete: SetNull)
+  vendorBillId       String?
+  vendorBill         VendorBill?   @relation(fields: [vendorBillId], references: [id], onDelete: SetNull)
+
+  noteDate           DateTime      @default(now())
+  reason             String        @db.Text
+  taxableAmountPaise Int           @default(0)
+  cgstAmountPaise    Int           @default(0)
+  sgstAmountPaise    Int           @default(0)
+  igstAmountPaise    Int           @default(0)
+  totalAmountPaise   Int           @default(0)
+  status             NoteStatus    @default(ISSUED)
+
+  createdById        String?
+  approvedById       String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([noteNumber])
+  @@index([noteType])
+  @@index([gstInvoiceId])
+  @@index([vendorBillId])
+  @@index([status])
+  @@map("credit_debit_notes")
+}
+
+model FinancialApproval {
+  id                 String                  @id @default(cuid())
+  approvalType       FinancialApprovalType
+  entityId           String                  // ID of bill, expense, note, refund
+  amountPaise        Int                     @default(0)
+  stage              String                  @default("FINANCE_HEAD") // ACCOUNTS_EXECUTIVE, ACCOUNTS_MANAGER, DIRECTOR_SUPER_ADMIN
+  status             FinancialApprovalStatus @default(PENDING)
+  requestedById      String
+  assignedRole       UserRoleCode            @default(SUPER_ADMIN)
+  reviewedById       String?
+  reviewedAt         DateTime?
+  comments           String?                 @db.Text
+
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+
+  @@index([approvalType, entityId])
+  @@index([status])
+  @@index([requestedById])
+  @@index([assignedRole])
+  @@map("financial_approvals")
+}
+
+model CostCentreBudget {
+  id                   String   @id @default(cuid())
+  costCentreCode       String   @unique // e.g. "CC-MKTG-2026"
+  costCentreName       String
+  department           String
+  financialYear        String   @default("2025-26") // "2025-26", "2026-27"
+  quarter              String   @default("FULL_YEAR") // Q1, Q2, Q3, Q4, FULL_YEAR
+  allocatedAmountPaise Int      @default(0)
+  utilizedAmountPaise  Int      @default(0)
+  isActive             Boolean  @default(true)
+  notes                String?  @db.Text
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([costCentreCode])
+  @@index([department])
+  @@index([financialYear])
+  @@map("cost_centre_budgets")
+}
+
+model GeneralLedgerEntry {
+  id                 String   @id @default(cuid())
+  entryNumber        String   @unique // e.g. "GLE-2026-0001"
+  entryDate          DateTime @default(now())
+  accountCode        String   // e.g. "REV-TUITION", "EXP-RENT", "AR-CUSTOMERS", "GST-OUT-CGST"
+  accountName        String
+  debitPaise         Int      @default(0)
+  creditPaise        Int      @default(0)
+  sourceDocumentType String   // "GST_INVOICE", "PAYMENT_TRANSACTION", "VENDOR_BILL", "EXPENSE", "CREDIT_NOTE"
+  sourceDocumentId   String
+  description        String
+  costCenter         String?
+  financialYear      String   @default("2025-26")
+  createdById        String?
+
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([entryNumber])
+  @@index([accountCode])
+  @@index([entryDate])
+  @@index([sourceDocumentType, sourceDocumentId])
+  @@index([financialYear])
+  @@map("general_ledger_entries")
+}
+
+model FinanceSettings {
+  id                      String   @id @default("default")
+  companyLegalName        String   @default("SOFTLAB GLOBAL")
+  tradeName               String   @default("SOFTLAB GLOBAL")
+  companyGstin            String   @default("09AAECS8901L1Z9")
+  companyPan              String   @default("AAECS8901L")
+  companyAddress          String   @default("4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civil Lines, Prayagraj, UP - 211011")
+  companyCity             String   @default("Prayagraj")
+  companyState            String   @default("Uttar Pradesh")
+  companyStateCode        String   @default("09")
+  companyPhone            String   @default("+91 9196596979")
+  companyEmail            String   @default("accounts@softlabglobal.com")
+  bankName                String   @default("HDFC Bank")
+  bankAccountNumber       String   @default("50200088991122")
+  bankIfsc                String   @default("HDFC0001234")
+  bankBranch              String   @default("Civil Lines, Prayagraj")
+
+  invoicePrefix           String   @default("SLG-INV-")
+  invoiceNextSequence     Int      @default(1)
+  billPrefix              String   @default("BILL-")
+  billNextSequence        Int      @default(1)
+  receiptPrefix           String   @default("RCP-")
+  receiptNextSequence     Int      @default(1)
+  financialYear           String   @default("2025-26")
+  accountingBasis         String   @default("ACCRUAL") // ACCRUAL or CASH_PROVISIONAL
+  periodStatus            String   @default("OPEN") // OPEN or CLOSED
+
+  executiveApprovalLimit  Int      @default(1000000) // ₹10,000 in Paise
+  managerApprovalLimit    Int      @default(5000000) // ₹50,000 in Paise
+
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  @@map("finance_settings")
+}
+
+model NotificationMatrixRule {
+  id                        String   @id @default(cuid())
+  eventType                 String   @unique // e.g. "NEW_STUDENT_ADMISSION", "NEW_STAFF_ONBOARDING", "VENDOR_BILL_REGISTERED", "EXPENSE_SUBMITTED"
+  description               String
+  senderEmail               String   // e.g. "admission@softlabglobal.com"
+  senderName                String   // e.g. "SOFTLAB GLOBAL Admissions"
+  primaryRecipientRole      String?  // e.g. "STUDENT", "STAFF", "VENDOR"
+  notifyConvertingCounselor Boolean  @default(true)
+  notifyDepartmentManager   Boolean  @default(true)
+  notifyFinance             Boolean  @default(false)
+  notifyHigherManagement    Boolean  @default(false)
+  escalationThresholdPaise  Int?     // e.g. 5000000 (₹50,000)
+  isActive                  Boolean  @default(true)
+
+  createdAt                 DateTime @default(now())
+  updatedAt                 DateTime @updatedAt
+
+  @@index([eventType])
+  @@index([isActive])
+  @@map("notification_matrix_rules")
+}
+
+model FinancialAuditLog {
+  id            String   @id @default(cuid())
+  action        String   // "INVOICE_CREATED", "INVOICE_ISSUED", "BILL_REGISTERED", "EXPENSE_APPROVED", etc.
+  entityType    String   // "GstInvoice", "VendorBill", "Expense", "CreditDebitNote", etc.
+  entityId      String
+  actorId       String
+  actorName     String
+  actorRole     String
+  previousState Json?
+  newState      Json?
+  notes         String?  @db.Text
+  ipAddress     String?
+  createdAt     DateTime @default(now())
+
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("financial_audit_logs")
+}
+
+// ====================================================================
+// 21. VERIFIED USER ONBOARDING, KYC & STATUTORY COMPLIANCE
+// ====================================================================
+
+enum VerificationType {
+  PAN
+  AADHAAR
+  BANK_ACCOUNT
+  GSTIN
+  CORPORATE_REGISTRATION
+}
+
+enum VerificationStatus {
+  NOT_STARTED
+  PENDING_CONSENT
+  PENDING_VERIFICATION
+  VERIFIED
+  FAILED
+  MANUAL_REVIEW_REQUIRED
+  MANUALLY_REVIEWED
+  PROVIDER_UNAVAILABLE
+  PENDING_CONFIGURATION
+  EXPIRED
+  NOT_APPLICABLE
+}
+
+model VerificationRecord {
+  id                 String             @id @default(cuid())
+  entityType         String             // "StaffProfile", "Vendor", "CorporatePartner", "User", "Franchise"
+  entityId           String
+  verificationType   VerificationType
+  status             VerificationStatus @default(NOT_STARTED)
+  provider           String?            // "SETU", "CASHFREE", "RAZORPAY", "DIGIO", "SANDBOX", "MANUAL", "SYSTEM"
+  referenceId        String?            // Provider transaction/request ID or internal tracking ref
+  resultCode         String?            // "SUCCESS", "NAME_MISMATCH", "INVALID_FORMAT", etc.
+  maskedTarget       String             // "ABCDE****F", "XXXX-XXXX-1234", "A/C ending in 5678", "09AFY****ZX"
+  encryptedValue     String?            @db.Text // AES-256-GCM encrypted raw value at rest
+  declaredName       String?
+  verifiedName       String?
+  nameMatchScore     Float?             // 0.0 - 100.0%
+  expiryDate         DateTime?
+  sanitizedResponse  Json?              // Sanitized provider response payload
+  failureReason      String?
+  attemptCount       Int                @default(1)
+  lastAttemptAt      DateTime?
+  isLatest           Boolean            @default(true)
+
+  // Manual Reviewer Audit
+  manualReviewerId   String?
+  manualReviewerName String?
+  manualReviewNotes  String?            @db.Text
+  manualReviewedAt   DateTime?
+
+  // Consent Tracking Link
+  consentId          String?
+  consent            VerificationConsent? @relation(fields: [consentId], references: [id], onDelete: SetNull)
+
+  auditLogs          VerificationAuditLog[]
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@index([entityType, entityId])
+  @@index([verificationType])
+  @@index([status])
+  @@index([referenceId])
+  @@index([isLatest])
+  @@index([createdAt])
+  @@map("verification_records")
+}
+
+model VerificationConsent {
+  id                 String               @id @default(cuid())
+  userId             String
+  purpose            String               // Purpose of verification
+  termsVersion       String               @default("v1.0")
+  ipAddress          String?
+  userAgent          String?
+  consentGiven       Boolean              @default(true)
+  consentGivenAt     DateTime             @default(now())
+  alternativeOffered String?              // Alternative method (e.g. "Physical offline document submission with HR")
+  retentionPolicy    String               @default("Retained strictly for employment, financial or statutory tax compliance.")
+
+  records            VerificationRecord[]
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([userId])
+  @@index([consentGivenAt])
+  @@map("verification_consents")
+}
+
+model VerificationAuditLog {
+  id                   String              @id @default(cuid())
+  verificationRecordId String
+  verificationRecord   VerificationRecord  @relation(fields: [verificationRecordId], references: [id], onDelete: Cascade)
+  previousStatus       VerificationStatus?
+  newStatus            VerificationStatus
+  actorId              String
+  actorName            String
+  actorRole            String
+  action               String              // "INITIATED", "FORMAT_CHECKED", "PROVIDER_VERIFIED", "MANUALLY_APPROVED", etc.
+  details              Json?
+  ipAddress            String?
+  createdAt            DateTime            @default(now())
+
+  @@index([verificationRecordId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("verification_audit_logs")
+}
+
+// ====================================================================
+// 22. ENTERPRISE NOTIFICATION & HIGHER AUTHORITY DISPATCH ENGINE
+// ====================================================================
+
+model HigherAuthorityRecipient {
+  id                  String       @id @default(cuid())
+  name                String
+  designation         String
+  department          String       @default("EXECUTIVE_MANAGEMENT")
+  roleCode            UserRoleCode @default(DIRECTOR)
+  officialEmail       String
+  personalEmail       String?
+  whatsappNumber      String?
+  isActive            Boolean      @default(true)
+  notifyEmail         Boolean      @default(true)
+  notifyPersonalEmail Boolean      @default(false)
+  notifyWhatsApp      Boolean      @default(true)
+  receiveDailyReports Boolean      @default(true)
+  receiveEscalations  Boolean      @default(true)
+  receiveOnboarding   Boolean      @default(false)
+  priority            Int          @default(1) // 1 = High, 2 = Medium, 3 = Low
+  userId              String?      // Optional link to existing platform User
+  user                User?        @relation("UserHigherAuthority", fields: [userId], references: [id], onDelete: SetNull)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  @@index([roleCode])
+  @@index([isActive])
+  @@index([officialEmail])
+  @@map("higher_authority_recipients")
+}
+
+model NotificationDeliveryLog {
+  id                 String    @id @default(cuid())
+  idempotencyKey     String    @unique // e.g. "DAILY_REPORT:rep_123:OFFICIAL_EMAIL:dir@softlabglobal.com"
+  eventType          String    // e.g. "DAILY_REPORT_SUBMITTED", "STAFF_ONBOARDED", "VENDOR_ONBOARDED", etc.
+  channel            String    // "OFFICIAL_EMAIL", "PERSONAL_EMAIL", "WHATSAPP", "IN_APP"
+  recipientName      String
+  recipientAddress   String    // Email address or phone number or userId
+  recipientRole      String?
+  senderAddress      String    // Sender email or WhatsApp phone ID
+  subject            String?
+  contentSummary     String?   @db.Text
+  status             String    @default("PENDING") // "PENDING", "SENT", "DELIVERED", "FAILED", "QUEUED", "SIMULATED"
+  providerResponse   String?   @db.Text
+  errorMessage       String?   @db.Text
+  retryCount         Int       @default(0)
+  maxRetries         Int       @default(3)
+  relatedEntityId    String?   // Report ID, Staff ID, Vendor ID, etc.
+  relatedEntityType  String?   // "DailyWorkReport", "StaffProfile", "Vendor", etc.
+  triggeringUserId   String?   // The employee who triggered this action
+  metadata           Json?
+  sentAt             DateTime?
+  deliveredAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([eventType])
+  @@index([channel])
+  @@index([status])
+  @@index([recipientAddress])
+  @@index([createdAt])
+  @@map("notification_delivery_logs")
+}
+
+// ==============================================================================
+// 44. SLG CALL INTELLIGENCE — MULTI-TENANT ENTERPRISE SAAS SUITE
+// ==============================================================================
+
+enum TenantPlanTier {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum TenantStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
+enum SlgCallType {
+  INCOMING
+  OUTGOING
+}
+
+enum SlgCallStatus {
+  CONNECTED
+  MISSED
+  REJECTED
+  UNANSWERED
+  BUSY
+  FAILED
+}
+
+enum SlgCallSource {
+  CLOUD_PBX
+  ANDROID_SIM
+  DESKTOP_SIP
+  MANUAL
+}
+
+enum SlgStorageProvider {
+  CLOUDFLARE_R2
+  AWS_S3
+  LOCAL
+}
+
+model Tenant {
+  id                         String               @id @default(cuid())
+  slug                       String               @unique // e.g. "softlab", "acme-corp"
+  name                       String
+  legalName                  String?
+  gstin                      String?
+  planTier                   TenantPlanTier       @default(PROFESSIONAL)
+  status                     TenantStatus         @default(ACTIVE)
+  maxUsers                   Int                  @default(50)
+  maxStorageGb               Int                  @default(100)
+  monthlyAiMinutesLimit      Int                  @default(2000)
+  usedAiMinutesCurrentMonth  Int                  @default(0)
+  customDomain               String?              @unique
+  logoUrl                    String?
+  themePrimaryColor          String?              @default("#10B981")
+  timeZone                   String               @default("Asia/Kolkata")
+  billingCycleStart          DateTime?
+  billingCycleEnd            DateTime?
+  createdAt                  DateTime             @default(now())
+  updatedAt                  DateTime             @updatedAt
+
+  branches                   TenantBranch[]
+  departments                TenantDepartment[]
+  users                      User[]               @relation("TenantUsers")
+  callLogs                   SlgCallLog[]
+  callRecordings             SlgCallRecording[]
+  callTranscripts            SlgCallTranscript[]
+  whatsAppMessages           SlgWhatsAppMessage[]
+  smsMessages                SlgSmsMessage[]
+  dailyReports               SlgDailyReport[]
+  subscriptions              TenantSubscription[]
+  auditLogs                  SlgAuditLog[]
+  deviceRegistrations        SlgDeviceRegistration[]
+
+  @@index([slug])
+  @@index([status])
+  @@map("tenants")
+}
+
+model TenantBranch {
+  id                   String        @id @default(cuid())
+  tenantId             String
+  tenant               Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code                 String
+  name                 String
+  address              String?
+  city                 String?
+  state                String?
+  country              String        @default("India")
+  latitude             Float?
+  longitude            Float?
+  geofenceRadiusMeters Int           @default(150)
+  isActive             Boolean       @default(true)
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+
+  users                User[]        @relation("BranchUsers")
+  callLogs             SlgCallLog[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("tenant_branches")
+}
+
+model TenantDepartment {
+  id          String        @id @default(cuid())
+  tenantId    String
+  tenant      Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  code        String        // SALES, ADMISSIONS, HR, PLACEMENT, SUPPORT, OPERATIONS, TECH, MANAGEMENT
+  name        String
+  description String?
+  isActive    Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  users       User[]        @relation("DepartmentUsers")
+  callLogs    SlgCallLog[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+  @@map("tenant_departments")
+}
+
+model SlgCallLog {
+  id               String              @id @default(cuid())
+  tenantId         String
+  tenant           Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User                @relation("SlgUserCallLogs", fields: [userId], references: [id], onDelete: Cascade)
+  branchId         String?
+  branch           TenantBranch?       @relation(fields: [branchId], references: [id], onDelete: SetNull)
+  departmentId     String?
+  department       TenantDepartment?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  leadId           String?
+  lead             Lead?               @relation(fields: [leadId], references: [id], onDelete: SetNull)
+
+  source           SlgCallSource       @default(CLOUD_PBX)
+  provider         String?             @default("GENERIC") // "EXOTEL", "TWILIO", "GENERIC"
+  providerId       String?             // External CDR ID (e.g. Exotel Call SID / Twilio Call SID)
+  providerAccountId String?            // Provider Account SID / Subdomain
+  isEmployeeMatched Boolean            @default(true)
+  isCustomerMatched Boolean            @default(true)
+  callType         SlgCallType         @default(OUTGOING)
+  callStatus       SlgCallStatus       @default(CONNECTED)
+  contactName      String
+  customerPhone    String              // E.164 standard formatted
+  agentPhone       String
+  virtualNumber    String?
+  disposition      String              @default("INTERESTED")
+  notes            String?             @db.Text
+  nextFollowUpAt   DateTime?
+  followUpAssignedToId String?
+
+  startedAt        DateTime            @default(now())
+  connectedAt      DateTime?
+  endedAt          DateTime?
+  durationSeconds  Int                 @default(0) // Total duration
+  talkTimeSeconds  Int                 @default(0) // Connected duration
+
+  isRecorded       Boolean             @default(false)
+  isTranscribed    Boolean             @default(false)
+  rawMetadata      Json?
+  recording        SlgCallRecording?
+  transcript       SlgCallTranscript?
+
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+
+  @@index([tenantId, startedAt])
+  @@index([tenantId, userId])
+  @@index([tenantId, providerId])
+  @@index([customerPhone])
+  @@index([callStatus])
+  @@index([disposition])
+  @@map("slg_call_logs")
+}
+
+model SlgCallRecording {
+  id                  String              @id @default(cuid())
+  tenantId            String
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  callLogId           String              @unique
+  callLog             SlgCallLog          @relation(fields: [callLogId], references: [id], onDelete: Cascade)
+
+  storageProvider     SlgStorageProvider  @default(CLOUDFLARE_R2)
+  storageKey          String              // Encrypted object path
+  providerRecordingId String?
+  consentRecorded     Boolean             @default(false)
+  fileSizeBytes   BigInt?
+  durationSeconds Int                 @default(0)
+  mimeType        String              @default("audio/mp4")
+  checksumSha256  String?             // Tamper-verification hash
+  encryptionKeyId String?
+
+  isArchived      Boolean             @default(false)
+  playbacksCount  Int                 @default(0)
+  downloadsCount  Int                 @default(0)
+  lastAccessedAt  DateTime?
+  expiresAt       DateTime?
+
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([tenantId])
+  @@map("slg_call_recordings")
+}
+
+model SlgCallTranscript {
+  id               String     @id @default(cuid())
+  tenantId         String
+  tenant           Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  callLogId        String     @unique
+  callLog          SlgCallLog @relation(fields: [callLogId], references: [id], onDelete: Cascade)
+
+  rawTranscript    Json       // [{ speaker: "agent" | "customer", text: string, startMs: number, endMs: number }]
+  fullText         String     @db.Text
+  languageDetected String     @default("en-IN")
+  sentimentScore   Float      @default(0.0) // -1.0 to 1.0
+  sentimentLabel   String     @default("NEUTRAL") // POSITIVE, NEUTRAL, NEGATIVE
+  summary          String?    @db.Text
+  actionItems      Json?      // Extracted tasks
+  objections       Json?      // Extracted customer objections
+  aiModelUsed      String     @default("gemini-1.5-flash")
+  isAiGenerated    Boolean    @default(true)
+  confidenceScore  Float?     @default(0.85)
+  tokenUsage       Int?
+
+  createdAt        DateTime   @default(now())
+
+  @@index([tenantId])
+  @@map("slg_call_transcripts")
+}
+
+model SlgDailyReport {
+  id                       String                    @id @default(cuid())
+  tenantId                 String
+  tenant                   Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId                   String
+  user                     User                      @relation("UserDailyReports", fields: [userId], references: [id], onDelete: Cascade)
+  branchId                 String?
+  departmentId             String?
+  reportDate               DateTime                  @db.Date
+  status                   String                    @default("SUBMITTED") // DRAFT, SUBMITTED, REVISION_REQUESTED, APPROVED, REJECTED
+
+  // Verified system metrics
+  systemCallsTotal         Int                       @default(0)
+  systemCallsConnected     Int                       @default(0)
+  systemCallsMissed        Int                       @default(0)
+  systemTalkTimeSeconds    Int                       @default(0)
+  systemAttendanceMinutes  Int                       @default(0)
+  systemFollowUpsCompleted Int                       @default(0)
+  systemMessagesSent       Int                       @default(0)
+
+  // Employee self-reported sections
+  workSummary              String                    @db.Text
+  achievements             String?                   @db.Text
+  impediments              String?                   @db.Text
+  tomorrowActionPlan       String?                   @db.Text
+
+  // Review & Approval Workflow
+  reviewerId               String?
+  reviewer                 User?                     @relation("UserReviewedDailyReports", fields: [reviewerId], references: [id], onDelete: SetNull)
+  reviewerFeedback         String?                   @db.Text
+  reviewedAt               DateTime?
+  revisionCount            Int                       @default(0)
+
+  // AI-generated performance synthesis
+  aiPerformanceInsight     String?                   @db.Text
+  aiSummary                String?                   @db.Text
+
+  pdfExportUrl             String?
+  excelExportUrl           String?
+
+  items                    SlgDailyReportItem[]
+  revisions                SlgDailyReportRevision[]
+
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+
+  @@unique([tenantId, userId, reportDate])
+  @@index([tenantId, reportDate])
+  @@index([status])
+  @@map("slg_daily_reports")
+}
+
+model SlgDailyReportItem {
+  id               String         @id @default(cuid())
+  reportId         String
+  report           SlgDailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  taskTitle        String
+  status           String         @default("COMPLETED") // COMPLETED, IN_PROGRESS, BLOCKED
+  measurableResult String?
+  timeSpentMinutes Int?           @default(0)
+  notes            String?        @db.Text
+  createdAt        DateTime       @default(now())
+
+  @@index([reportId])
+  @@map("slg_daily_report_items")
+}
+
+model SlgDailyReportRevision {
+  id        String         @id @default(cuid())
+  reportId  String
+  report    SlgDailyReport @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  actorId   String
+  action    String         // SUBMITTED, REVISION_REQUESTED, RESUBMITTED, APPROVED, REJECTED
+  comments  String?        @db.Text
+  createdAt DateTime       @default(now())
+
+  @@index([reportId])
+  @@map("slg_daily_report_revisions")
+}
+
+model SlgDeviceRegistration {
+  id                        String    @id @default(cuid())
+  tenantId                  String
+  tenant                    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  userId                    String
+  user                      User      @relation("UserDeviceRegistrations", fields: [userId], references: [id], onDelete: Cascade)
+  deviceUuid                String    @unique
+  deviceType                String    @default("ANDROID") // ANDROID, WINDOWS, MACOS, LINUX
+  deviceModel               String?
+  osVersion                 String?
+  appVersion                String?
+  pushToken                 String?
+  isAuthorized              Boolean   @default(true)
+  status                    String    @default("PENDING_APPROVAL") // NOT_REGISTERED, PENDING_APPROVAL, ACTIVE, REVOKED, BLOCKED
+  deviceName                String?
+  deviceFingerprint         String?
+  lastSyncAt                DateTime?
+  approvedAt                DateTime?
+  approvedByUserId          String?
+  revokedAt                 DateTime?
+  revokedByUserId           String?
+  revocationReason          String?
+  suspiciousActivityAlerts  Json?
+  lastSeenAt                DateTime  @default(now())
+  consentRecordedAt         DateTime  @default(now())
+  consentVersion            String    @default("1.0.0")
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  @@index([tenantId, userId])
+  @@index([tenantId, status])
+  @@map("slg_device_registrations")
+}
+
+model SlgWhatsAppMessage {
+  id            String    @id @default(cuid())
+  tenantId      String
+  tenant        Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId        String?
+  customerPhone String
+  direction     String    @default("OUTBOUND") // INBOUND, OUTBOUND
+  messageType   String    @default("TEXT") // TEXT, TEMPLATE, IMAGE, DOCUMENT, AUDIO, INTERACTIVE
+  content       String    @db.Text
+  mediaUrl      String?
+  status        String    @default("SENT") // SENT, DELIVERED, READ, FAILED
+  metaMessageId String?   @unique
+  templateName  String?
+  sentAt        DateTime  @default(now())
+  deliveredAt   DateTime?
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([tenantId, customerPhone])
+  @@map("slg_whatsapp_messages")
+}
+
+model SlgSmsMessage {
+  id                String    @id @default(cuid())
+  tenantId          String
+  tenant            Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId            String?
+  recipientPhone    String
+  senderHeader      String    // 6-character registered DLT Header
+  dltTemplateId     String    // TRAI registered Template ID
+  dltEntityId       String?   // Principal Entity ID
+  content           String    @db.Text
+  status            String    @default("SENT") // SENT, DELIVERED, FAILED
+  providerGatewayId String?
+  sentAt            DateTime  @default(now())
+  deliveredAt       DateTime?
+  createdAt         DateTime  @default(now())
+
+  @@index([tenantId, recipientPhone])
+  @@map("slg_sms_messages")
+}
+
+model SlgAuditLog {
+  id          String   @id @default(cuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUserId String?
+  actorUser   User?    @relation("UserAuditLogs", fields: [actorUserId], references: [id], onDelete: SetNull)
+  action      String   // CALL_RECORDING_LISTENED, CALL_RECORDING_DOWNLOADED, REPORT_APPROVED, etc.
+  entityType  String
+  entityId    String
+  ipAddress   String?
+  userAgent   String?
+  details     Json?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, action])
+  @@index([entityType, entityId])
+  @@map("slg_audit_logs")
+}
+
+model TenantSubscription {
+  id                 String         @id @default(cuid())
+  tenantId           String
+  tenant             Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planTier           TenantPlanTier @default(PROFESSIONAL)
+  status             TenantStatus   @default(ACTIVE)
+  gateway            String         @default("RAZORPAY") // RAZORPAY, STRIPE
+  subscriptionId     String?        @unique
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean        @default(false)
+  amountPaise        Int            @default(499900)
+  currency           String         @default("INR")
+  gstAmountPaise     Int            @default(89982)
+  invoiceUrl         String?
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+
+  @@index([tenantId])
+  @@map("tenant_subscriptions")
+}
 

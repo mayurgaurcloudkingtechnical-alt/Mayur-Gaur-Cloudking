@@ -35,8 +35,8 @@ export function CreateBatchDialog({
   const [secondaryTrainerIds, setSecondaryTrainerIds] = React.useState<string[]>([]);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
 
-  const { data: coursesData } = api.course.list.useQuery(
-    { pageSize: 50 },
+  const { data: coursesData } = api.course.listAllForSelect.useQuery(
+    undefined,
     { enabled: open }
   );
   const { data: trainers } = api.batch.getAvailableTrainers.useQuery(undefined, {
@@ -50,8 +50,9 @@ export function CreateBatchDialog({
   }, [defaultCourseId]);
 
   React.useEffect(() => {
-    if (autoCode && courseId && startDate && coursesData?.courses) {
-      const course = coursesData.courses.find((c) => c.id === courseId);
+    const courseList = Array.isArray(coursesData) ? coursesData : (coursesData as any)?.courses || [];
+    if (autoCode && courseId && startDate && courseList.length > 0) {
+      const course = courseList.find((c: any) => c.id === courseId);
       if (course) {
         const prefix = course.slug.split("-")[0].toUpperCase();
         const year = new Date(startDate).getFullYear() || new Date().getFullYear();
@@ -142,7 +143,7 @@ export function CreateBatchDialog({
             className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
           >
             <option value="">-- Choose an academic course --</option>
-            {coursesData?.courses.map((c) => (
+            {(coursesData || []).map((c) => (
               <option key={c.id} value={c.id}>
                 {c.title} ({c.durationWeeks} wks • ₹{(c.baseFee / 100).toLocaleString("en-IN")})
               </option>

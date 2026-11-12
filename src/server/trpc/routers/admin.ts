@@ -1811,7 +1811,20 @@ export const adminRouter = router({
       let cardNumber = student.idCard?.cardNumber;
       if (!cardNumber) {
         const count = await ctx.db.studentIdCard.count();
-        cardNumber = `SLG-IDC-${year}-${String(count + 1).padStart(5, "0")}`;
+        for (let i = 1; i <= 50; i++) {
+          const candidate = `SLG-IDC-${year}-${String(count + i).padStart(5, "0")}`;
+          const existing = await ctx.db.studentIdCard.findUnique({
+            where: { cardNumber: candidate },
+            select: { id: true },
+          });
+          if (!existing) {
+            cardNumber = candidate;
+            break;
+          }
+        }
+        if (!cardNumber) {
+          cardNumber = `SLG-IDC-${year}-${Date.now().toString().slice(-6)}`;
+        }
       }
 
       const isUniversity = student.educationProvider === "Dr. Preeti Global University" || !!student.universityName;

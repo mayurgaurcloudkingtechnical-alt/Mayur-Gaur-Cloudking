@@ -52,6 +52,13 @@ export function ReceiptPageView() {
               amountInWords: res.financials.amountInWords,
               paymentMode: res.payment.paymentMethod,
               transactionReference: res.payment.transactionReference,
+              globalCertificationFee: res.financials.globalCertFeePaise || 350000,
+              slgKitFee: res.financials.slgKitFeePaise || 100000,
+              taxableAmount: res.financials.taxableBasePaise,
+              cgstAmount: res.financials.cgstPaise,
+              sgstAmount: res.financials.sgstPaise,
+              totalGstAmount: res.financials.totalGstPaise,
+              sacCode: res.financials.sacCode || "999293",
               paymentId: paymentId || undefined,
             });
           }
@@ -93,6 +100,9 @@ export function ReceiptPageView() {
               amountInWords: rupeesToWords(Math.floor(paid / 100)),
               paymentMode: latestPayment ? latestPayment.paymentMethod : "Cash",
               transactionReference: latestPayment?.transactionReference || "",
+              globalCertificationFee: 350000,
+              slgKitFee: 100000,
+              sacCode: "999293",
               feeStructureId: fee.id,
               paymentId: latestPayment?.id,
             });

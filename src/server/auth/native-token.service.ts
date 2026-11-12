@@ -147,6 +147,21 @@ export class NativeTokenService {
       throw new Error("User account is inactive or not found");
     }
 
+    const platformNorm = (params.platform || "").toLowerCase();
+    if (
+      (platformNorm.includes("android") || platformNorm.includes("ios") || platformNorm.includes("mobile")) &&
+      user.canAccessMobile === false
+    ) {
+      throw new Error("Mobile application access has been disabled for your account.");
+    }
+
+    if (
+      (platformNorm.includes("windows") || platformNorm.includes("mac") || platformNorm.includes("linux") || platformNorm.includes("desktop")) &&
+      user.canAccessDesktop === false
+    ) {
+      throw new Error("Desktop application access has been disabled for your account.");
+    }
+
     // 1. Generate high-entropy raw refresh token
     const rawRefreshToken = crypto.randomBytes(32).toString("hex");
     const tokenHash = hashToken(rawRefreshToken);
@@ -259,6 +274,21 @@ export class NativeTokenService {
     const { user } = existingSession;
     if (!user || user.status !== "ACTIVE") {
       throw new Error("User account is inactive or not found");
+    }
+
+    const platformNorm = (params.platform || "").toLowerCase();
+    if (
+      (platformNorm.includes("android") || platformNorm.includes("ios") || platformNorm.includes("mobile")) &&
+      user.canAccessMobile === false
+    ) {
+      throw new Error("Mobile application access has been disabled for your account.");
+    }
+
+    if (
+      (platformNorm.includes("windows") || platformNorm.includes("mac") || platformNorm.includes("linux") || platformNorm.includes("desktop")) &&
+      user.canAccessDesktop === false
+    ) {
+      throw new Error("Desktop application access has been disabled for your account.");
     }
 
     // Invalidate old session (rotation)

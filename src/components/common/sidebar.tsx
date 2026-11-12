@@ -34,6 +34,8 @@ import {
   Video,
   Youtube,
   Activity,
+  ShieldCheck,
+  Mail,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -108,23 +110,27 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
       case "TELECALLER":
         return [
           { title: "Telecalling Desk", href: "/telecaller/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "SLG Call Intelligence", href: "/admin/slg-call-intelligence", icon: <PhoneCall className="h-4 w-4 text-emerald-500" />, badge: "AI" },
           { title: "Callyzer Calling Report", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "App" },
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Inbound Leads", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
+          { title: "Communications & Alerts", href: "/admin/communications", icon: <Mail className="h-4 w-4" />, badge: "Alerts" },
           { title: "DDU Global Portal", href: DDU_CONFIG.portals.mainWebsiteUrl, icon: <Globe className="h-4 w-4" />, external: true, badge: "USA" },
           { title: "Meta Ads & Ingestion", href: "/counselor/marketing", icon: <Share2 className="h-4 w-4" /> },
         ];
       case "COUNSELOR":
         return [
           { title: "Dashboard", href: "/counselor/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+          { title: "SLG Call Intelligence", href: "/admin/slg-call-intelligence", icon: <PhoneCall className="h-4 w-4 text-emerald-500" />, badge: "AI" },
           { title: "Callyzer Calling Report", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "App" },
           { title: "AI Calling & Bulk Import", href: "/counselor/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Lead Pipeline", href: "/counselor/leads", icon: <Users className="h-4 w-4" /> },
           { title: "Service Enquiries", href: "/counselor/services", icon: <Briefcase className="h-4 w-4" /> },
           { title: "Daily Follow-ups", href: "/counselor/follow-ups", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
+          { title: "Communications & Alerts", href: "/admin/communications", icon: <Mail className="h-4 w-4" />, badge: "Alerts" },
           { title: "Admissions Desk", href: "/counselor/admissions", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Fee Collection", href: "/counselor/fees", icon: <IndianRupee className="h-4 w-4" /> },
           { title: "DPGU Partner Portal", href: DPGU_CONFIG.portals.consultantPortalUrl, icon: <Building2 className="h-4 w-4" />, external: true, badge: "DPGU" },
@@ -227,7 +233,8 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
           { title: "Batches & Cohorts", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
           { title: "Attendance Oversight", href: "/admin/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },
-          { title: "Finance & Accounts", href: "/admin/finance", icon: <IndianRupee className="h-4 w-4" /> },
+          { title: "Accounts & Finance", href: "/admin/finance", icon: <IndianRupee className="h-4 w-4" />, badge: "ERP" },
+          { title: "Verification & KYC", href: "/admin/verification", icon: <ShieldCheck className="h-4 w-4" />, badge: "KYC" },
           { title: "Exams & Results", href: "/admin/exams", icon: <FileCheck2 className="h-4 w-4" /> },
           { title: "Certificates", href: "/admin/certificates", icon: <Award className="h-4 w-4" /> },
           { title: "Placements", href: "/admin/placements", icon: <Briefcase className="h-4 w-4" /> },
@@ -239,10 +246,12 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
               ]
             : []),
           { title: "Staff & HRMS", href: "/admin/staff", icon: <Users className="h-4 w-4" /> },
+          { title: "SLG Call Intelligence", href: "/admin/slg-call-intelligence", icon: <PhoneCall className="h-4 w-4 text-emerald-500" />, badge: "SaaS" },
           { title: "Callyzer Live Tracking", href: "/admin/callyzer", icon: <PhoneCall className="h-4 w-4" />, badge: "Live" },
           { title: "User Management", href: "/admin/users", icon: <Users className="h-4 w-4" /> },
           { title: "Work Planner", href: "/admin/work-planner", icon: <CheckSquare className="h-4 w-4" />, badge: "AI" },
           { title: "Daily Reports", href: "/admin/daily-reports", icon: <FileText className="h-4 w-4" /> },
+          { title: "Communications & Alerts", href: "/admin/communications", icon: <Mail className="h-4 w-4" />, badge: "Alerts" },
           { title: "YouTube Auto-Publishing", href: "/admin/youtube", icon: <Youtube className="h-4 w-4" />, badge: "API" },
           { title: "Integrations Hub", href: "/admin/integrations", icon: <Share2 className="h-4 w-4" /> },
           { title: "Settings & RBAC", href: "/admin/settings", icon: <Settings className="h-4 w-4" /> },
@@ -297,7 +306,9 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
                 );
               }
 
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive = pathname
+                ? pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+                : false;
               return (
                 <Link
                   key={item.href}

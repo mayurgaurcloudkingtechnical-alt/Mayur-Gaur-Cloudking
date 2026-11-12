@@ -496,10 +496,18 @@ export class StudentAdmissionNotificationService {
       (app?.applicationNumber ? `SLG-2026-${app.applicationNumber.slice(-4)}` : "SG-2026-PENDING");
     const admissionNumber = app?.applicationNumber || studentId;
 
+    let feeStructure: any = null;
+    if (studentProfile?.id) {
+      feeStructure = await db.feeStructure.findFirst({
+        where: { studentId: studentProfile.id },
+      });
+    }
+
     return {
       app,
       studentProfile,
       user,
+      feeStructure,
       leadId: app?.leadId || null,
       applicationId: app?.id || undefined,
       applicationNumber: admissionNumber,
@@ -618,6 +626,11 @@ export class StudentAdmissionNotificationService {
       temporaryPassword: previewPassword,
       counselorName: target.counselorName,
       counselorPhone: target.counselorPhone,
+      totalCourseFeePaise: target.feeStructure?.totalCourseFee,
+      discountPaise: target.feeStructure?.discountAmount,
+      netPayablePaise: target.feeStructure?.netPayableAmount,
+      paidAmountPaise: target.feeStructure?.paidAmount,
+      pendingAmountPaise: target.feeStructure?.pendingAmount,
     });
 
     const waLines = [
@@ -742,6 +755,11 @@ export class StudentAdmissionNotificationService {
             temporaryPassword: temporaryPasswordToSend,
             counselorName: target.counselorName,
             counselorPhone: target.counselorPhone,
+            totalCourseFeePaise: target.feeStructure?.totalCourseFee,
+            discountPaise: target.feeStructure?.discountAmount,
+            netPayablePaise: target.feeStructure?.netPayableAmount,
+            paidAmountPaise: target.feeStructure?.paidAmount,
+            pendingAmountPaise: target.feeStructure?.pendingAmount,
           });
           emailSent = emailRes.sent;
         } catch (err: any) {

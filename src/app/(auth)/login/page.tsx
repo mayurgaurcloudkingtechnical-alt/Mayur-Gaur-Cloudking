@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { signIn } from "next-auth/react";
+import { signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,12 @@ function LoginForm() {
   const [error, setError] = React.useState<string | null>(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [showPassword, setShowPassword] = React.useState(false);
+
+  React.useEffect(() => {
+    if (searchParams.get("clear") === "true") {
+      signOut({ redirect: false }).catch(() => {});
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,8 +57,26 @@ function LoginForm() {
       }
 
       // Successful login - redirect to server-side dispatcher or callbackUrl
-      if (callbackUrl && callbackUrl !== "/" && callbackUrl !== "/login") {
-        window.location.href = callbackUrl;
+      if (
+        callbackUrl &&
+        callbackUrl !== "/" &&
+        callbackUrl !== "/login" &&
+        !callbackUrl.includes("0.0.0.0")
+      ) {
+        try {
+          if (callbackUrl.startsWith("/")) {
+            window.location.href = callbackUrl;
+          } else {
+            const parsed = new URL(callbackUrl, window.location.origin);
+            if (parsed.origin === window.location.origin) {
+              window.location.href = parsed.pathname + parsed.search;
+            } else {
+              window.location.href = "/dashboard";
+            }
+          }
+        } catch {
+          window.location.href = "/dashboard";
+        }
       } else {
         window.location.href = "/dashboard";
       }
