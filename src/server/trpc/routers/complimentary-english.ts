@@ -31,7 +31,7 @@ export const complimentaryEnglishRouter = router({
         batches: {
           include: {
             classes: {
-              orderBy: { startTime: "asc" },
+              orderBy: { scheduledAt: "asc" },
               take: 4,
             },
           },
@@ -67,7 +67,7 @@ export const complimentaryEnglishRouter = router({
       }),
       ctx.db.scheduledClass.findMany({
         where: { batchId: weeklyBatch.id },
-        orderBy: { startTime: "asc" },
+        orderBy: { scheduledAt: "asc" },
         take: 8,
       }),
     ]);

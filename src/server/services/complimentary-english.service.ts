@@ -212,15 +212,13 @@ export class ComplimentaryEnglishService {
 
       for (let w = 0; w < 4; w++) {
         const sTime = new Date(nextSat.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-        const eTime = new Date(sTime.getTime() + 90 * 60 * 1000);
         await db.scheduledClass.create({
           data: {
             batchId: weeklyBatch.id,
             title: `Weekly English Speaking & Personality Session #${w + 1}`,
             agendaNotes: "1 class per week supplementary communication & interview readiness session.",
             scheduledAt: sTime,
-            startTime: sTime,
-            endTime: eTime,
+            durationMin: 90,
             mode: DeliveryMode.HYBRID,
           },
         });
