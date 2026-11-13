@@ -621,9 +621,6 @@ export class StaffProfileService {
           where: { id: existing.userId },
           data: userData,
         });
-      },
-          data: userData,
-        });
       }
 
       // 2. Synchronize staff documents if provided
