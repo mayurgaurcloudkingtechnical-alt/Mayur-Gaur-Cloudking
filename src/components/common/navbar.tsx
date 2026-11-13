@@ -27,11 +27,16 @@ interface NavbarProps {
 
 export function Navbar({ user, onToggleSidebar }: NavbarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [avatarError, setAvatarError] = useState(false);
   const { data: meData } = api.auth.me.useQuery(undefined, {
     staleTime: 30000,
   });
 
   const avatarUrl = meData?.avatarUrl;
+
+  React.useEffect(() => {
+    setAvatarError(false);
+  }, [avatarUrl]);
 
   return (
     <>
@@ -79,11 +84,12 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
               <span className="text-[11px] text-slate-500">{user?.email || ""}</span>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 overflow-hidden border-2 border-emerald-400 shadow-xs group-hover:ring-2 group-hover:ring-blue-400 transition shrink-0">
-              {avatarUrl ? (
+              {avatarUrl && !avatarError ? (
                 <img
                   src={avatarUrl}
                   alt={user?.firstName || "Profile"}
                   className="w-full h-full object-cover"
+                  onError={() => setAvatarError(true)}
                 />
               ) : (
                 <UserIcon className="h-4 w-4" />

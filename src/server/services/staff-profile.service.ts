@@ -566,15 +566,62 @@ export class StaffProfileService {
       const userData: any = {};
       if (input.firstName !== undefined) userData.firstName = input.firstName.trim();
       if (input.lastName !== undefined) userData.lastName = input.lastName.trim();
-      if (input.email !== undefined) userData.email = input.email.trim().toLowerCase();
-      if (input.phone !== undefined) userData.phone = input.phone.trim();
+      if (input.email !== undefined) {
+        const normalizedEmail = input.email.trim().toLowerCase();
+        if (normalizedEmail && normalizedEmail !== existing.user.email) {
+          const emailConflict = await tx.user.findFirst({
+            where: { email: normalizedEmail, id: { not: existing.userId } },
+            select: { id: true, status: true, firstName: true, lastName: true },
+          });
+          if (emailConflict) {
+            if (emailConflict.status === UserStatus.DELETED) {
+              await tx.user.update({
+                where: { id: emailConflict.id },
+                data: { email: `deleted_${emailConflict.id}_${normalizedEmail}` },
+              });
+            } else {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Email ${normalizedEmail} is already in use by ${emailConflict.firstName} ${emailConflict.lastName}.`,
+              });
+            }
+          }
+        }
+        userData.email = normalizedEmail;
+      }
+      if (input.phone !== undefined) {
+        const normalizedPhone = input.phone.trim() || null;
+        if (normalizedPhone && normalizedPhone !== existing.user.phone) {
+          const phoneConflict = await tx.user.findFirst({
+            where: { phone: normalizedPhone, id: { not: existing.userId } },
+            select: { id: true, status: true, email: true, firstName: true, lastName: true },
+          });
+          if (phoneConflict) {
+            if (phoneConflict.status === UserStatus.DELETED) {
+              await tx.user.update({
+                where: { id: phoneConflict.id },
+                data: { phone: null },
+              });
+            } else {
+              throw new TRPCError({
+                code: "CONFLICT",
+                message: `Phone number ${normalizedPhone} is already linked to another active account (${phoneConflict.email}). Please use a different number or leave it blank.`,
+              });
+            }
+          }
+        }
+        userData.phone = normalizedPhone;
+      }
       if (input.callingNumber !== undefined) userData.callingNumber = input.callingNumber.trim() || null;
       if (input.whatsappNumber !== undefined) userData.whatsappNumber = input.whatsappNumber.trim() || null;
-      if (input.profilePhoto !== undefined) userData.avatarUrl = input.profilePhoto.trim();
+      if (input.profilePhoto !== undefined) userData.avatarUrl = input.profilePhoto.trim() || null;
 
       if (Object.keys(userData).length > 0) {
         await tx.user.update({
           where: { id: existing.userId },
+          data: userData,
+        });
+      },
           data: userData,
         });
       }

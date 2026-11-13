@@ -297,10 +297,10 @@ export function WhatsAppConnectionWizard() {
               <span className="h-6 w-6 rounded-full bg-emerald-600 text-white text-xs font-bold flex items-center justify-center">
                 2
               </span>
-              <span className="text-xs font-bold text-slate-900">WhatsApp $\rightarrow$ API Setup</span>
+              <span className="text-xs font-bold text-slate-900">WhatsApp → API Setup</span>
             </div>
             <p className="text-[11.5px] text-slate-600 leading-normal">
-              Click <strong>WhatsApp</strong> $\rightarrow$ <strong>API Setup</strong>. Under &quot;Step 5: Add a phone number&quot;,
+              Click <strong>WhatsApp</strong> → <strong>API Setup</strong>. Under &quot;Step 5: Add a phone number&quot;,
               enter your business number to receive the Meta SMS confirmation code.
             </p>
           </div>
@@ -347,7 +347,7 @@ export function WhatsAppConnectionWizard() {
           Official Meta Webhook Configuration
         </h4>
         <p className="text-xs text-slate-500">
-          Paste these verified endpoints into your Meta for Developers App under <strong>WhatsApp $\rightarrow$ Configuration $\rightarrow$ Edit</strong>.
+          Paste these verified endpoints into your Meta for Developers App under <strong>WhatsApp → Configuration → Edit</strong>.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
