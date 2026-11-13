@@ -167,6 +167,7 @@ enum FeePaymentStatus {
   PENDING
   PARTIAL
   PAID
+  WAIVED
   OVERDUE
   CANCELLED
 }
@@ -749,6 +750,17 @@ model LessonContent {
   // External Resource Link
   externalUrl String?
 
+  // Centralized Academic Content Extensions
+  learningObjectives    String? @db.Text
+  practicalInstructions String? @db.Text
+  codeExamplesJson      Json?
+  assignmentPrompt      String? @db.Text
+  projectPrompt         String? @db.Text
+  expectedOutput        String? @db.Text
+  requiredTools         String?
+  resourcesJson         Json?
+  assignedTrainerId     String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -768,6 +780,10 @@ model Enrollment {
   batchId              String?
   batch                Batch?           @relation(fields: [batchId], references: [id])
   status               EnrollmentStatus @default(ACTIVE)
+  enrollmentType       String           @default("PAID") // "PAID" | "COMPLIMENTARY"
+  sourceAdmissionId    String?
+  complimentaryReason  String?
+  validUntil           DateTime?
   enrolledAt           DateTime         @default(now())
   completedAt          DateTime?
   lastAccessedLessonId String?
@@ -1216,9 +1232,13 @@ model FeeStructure {
   netPayableAmount  Int // In Paise (totalCourseFee + registrationFee - discountAmount - scholarshipAmount)
   paidAmount        Int                @default(0) // In Paise
   pendingAmount     Int // In Paise (netPayableAmount - paidAmount)
-  paymentStatus     FeePaymentStatus   @default(PENDING)
-  status            FeeStructureStatus @default(ACTIVE)
-  remarks           String?            @db.Text
+  paymentStatus       FeePaymentStatus   @default(PENDING)
+  status              FeeStructureStatus @default(ACTIVE)
+  isComplimentary     Boolean            @default(false)
+  waiverType          String?
+  waiverReason        String?
+  nonCashWaiverAmount Int                @default(0)
+  remarks             String?            @db.Text
   createdById       String?
   createdBy         User?              @relation("FeeStructureCreator", fields: [createdById], references: [id], onDelete: SetNull)
   createdAt         DateTime           @default(now())
@@ -5706,4 +5726,133 @@ model EventRegistration {
   @@index([paymentStatus])
   @@index([leadId])
   @@map("event_registrations")
+}
+
+// ==============================================================================
+// ACADEMIC CONTENT CMS, VERSIONING, BULK IMPORT & VIRTUAL PRACTICAL LABS
+// ==============================================================================
+
+model AcademicContentVersion {
+  id                    String   @id @default(cuid())
+  lessonId              String
+  courseId              String
+  versionNumber         Int      @default(1)
+  title                 String
+  bodyHtml              String?  @db.Text
+  bodyText              String?  @db.Text
+  learningObjectives    String?  @db.Text
+  practicalInstructions String?  @db.Text
+  codeExamplesJson      Json?
+  assignmentPrompt      String?  @db.Text
+  projectPrompt         String?  @db.Text
+  expectedOutput        String?  @db.Text
+  requiredTools         String?
+  resourcesJson         Json?
+  changeSource          String   @default("CMS_EDIT")
+  importJobId           String?
+  changedById           String?
+  createdAt             DateTime @default(now())
+
+  @@index([lessonId, versionNumber])
+  @@index([courseId])
+  @@map("academic_content_versions")
+}
+
+model AcademicBulkImportJob {
+  id           String    @id @default(cuid())
+  fileName     String
+  status       String    @default("PREVIEW")
+  summaryJson  Json?
+  diffJson     Json?
+  uploadedById String?
+  approvedById String?
+  approvedAt   DateTime?
+  rolledBackAt DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+  @@map("academic_bulk_import_jobs")
+}
+
+model PracticalLab {
+  id             String    @id @default(cuid())
+  courseId       String
+  moduleId       String?
+  lessonId       String?
+  title          String
+  slug           String    @unique
+  labType        String    @default("PROGRAMMING")
+  language       String    @default("python")
+  instructions   String    @db.Text
+  starterCode    String?   @db.Text
+  expectedOutput String?   @db.Text
+  testCasesJson  Json?
+  maxMarks       Int       @default(100)
+  deadline       DateTime?
+  status         String    @default("PUBLISHED")
+  assignedById   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  submissions PracticalSubmission[]
+
+  @@index([courseId])
+  @@index([moduleId])
+  @@index([lessonId])
+  @@index([labType])
+  @@map("practical_labs")
+}
+
+model PracticalSubmission {
+  id                 String    @id @default(cuid())
+  labId              String
+  lab                PracticalLab @relation(fields: [labId], references: [id], onDelete: Cascade)
+  studentId          String
+  courseId           String
+  moduleId           String?
+  lessonId           String?
+  labType            String
+  attemptNumber      Int       @default(1)
+  startedAt          DateTime  @default(now())
+  submittedAt        DateTime?
+  durationSeconds    Int       @default(0)
+  submittedCode      String?   @db.Text
+  submittedFileUrl   String?
+  executionResult    String?   @db.Text
+  testCaseResultJson Json?
+  passedTestCases    Int       @default(0)
+  totalTestCases     Int       @default(0)
+  score              Int?
+  maxScore           Int       @default(100)
+  trainerFeedback    String?   @db.Text
+  reviewedById       String?
+  reviewedAt         DateTime?
+  status             String    @default("SUBMITTED")
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([labId])
+  @@index([studentId])
+  @@index([courseId])
+  @@index([status])
+  @@map("practical_submissions")
+}
+
+model LabExecutionLog {
+  id          String   @id @default(cuid())
+  userId      String
+  studentId   String?
+  labId       String?
+  labType     String
+  language    String
+  exitCode    Int      @default(0)
+  durationMs  Int      @default(0)
+  timedOut    Boolean  @default(false)
+  sandboxMode String   @default("ISOLATED_CONTAINER")
+  createdAt   DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([studentId])
+  @@map("lab_execution_logs")
 }

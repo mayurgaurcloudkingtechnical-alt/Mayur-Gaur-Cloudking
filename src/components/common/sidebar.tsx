@@ -36,6 +36,7 @@ import {
   Activity,
   ShieldCheck,
   Mail,
+  Terminal,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -69,6 +70,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Dashboard", href: "/student/dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
           { title: "Live Classes", href: "/student/live-classes", icon: <Video className="h-4 w-4" />, badge: "Live" },
           { title: "My Courses", href: "/student/courses", icon: <BookOpen className="h-4 w-4" /> },
+          { title: "Virtual Practical Labs", href: "/student/virtual-labs", icon: <Terminal className="h-4 w-4" />, badge: "Labs" },
           { title: "Student ID Card", href: "/student/id-card", icon: <CreditCard className="h-4 w-4" /> },
           ...(isUniversityEnrolled
             ? [
@@ -105,6 +107,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
           { title: "Batches List", href: "/trainer/batches", icon: <Users className="h-4 w-4" /> },
           { title: "Attendance & Register", href: "/trainer/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },
           { title: "Course Topics & CMS", href: "/trainer/courses", icon: <BookOpen className="h-4 w-4" /> },
+          { title: "Virtual Labs Review", href: "/admin/virtual-labs", icon: <Terminal className="h-4 w-4" />, badge: "Labs" },
           { title: "Mock Interviews", href: "/trainer/interviews", icon: <Award className="h-4 w-4" /> },
         ];
       case "TELECALLER":
@@ -232,6 +235,8 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
             : []),
           { title: "Student Management", href: "/admin/students", icon: <UserPlus className="h-4 w-4" /> },
           { title: "Course Catalog", href: "/admin/courses", icon: <BookMarked className="h-4 w-4" /> },
+          { title: "Academic Content CMS", href: "/admin/academic-content", icon: <BookOpen className="h-4 w-4" />, badge: "CMS" },
+          { title: "Virtual Practical Labs", href: "/admin/virtual-labs", icon: <Terminal className="h-4 w-4" />, badge: "Labs" },
           { title: "Events & Workshops", href: "/admin/events", icon: <Calendar className="h-4 w-4" />, badge: "Events" },
           { title: "Batches & Cohorts", href: "/admin/batches", icon: <Calendar className="h-4 w-4" /> },
           { title: "Attendance Oversight", href: "/admin/attendance", icon: <ClipboardCheck className="h-4 w-4" /> },

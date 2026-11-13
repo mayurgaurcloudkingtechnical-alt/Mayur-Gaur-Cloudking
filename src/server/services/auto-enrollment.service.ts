@@ -1,6 +1,7 @@
 import { Prisma, UserRoleCode, EnrollmentStatus, FeePaymentStatus, InstallmentStatus, ApplicationStage, LeadStatus } from "@prisma/client";
 import * as bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
+import { ComplimentaryEnglishService, ENGLISH_COURSE_SLUG, ENGLISH_WEEKLY_BATCH_CODE } from "./complimentary-english.service";
 
 export interface ProvisionResult {
   studentProfileId: string;
@@ -158,6 +159,27 @@ export class AutoEnrollmentService {
       where: { id: app.leadId },
       data: { status: LeadStatus.ADMITTED },
     });
+
+    // 6. Auto-enroll complimentary Professional English & Personality Development (100% waiver, ₹0 payable)
+    const englishCourse = await tx.course.findUnique({
+      where: { slug: ENGLISH_COURSE_SLUG },
+      select: { id: true, baseFee: true },
+    });
+    if (englishCourse && englishCourse.id !== app.courseId) {
+      const weeklyBatch = await tx.batch.findUnique({
+        where: { code: ENGLISH_WEEKLY_BATCH_CODE },
+        select: { id: true },
+      });
+      await ComplimentaryEnglishService.grantComplimentaryInTx(tx, {
+        studentProfileId: studentProfile.id,
+        studentUserId: targetUser.id,
+        courseId: englishCourse.id,
+        courseBaseFee: englishCourse.baseFee,
+        batchId: weeklyBatch?.id || null,
+        sourceAdmissionId: app.id,
+        reason: `Complimentary benefit with ${app.course.title}`,
+      });
+    }
 
     return {
       studentProfileId: studentProfile.id,

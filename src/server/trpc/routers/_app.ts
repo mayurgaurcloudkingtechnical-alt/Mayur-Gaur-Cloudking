@@ -41,8 +41,14 @@ import { eventsRouter } from "./events";
 import { slgCallIntelligenceRouter } from "./slg-call-intelligence";
 import { slgIdentityRouter } from "./slg-identity";
 import { slgDevicesRouter } from "./slg-devices";
+import { academicContentRouter } from "./academic-content";
+import { virtualLabsRouter } from "./virtual-labs";
+import { complimentaryEnglishRouter } from "./complimentary-english";
 
 export const appRouter = router({
+  academicContent: academicContentRouter,
+  virtualLabs: virtualLabsRouter,
+  complimentaryEnglish: complimentaryEnglishRouter,
   slgCallIntelligence: slgCallIntelligenceRouter,
   slgIdentity: slgIdentityRouter,
   slgDevices: slgDevicesRouter,

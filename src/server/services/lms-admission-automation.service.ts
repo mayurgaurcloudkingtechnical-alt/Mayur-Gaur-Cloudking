@@ -4,6 +4,7 @@ import { OmnichannelInboxService } from "./omnichannel-inbox.service";
 import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
 import { StudentAdmissionNotificationService } from "./student-admission-notification.service";
 import { ReceiptService } from "./receipt.service";
+import { ComplimentaryEnglishService, ENGLISH_COURSE_SLUG, ENGLISH_WEEKLY_BATCH_CODE } from "./complimentary-english.service";
 import crypto from "crypto";
 
 export interface CompleteAdmissionParams {
@@ -166,6 +167,29 @@ export class LmsAdmissionAutomationService {
           status: "ACTIVE",
         },
       });
+    }
+
+    // 6b. Auto-grant complimentary Professional English & Personality Development
+    const englishCourse = await db.course.findUnique({
+      where: { slug: ENGLISH_COURSE_SLUG },
+      select: { id: true, baseFee: true },
+    });
+    if (englishCourse && englishCourse.id !== courseId) {
+      const weeklyBatch = await db.batch.findUnique({
+        where: { code: ENGLISH_WEEKLY_BATCH_CODE },
+        select: { id: true },
+      });
+      await db.$transaction((tx) =>
+        ComplimentaryEnglishService.grantComplimentaryInTx(tx, {
+          studentProfileId: studentProfile.id,
+          studentUserId: user.id,
+          courseId: englishCourse.id,
+          courseBaseFee: englishCourse.baseFee,
+          batchId: weeklyBatch?.id || null,
+          sourceAdmissionId: application.id,
+          reason: `Complimentary benefit with admission ${application.applicationNumber}`,
+        })
+      );
     }
 
     // 7. Record Payment Transaction
