@@ -236,7 +236,8 @@ INSERT INTO departments VALUES (1, 'Cloud & DevOps', 'Prayagraj'), (2, 'Cyber Se
 CREATE TABLE students (id INTEGER PRIMARY KEY, name TEXT, course TEXT, marks INTEGER, dept_id INTEGER);
 INSERT INTO students VALUES (101, 'Aarav', 'Python Full Stack', 88, 1), (102, 'Priya', 'Cyber Security', 94, 2), (103, 'Rohan', 'AI & ML', 91, 3);
 """)
-query = sys.stdin.read()
+with open(sys.argv[1], "r", encoding="utf-8") as f:
+    query = f.read()
 statements = [s.strip() for s in query.split(";") if s.strip()]
 rows_out = []
 cols_out = []
@@ -254,13 +255,15 @@ print(json.dumps({"rows": rows_out, "messages": msg}))
 
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "slg-sql-"));
     const scriptPath = path.join(tmpDir, "run_sql.py");
+    const sqlPath = path.join(tmpDir, "query.sql");
     fs.writeFileSync(scriptPath, pyScript, "utf8");
+    fs.writeFileSync(sqlPath, sql, "utf8");
 
     try {
       const { stdout, stderr } = await execFileAsync(
         "python3",
-        [scriptPath],
-        { timeout: 5000, maxBuffer: 256 * 1024, input: sql } as any
+        [scriptPath, sqlPath],
+        { timeout: 5000, maxBuffer: 256 * 1024 }
       );
       const parsed = JSON.parse(String(stdout || "{}"));
       const rows = Array.isArray(parsed.rows) ? parsed.rows : [];
