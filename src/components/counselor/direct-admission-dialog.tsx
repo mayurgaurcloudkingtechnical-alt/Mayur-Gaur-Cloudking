@@ -92,7 +92,7 @@ export function DirectAdmissionDialog({
   onSuccess,
 }: DirectAdmissionDialogProps) {
   // Provider & Course selection
-  const [providerMode, setProviderMode] = useState<"SOFTLAB" | "CERTIFICATION" | "UNIVERSITY">("SOFTLAB");
+  const [providerMode, setProviderMode] = useState<"SOFTLAB" | "SHORT_TERM" | "WORKSHOP" | "INTERNSHIP" | "CERTIFICATION" | "UNIVERSITY">("SOFTLAB");
   const [courseId, setCourseId] = useState("");
   const [batchId, setBatchId] = useState("");
   const [selectedSpecialization, setSelectedSpecialization] = useState<string>("");
@@ -184,7 +184,16 @@ export function DirectAdmissionDialog({
     if (providerMode === "CERTIFICATION") {
       return c.programCategory === "CERTIFICATION";
     }
-    return c.providerType !== "UNIVERSITY" && c.programCategory !== "CERTIFICATION";
+    if (providerMode === "SHORT_TERM") {
+      return c.programCategory === "SHORT_TERM";
+    }
+    if (providerMode === "WORKSHOP") {
+      return c.programCategory === "WORKSHOP";
+    }
+    if (providerMode === "INTERNSHIP") {
+      return c.programCategory === "INTERNSHIP";
+    }
+    return c.providerType !== "UNIVERSITY" && !["CERTIFICATION", "SHORT_TERM", "WORKSHOP", "INTERNSHIP"].includes(c.programCategory);
   });
 
   const { data: batchesData } = api.batch.list.useQuery(
@@ -1189,7 +1198,7 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                       setBatchId("");
                       setSelectedSpecialization("");
                     }}
-                    className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg border text-xs font-semibold transition-all ${
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-semibold transition-all ${
                       providerMode === "SOFTLAB"
                         ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
                         : "bg-white text-slate-700 border-slate-300 hover:bg-slate-100"
@@ -1197,6 +1206,60 @@ Campus: SoftLab Global, 4th Floor, 211/C/59, Tata Motors Building, M.G Road, Civ
                   >
                     <BookOpen className="h-3.5 w-3.5" />
                     <span>Flagship Courses</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProviderMode("SHORT_TERM");
+                      setCourseId("");
+                      setBatchId("");
+                      setSelectedSpecialization("");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-semibold transition-all ${
+                      providerMode === "SHORT_TERM"
+                        ? "bg-emerald-600 text-white border-emerald-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-emerald-50"
+                    }`}
+                  >
+                    <Clock className="h-3.5 w-3.5" />
+                    <span>Short-Term (₹4,999)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProviderMode("WORKSHOP");
+                      setCourseId("");
+                      setBatchId("");
+                      setSelectedSpecialization("");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-semibold transition-all ${
+                      providerMode === "WORKSHOP"
+                        ? "bg-amber-600 text-white border-amber-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-amber-50"
+                    }`}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    <span>Workshops (₹799)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setProviderMode("INTERNSHIP");
+                      setCourseId("");
+                      setBatchId("");
+                      setSelectedSpecialization("");
+                    }}
+                    className={`flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg border text-xs font-semibold transition-all ${
+                      providerMode === "INTERNSHIP"
+                        ? "bg-cyan-600 text-white border-cyan-700 shadow-xs"
+                        : "bg-white text-slate-700 border-slate-300 hover:bg-cyan-50"
+                    }`}
+                  >
+                    <Award className="h-3.5 w-3.5" />
+                    <span>Internships (₹999/₹2,499)</span>
                   </button>
 
                   <button

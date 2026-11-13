@@ -270,11 +270,11 @@ model User {
   revokedCertificates Certificate[] @relation("CertificateRevoker")
 
   // Placement relations
-  createdJobDrives   JobDrive[]          @relation("JobDriveCreator")
-  assignedRecruiters RecruiterContact[]  @relation("RecruiterAssignee")
-  recruiterFollowUps RecruiterFollowUp[]
-  verifiedHiringJobs ExtractedHiringJob[] @relation("HiringJobReviewer")
-  reviewedChangeProposals JobChangeProposal[] @relation("HiringProposalReviewer")
+  createdJobDrives        JobDrive[]           @relation("JobDriveCreator")
+  assignedRecruiters      RecruiterContact[]   @relation("RecruiterAssignee")
+  recruiterFollowUps      RecruiterFollowUp[]
+  verifiedHiringJobs      ExtractedHiringJob[] @relation("HiringJobReviewer")
+  reviewedChangeProposals JobChangeProposal[]  @relation("HiringProposalReviewer")
 
   // Staff ERP & HR relations
   staffProfile            StaffProfile?
@@ -310,10 +310,10 @@ model User {
 
   // Campus & Institutional Partnerships
   institutionMemberships  InstitutionUserMembership[]
-  uploadedStudentImports  StudentImportJob[]          @relation("StudentImportUploader")
-  uploadedLeadBatches     LeadImportBatch[]           @relation("LeadBatchUploader")
-  approvedInstitutions    InstitutionApproval[]       @relation("InstitutionApprover")
-  createdJobFairs         JobFair[]                   @relation("JobFairCreator")
+  uploadedStudentImports  StudentImportJob[]           @relation("StudentImportUploader")
+  uploadedLeadBatches     LeadImportBatch[]            @relation("LeadBatchUploader")
+  approvedInstitutions    InstitutionApproval[]        @relation("InstitutionApprover")
+  createdJobFairs         JobFair[]                    @relation("JobFairCreator")
   verifiedStudentPayments StudentRegistrationPayment[] @relation("PaymentVerifier")
 
   // Omnichannel, AI Knowledge & Escalations
@@ -335,28 +335,28 @@ model User {
   SiaDevice                        SiaDevice[]
 
   // Enterprise HRMS & Daily Management Relations
-  attendanceEvents                 AttendanceEvent[]
-  reviewedRegularizations          AttendanceRegularizationRequest[] @relation("RegularizationReviewer")
-  reviewedOvertimes                OvertimeRequest[]                 @relation("OvertimeReviewer")
-  reviewedPlannerRuns              TaskGenerationRun[]               @relation("PlannerReviewer")
-  approvedWorkTasks                DailyWorkTask[]                   @relation("WorkTaskApprover")
-  taskStatusChanges                TaskStatusHistory[]               @relation("TaskStatusChanger")
-  reviewedDailyReports             DailyWorkReport[]                 @relation("ReportReviewer")
+  attendanceEvents        AttendanceEvent[]
+  reviewedRegularizations AttendanceRegularizationRequest[] @relation("RegularizationReviewer")
+  reviewedOvertimes       OvertimeRequest[]                 @relation("OvertimeReviewer")
+  reviewedPlannerRuns     TaskGenerationRun[]               @relation("PlannerReviewer")
+  approvedWorkTasks       DailyWorkTask[]                   @relation("WorkTaskApprover")
+  taskStatusChanges       TaskStatusHistory[]               @relation("TaskStatusChanger")
+  reviewedDailyReports    DailyWorkReport[]                 @relation("ReportReviewer")
 
   // Callyzer Call Monitoring & Live Staff Tracking Relations
-  staffCallLogs                    StaffCallLog[]                    @relation("UserCallLogs")
-  staffLiveSession                 StaffLiveSession?                 @relation("UserLiveSession")
+  staffCallLogs    StaffCallLog[]    @relation("UserCallLogs")
+  staffLiveSession StaffLiveSession? @relation("UserLiveSession")
 
   // Virtual Mock & Recruiter Interview Relations
-  conductedMockInterviews          MockInterview[]                   @relation("MockInterviewer")
-  conductedRecruiterInterviews     RecruiterInterview[]              @relation("RecruiterInterviews")
+  conductedMockInterviews      MockInterview[]      @relation("MockInterviewer")
+  conductedRecruiterInterviews RecruiterInterview[] @relation("RecruiterInterviews")
 
   // Management Control Center & Operations Relations
-  assignedAlerts                   ManagementAlert[]                 @relation("AlertAssignedTo")
-  acknowledgedAlerts               ManagementAlert[]                 @relation("AlertAcknowledgedBy")
-  resolvedAlerts                   ManagementAlert[]                 @relation("AlertResolvedBy")
-  requestedCorrections             RecordCorrectionLog[]             @relation("CorrectionRequestedBy")
-  approvedCorrections              RecordCorrectionLog[]             @relation("CorrectionApprovedBy")
+  assignedAlerts       ManagementAlert[]     @relation("AlertAssignedTo")
+  acknowledgedAlerts   ManagementAlert[]     @relation("AlertAcknowledgedBy")
+  resolvedAlerts       ManagementAlert[]     @relation("AlertResolvedBy")
+  requestedCorrections RecordCorrectionLog[] @relation("CorrectionRequestedBy")
+  approvedCorrections  RecordCorrectionLog[] @relation("CorrectionApprovedBy")
 
   @@index([email])
   @@index([phone])
@@ -470,9 +470,9 @@ model StudentProfile {
   registrationPayments   StudentRegistrationPayment[]
 
   // Live Classes & Virtual Interviews
-  liveAttendances        LiveClassAttendance[]
-  mockInterviews         MockInterview[]
-  recruiterInterviews    RecruiterInterview[]
+  liveAttendances     LiveClassAttendance[]
+  mockInterviews      MockInterview[]
+  recruiterInterviews RecruiterInterview[]
 
   @@index([studentId])
   @@map("student_profiles")
@@ -543,17 +543,17 @@ model Course {
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
 
-  trainers      CourseTrainer[]
-  batches       Batch[]
-  modules       Module[]
-  enrollments   Enrollment[]
-  leads         Lead[]
-  applications  AdmissionApplication[]
-  feeStructures FeeStructure[]
-  exams         Exam[]
-  questionBank  QuestionBank[]
-  certificates  Certificate[]
-  jobDrives     JobDrive[]
+  trainers            CourseTrainer[]
+  batches             Batch[]
+  modules             Module[]
+  enrollments         Enrollment[]
+  leads               Lead[]
+  applications        AdmissionApplication[]
+  feeStructures       FeeStructure[]
+  exams               Exam[]
+  questionBank        QuestionBank[]
+  certificates        Certificate[]
+  jobDrives           JobDrive[]
   institutionMappings InstitutionCourseMapping[]
 
   @@index([slug])
@@ -614,36 +614,36 @@ model BatchTrainer {
 }
 
 model ScheduledClass {
-  id                      String                  @id @default(cuid())
+  id                      String             @id @default(cuid())
   batchId                 String
-  batch                   Batch                   @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  batch                   Batch              @relation(fields: [batchId], references: [id], onDelete: Cascade)
   moduleId                String?
-  module                  Module?                 @relation(fields: [moduleId], references: [id], onDelete: SetNull)
+  module                  Module?            @relation(fields: [moduleId], references: [id], onDelete: SetNull)
   title                   String
   scheduledAt             DateTime
-  durationMin             Int                     @default(60)
+  durationMin             Int                @default(60)
   trainerId               String?
-  trainer                 TrainerProfile?         @relation(fields: [trainerId], references: [id], onDelete: SetNull)
-  mode                    DeliveryMode            @default(OFFLINE)
+  trainer                 TrainerProfile?    @relation(fields: [trainerId], references: [id], onDelete: SetNull)
+  mode                    DeliveryMode       @default(OFFLINE)
   location                String? // Physical Room or Meeting URL
-  agendaNotes             String?                 @db.Text
-  status                  ClassSessionStatus      @default(SCHEDULED)
+  agendaNotes             String?            @db.Text
+  status                  ClassSessionStatus @default(SCHEDULED)
   statusReason            String?
   topicCovered            String?
   coveredLessonId         String?
-  coveredLesson           Lesson?                 @relation(fields: [coveredLessonId], references: [id], onDelete: SetNull)
-  roomCode                String?                 @unique
+  coveredLesson           Lesson?            @relation(fields: [coveredLessonId], references: [id], onDelete: SetNull)
+  roomCode                String?            @unique
   startedAt               DateTime?
   endedAt                 DateTime?
-  isRecordingEnabled      Boolean                 @default(true)
-  allowAutoPublishYouTube Boolean                 @default(false)
-  createdAt               DateTime                @default(now())
-  updatedAt               DateTime                @updatedAt
+  isRecordingEnabled      Boolean            @default(true)
+  allowAutoPublishYouTube Boolean            @default(false)
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
 
-  attendance              AttendanceRecord?
-  liveAttendances         LiveClassAttendance[]
-  liveSessionEvents       LiveClassSessionEvent[]
-  recordings              ClassRecording[]
+  attendance        AttendanceRecord?
+  liveAttendances   LiveClassAttendance[]
+  liveSessionEvents LiveClassSessionEvent[]
+  recordings        ClassRecording[]
 
   @@index([batchId, scheduledAt])
   @@index([trainerId])
@@ -657,16 +657,16 @@ model ScheduledClass {
 // ==============================================================================
 
 model Module {
-  id               String           @id @default(cuid())
-  courseId         String
-  course           Course           @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title            String
-  description      String?          @db.Text
-  sortOrder        Int              @default(0)
-  status           ContentStatus    @default(DRAFT)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  deletedAt        DateTime?
+  id          String        @id @default(cuid())
+  courseId    String
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  description String?       @db.Text
+  sortOrder   Int           @default(0)
+  status      ContentStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  deletedAt   DateTime?
 
   lessons          Lesson[]
   exams            Exam[]
@@ -924,26 +924,26 @@ model Lead {
   metaWebhookLogs      MetaLeadWebhookLog[]
 
   // Meta Lead Ads & Pipeline Tracking
-  metaLeadId             String?   @unique
+  metaLeadId             String? @unique
   metaFormId             String?
   metaPageId             String?
   metaAdId               String?
   metaAdsetId            String?
   metaCampaignId         String?
-  pipelineStage          String?   @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"
-  qualificationReason    String?   @db.Text
-  disqualificationReason String?   @db.Text
-  purchaseTimeline       String?   // "IMMEDIATE", "THIS_WEEK", "NEXT_MONTH", "LOOKING_AROUND"
-  serviceCategory        String?   // "SOFTWARE", "CORPORATE_TRAINING", "CAMPUS_DRIVE", "INSTITUTIONAL_PARTNERSHIP", "FRANCHISE"
+  pipelineStage          String? @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"
+  qualificationReason    String? @db.Text
+  disqualificationReason String? @db.Text
+  purchaseTimeline       String? // "IMMEDIATE", "THIS_WEEK", "NEXT_MONTH", "LOOKING_AROUND"
+  serviceCategory        String? // "SOFTWARE", "CORPORATE_TRAINING", "CAMPUS_DRIVE", "INSTITUTIONAL_PARTNERSHIP", "FRANCHISE"
   metaRawData            Json?
 
   // Centralized Ingestion & Source Attribution
-  captureMethod       String?   // "MANUAL_COUNSELOR", "MANUAL_TELECALLER", "BULK_CSV_XLSX", "INBOUND_CALL", "OUTBOUND_CALL", "AI_VOICE", "WEBSITE_FORM", "WHATSAPP", "META_ADS", "GOOGLE_ADS"
-  importBatchId       String?
-  originalEventTime   DateTime?
-  aiAgentId           String?
-  lastHandledById     String?
-  callCount           Int       @default(0)
+  captureMethod     String? // "MANUAL_COUNSELOR", "MANUAL_TELECALLER", "BULK_CSV_XLSX", "INBOUND_CALL", "OUTBOUND_CALL", "AI_VOICE", "WEBSITE_FORM", "WHATSAPP", "META_ADS", "GOOGLE_ADS"
+  importBatchId     String?
+  originalEventTime DateTime?
+  aiAgentId         String?
+  lastHandledById   String?
+  callCount         Int       @default(0)
 
   @@index([email])
   @@index([phone])
@@ -1002,22 +1002,22 @@ model FollowUpHistory {
 }
 
 model LeadImportBatch {
-  id           String      @id @default(cuid())
-  batchCode    String      @unique // e.g. "SLG-IMP-20261022-0001"
+  id           String     @id @default(cuid())
+  batchCode    String     @unique // e.g. "SLG-IMP-20261022-0001"
   uploaderId   String?
-  uploader     User?       @relation("LeadBatchUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  uploader     User?      @relation("LeadBatchUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
   fileName     String?
-  source       LeadSource  @default(BULK_UPLOAD)
-  totalRows    Int         @default(0)
-  createdCount Int         @default(0)
-  updatedCount Int         @default(0)
-  failedCount  Int         @default(0)
-  errorSummary Json?       // [{ row, phone, name, reason }]
-  status       String      @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
-  startedAt    DateTime    @default(now())
+  source       LeadSource @default(BULK_UPLOAD)
+  totalRows    Int        @default(0)
+  createdCount Int        @default(0)
+  updatedCount Int        @default(0)
+  failedCount  Int        @default(0)
+  errorSummary Json? // [{ row, phone, name, reason }]
+  status       String     @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
+  startedAt    DateTime   @default(now())
   completedAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@index([uploaderId])
   @@index([createdAt])
@@ -1053,13 +1053,13 @@ model MetaCampaignRoutingRule {
   id               String   @id @default(cuid())
   priority         Int      @default(0) // Lowest number runs first
   name             String
-  campaignPattern  String   // e.g. "SLG_META_COURSES_LEADS_OCT26", "SLG_META_BOSSE_DPGU_LEADS_OCT26", "SLG_META_SERVICES_LEADS_OCT26"
+  campaignPattern  String // e.g. "SLG_META_COURSES_LEADS_OCT26", "SLG_META_BOSSE_DPGU_LEADS_OCT26", "SLG_META_SERVICES_LEADS_OCT26"
   formIdPattern    String?
   targetPipeline   String   @default("COURSE_ADMISSIONS") // "COURSE_ADMISSIONS", "BOSSE_DPGU", "BUSINESS_SERVICES"
   assignedTeam     String   @default("Admissions Team") // "Admissions Team", "Education Counselling Team", "Business Development Team"
   defaultOwnerRole String   @default("COUNSELOR")
   defaultOwnerId   String?
-  autoTags         Json?    // Array of tags e.g. ["META_OCT26", "ADMISSIONS"]
+  autoTags         Json? // Array of tags e.g. ["META_OCT26", "ADMISSIONS"]
   isActive         Boolean  @default(true)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
@@ -1551,56 +1551,56 @@ model CorporatePartner {
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  jobDrives  JobDrive[]
-  recruiters RecruiterContact[]
-  followUps  RecruiterFollowUp[]
+  jobDrives     JobDrive[]
+  recruiters    RecruiterContact[]
+  followUps     RecruiterFollowUp[]
   jobFairStalls JobFairRecruiter[]
-  invoices   CorporateStaffingInvoice[]
+  invoices      CorporateStaffingInvoice[]
 
   @@index([isActive])
   @@map("corporate_partners")
 }
 
 model CorporateStaffingInvoice {
-  id                String            @id @default(cuid())
-  invoiceNumber     String            @unique // e.g. "SLG-INV-STF-2026-0001"
-  partnerId         String?
-  partner           CorporatePartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
-  companyName       String
-  companyGst        String?
-  companyAddress    String?
-  companyCity       String?
-  companyState      String?
-  contactPerson     String?
-  contactEmail      String?
-  contactPhone      String?
+  id             String            @id @default(cuid())
+  invoiceNumber  String            @unique // e.g. "SLG-INV-STF-2026-0001"
+  partnerId      String?
+  partner        CorporatePartner? @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  companyName    String
+  companyGst     String?
+  companyAddress String?
+  companyCity    String?
+  companyState   String?
+  contactPerson  String?
+  contactEmail   String?
+  contactPhone   String?
 
-  candidateName     String
-  candidateEmail    String?
-  candidatePhone    String?
-  position          String
-  joinedDate        DateTime          @default(now())
-  annualCtc         Float             // in Rupees, e.g. 600000 (6 LPA)
-  feePercentage     Float             @default(8.33) // 8.33 to 12.0 %
-  baseAmount        Float             // annualCtc * (feePercentage / 100)
-  sacCode           String            @default("998512") // Staffing & Manpower Supply Services
-  gstRate           Float             @default(18.0)
-  cgstAmount        Float             @default(0)
-  sgstAmount        Float             @default(0)
-  igstAmount        Float             @default(0)
-  totalTaxAmount    Float             @default(0)
-  grandTotal        Float             // baseAmount + totalTaxAmount
+  candidateName  String
+  candidateEmail String?
+  candidatePhone String?
+  position       String
+  joinedDate     DateTime @default(now())
+  annualCtc      Float // in Rupees, e.g. 600000 (6 LPA)
+  feePercentage  Float    @default(8.33) // 8.33 to 12.0 %
+  baseAmount     Float // annualCtc * (feePercentage / 100)
+  sacCode        String   @default("998512") // Staffing & Manpower Supply Services
+  gstRate        Float    @default(18.0)
+  cgstAmount     Float    @default(0)
+  sgstAmount     Float    @default(0)
+  igstAmount     Float    @default(0)
+  totalTaxAmount Float    @default(0)
+  grandTotal     Float // baseAmount + totalTaxAmount
 
-  status            String            @default("UNPAID") // UNPAID, PAID, PARTIALLY_PAID, CANCELLED
-  dueDate           DateTime?
-  paidAt            DateTime?
-  paymentMode       String?           // NEFT, RTGS, IMPS, UPI, CHEQUE
-  transactionRef    String?
-  notes             String?           @db.Text
-  authorizedBy      String?           @default("Harsh Shukla")
+  status         String    @default("UNPAID") // UNPAID, PAID, PARTIALLY_PAID, CANCELLED
+  dueDate        DateTime?
+  paidAt         DateTime?
+  paymentMode    String? // NEFT, RTGS, IMPS, UPI, CHEQUE
+  transactionRef String?
+  notes          String?   @db.Text
+  authorizedBy   String?   @default("Harsh Shukla")
 
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([partnerId])
   @@index([status])
@@ -1704,11 +1704,11 @@ model JobDrive {
 
   // Campus Partnerships & Job Fair Expansion
   jobFairId             String?
-  jobFair               JobFair?          @relation(fields: [jobFairId], references: [id], onDelete: SetNull)
-  eligiblePassingYears  Int[]             @default([])
+  jobFair               JobFair?               @relation(fields: [jobFairId], references: [id], onDelete: SetNull)
+  eligiblePassingYears  Int[]                  @default([])
   minCgpa               Float?
   maxActiveBacklogs     Int?
-  eligibleDegreeTypes   String[]          @default([])
+  eligibleDegreeTypes   String[]               @default([])
   participatingColleges DriveInstitution[]
   nominations           DriveNomination[]
   applications          PlacementApplication[]
@@ -1868,26 +1868,26 @@ enum HiringTrustPolicy {
 }
 
 model HiringSource {
-  id                String            @id @default(cuid())
+  id                String           @id @default(cuid())
   name              String
-  sourceType        HiringSourceType  @default(WHATSAPP_GROUP)
+  sourceType        HiringSourceType @default(WHATSAPP_GROUP)
   identifier        String?
-  description       String?           @db.Text
-  consentStatus     String            @default("AUTHORIZED") // AUTHORIZED, PENDING_CONSENT, REVOKED
-  isEnabled         Boolean           @default(true)
-  allowedCategories String[]          @default([])
-  autoPublishTrust  Boolean           @default(false)
-  minConfidence     Float             @default(0.85)
+  description       String?          @db.Text
+  consentStatus     String           @default("AUTHORIZED") // AUTHORIZED, PENDING_CONSENT, REVOKED
+  isEnabled         Boolean          @default(true)
+  allowedCategories String[]         @default([])
+  autoPublishTrust  Boolean          @default(false)
+  minConfidence     Float            @default(0.85)
   lastSyncAt        DateTime?
   lastMessageAt     DateTime?
-  totalReceived     Int               @default(0)
-  totalExtracted    Int               @default(0)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  totalReceived     Int              @default(0)
+  totalExtracted    Int              @default(0)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 
-  messages          IncomingHiringMessage[]
-  sourceReferences  JobSourceReference[]
-  logs              HiringAutomationLog[]
+  messages         IncomingHiringMessage[]
+  sourceReferences JobSourceReference[]
+  logs             HiringAutomationLog[]
 
   @@index([isEnabled])
   @@index([sourceType])
@@ -1895,26 +1895,26 @@ model HiringSource {
 }
 
 model IncomingHiringMessage {
-  id                String                 @id @default(cuid())
+  id                String                  @id @default(cuid())
   sourceId          String?
-  source            HiringSource?          @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  providerMessageId String?                @unique
+  source            HiringSource?           @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  providerMessageId String?                 @unique
   contentHash       String
-  rawText           String                 @db.Text
+  rawText           String                  @db.Text
   senderPhone       String?
   senderName        String?
-  channel           String                 @default("WHATSAPP")
-  receivedAt        DateTime               @default(now())
-  processingStatus  HiringProcessingStatus @default(RECEIVED)
-  errorMessage      String?                @db.Text
-  retryCount        Int                    @default(0)
+  channel           String                  @default("WHATSAPP")
+  receivedAt        DateTime                @default(now())
+  processingStatus  HiringProcessingStatus  @default(RECEIVED)
+  errorMessage      String?                 @db.Text
+  retryCount        Int                     @default(0)
   duplicateOfId     String?
-  duplicateOf       IncomingHiringMessage? @relation("MessageDuplicates", fields: [duplicateOfId], references: [id])
+  duplicateOf       IncomingHiringMessage?  @relation("MessageDuplicates", fields: [duplicateOfId], references: [id])
   duplicates        IncomingHiringMessage[] @relation("MessageDuplicates")
 
-  extractedJob      ExtractedHiringJob?
-  sourceReferences  JobSourceReference[]
-  logs              HiringAutomationLog[]
+  extractedJob     ExtractedHiringJob?
+  sourceReferences JobSourceReference[]
+  logs             HiringAutomationLog[]
 
   @@index([contentHash])
   @@index([processingStatus])
@@ -1924,63 +1924,63 @@ model IncomingHiringMessage {
 }
 
 model ExtractedHiringJob {
-  id                   String                 @id @default(cuid())
-  messageId            String                 @unique
-  message              IncomingHiringMessage  @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  jobDriveId           String?
-  jobDrive             JobDrive?              @relation(fields: [jobDriveId], references: [id], onDelete: SetNull)
-  
+  id         String                @id @default(cuid())
+  messageId  String                @unique
+  message    IncomingHiringMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  jobDriveId String?
+  jobDrive   JobDrive?             @relation(fields: [jobDriveId], references: [id], onDelete: SetNull)
+
   jobTitle             String
   companyName          String
   recruiterName        String?
   recruiterDesignation String?
   recruiterEmail       String?
   recruiterPhone       String?
-  
-  jobDescription       String                 @db.Text
-  requiredSkills       String[]               @default([])
-  qualification        String?
-  eligibleBranches     String[]               @default([])
-  experienceRequired   String?
-  isFresher            Boolean                @default(false)
-  openingsCount        Int                    @default(1)
-  
-  salaryPackage        String?
-  minSalary            Int?
-  maxSalary            Int?
-  salaryType           String?                @default("ANNUAL_CTC")
-  currency             String                 @default("INR")
-  location             String?
-  workMode             String                 @default("ON_SITE")
-  employmentType       String                 @default("FULL_TIME")
-  shift                String?
-  deadline             DateTime?
-  interviewDate        DateTime?
-  
-  applicationMethod    String?
-  applicationEmail     String?
-  applicationLink      String?
-  companyWebsite       String?
-  requiredDocuments    String[]               @default([])
-  
-  feesMentioned        Boolean                @default(false)
-  feeDetails           String?
-  isSuspicious         Boolean                @default(false)
-  suspicionReason      String?                @db.Text
-  confidenceScore      Float                  @default(0.0)
-  missingFields        String[]               @default([])
-  status               HiringProcessingStatus @default(PENDING_VERIFICATION)
-  rejectionReason      String?
-  
-  verifiedById         String?
-  verifiedBy           User?                  @relation("HiringJobReviewer", fields: [verifiedById], references: [id], onDelete: SetNull)
-  verifiedAt           DateTime?
-  autoPublished        Boolean                @default(false)
-  
-  createdAt            DateTime               @default(now())
-  updatedAt            DateTime               @updatedAt
 
-  changeProposals      JobChangeProposal[]
+  jobDescription     String   @db.Text
+  requiredSkills     String[] @default([])
+  qualification      String?
+  eligibleBranches   String[] @default([])
+  experienceRequired String?
+  isFresher          Boolean  @default(false)
+  openingsCount      Int      @default(1)
+
+  salaryPackage  String?
+  minSalary      Int?
+  maxSalary      Int?
+  salaryType     String?   @default("ANNUAL_CTC")
+  currency       String    @default("INR")
+  location       String?
+  workMode       String    @default("ON_SITE")
+  employmentType String    @default("FULL_TIME")
+  shift          String?
+  deadline       DateTime?
+  interviewDate  DateTime?
+
+  applicationMethod String?
+  applicationEmail  String?
+  applicationLink   String?
+  companyWebsite    String?
+  requiredDocuments String[] @default([])
+
+  feesMentioned   Boolean                @default(false)
+  feeDetails      String?
+  isSuspicious    Boolean                @default(false)
+  suspicionReason String?                @db.Text
+  confidenceScore Float                  @default(0.0)
+  missingFields   String[]               @default([])
+  status          HiringProcessingStatus @default(PENDING_VERIFICATION)
+  rejectionReason String?
+
+  verifiedById  String?
+  verifiedBy    User?     @relation("HiringJobReviewer", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt    DateTime?
+  autoPublished Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  changeProposals JobChangeProposal[]
 
   @@index([status])
   @@index([companyName])
@@ -1990,14 +1990,14 @@ model ExtractedHiringJob {
 }
 
 model JobSourceReference {
-  id          String                @id @default(cuid())
-  jobDriveId  String?
-  jobDrive    JobDrive?             @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
-  messageId   String
-  message     IncomingHiringMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
-  sourceId    String?
-  source      HiringSource?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  receivedAt  DateTime              @default(now())
+  id         String                @id @default(cuid())
+  jobDriveId String?
+  jobDrive   JobDrive?             @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  messageId  String
+  message    IncomingHiringMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  sourceId   String?
+  source     HiringSource?         @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  receivedAt DateTime              @default(now())
 
   @@index([jobDriveId])
   @@index([messageId])
@@ -2005,17 +2005,17 @@ model JobSourceReference {
 }
 
 model JobChangeProposal {
-  id              String             @id @default(cuid())
-  jobDriveId      String
-  jobDrive        JobDrive           @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
-  extractedJobId  String
-  extractedJob    ExtractedHiringJob @relation(fields: [extractedJobId], references: [id], onDelete: Cascade)
-  fieldChanges    Json
-  status          String             @default("PENDING") // PENDING, APPROVED, REJECTED
-  reviewedById    String?
-  reviewedBy      User?              @relation("HiringProposalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  reviewedAt      DateTime?
-  createdAt       DateTime           @default(now())
+  id             String             @id @default(cuid())
+  jobDriveId     String
+  jobDrive       JobDrive           @relation(fields: [jobDriveId], references: [id], onDelete: Cascade)
+  extractedJobId String
+  extractedJob   ExtractedHiringJob @relation(fields: [extractedJobId], references: [id], onDelete: Cascade)
+  fieldChanges   Json
+  status         String             @default("PENDING") // PENDING, APPROVED, REJECTED
+  reviewedById   String?
+  reviewedBy     User?              @relation("HiringProposalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewedAt     DateTime?
+  createdAt      DateTime           @default(now())
 
   @@index([jobDriveId])
   @@index([status])
@@ -2023,16 +2023,16 @@ model JobChangeProposal {
 }
 
 model HiringAutomationLog {
-  id          String                 @id @default(cuid())
-  sourceId    String?
-  source      HiringSource?          @relation(fields: [sourceId], references: [id], onDelete: SetNull)
-  messageId   String?
-  message     IncomingHiringMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
-  level       String                 @default("INFO") // INFO, WARN, ERROR, SUCCESS
-  event       String
-  details     Json?
-  error       String?                @db.Text
-  createdAt   DateTime               @default(now())
+  id        String                 @id @default(cuid())
+  sourceId  String?
+  source    HiringSource?          @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+  messageId String?
+  message   IncomingHiringMessage? @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  level     String                 @default("INFO") // INFO, WARN, ERROR, SUCCESS
+  event     String
+  details   Json?
+  error     String?                @db.Text
+  createdAt DateTime               @default(now())
 
   @@index([event])
   @@index([createdAt])
@@ -2040,14 +2040,14 @@ model HiringAutomationLog {
 }
 
 model HiringAutomationConfig {
-  id                  String             @id @default("default")
-  trustPolicy         HiringTrustPolicy  @default(REVIEW_FIRST)
-  autoPublishMinScore Float              @default(0.85)
-  enableHinglishAi    Boolean            @default(true)
-  rejectSuspicious    Boolean            @default(true)
-  maxDailyIngestion   Int                @default(500)
-  webhookSecret       String             @default("slg_hiring_wh_sec_2026")
-  updatedAt           DateTime           @updatedAt
+  id                  String            @id @default("default")
+  trustPolicy         HiringTrustPolicy @default(REVIEW_FIRST)
+  autoPublishMinScore Float             @default(0.85)
+  enableHinglishAi    Boolean           @default(true)
+  rejectSuspicious    Boolean           @default(true)
+  maxDailyIngestion   Int               @default(500)
+  webhookSecret       String            @default("slg_hiring_wh_sec_2026")
+  updatedAt           DateTime          @updatedAt
 
   @@map("hiring_automation_config")
 }
@@ -2425,32 +2425,32 @@ model StaffApplicant {
 }
 
 model StaffOnboardingChecklist {
-  id                   String       @id @default(cuid())
-  staffId              String       @unique
-  staff                StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  personalDetailsDone       Boolean   @default(false)
-  documentsUploaded         Boolean   @default(false)
-  bankDetailsVerified       Boolean   @default(false)
-  workstationAssigned       Boolean   @default(false)
-  idCardIssued              Boolean   @default(false)
-  emailAccountCreated       Boolean   @default(false)
-  slackOrPortalInvited      Boolean   @default(false)
-  orientationCompleted      Boolean   @default(false)
+  id                      String       @id @default(cuid())
+  staffId                 String       @unique
+  staff                   StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  personalDetailsDone     Boolean      @default(false)
+  documentsUploaded       Boolean      @default(false)
+  bankDetailsVerified     Boolean      @default(false)
+  workstationAssigned     Boolean      @default(false)
+  idCardIssued            Boolean      @default(false)
+  emailAccountCreated     Boolean      @default(false)
+  slackOrPortalInvited    Boolean      @default(false)
+  orientationCompleted    Boolean      @default(false)
   // Step 4 Extended Checklist items
-  docVerificationDone       Boolean   @default(false)
-  offerLetterAckDone        Boolean   @default(false)
-  roleAssignmentDone        Boolean   @default(false)
-  crmAccessVerified         Boolean   @default(false)
-  hrmsProfileDone           Boolean   @default(false)
-  attendancePolicyAckDone   Boolean   @default(false)
-  trainingInductionDone     Boolean   @default(false)
-  managerApprovalDone       Boolean   @default(false)
-  completionPercent         Int       @default(0)
-  status                    String    @default("IN_PROGRESS")
-  completedAt          DateTime?
-  notes                String?      @db.Text
-  createdAt            DateTime     @default(now())
-  updatedAt            DateTime     @updatedAt
+  docVerificationDone     Boolean      @default(false)
+  offerLetterAckDone      Boolean      @default(false)
+  roleAssignmentDone      Boolean      @default(false)
+  crmAccessVerified       Boolean      @default(false)
+  hrmsProfileDone         Boolean      @default(false)
+  attendancePolicyAckDone Boolean      @default(false)
+  trainingInductionDone   Boolean      @default(false)
+  managerApprovalDone     Boolean      @default(false)
+  completionPercent       Int          @default(0)
+  status                  String       @default("IN_PROGRESS")
+  completedAt             DateTime?
+  notes                   String?      @db.Text
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   @@map("staff_onboarding_checklists")
 }
@@ -3609,47 +3609,47 @@ enum InstitutionRole {
 }
 
 model Institution {
-  id                         String            @id @default(cuid())
-  code                       String            @unique // e.g. "INST-2026-001"
-  name                       String
-  type                       InstitutionType   @default(COLLEGE)
-  affiliation                String?           // Affiliating University
-  recognition                String?           // UGC, AICTE, NAAC, etc.
-  registrationNumber         String?
-  address                    String?
-  district                   String?
-  city                       String?
-  state                      String?
-  pincode                    String?
-  website                    String?
-  officialEmail              String            @unique
-  officialPhone              String?
-  authorizedPersonName       String
+  id                          String            @id @default(cuid())
+  code                        String            @unique // e.g. "INST-2026-001"
+  name                        String
+  type                        InstitutionType   @default(COLLEGE)
+  affiliation                 String? // Affiliating University
+  recognition                 String? // UGC, AICTE, NAAC, etc.
+  registrationNumber          String?
+  address                     String?
+  district                    String?
+  city                        String?
+  state                       String?
+  pincode                     String?
+  website                     String?
+  officialEmail               String            @unique
+  officialPhone               String?
+  authorizedPersonName        String
   authorizedPersonDesignation String
-  authorizedPersonEmail      String
-  authorizedPersonPhone      String
-  placementOfficerName       String?
-  placementOfficerEmail      String?
-  placementOfficerPhone      String?
-  departmentsOffered         String[]          @default([])
-  estimatedStudentCount      Int?
-  agreementDocumentUrl       String?
-  status                     InstitutionStatus @default(PENDING_APPROVAL)
-  rejectionReason            String?           @db.Text
-  correctionNotes            String?           @db.Text
-  approvedAt                 DateTime?
-  approvedById               String?
-  createdAt                  DateTime          @default(now())
-  updatedAt                  DateTime          @updatedAt
+  authorizedPersonEmail       String
+  authorizedPersonPhone       String
+  placementOfficerName        String?
+  placementOfficerEmail       String?
+  placementOfficerPhone       String?
+  departmentsOffered          String[]          @default([])
+  estimatedStudentCount       Int?
+  agreementDocumentUrl        String?
+  status                      InstitutionStatus @default(PENDING_APPROVAL)
+  rejectionReason             String?           @db.Text
+  correctionNotes             String?           @db.Text
+  approvedAt                  DateTime?
+  approvedById                String?
+  createdAt                   DateTime          @default(now())
+  updatedAt                   DateTime          @updatedAt
 
-  members                    InstitutionUserMembership[]
-  approvals                  InstitutionApproval[]
-  courseMappings             InstitutionCourseMapping[]
-  students                   StudentInstitutionEnrollment[]
-  importJobs                 StudentImportJob[]
-  driveParticipations        DriveInstitution[]
-  jobFairParticipations      JobFairInstitution[]
-  payments                   StudentRegistrationPayment[]
+  members               InstitutionUserMembership[]
+  approvals             InstitutionApproval[]
+  courseMappings        InstitutionCourseMapping[]
+  students              StudentInstitutionEnrollment[]
+  importJobs            StudentImportJob[]
+  driveParticipations   DriveInstitution[]
+  jobFairParticipations JobFairInstitution[]
+  payments              StudentRegistrationPayment[]
 
   @@index([status])
   @@index([city])
@@ -3679,7 +3679,7 @@ model InstitutionApproval {
   id            String      @id @default(cuid())
   institutionId String
   institution   Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  decision      String      // APPROVED, REJECTED, CORRECTION_REQUESTED
+  decision      String // APPROVED, REJECTED, CORRECTION_REQUESTED
   remarks       String?     @db.Text
   actionById    String
   actionBy      User        @relation("InstitutionApprover", fields: [actionById], references: [id])
@@ -3694,9 +3694,9 @@ model InstitutionCourseMapping {
   id                    String      @id @default(cuid())
   institutionId         String
   institution           Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-  institutionCourseName String      // e.g. "B.Tech Computer Science"
-  institutionDepartment String?     // e.g. "Computer Science & Engineering"
-  degreeType            String?     // e.g. "B.Tech", "MCA", "BCA", "Diploma"
+  institutionCourseName String // e.g. "B.Tech Computer Science"
+  institutionDepartment String? // e.g. "Computer Science & Engineering"
+  degreeType            String? // e.g. "B.Tech", "MCA", "BCA", "Diploma"
   standardCourseId      String?
   standardCourse        Course?     @relation(fields: [standardCourseId], references: [id], onDelete: SetNull)
   academicYears         String[]    @default([]) // e.g. ["2022-2026", "2023-2027"]
@@ -3704,7 +3704,7 @@ model InstitutionCourseMapping {
   createdAt             DateTime    @default(now())
   updatedAt             DateTime    @updatedAt
 
-  students              StudentInstitutionEnrollment[]
+  students StudentInstitutionEnrollment[]
 
   @@index([institutionId])
   @@index([standardCourseId])
@@ -3717,16 +3717,16 @@ model StudentInstitutionEnrollment {
   institution           Institution               @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   studentProfileId      String
   student               StudentProfile            @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
-  enrollmentNumber      String                    // Institutional Enrollment / Registration No.
+  enrollmentNumber      String // Institutional Enrollment / Registration No.
   rollNumber            String?
   courseMappingId       String?
   courseMapping         InstitutionCourseMapping? @relation(fields: [courseMappingId], references: [id], onDelete: SetNull)
-  courseName            String                    // e.g. "B.Tech CSE"
+  courseName            String // e.g. "B.Tech CSE"
   department            String?
   degreeType            String?
-  academicYear          String                    // e.g. "2022-2026"
+  academicYear          String // e.g. "2022-2026"
   admissionYear         Int?
-  passingYear           Int                       // e.g. 2026
+  passingYear           Int // e.g. 2026
   currentSemester       Int?
   currentYear           Int?
   academicPercentage    Float?
@@ -3743,9 +3743,9 @@ model StudentInstitutionEnrollment {
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
 
-  payments              StudentRegistrationPayment[]
-  driveNominations      DriveNomination[]
-  jobFairRegistrations  JobFairRegistration[]
+  payments             StudentRegistrationPayment[]
+  driveNominations     DriveNomination[]
+  jobFairRegistrations JobFairRegistration[]
 
   @@unique([institutionId, enrollmentNumber])
   @@index([institutionId])
@@ -3763,7 +3763,7 @@ model StudentRegistrationPayment {
   institution          Institution                  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   studentProfileId     String
   student              StudentProfile               @relation(fields: [studentProfileId], references: [id], onDelete: Cascade)
-  amount               Int                          // in Paise
+  amount               Int // in Paise
   currency             String                       @default("INR")
   paymentMethod        String                       @default("OFFLINE_COLLEGE") // CASH, UPI, BANK_TRANSFER, ONLINE, WAIVED
   transactionReference String?
@@ -3807,30 +3807,30 @@ model StudentImportJob {
 }
 
 model JobFair {
-  id                   String               @id @default(cuid())
-  fairCode             String               @unique // e.g. "FAIR-2026-PRAYAGRAJ"
+  id                   String    @id @default(cuid())
+  fairCode             String    @unique // e.g. "FAIR-2026-PRAYAGRAJ"
   title                String
-  slug                 String               @unique
-  description          String?              @db.Text
+  slug                 String    @unique
+  description          String?   @db.Text
   theme                String?
-  fairType             String               @default("HYBRID") // "ONLINE", "OFFLINE", "HYBRID"
+  fairType             String    @default("HYBRID") // "ONLINE", "OFFLINE", "HYBRID"
   venue                String?
-  city                 String?              @default("Prayagraj")
+  city                 String?   @default("Prayagraj")
   startDate            DateTime
   endDate              DateTime
   registrationDeadline DateTime?
   maxCapacity          Int?
   bannerUrl            String?
-  status               String               @default("PUBLISHED") // "DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"
+  status               String    @default("PUBLISHED") // "DRAFT", "PUBLISHED", "ONGOING", "COMPLETED", "CANCELLED"
   createdById          String
-  createdBy            User                 @relation("JobFairCreator", fields: [createdById], references: [id])
-  createdAt            DateTime             @default(now())
-  updatedAt            DateTime             @updatedAt
+  createdBy            User      @relation("JobFairCreator", fields: [createdById], references: [id])
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  institutions         JobFairInstitution[]
-  recruiters           JobFairRecruiter[]
-  registrations        JobFairRegistration[]
-  drives               JobDrive[]
+  institutions  JobFairInstitution[]
+  recruiters    JobFairRecruiter[]
+  registrations JobFairRegistration[]
+  drives        JobDrive[]
 
   @@index([status])
   @@index([startDate])
@@ -3936,8 +3936,8 @@ model AttendanceEvent {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   staffId        String?
   staff          StaffProfile? @relation(fields: [staffId], references: [id], onDelete: Cascade)
-  eventType      String        // "LOGIN_CHECKIN", "LOGOUT_CHECKOUT", "AUTO_RECONCILE", "MANUAL_PUNCH"
-  source         String        // "CRM_LMS_LOGIN", "MANUAL_CORRECTION", "SYSTEM_RECONCILE", "MOBILE_APP"
+  eventType      String // "LOGIN_CHECKIN", "LOGOUT_CHECKOUT", "AUTO_RECONCILE", "MANUAL_PUNCH"
+  source         String // "CRM_LMS_LOGIN", "MANUAL_CORRECTION", "SYSTEM_RECONCILE", "MOBILE_APP"
   ipAddress      String?
   userAgent      String?
   idempotencyKey String?       @unique
@@ -3959,7 +3959,7 @@ model AttendanceRegularizationRequest {
   staff             StaffProfile @relation(fields: [staffId], references: [id], onDelete: Cascade)
   attendanceId      String?
   date              DateTime     @db.Date
-  type              String       // "MISSED_CHECK_IN", "MISSED_CHECK_OUT", "REMOTE_WORK", "FIELD_VISIT", "FORGOTTEN_PUNCH"
+  type              String // "MISSED_CHECK_IN", "MISSED_CHECK_OUT", "REMOTE_WORK", "FIELD_VISIT", "FORGOTTEN_PUNCH"
   requestedCheckIn  DateTime?
   requestedCheckOut DateTime?
   reason            String       @db.Text
@@ -4037,38 +4037,38 @@ model TaskGenerationRun {
 }
 
 model DailyWorkTask {
-  id                 String             @id @default(cuid())
-  taskCode           String             @unique // e.g. "TASK-20261014-001"
+  id                 String                @id @default(cuid())
+  taskCode           String                @unique // e.g. "TASK-20261014-001"
   title              String
-  description        String             @db.Text
+  description        String                @db.Text
   generationRunId    String?
-  generationRun      TaskGenerationRun? @relation(fields: [generationRunId], references: [id], onDelete: SetNull)
-  reportingDate      DateTime           @db.Date
-  department         String             // "COUNSELING", "SALES", "MARKETING", "PLACEMENT", "HR", "OPERATIONS", "ACADEMICS"
-  sourceType         String             // "CRM_OVERDUE_FOLLOWUP", "CRM_NEW_UNATTENDED", "CRM_ADMISSION_PIPELINE", "RECRUITER_VACANCY", "CAMPUS_DRIVE", "HR_PENDING", "DIRECTOR_DIRECTIVE"
+  generationRun      TaskGenerationRun?    @relation(fields: [generationRunId], references: [id], onDelete: SetNull)
+  reportingDate      DateTime              @db.Date
+  department         String // "COUNSELING", "SALES", "MARKETING", "PLACEMENT", "HR", "OPERATIONS", "ACADEMICS"
+  sourceType         String // "CRM_OVERDUE_FOLLOWUP", "CRM_NEW_UNATTENDED", "CRM_ADMISSION_PIPELINE", "RECRUITER_VACANCY", "CAMPUS_DRIVE", "HR_PENDING", "DIRECTOR_DIRECTIVE"
   sourceReferenceId  String?
   assignedStaffId    String
-  assignedStaff      StaffProfile       @relation("StaffAssignedWorkTasks", fields: [assignedStaffId], references: [id], onDelete: Cascade)
+  assignedStaff      StaffProfile          @relation("StaffAssignedWorkTasks", fields: [assignedStaffId], references: [id], onDelete: Cascade)
   reportingManagerId String?
-  reportingManager   StaffProfile?      @relation("StaffManagedWorkTasks", fields: [reportingManagerId], references: [id], onDelete: SetNull)
-  priority           String             @default("MEDIUM") // "CRITICAL", "HIGH", "MEDIUM", "LOW"
+  reportingManager   StaffProfile?         @relation("StaffManagedWorkTasks", fields: [reportingManagerId], references: [id], onDelete: SetNull)
+  priority           String                @default("MEDIUM") // "CRITICAL", "HIGH", "MEDIUM", "LOW"
   dueDate            DateTime
   targetQuantity     Int?
-  completedQuantity  Int?               @default(0)
-  expectedOutcome    String?            @db.Text
-  evidenceNotes      String?            @db.Text
+  completedQuantity  Int?                  @default(0)
+  expectedOutcome    String?               @db.Text
+  evidenceNotes      String?               @db.Text
   evidenceUrl        String?
-  status             String             @default("DRAFT") // "DRAFT", "DIRECTOR_REVIEW", "APPROVED", "ASSIGNED", "IN_PROGRESS", "SUBMITTED_FOR_REVIEW", "COMPLETED", "REJECTED", "BLOCKED", "CANCELLED", "OVERDUE"
-  escalated          Boolean            @default(false)
+  status             String                @default("DRAFT") // "DRAFT", "DIRECTOR_REVIEW", "APPROVED", "ASSIGNED", "IN_PROGRESS", "SUBMITTED_FOR_REVIEW", "COMPLETED", "REJECTED", "BLOCKED", "CANCELLED", "OVERDUE"
+  escalated          Boolean               @default(false)
   escalationReason   String?
   approvedById       String?
-  approvedBy         User?              @relation("WorkTaskApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  approvedBy         User?                 @relation("WorkTaskApprover", fields: [approvedById], references: [id], onDelete: SetNull)
   approvedAt         DateTime?
   completedAt        DateTime?
   reportItems        DailyWorkReportItem[]
   statusHistory      TaskStatusHistory[]
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
 
   @@index([reportingDate])
   @@index([assignedStaffId])
@@ -4131,7 +4131,7 @@ model DailyWorkReportItem {
   taskId           String?
   task             DailyWorkTask?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
   taskTitle        String
-  status           String          // "COMPLETED", "IN_PROGRESS", "BLOCKED"
+  status           String // "COMPLETED", "IN_PROGRESS", "BLOCKED"
   blockedReason    String?
   measurableResult String?
   notes            String?         @db.Text
@@ -4270,31 +4270,31 @@ model ClassRecording {
 }
 
 model YouTubePublishQueue {
-  id               String         @id @default(cuid())
-  recordingId      String         @unique
-  recording        ClassRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
-  classId          String
-  courseTitle      String
-  moduleTitle      String
-  lectureTopic     String
-  trainerName      String
-  targetPrivacy    String         @default("UNLISTED") // "PRIVATE", "UNLISTED", "PUBLIC"
-  status           String         @default("QUEUED") // "QUEUED", "PROCESSING", "UPLOADING", "PUBLISHED", "FAILED", "BLOCKED_PRIVACY"
-  attemptCount     Int            @default(0)
-  lastAttemptAt    DateTime?
-  errorMessage     String?
-  videoTitle       String?
-  videoDescription String?        @db.Text
-  tags             String[]       @default([])
-  thumbnailUrl     String?
-  youTubeVideoId   String?
-  youTubeUrl       String?
-  isApproved       Boolean        @default(true)
-  approvedById     String?
-  uploadProgressPercent Int       @default(0)
-  publishedAt      DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  id                    String         @id @default(cuid())
+  recordingId           String         @unique
+  recording             ClassRecording @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  classId               String
+  courseTitle           String
+  moduleTitle           String
+  lectureTopic          String
+  trainerName           String
+  targetPrivacy         String         @default("UNLISTED") // "PRIVATE", "UNLISTED", "PUBLIC"
+  status                String         @default("QUEUED") // "QUEUED", "PROCESSING", "UPLOADING", "PUBLISHED", "FAILED", "BLOCKED_PRIVACY"
+  attemptCount          Int            @default(0)
+  lastAttemptAt         DateTime?
+  errorMessage          String?
+  videoTitle            String?
+  videoDescription      String?        @db.Text
+  tags                  String[]       @default([])
+  thumbnailUrl          String?
+  youTubeVideoId        String?
+  youTubeUrl            String?
+  isApproved            Boolean        @default(true)
+  approvedById          String?
+  uploadProgressPercent Int            @default(0)
+  publishedAt           DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
   @@index([status])
   @@index([classId])
@@ -4385,12 +4385,12 @@ enum AlertStatus {
 
 model ManagementAlert {
   id               String        @id @default(cuid())
-  type             String        // "CLASS_START_OVERDUE", "ATTENDANCE_NOT_FINALIZED", "INTERVIEW_FEEDBACK_OVERDUE", "YOUTUBE_PUBLISH_FAILED", "PROVIDER_ERROR", "UNASSIGNED_TRAINER"
+  type             String // "CLASS_START_OVERDUE", "ATTENDANCE_NOT_FINALIZED", "INTERVIEW_FEEDBACK_OVERDUE", "YOUTUBE_PUBLISH_FAILED", "PROVIDER_ERROR", "UNASSIGNED_TRAINER"
   title            String
   description      String        @db.Text
   severity         AlertSeverity @default(MEDIUM)
   status           AlertStatus   @default(OPEN)
-  sourceModule     String        // "CLASSROOM", "ATTENDANCE", "INTERVIEW", "COMMUNICATIONS", "YOUTUBE", "SYSTEM"
+  sourceModule     String // "CLASSROOM", "ATTENDANCE", "INTERVIEW", "COMMUNICATIONS", "YOUTUBE", "SYSTEM"
   relatedRecordId  String?
   assignedToId     String?
   assignedTo       User?         @relation("AlertAssignedTo", fields: [assignedToId], references: [id], onDelete: SetNull)
@@ -4420,7 +4420,7 @@ enum CorrectionStatus {
 
 model RecordCorrectionLog {
   id              String           @id @default(cuid())
-  recordType      String           // "SCHEDULED_CLASS", "LIVE_ATTENDANCE", "MOCK_INTERVIEW", "RECRUITER_INTERVIEW", "YOUTUBE_QUEUE"
+  recordType      String // "SCHEDULED_CLASS", "LIVE_ATTENDANCE", "MOCK_INTERVIEW", "RECRUITER_INTERVIEW", "YOUTUBE_QUEUE"
   recordId        String
   fieldChanged    String
   oldValue        String?          @db.Text
@@ -4443,5 +4443,91 @@ model RecordCorrectionLog {
   @@map("record_correction_logs")
 }
 
+model Event {
+  id                    String    @id @default(cuid())
+  title                 String
+  slug                  String    @unique
+  programType           String    @default("EVENT")
+  category              String    @default("General")
+  summary               String
+  description           String    @db.Text
+  bannerUrl             String?
+  posterUrl             String?
+  galleryUrls           String[]  @default([])
+  videoUrl              String?
+  fee                   Int       @default(0)
+  originalFee           Int?
+  duration              String    @default("1 Day")
+  startDate             DateTime?
+  endDate               DateTime?
+  startTime             String?
+  endTime               String?
+  registrationStartDate DateTime?
+  registrationEndDate   DateTime?
+  venue                 String    @default("SoftLab Global Tech Center, Civil Lines, Prayagraj / Online Hybrid")
+  mode                  String    @default("HYBRID")
+  seatCapacity          Int       @default(100)
+  registeredCount       Int       @default(0)
+  eligibility           String?   @default("Open to all students, IT aspirants and graduates")
+  learningOutcomes      String[]  @default([])
+  syllabus              Json?
+  benefits              String[]  @default([])
+  trainerName           String?
+  trainerBio            String?
+  trainerImage          String?
+  certificateTitle      String?
+  certificateType       String?   @default("PARTICIPATION")
+  faqs                  Json?
+  status                String    @default("UPCOMING")
+  isFeatured            Boolean   @default(false)
+  sortOrder             Int       @default(0)
+  year                  Int       @default(2026)
+  month                 Int       @default(11)
+  metaTitle             String?
+  metaDescription       String?
+  courseId              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  deletedAt             DateTime?
 
+  registrations EventRegistration[]
 
+  @@index([slug])
+  @@index([status])
+  @@index([programType])
+  @@index([year, month])
+  @@map("events")
+}
+
+model EventRegistration {
+  id                  String    @id @default(cuid())
+  registrationNumber  String    @unique
+  eventId             String
+  event               Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  leadId              String?
+  fullName            String
+  email               String
+  phone               String
+  city                String?
+  qualification       String?
+  amount              Int       @default(0)
+  paymentStatus       String    @default("PENDING")
+  paymentMethod       String?
+  paymentReference    String?
+  razorpayOrderId     String?
+  paidAt              DateTime?
+  attendanceStatus    String    @default("REGISTERED")
+  certificateIssued   Boolean   @default(false)
+  certificateNumber   String?
+  certificateIssuedAt DateTime?
+  assignedCounselorId String?
+  notes               String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@index([eventId])
+  @@index([phone])
+  @@index([paymentStatus])
+  @@index([leadId])
+  @@map("event_registrations")
+}

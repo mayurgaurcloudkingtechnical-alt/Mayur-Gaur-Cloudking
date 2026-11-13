@@ -181,8 +181,21 @@ export function StudentDashboardView() {
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-slate-300 transition-colors"
                 >
                   <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-bold text-slate-900 text-sm truncate">{enr.courseTitle}</h4>
+                      {enr.courseTitle.includes("Internship") ? (
+                        <Badge variant="outline" className="text-[10px] text-cyan-800 bg-cyan-50 border-cyan-300 font-semibold">
+                          Internship
+                        </Badge>
+                      ) : enr.courseTitle.includes("Workshop") ? (
+                        <Badge variant="outline" className="text-[10px] text-amber-800 bg-amber-50 border-amber-300 font-semibold">
+                          Workshop
+                        </Badge>
+                      ) : enr.courseTitle.includes("Short-Term") ? (
+                        <Badge variant="outline" className="text-[10px] text-emerald-800 bg-emerald-50 border-emerald-300 font-semibold">
+                          Short-Term
+                        </Badge>
+                      ) : null}
                       {enr.batchCode && (
                         <Badge variant="outline" className="text-[10px] font-mono text-emerald-700 bg-emerald-50">
                           {enr.batchCode}

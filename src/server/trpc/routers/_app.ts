@@ -37,6 +37,7 @@ import { recruiterInterviewRouter } from "./recruiterInterview";
 import { youtubePublisherRouter } from "./youtubePublisher";
 import { managementRouter } from "./management";
 import { verificationRouter } from "./verification";
+import { eventsRouter } from "./events";
 
 export const appRouter = router({
   verification: verificationRouter,
@@ -77,6 +78,7 @@ export const appRouter = router({
   omnichannel: omnichannelRouter,
   aiKnowledge: aiKnowledgeRouter,
   automations: automationsRouter,
+  events: eventsRouter,
 });
 
 

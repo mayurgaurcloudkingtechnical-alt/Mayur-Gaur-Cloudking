@@ -47,6 +47,7 @@ export const SITE_CONFIG = {
   navLinks: [
     { label: "Home", href: "/" },
     { label: "Courses", href: "/courses" },
+    { label: "Events & Programs", href: "/events" },
     { label: "BOSSE Board (10th & 12th)", href: "/bosse" },
     { label: "Dr. Preeti Global University", href: "/dr-preeti-global-university" },
     { label: "Global Certification (USA)", href: "/delaware-digital-university" },
