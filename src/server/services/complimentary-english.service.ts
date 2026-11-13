@@ -337,8 +337,8 @@ export class ComplimentaryEnglishService {
         title: "Complimentary Course Unlocked: Professional English & Personality Development",
         message:
           "You have received complimentary access (100% Discount — ₹0 Payable) to our 6-Month Professional English Speaking & Personality Development program (1 class/week).",
-        type: "ACADEMIC",
-        linkUrl: "/student/courses",
+        type: "ADMISSION",
+        link: "/student/courses",
       },
     });
 
