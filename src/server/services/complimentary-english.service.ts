@@ -217,11 +217,11 @@ export class ComplimentaryEnglishService {
           data: {
             batchId: weeklyBatch.id,
             title: `Weekly English Speaking & Personality Session #${w + 1}`,
-            description: "1 class per week supplementary communication & interview readiness session.",
+            agendaNotes: "1 class per week supplementary communication & interview readiness session.",
             scheduledAt: sTime,
             startTime: sTime,
             endTime: eTime,
-            deliveryMode: DeliveryMode.HYBRID,
+            mode: DeliveryMode.HYBRID,
           },
         });
       }
