@@ -42,6 +42,7 @@ import {
   Trash2,
   Plus,
   Clock,
+  Sparkles,
 } from "lucide-react";
 import { DualFeeReceipt, DualReceiptData } from "@/components/common/dual-fee-receipt";
 import { StudentIdCardView, StudentIdCardData } from "@/components/common/student-id-card-view";
