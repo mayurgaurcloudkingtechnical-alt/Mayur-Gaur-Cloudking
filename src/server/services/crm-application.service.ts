@@ -2110,6 +2110,7 @@ export class CrmApplicationService {
             } else if (input.paidAmount > 0) {
               const year = new Date().getFullYear();
               const rand = Math.floor(1000 + Math.random() * 9000);
+              const nextReceipt = await ReceiptService.generateReceiptNumber();
               await db.paymentTransaction.create({
                 data: {
                   admissionId: app.id,
@@ -2119,7 +2120,7 @@ export class CrmApplicationService {
                   paymentMethod: PaymentMethod.CASH,
                   status: PaymentTransactionStatus.SUCCESS,
                   transactionReference: `PAY-${year}-${rand}`,
-                  receiptNumber: `SLG-REC-${year}-${rand}`,
+                  receiptNumber: nextReceipt,
                   paymentDate: new Date(),
                   paidAt: new Date(),
                   remarks: input.remarks || "Admission Down-Payment",

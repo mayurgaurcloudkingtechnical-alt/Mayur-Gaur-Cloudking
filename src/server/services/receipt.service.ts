@@ -70,21 +70,46 @@ export class ReceiptService {
   };
 
   /**
-   * Generates a unique sequential/random receipt number: SLG-YYYY-XXXXXX.
+   * Generates a unique sequential receipt number starting from 000015: SLG-YYYY-000015, SLG-YYYY-000016, ...
    */
   static async generateReceiptNumber(): Promise<string> {
     const year = new Date().getFullYear();
-    for (let attempt = 0; attempt < 5; attempt++) {
-      const rand = Math.floor(100000 + Math.random() * 900000);
-      const code = `SLG-${year}-${rand}`;
-      const existing = await db.paymentTransaction.findUnique({
-        where: { receiptNumber: code },
-      });
-      if (!existing) {
-        return code;
+    const prefix = `SLG-${year}-`;
+
+    const existingReceipts = await db.paymentTransaction.findMany({
+      where: {
+        receiptNumber: { startsWith: prefix },
+      },
+      select: { receiptNumber: true },
+    });
+
+    let maxSeq = 14; // Next sequential number will start at 15 (SLG-YYYY-000015)
+    for (const row of existingReceipts) {
+      if (!row.receiptNumber) continue;
+      const suffix = row.receiptNumber.slice(prefix.length);
+      if (/^\d{6}$/.test(suffix)) {
+        const num = parseInt(suffix, 10);
+        // Ignore legacy 6-digit random numbers (>= 100000); track sequential counter (< 100000)
+        if (num < 100000 && num > maxSeq) {
+          maxSeq = num;
+        }
       }
     }
-    return `SLG-${year}-${Date.now().toString().slice(-6)}`;
+
+    let nextSeq = maxSeq + 1;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const code = `${prefix}${String(nextSeq).padStart(6, "0")}`;
+      const exists = await db.paymentTransaction.findUnique({
+        where: { receiptNumber: code },
+        select: { id: true },
+      });
+      if (!exists) {
+        return code;
+      }
+      nextSeq++;
+    }
+
+    return `${prefix}${String(nextSeq).padStart(6, "0")}`;
   }
 
   /**

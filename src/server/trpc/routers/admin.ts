@@ -15,6 +15,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcryptjs";
 import { StudentAdmissionNotificationService } from "@/server/services/student-admission-notification.service";
+import { ReceiptService } from "@/server/services/receipt.service";
 import { AuthenticatedUser } from "@/server/auth/rbac";
 
 function asAuthUser(user: any): AuthenticatedUser {
@@ -1302,7 +1303,7 @@ export const adminRouter = router({
           const year = new Date(input.admissionDate).getFullYear();
           const rand = Math.floor(1000 + Math.random() * 9000);
           const ref = `PAY-${year}-${rand}`;
-          const receiptNo = input.receiptNumber?.trim() || `SLG-${year}-${Math.floor(100000 + Math.random() * 900000)}`;
+          const receiptNo = input.receiptNumber?.trim() || (await ReceiptService.generateReceiptNumber());
 
           await tx.paymentTransaction.create({
             data: {

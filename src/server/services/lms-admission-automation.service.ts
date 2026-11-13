@@ -3,6 +3,7 @@ import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { OmnichannelInboxService } from "./omnichannel-inbox.service";
 import { WhatsAppSalesGroupNotificationService } from "./whatsapp-sales-group-notification.service";
 import { StudentAdmissionNotificationService } from "./student-admission-notification.service";
+import { ReceiptService } from "./receipt.service";
 import crypto from "crypto";
 
 export interface CompleteAdmissionParams {
@@ -168,7 +169,7 @@ export class LmsAdmissionAutomationService {
     }
 
     // 7. Record Payment Transaction
-    const receiptNumber = `RCP-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const receiptNumber = await ReceiptService.generateReceiptNumber();
     const txRef = params.transactionReference || razorpayPaymentId || `TXN-${Date.now()}`;
     const payment = await db.paymentTransaction.create({
       data: {
