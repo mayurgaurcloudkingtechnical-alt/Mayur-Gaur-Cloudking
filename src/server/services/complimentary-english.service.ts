@@ -1,5 +1,5 @@
 import { Prisma, ContentStatus, LessonType, EnrollmentStatus, FeePaymentStatus, FeeStructureStatus, BatchStatus, DeliveryMode } from "@prisma/client";
-import { prisma } from "@/server/db";
+import { db } from "@/server/db/client";
 
 export const ENGLISH_COURSE_SLUG = "professional-english-speaking-personality-development";
 export const ENGLISH_WEEKLY_BATCH_CODE = "ENG-PD-WEEKLY-2026";
@@ -110,13 +110,13 @@ const SIX_MONTH_MODULES = [
 
 export class ComplimentaryEnglishService {
   static async ensureFlagshipCourse() {
-    let course = await prisma.course.findUnique({
+    let course = await db.course.findUnique({
       where: { slug: ENGLISH_COURSE_SLUG },
       include: { modules: { include: { lessons: true } }, batches: true },
     });
 
     if (!course) {
-      course = await prisma.course.create({
+      course = await db.course.create({
         data: {
           title: "Professional English Speaking & Personality Development",
           slug: ENGLISH_COURSE_SLUG,
@@ -144,7 +144,7 @@ export class ComplimentaryEnglishService {
     if (course.modules.length === 0) {
       for (let mIdx = 0; mIdx < SIX_MONTH_MODULES.length; mIdx++) {
         const modSpec = SIX_MONTH_MODULES[mIdx];
-        const mod = await prisma.module.create({
+        const mod = await db.module.create({
           data: {
             courseId: course.id,
             title: modSpec.title,
@@ -155,7 +155,7 @@ export class ComplimentaryEnglishService {
         });
         for (let lIdx = 0; lIdx < modSpec.lessons.length; lIdx++) {
           const lSpec = modSpec.lessons[lIdx];
-          const lesson = await prisma.lesson.create({
+          const lesson = await db.lesson.create({
             data: {
               moduleId: mod.id,
               title: lSpec.title,
@@ -165,7 +165,7 @@ export class ComplimentaryEnglishService {
               status: ContentStatus.PUBLISHED,
             },
           });
-          await prisma.lessonContent.create({
+          await db.lessonContent.create({
             data: {
               lessonId: lesson.id,
               learningObjectives: `Master ${lSpec.title} as part of ${modSpec.title}.`,
@@ -180,12 +180,12 @@ export class ComplimentaryEnglishService {
       }
     }
 
-    let weeklyBatch = await prisma.batch.findUnique({
+    let weeklyBatch = await db.batch.findUnique({
       where: { code: ENGLISH_WEEKLY_BATCH_CODE },
     });
     if (!weeklyBatch) {
       const start = new Date();
-      weeklyBatch = await prisma.batch.create({
+      weeklyBatch = await db.batch.create({
         data: {
           courseId: course.id,
           code: ENGLISH_WEEKLY_BATCH_CODE,
@@ -199,7 +199,7 @@ export class ComplimentaryEnglishService {
       });
 
       // Seed 4 upcoming Saturday weekly classes if none exist
-      const existingClasses = await prisma.scheduledClass.count({
+      const existingClasses = await db.scheduledClass.count({
         where: { batchId: weeklyBatch.id },
       });
       if (existingClasses === 0) {
@@ -212,7 +212,7 @@ export class ComplimentaryEnglishService {
         for (let w = 0; w < 4; w++) {
           const sTime = new Date(nextSat.getTime() + w * 7 * 24 * 60 * 60 * 1000);
           const eTime = new Date(sTime.getTime() + 90 * 60 * 1000);
-          await prisma.scheduledClass.create({
+          await db.scheduledClass.create({
             data: {
               batchId: weeklyBatch.id,
               title: `Weekly English Speaking & Personality Session #${w + 1}`,
@@ -231,7 +231,7 @@ export class ComplimentaryEnglishService {
 
   static async auditEligibility() {
     const { course } = await this.ensureFlagshipCourse();
-    const students = await prisma.studentProfile.findMany({
+    const students = await db.studentProfile.findMany({
       include: {
         user: { select: { id: true, firstName: true, lastName: true, email: true } },
         enrollments: {
@@ -372,13 +372,13 @@ export class ComplimentaryEnglishService {
         if (st.alreadyHasEnglish) alreadyEnrolled++;
         continue;
       }
-      const profile = await prisma.studentProfile.findUnique({
+      const profile = await db.studentProfile.findUnique({
         where: { id: st.studentProfileId },
         select: { userId: true },
       });
       if (!profile) continue;
 
-      const res = await prisma.$transaction((tx) =>
+      const res = await db.$transaction((tx) =>
         this.grantComplimentaryInTx(tx, {
           studentProfileId: st.studentProfileId,
           studentUserId: profile.userId,

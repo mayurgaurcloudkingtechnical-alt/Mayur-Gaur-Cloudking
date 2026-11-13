@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { router, protectedProcedure, adminProcedure } from "../init";
+import { router, protectedProcedure, requireRoleProcedure } from "../init";
+import { UserRoleCode } from "@prisma/client";
+
+const adminProcedure = requireRoleProcedure([
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+]);
 import { TRPCError } from "@trpc/server";
 import { VirtualLabSandboxService, SupportedLabLanguage } from "@/server/services/virtual-lab-sandbox.service";
 
@@ -24,7 +32,7 @@ export const virtualLabsRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
-      const labs = await ctx.prisma.practicalLab.findMany({
+      const labs = await ctx.db.practicalLab.findMany({
         where: {
           ...(input?.courseId ? { courseId: input.courseId } : {}),
           ...(input?.labType && input.labType !== "ALL" ? { labType: input.labType } : {}),
@@ -36,7 +44,7 @@ export const virtualLabsRouter = router({
       });
 
       const courseIds = Array.from(new Set(labs.map((l) => l.courseId)));
-      const courses = await ctx.prisma.course.findMany({
+      const courses = await ctx.db.course.findMany({
         where: { id: { in: courseIds } },
         select: { id: true, title: true, slug: true },
       });
@@ -69,7 +77,7 @@ export const virtualLabsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
+      const role = ctx.user.roleCode;
       if (!["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER", "TRAINER"].includes(role)) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Only Admin or Trainer can create labs." });
       }
@@ -79,7 +87,7 @@ export const virtualLabsRouter = router({
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
 
-      const lab = await ctx.prisma.practicalLab.create({
+      const lab = await ctx.db.practicalLab.create({
         data: {
           courseId: input.courseId,
           moduleId: input.moduleId || null,
@@ -94,13 +102,13 @@ export const virtualLabsRouter = router({
           testCasesJson: input.testCasesJson ? (input.testCasesJson as any) : undefined,
           maxMarks: input.maxMarks,
           deadline: input.deadline ? new Date(input.deadline) : null,
-          assignedById: ctx.session.user.id,
+          assignedById: ctx.user.id,
         },
       });
 
-      await ctx.prisma.auditLog.create({
+      await ctx.db.auditLog.create({
         data: {
-          actorId: ctx.session.user.id,
+          actorId: ctx.user.id,
           action: "PRACTICAL_LAB_CREATED",
           entityType: "PracticalLab",
           entityId: lab.id,
@@ -122,21 +130,21 @@ export const virtualLabsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const student = await ctx.prisma.studentProfile.findUnique({
-        where: { userId: ctx.session.user.id },
+      const student = await ctx.db.studentProfile.findUnique({
+        where: { userId: ctx.user.id },
         select: { id: true },
       });
 
       let testCases: Array<{ name: string; expectedOutput: string }> | undefined;
       if (input.labId) {
-        const lab = await ctx.prisma.practicalLab.findUnique({ where: { id: input.labId } });
+        const lab = await ctx.db.practicalLab.findUnique({ where: { id: input.labId } });
         if (lab?.testCasesJson && Array.isArray(lab.testCasesJson)) {
           testCases = lab.testCasesJson as any;
         }
       }
 
       return VirtualLabSandboxService.executeCode({
-        userId: ctx.session.user.id,
+        userId: ctx.user.id,
         studentId: student?.id,
         labId: input.labId,
         labType: input.labType,
@@ -157,19 +165,19 @@ export const virtualLabsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const student = await ctx.prisma.studentProfile.findUnique({
-        where: { userId: ctx.session.user.id },
+      const student = await ctx.db.studentProfile.findUnique({
+        where: { userId: ctx.user.id },
       });
       if (!student) {
         throw new TRPCError({ code: "FORBIDDEN", message: "Student profile required to submit labs." });
       }
 
-      const lab = await ctx.prisma.practicalLab.findUnique({ where: { id: input.labId } });
+      const lab = await ctx.db.practicalLab.findUnique({ where: { id: input.labId } });
       if (!lab) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Practical lab not found" });
       }
 
-      const prevCount = await ctx.prisma.practicalSubmission.count({
+      const prevCount = await ctx.db.practicalSubmission.count({
         where: { labId: lab.id, studentId: student.id },
       });
 
@@ -185,7 +193,7 @@ export const virtualLabsRouter = router({
 
       if (input.submittedCode && ["python", "javascript", "typescript", "c", "cpp", "java", "php", "bash", "sql"].includes(lab.language)) {
         const res = await VirtualLabSandboxService.executeCode({
-          userId: ctx.session.user.id,
+          userId: ctx.user.id,
           studentId: student.id,
           labId: lab.id,
           labType: lab.labType,
@@ -202,7 +210,7 @@ export const virtualLabsRouter = router({
         }
       }
 
-      const submission = await ctx.prisma.practicalSubmission.create({
+      const submission = await ctx.db.practicalSubmission.create({
         data: {
           labId: lab.id,
           studentId: student.id,
@@ -229,8 +237,8 @@ export const virtualLabsRouter = router({
     }),
 
   getStudentPerformance: protectedProcedure.query(async ({ ctx }) => {
-    const student = await ctx.prisma.studentProfile.findUnique({
-      where: { userId: ctx.session.user.id },
+    const student = await ctx.db.studentProfile.findUnique({
+      where: { userId: ctx.user.id },
       include: {
         enrollments: {
           where: { status: "ACTIVE" },
@@ -251,12 +259,12 @@ export const virtualLabsRouter = router({
     }
 
     const enrolledCourseIds = student.enrollments.map((e) => e.courseId);
-    const assignedLabs = await ctx.prisma.practicalLab.findMany({
+    const assignedLabs = await ctx.db.practicalLab.findMany({
       where: { courseId: { in: enrolledCourseIds }, status: "PUBLISHED" },
       orderBy: { createdAt: "desc" },
     });
 
-    const submissions = await ctx.prisma.practicalSubmission.findMany({
+    const submissions = await ctx.db.practicalSubmission.findMany({
       where: { studentId: student.id },
       orderBy: { createdAt: "desc" },
       include: { lab: { select: { title: true, labType: true, language: true } } },
@@ -285,11 +293,11 @@ export const virtualLabsRouter = router({
   listSubmissionsForReview: protectedProcedure
     .input(z.object({ status: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
+      const role = ctx.user.roleCode;
       if (!["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER", "TRAINER"].includes(role)) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      const subs = await ctx.prisma.practicalSubmission.findMany({
+      const subs = await ctx.db.practicalSubmission.findMany({
         where: input?.status && input.status !== "ALL" ? { status: input.status } : {},
         orderBy: { createdAt: "desc" },
         take: 100,
@@ -297,7 +305,7 @@ export const virtualLabsRouter = router({
       });
 
       const studentIds = Array.from(new Set(subs.map((s) => s.studentId)));
-      const students = await ctx.prisma.studentProfile.findMany({
+      const students = await ctx.db.studentProfile.findMany({
         where: { id: { in: studentIds } },
         include: { user: { select: { firstName: true, lastName: true } } },
       });
@@ -324,17 +332,17 @@ export const virtualLabsRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const role = ctx.session.user.role;
+      const role = ctx.user.roleCode;
       if (!["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER", "TRAINER"].includes(role)) {
         throw new TRPCError({ code: "FORBIDDEN" });
       }
-      const updated = await ctx.prisma.practicalSubmission.update({
+      const updated = await ctx.db.practicalSubmission.update({
         where: { id: input.submissionId },
         data: {
           score: input.score,
           trainerFeedback: input.trainerFeedback,
           status: input.status,
-          reviewedById: ctx.session.user.id,
+          reviewedById: ctx.user.id,
           reviewedAt: new Date(),
         },
       });
@@ -344,14 +352,14 @@ export const virtualLabsRouter = router({
   getAdminLabAnalytics: adminProcedure.query(async ({ ctx }) => {
     const [totalLabs, totalSubmissions, pendingReviews, approvedCount, totalExecutions] =
       await Promise.all([
-        ctx.prisma.practicalLab.count(),
-        ctx.prisma.practicalSubmission.count(),
-        ctx.prisma.practicalSubmission.count({ where: { status: "SUBMITTED" } }),
-        ctx.prisma.practicalSubmission.count({ where: { status: { in: ["APPROVED", "PASSED"] } } }),
-        ctx.prisma.labExecutionLog.count(),
+        ctx.db.practicalLab.count(),
+        ctx.db.practicalSubmission.count(),
+        ctx.db.practicalSubmission.count({ where: { status: "SUBMITTED" } }),
+        ctx.db.practicalSubmission.count({ where: { status: { in: ["APPROVED", "PASSED"] } } }),
+        ctx.db.labExecutionLog.count(),
       ]);
 
-    const recentExecutions = await ctx.prisma.labExecutionLog.findMany({
+    const recentExecutions = await ctx.db.labExecutionLog.findMany({
       orderBy: { createdAt: "desc" },
       take: 25,
     });

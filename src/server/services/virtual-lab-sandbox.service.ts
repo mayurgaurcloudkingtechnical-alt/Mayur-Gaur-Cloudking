@@ -3,7 +3,7 @@ import { promisify } from "node:util";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { prisma } from "@/server/db";
+import { db } from "@/server/db/client";
 
 const execFileAsync = promisify(execFile);
 
@@ -80,7 +80,7 @@ const DOCKER_IMAGES: Record<string, { image: string; fileName: string; cmd: stri
 export class VirtualLabSandboxService {
   static async checkRateLimit(userId: string): Promise<void> {
     const oneMinuteAgo = new Date(Date.now() - 60_000);
-    const recentCount = await prisma.labExecutionLog.count({
+    const recentCount = await db.labExecutionLog.count({
       where: {
         userId,
         createdAt: { gte: oneMinuteAgo },
@@ -140,7 +140,7 @@ export class VirtualLabSandboxService {
       }));
     }
 
-    await prisma.labExecutionLog.create({
+    await db.labExecutionLog.create({
       data: {
         userId: params.userId,
         studentId: params.studentId || null,

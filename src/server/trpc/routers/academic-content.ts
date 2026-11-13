@@ -1,5 +1,13 @@
 import { z } from "zod";
-import { router, adminProcedure, protectedProcedure } from "../init";
+import { router, protectedProcedure, requireRoleProcedure } from "../init";
+import { UserRoleCode } from "@prisma/client";
+
+const adminProcedure = requireRoleProcedure([
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+]);
 import { TRPCError } from "@trpc/server";
 import { ContentStatus, LessonType } from "@prisma/client";
 
@@ -35,7 +43,7 @@ export const academicContentRouter = router({
         .optional()
     )
     .query(async ({ ctx, input }) => {
-      const courses = await ctx.prisma.course.findMany({
+      const courses = await ctx.db.course.findMany({
         where: {
           deletedAt: null,
           ...(input?.providerType && input.providerType !== "ALL"
@@ -107,7 +115,7 @@ export const academicContentRouter = router({
   getCourseHierarchy: protectedProcedure
     .input(z.object({ courseId: z.string() }))
     .query(async ({ ctx, input }) => {
-      const course = await ctx.prisma.course.findUnique({
+      const course = await ctx.db.course.findUnique({
         where: { id: input.courseId },
         include: {
           modules: {
@@ -126,7 +134,7 @@ export const academicContentRouter = router({
       if (!course) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Course not found" });
       }
-      const importJobs = await ctx.prisma.academicBulkImportJob.findMany({
+      const importJobs = await ctx.db.academicBulkImportJob.findMany({
         orderBy: { createdAt: "desc" },
         take: 10,
       });
@@ -157,7 +165,7 @@ export const academicContentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const lesson = await ctx.prisma.lesson.findUnique({
+      const lesson = await ctx.db.lesson.findUnique({
         where: { id: input.lessonId },
         include: { module: true, contentDetails: true },
       });
@@ -165,13 +173,13 @@ export const academicContentRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: "Lesson not found" });
       }
 
-      const lastVersion = await ctx.prisma.academicContentVersion.findFirst({
+      const lastVersion = await ctx.db.academicContentVersion.findFirst({
         where: { lessonId: lesson.id },
         orderBy: { versionNumber: "desc" },
       });
       const nextVersion = (lastVersion?.versionNumber ?? 0) + 1;
 
-      await ctx.prisma.$transaction(async (tx) => {
+      await ctx.db.$transaction(async (tx) => {
         await tx.academicContentVersion.create({
           data: {
             lessonId: lesson.id,
@@ -187,7 +195,7 @@ export const academicContentRouter = router({
             expectedOutput: lesson.contentDetails?.expectedOutput,
             requiredTools: lesson.contentDetails?.requiredTools,
             changeSource: "CMS_EDIT",
-            changedById: ctx.session.user.id,
+            changedById: ctx.user.id,
           },
         });
 
@@ -237,7 +245,7 @@ export const academicContentRouter = router({
 
         await tx.auditLog.create({
           data: {
-            actorId: ctx.session.user.id,
+            actorId: ctx.user.id,
             action: "ACADEMIC_CONTENT_UPDATED",
             entityType: "Lesson",
             entityId: lesson.id,
@@ -252,7 +260,7 @@ export const academicContentRouter = router({
   getVersionHistory: adminProcedure
     .input(z.object({ lessonId: z.string() }))
     .query(async ({ ctx, input }) => {
-      return ctx.prisma.academicContentVersion.findMany({
+      return ctx.db.academicContentVersion.findMany({
         where: { lessonId: input.lessonId },
         orderBy: { versionNumber: "desc" },
         take: 25,
@@ -262,19 +270,19 @@ export const academicContentRouter = router({
   rollbackVersion: adminProcedure
     .input(z.object({ versionId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const version = await ctx.prisma.academicContentVersion.findUnique({
+      const version = await ctx.db.academicContentVersion.findUnique({
         where: { id: input.versionId },
       });
       if (!version) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Version snapshot not found" });
       }
 
-      const lastVersion = await ctx.prisma.academicContentVersion.findFirst({
+      const lastVersion = await ctx.db.academicContentVersion.findFirst({
         where: { lessonId: version.lessonId },
         orderBy: { versionNumber: "desc" },
       });
 
-      await ctx.prisma.$transaction(async (tx) => {
+      await ctx.db.$transaction(async (tx) => {
         await tx.lesson.update({
           where: { id: version.lessonId },
           data: { title: version.title },
@@ -318,7 +326,7 @@ export const academicContentRouter = router({
             expectedOutput: version.expectedOutput,
             requiredTools: version.requiredTools,
             changeSource: "ROLLBACK",
-            changedById: ctx.session.user.id,
+            changedById: ctx.user.id,
           },
         });
       });
@@ -334,7 +342,7 @@ export const academicContentRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const courses = await ctx.prisma.course.findMany({
+      const courses = await ctx.db.course.findMany({
         where: { deletedAt: null },
         include: {
           modules: {
@@ -453,13 +461,13 @@ export const academicContentRouter = router({
         invalid: diffs.filter((d) => d.status === "INVALID").length,
       };
 
-      const job = await ctx.prisma.academicBulkImportJob.create({
+      const job = await ctx.db.academicBulkImportJob.create({
         data: {
           fileName: input.fileName,
           status: "PREVIEW",
           summaryJson: summary,
           diffJson: diffs as any,
-          uploadedById: ctx.session.user.id,
+          uploadedById: ctx.user.id,
         },
       });
 
@@ -469,7 +477,7 @@ export const academicContentRouter = router({
   approveBulkImport: adminProcedure
     .input(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const job = await ctx.prisma.academicBulkImportJob.findUnique({
+      const job = await ctx.db.academicBulkImportJob.findUnique({
         where: { id: input.jobId },
       });
       if (!job || job.status !== "PREVIEW") {
@@ -483,7 +491,7 @@ export const academicContentRouter = router({
       let appliedUpdates = 0;
       let appliedCreates = 0;
 
-      await ctx.prisma.$transaction(async (tx) => {
+      await ctx.db.$transaction(async (tx) => {
         for (const item of diffs) {
           if (item.status === "UPDATE_EXISTING" && item.lessonId) {
             const existing = await tx.lesson.findUnique({
@@ -512,7 +520,7 @@ export const academicContentRouter = router({
                 requiredTools: existing.contentDetails?.requiredTools,
                 changeSource: "BULK_IMPORT",
                 importJobId: job.id,
-                changedById: ctx.session.user.id,
+                changedById: ctx.user.id,
               },
             });
 
@@ -582,7 +590,7 @@ export const academicContentRouter = router({
           where: { id: job.id },
           data: {
             status: "APPROVED",
-            approvedById: ctx.session.user.id,
+            approvedById: ctx.user.id,
             approvedAt: new Date(),
           },
         });
@@ -594,10 +602,10 @@ export const academicContentRouter = router({
   rollbackBulkImport: adminProcedure
     .input(z.object({ jobId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const snapshots = await ctx.prisma.academicContentVersion.findMany({
+      const snapshots = await ctx.db.academicContentVersion.findMany({
         where: { importJobId: input.jobId },
       });
-      await ctx.prisma.$transaction(async (tx) => {
+      await ctx.db.$transaction(async (tx) => {
         for (const snap of snapshots) {
           await tx.lesson.update({
             where: { id: snap.lessonId },

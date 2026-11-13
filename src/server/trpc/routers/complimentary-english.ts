@@ -1,4 +1,12 @@
-import { router, adminProcedure, publicProcedure } from "../init";
+import { router, publicProcedure, requireRoleProcedure } from "../init";
+import { UserRoleCode } from "@prisma/client";
+
+const adminProcedure = requireRoleProcedure([
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+]);
 import {
   ComplimentaryEnglishService,
   ENGLISH_COURSE_SLUG,
@@ -7,7 +15,7 @@ import {
 
 export const complimentaryEnglishRouter = router({
   getSummary: publicProcedure.query(async ({ ctx }) => {
-    const course = await ctx.prisma.course.findUnique({
+    const course = await ctx.db.course.findUnique({
       where: { slug: ENGLISH_COURSE_SLUG },
       include: {
         modules: {
@@ -41,23 +49,23 @@ export const complimentaryEnglishRouter = router({
   }),
 
   runMigration: adminProcedure.mutation(async ({ ctx }) => {
-    return ComplimentaryEnglishService.migrateExistingEligibleStudents(ctx.session.user.id);
+    return ComplimentaryEnglishService.migrateExistingEligibleStudents(ctx.user.id);
   }),
 
   getAnalytics: adminProcedure.query(async ({ ctx }) => {
     const { course, weeklyBatch } = await ComplimentaryEnglishService.ensureFlagshipCourse();
     const [paidCount, complimentaryCount, waiversAgg, upcomingClasses] = await Promise.all([
-      ctx.prisma.enrollment.count({
+      ctx.db.enrollment.count({
         where: { courseId: course.id, enrollmentType: "PAID" },
       }),
-      ctx.prisma.enrollment.count({
+      ctx.db.enrollment.count({
         where: { courseId: course.id, enrollmentType: "COMPLIMENTARY" },
       }),
-      ctx.prisma.feeStructure.aggregate({
+      ctx.db.feeStructure.aggregate({
         where: { courseId: course.id, isComplimentary: true },
         _sum: { nonCashWaiverAmount: true },
       }),
-      ctx.prisma.scheduledClass.findMany({
+      ctx.db.scheduledClass.findMany({
         where: { batchId: weeklyBatch.id },
         orderBy: { startTime: "asc" },
         take: 8,
