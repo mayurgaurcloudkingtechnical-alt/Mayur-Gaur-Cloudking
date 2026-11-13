@@ -346,8 +346,8 @@ export class ComplimentaryEnglishService {
       data: {
         actorId: params.actorId || params.studentUserId,
         action: "COMPLIMENTARY_ENGLISH_ENROLLED",
-        entityType: "Enrollment",
-        entityId: enrollment.id,
+        resourceType: "Enrollment",
+        resourceId: enrollment.id,
         newData: {
           studentProfileId: params.studentProfileId,
           sourceAdmissionId: params.sourceAdmissionId,

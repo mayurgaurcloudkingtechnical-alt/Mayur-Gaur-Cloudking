@@ -110,8 +110,8 @@ export const virtualLabsRouter = router({
         data: {
           actorId: ctx.user.id,
           action: "PRACTICAL_LAB_CREATED",
-          entityType: "PracticalLab",
-          entityId: lab.id,
+          resourceType: "PracticalLab",
+          resourceId: lab.id,
           newData: { title: lab.title, labType: lab.labType, language: lab.language },
         },
       });

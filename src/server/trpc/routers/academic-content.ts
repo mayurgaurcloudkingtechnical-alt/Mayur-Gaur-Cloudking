@@ -247,8 +247,8 @@ export const academicContentRouter = router({
           data: {
             actorId: ctx.user.id,
             action: "ACADEMIC_CONTENT_UPDATED",
-            entityType: "Lesson",
-            entityId: lesson.id,
+            resourceType: "Lesson",
+            resourceId: lesson.id,
             newData: { title: input.title, versionSaved: nextVersion },
           },
         });
