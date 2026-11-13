@@ -198,31 +198,32 @@ export class ComplimentaryEnglishService {
         },
       });
 
-      // Seed 4 upcoming Saturday weekly classes if none exist
-      const existingClasses = await db.scheduledClass.count({
-        where: { batchId: weeklyBatch.id },
-      });
-      if (existingClasses === 0) {
-        const nextSat = new Date();
-        const day = nextSat.getDay();
-        const diff = (6 - day + 7) % 7 || 7;
-        nextSat.setDate(nextSat.getDate() + diff);
-        nextSat.setHours(11, 0, 0, 0);
+          }
 
-        for (let w = 0; w < 4; w++) {
-          const sTime = new Date(nextSat.getTime() + w * 7 * 24 * 60 * 60 * 1000);
-          const eTime = new Date(sTime.getTime() + 90 * 60 * 1000);
-          await db.scheduledClass.create({
-            data: {
-              batchId: weeklyBatch.id,
-              title: `Weekly English Speaking & Personality Session #${w + 1}`,
-              description: "1 class per week supplementary communication & interview readiness session.",
-              startTime: sTime,
-              endTime: eTime,
-              deliveryMode: DeliveryMode.HYBRID,
-            },
-          });
-        }
+    const existingClasses = await db.scheduledClass.count({
+      where: { batchId: weeklyBatch.id },
+    });
+    if (existingClasses === 0) {
+      const nextSat = new Date();
+      const day = nextSat.getDay();
+      const diff = (6 - day + 7) % 7 || 7;
+      nextSat.setDate(nextSat.getDate() + diff);
+      nextSat.setHours(11, 0, 0, 0);
+
+      for (let w = 0; w < 4; w++) {
+        const sTime = new Date(nextSat.getTime() + w * 7 * 24 * 60 * 60 * 1000);
+        const eTime = new Date(sTime.getTime() + 90 * 60 * 1000);
+        await db.scheduledClass.create({
+          data: {
+            batchId: weeklyBatch.id,
+            title: `Weekly English Speaking & Personality Session #${w + 1}`,
+            description: "1 class per week supplementary communication & interview readiness session.",
+            scheduledAt: sTime,
+            startTime: sTime,
+            endTime: eTime,
+            deliveryMode: DeliveryMode.HYBRID,
+          },
+        });
       }
     }
 
