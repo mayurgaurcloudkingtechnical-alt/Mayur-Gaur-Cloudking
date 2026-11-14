@@ -157,7 +157,7 @@ export function SkillverseDiwaliModal() {
       deliveryMode,
       city: city.trim() || "Prayagraj",
       locality: "Civil Lines",
-      enquirySource: "SKILLVERSE_DIWALI_OFFER_2026",
+      enquirySource: "SKILLVERSE_CHHATH_PUJA_OFFER_2026",
       parentConsentAccepted: true,
       initialStage: ctaType === "APPLY_NOW" ? "APPLICATION" : "ENQUIRY",
     });
@@ -342,17 +342,6 @@ export function SkillverseDiwaliModal() {
                 </div>
               </div>
             ) : (
-                        href="tel:+919196596975"
-                        className="text-slate-300 hover:text-white font-semibold inline-flex items-center gap-1"
-                      >
-                        <PhoneCall className="w-3 h-3 text-cyan-400" />
-                        <span>+91 91965 96975</span>
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
               /* VIEW 2: FAST-TRACK FESTIVE ADMISSION APPLICATION FORM */
               <div className="p-5 sm:p-7 max-h-[82vh] overflow-y-auto">
                 {submittedData ? (
@@ -363,10 +352,10 @@ export function SkillverseDiwaliModal() {
                     </div>
                     <div>
                       <h3 className="text-2xl font-black text-white">
-                        Diwali Festive Concession Registered!
+                        Chhath Puja Festive Concession Registered!
                       </h3>
                       <p className="text-xs text-slate-300 mt-1">
-                        Congratulations <strong>{submittedData.studentName}</strong>! Your Diwali scholarship application is officially logged in our Admissions CRM.
+                        Congratulations <strong>{submittedData.studentName}</strong>! Your Chhath Puja scholarship application is officially logged in our Admissions CRM.
                       </p>
                     </div>
 
@@ -379,16 +368,16 @@ export function SkillverseDiwaliModal() {
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-300">Campaign Tag:</span>
-                        <span className="font-bold text-amber-400">Skillverse Diwali Offer 2026</span>
+                        <span className="font-bold text-amber-400">Skillverse Chhath Puja Offer 2026</span>
                       </div>
                       <div className="flex items-center justify-between text-xs">
                         <span className="font-semibold text-slate-300">Concession Applied:</span>
-                        <span className="font-bold text-emerald-400">Up to 45% Festive Discount + Free Trial</span>
+                        <span className="font-bold text-emerald-400">Flat 35% Festive Discount + Free Trial</span>
                       </div>
                     </div>
 
                     <p className="text-xs text-slate-400">
-                      Our Academic Counselor will call you at <strong>+91 {submittedData.phone}</strong> to confirm your batch allocation and share your Diwali concession voucher.
+                      Our Academic Counselor will call you at <strong>+91 {submittedData.phone}</strong> to confirm your batch allocation and share your festive concession voucher.
                     </p>
 
                     <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
