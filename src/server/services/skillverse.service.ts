@@ -501,6 +501,17 @@ export class SkillverseService {
       verifiedFaculty = [];
     }
 
+    // Guarantee verified official contact numbers and remove any legacy numbers
+    if (!cms.contactPhone || cms.contactPhone.includes("73808")) {
+      cms.contactPhone = SKILLVERSE_BRAND.defaultContact.phone;
+    }
+    if (!cms.counselorPhone || cms.counselorPhone.includes("73808")) {
+      cms.counselorPhone = SKILLVERSE_BRAND.defaultContact.counselorPhone;
+    }
+    if (!cms.contactWhatsapp || cms.contactWhatsapp.includes("73808")) {
+      cms.contactWhatsapp = SKILLVERSE_BRAND.defaultContact.whatsapp;
+    }
+
     return {
       brand: SKILLVERSE_BRAND,
       courses,

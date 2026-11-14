@@ -22,6 +22,8 @@ import {
   Award,
 } from "lucide-react";
 
+import { openSkillverseEnquiryModal } from "./skillverse-enquiry-modal";
+
 export function openSkillverseDiwaliModal(detail?: { courseSlug?: string; grade?: string }) {
   if (typeof window !== "undefined") {
     window.dispatchEvent(
@@ -116,8 +118,8 @@ export function SkillverseDiwaliModal() {
   };
 
   const handleEnquireNow = () => {
-    setCtaType("ENQUIRE_NOW");
-    setViewMode("FORM");
+    setIsOpen(false);
+    openSkillverseEnquiryModal();
   };
 
   const handleClose = () => {
@@ -178,10 +180,10 @@ export function SkillverseDiwaliModal() {
               setIsOpen(true);
             }}
             className="group inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-slate-950 text-xs font-black shadow-2xl hover:scale-105 active:scale-95 transition-all border-2 border-white/80 cursor-pointer animate-pulse"
-            title="Open Skillverse Chhath Puja Festive Offer 2026 (Flat 35% Off)"
+            title="Open Skillverse Diwali Festive Offer 2026 (Up to 45% Off)"
           >
-            <span className="text-sm">🌅</span>
-            <span>छठ पूजा Offer: <strong>35% OFF</strong></span>
+            <span className="text-sm">🪔</span>
+            <span>Diwali Offer: <strong>UP TO 45% OFF</strong></span>
             <Sparkles className="w-3.5 h-3.5 text-slate-900 group-hover:rotate-12 transition-transform" />
           </button>
         </aside>
@@ -192,7 +194,7 @@ export function SkillverseDiwaliModal() {
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="SLG Skillverse Chhath Puja Offer 2026"
+          aria-label="SLG Skillverse Diwali Festive Offer 2026"
           className="fixed inset-0 z-[100000] flex items-center justify-center p-2.5 sm:p-4 bg-black/85 backdrop-blur-sm overflow-y-auto"
         >
           {/* Backdrop Click Dismiss */}
@@ -207,9 +209,9 @@ export function SkillverseDiwaliModal() {
             {/* Top Festive Header Bar */}
             <div className="bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 text-slate-950 px-4 sm:px-6 py-2.5 flex items-center justify-between font-black text-xs">
               <div className="flex items-center gap-2">
-                <span className="text-base">🌅</span>
+                <span className="text-base">🪔</span>
                 <span className="tracking-wide uppercase font-extrabold text-[11px] sm:text-xs">
-                  SLG SKILLVERSE — छठ पूजा SPECIAL OFFER 2026
+                  SLG SKILLVERSE — DIWALI FESTIVE OFFER 2026
                 </span>
                 <span className="hidden md:inline bg-black/20 px-2 py-0.5 rounded-full text-[10px] font-bold">
                   Valid till {SKILLVERSE_DIWALI_CAMPAIGN_2026.expiryDateFormatted}
@@ -237,7 +239,7 @@ export function SkillverseDiwaliModal() {
                   <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-amber-500/40 w-full group">
                     <img
                       src={SKILLVERSE_DIWALI_CAMPAIGN_2026.flyerPath}
-                      alt="SLG Skillverse Chhath Puja Festive Offer 2026 - Flat 35% Off On Courses"
+                      alt="SLG Skillverse Diwali Festive Offer 2026 - Up to 45% Off On Courses"
                       className="w-full h-auto object-contain max-h-[68vh] mx-auto transition-transform duration-300 group-hover:scale-[1.01]"
                     />
                     <div className="absolute top-3 left-3 bg-gradient-to-r from-amber-600 to-yellow-500 text-slate-950 text-[10px] font-black px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1 border border-white/40">
@@ -256,18 +258,18 @@ export function SkillverseDiwaliModal() {
                     </div>
 
                     <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
-                      छठ पूजा SPECIAL OFFER 2026
+                      LIGHT UP YOUR CAREER THIS DIWALI
                     </h2>
 
                     <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-amber-500/10 to-transparent border border-amber-500/40 space-y-1">
                       <div className="text-amber-400 font-extrabold text-xs tracking-wider uppercase">
-                        Festive Concession
+                        Diwali Festive Offer
                       </div>
                       <div className="text-3xl font-black text-amber-300 tracking-tight">
-                        FLAT 35% OFF
+                        UP TO 45% OFF
                       </div>
                       <p className="text-[11px] text-slate-300">
-                        Applicable on Full-Year School Foundation (Classes 8–12), IIT-JEE, NEET, Coding &amp; AI Tracks.
+                        Applicable on 45-Day Board Exam Power Prep, School Foundation (Classes 8–12), IIT-JEE, NEET, Coding &amp; AI Tracks.
                       </p>
                     </div>
 
@@ -282,7 +284,7 @@ export function SkillverseDiwaliModal() {
                       </div>
                       <div className="flex items-start gap-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span><strong>Pre-Approved Flat 35% Concession</strong> for all enrolments</span>
+                        <span><strong>Festive Concession up to 45%</strong> across all programs</span>
                       </div>
                     </div>
 
@@ -301,7 +303,7 @@ export function SkillverseDiwaliModal() {
                       onClick={handleApplyNow}
                       className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:opacity-95 text-slate-950 font-black text-sm shadow-xl transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98]"
                     >
-                      <span>ENROL NOW (Claim 35% Concession)</span>
+                      <span>APPLY NOW (Claim up to 45% Concession)</span>
                       <ArrowRight className="w-4 h-4 stroke-[2.5]" />
                     </button>
 
@@ -316,7 +318,7 @@ export function SkillverseDiwaliModal() {
                     <div className="pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] text-slate-300">
                       <a
                         href={`https://wa.me/919196596975?text=${encodeURIComponent(
-                          "Hello Skillverse Team, I want to claim the Chhath Puja 35% OFF festive concession on academic and tech courses."
+                          "Hello Skillverse Team, I want to claim the Diwali Festive Offer up to 45% OFF on courses."
                         )}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -526,6 +528,8 @@ export function SkillverseDiwaliModal() {
                           onChange={(e) => setPreferredProgram(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-white text-xs focus:outline-none focus:border-amber-400"
                         >
+                          <option value="45-day-board-exam-commerce">⚡ 45-Day Board Exam Power Prep — Commerce (₹4,500)</option>
+                          <option value="45-day-board-exam-science">⚡ 45-Day Board Exam Power Prep — Science (₹5,100)</option>
                           <option value="sap-s4hana-finance-controlling-fico">💼 SAP S/4HANA Finance & Controlling (SAP FICO)</option>
                           <option value="school-foundation-8-10">🏫 School Foundation (Classes 8, 9 & 10)</option>
                           <option value="senior-science-pcm-11-12">🔬 Senior Science PCM / PCB (Classes 11 & 12)</option>

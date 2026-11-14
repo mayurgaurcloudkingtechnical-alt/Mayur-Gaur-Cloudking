@@ -40,6 +40,7 @@ import {
 } from "lucide-react";
 
 const ACADEMIC_LINKS = [
+  { href: "/skillverse/45-day-exam-preparation", label: "⚡ 45-Day Board Exam Power Prep (Commerce & Science)" },
   { href: "/skillverse/school-foundation-8-10", label: "School Foundation (Classes 8–10)" },
   { href: "/skillverse/senior-secondary-11-12", label: "Senior Secondary (Classes 11–12)" },
   { href: "/skillverse/iit-jee-foundation", label: "IIT-JEE Foundation (8–10)" },
@@ -206,10 +207,10 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
       {/* ==================================================================== */}
       <header className="sticky top-0 z-40 bg-white shadow-xs overflow-visible">
         {/* TIER 1: BRAND IDENTITY & ACTIONS ROW */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8 h-20 flex items-center justify-between gap-2 sm:gap-4 overflow-visible">
           {/* Brand Logo Lockup */}
-          <Link href="/skillverse" className="flex items-center gap-3 group shrink-0">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white border border-slate-200/90 p-0.5 shadow-sm flex items-center justify-center overflow-hidden shrink-0 group-hover:border-emerald-400 transition-colors">
+          <Link href="/skillverse" className="flex items-center gap-2.5 sm:gap-3 group shrink-0">
+            <div className="w-11 h-11 sm:w-13 sm:h-13 rounded-2xl bg-white border border-slate-200/90 p-0.5 shadow-sm flex items-center justify-center overflow-hidden shrink-0 group-hover:border-emerald-400 transition-colors">
               <img
                 src={SKILLVERSE_BRAND.logoPath}
                 alt="SLG Skillverse — Powered by SoftLab Global"
@@ -218,47 +219,47 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             </div>
             <div>
               <div className="flex items-center gap-1 leading-none">
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-[#16A34A]">
+                <span className="text-lg sm:text-2xl font-black tracking-tight text-[#16A34A]">
                   SLG
                 </span>
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-[#0052CC]">
+                <span className="text-lg sm:text-2xl font-black tracking-tight text-[#0052CC]">
                   SKILL
                 </span>
-                <span className="text-xl sm:text-2xl font-black tracking-tight text-[#16A34A]">
+                <span className="text-lg sm:text-2xl font-black tracking-tight text-[#16A34A]">
                   VERSE
                 </span>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-1">
+              <p className="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 mt-0.5 sm:mt-1">
                 Powered by SoftLab Global
               </p>
             </div>
           </Link>
 
-          {/* Search Bar (Centered / Flexible) */}
-          <div className="hidden lg:flex items-center flex-1 max-w-md mx-4">
+          {/* Search Bar (Centered / Flexible with responsive max-width) */}
+          <div className="hidden lg:flex items-center flex-1 max-w-xs xl:max-w-sm 2xl:max-w-md mx-2 xl:mx-4 min-w-0">
             <form onSubmit={handleSearch} className="relative w-full">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3 pointer-events-none" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
               <input
                 type="search"
                 placeholder="Search Class 8–12, JEE, AI, Coding, Robotics..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-xs focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all focus:outline-none placeholder:text-slate-400 shadow-2xs"
+                className="w-full pl-9 pr-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white text-xs focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all focus:outline-none placeholder:text-slate-400 shadow-2xs"
               />
             </form>
           </div>
 
-          {/* Primary Action Cluster */}
-          <div className="hidden md:flex items-center gap-2 xl:gap-2.5 shrink-0">
+          {/* Primary Action Cluster - Robust fluid responsiveness */}
+          <div className="hidden md:flex items-center gap-1.5 xl:gap-2 shrink-0">
             {/* WhatsApp Direct Chat Pill - Always single-line */}
             <a
               href="https://wa.me/919196596975"
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-emerald-500/40 bg-emerald-50 hover:bg-emerald-100 text-[#15803D] text-xs font-bold transition-all shadow-2xs"
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-2.5 xl:px-3 py-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50 hover:bg-emerald-100 text-[#15803D] text-xs font-bold transition-all shadow-2xs"
               title="Chat on WhatsApp +91-9196596975"
             >
-              <MessageCircle className="w-4 h-4 text-[#16A34A] shrink-0" />
+              <MessageCircle className="w-3.5 h-3.5 text-[#16A34A] shrink-0" />
               <span className="hidden xl:inline whitespace-nowrap font-bold tracking-tight">+91 91965 96975</span>
               <span className="xl:hidden whitespace-nowrap font-bold tracking-tight">WhatsApp</span>
             </a>
@@ -273,22 +274,22 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                   openSkillverseEnquiryModal();
                 }
               }}
-              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-[#16A34A] hover:opacity-95 text-white font-black text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
+              className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-amber-600 to-[#16A34A] hover:opacity-95 text-white font-black text-xs shadow-md transition-all active:scale-[0.98] cursor-pointer"
               title="Open Skillverse Admission & Diwali Concession Form"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
-              <span>{isDiwaliCampaignActive() ? "Chhath 35% Offer" : "Book Free Demo"}</span>
+              <span>{isDiwaliCampaignActive() ? "Diwali 45% Offer" : "Book Free Demo"}</span>
             </button>
 
             {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
             {staffUser ? (
-              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 shrink-0">
+              <div className="flex items-center gap-1.5 xl:gap-2 pl-1.5 border-l border-slate-200 shrink-0">
                 <Link
                   href="/skillverse/staff-login"
-                  className="flex items-center gap-2 p-1 rounded-xl hover:bg-slate-100 transition-colors"
+                  className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-100 transition-colors"
                   title="Open Admissions CRM & Staff Command Center"
                 >
-                  <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-black flex items-center justify-center text-xs shadow-xs">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-[#16A34A] to-[#0052CC] text-white font-black flex items-center justify-center text-xs shadow-xs">
                     {(staffUser.name || "S").charAt(0).toUpperCase()}
                   </div>
                   <div className="hidden xl:flex flex-col text-left">
@@ -303,7 +304,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-1 px-2.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-2xs whitespace-nowrap"
+                  className="inline-flex items-center gap-1 px-2 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all cursor-pointer shadow-2xs whitespace-nowrap"
                   title="Log Out of Staff Session"
                 >
                   <LogOut className="w-3.5 h-3.5 shrink-0" />
@@ -313,7 +314,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
             ) : (
               <Link
                 href="/skillverse/login"
-                className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-300 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                className="shrink-0 whitespace-nowrap inline-flex items-center gap-1.5 px-3 xl:px-3.5 py-1.5 rounded-xl border border-slate-300 hover:border-blue-400 bg-white hover:bg-blue-50/50 text-slate-700 hover:text-blue-700 text-xs font-bold transition-all shadow-2xs cursor-pointer"
                 title="Staff, Teacher & Admin Login"
               >
                 <Lock className="w-3.5 h-3.5 text-slate-500 shrink-0" />

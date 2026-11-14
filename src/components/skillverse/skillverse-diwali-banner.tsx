@@ -26,7 +26,7 @@ export function SkillverseDiwaliBanner() {
   return (
     <aside
       role="region"
-      aria-label="SLG Skillverse Chhath Puja Festive Offer 2026"
+      aria-label="SLG Skillverse Diwali Festive Offer 2026"
       className="relative z-50 bg-gradient-to-r from-[#071630] via-[#0e2a47] to-[#071630] text-white border-b-2 border-amber-500/70 shadow-lg overflow-hidden"
     >
       {/* Subtle festive shimmer */}
@@ -37,16 +37,16 @@ export function SkillverseDiwaliBanner() {
         <div
           onClick={() => openSkillverseDiwaliModal()}
           className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0 cursor-pointer group"
-          title="Click to view Skillverse Chhath Puja 35% OFF Flyer & Concession Details"
+          title="Click to view Skillverse Diwali Up to 45% OFF Flyer & Concession Details"
         >
           <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-500/30 border border-amber-400/60 text-amber-200 font-black text-[10.5px] uppercase tracking-wider shrink-0 shadow-xs">
-            <span className="text-xs">🌅</span>
-            <span>छठ पूजा Offer 2026</span>
+            <span className="text-xs">🪔</span>
+            <span>Diwali Offer 2026</span>
           </div>
 
           <div className="truncate text-slate-100 flex items-center gap-2">
             <span className="font-black text-amber-300 tracking-tight">
-              FLAT 35% OFF:
+              UP TO 45% OFF:
             </span>
             <span className="hidden md:inline font-medium text-slate-200">
               Future-Ready IT, Academic &amp; Tech Skills Concession.
@@ -66,7 +66,7 @@ export function SkillverseDiwaliBanner() {
             className="px-3 py-1 sm:px-4 sm:py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 font-black text-[11px] sm:text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer hover:scale-105 active:scale-95"
           >
             <Sparkles className="w-3.5 h-3.5 text-slate-900" />
-            <span>Claim 35% Concession</span>
+            <span>Claim 45% Concession</span>
             <ArrowRight className="w-3.5 h-3.5 stroke-[2.5]" />
           </button>
 

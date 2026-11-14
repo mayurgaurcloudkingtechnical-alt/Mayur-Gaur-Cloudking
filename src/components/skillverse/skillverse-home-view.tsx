@@ -821,7 +821,9 @@ export function SkillverseHomeView({
                         href="tel:+919196596975"
                         className="font-bold text-slate-900 hover:text-emerald-600 transition-colors"
                       >
-                        {cms.contactPhone || "+91 91965 96975"}
+                        {cms.contactPhone && !cms.contactPhone.includes("73808")
+                          ? cms.contactPhone
+                          : "+91 91965 96975"}
                       </a>
                       <a
                         href="https://wa.me/919196596975"
@@ -840,7 +842,9 @@ export function SkillverseHomeView({
                         href="tel:+919196596979"
                         className="font-semibold text-slate-800 hover:text-blue-600 transition-colors"
                       >
-                        {cms.counselorPhone || "+91 91965 96979"}
+                        {cms.counselorPhone && !cms.counselorPhone.includes("73808")
+                          ? cms.counselorPhone
+                          : "+91 91965 96979"}
                       </a>
                       <a
                         href="https://wa.me/919196596979"

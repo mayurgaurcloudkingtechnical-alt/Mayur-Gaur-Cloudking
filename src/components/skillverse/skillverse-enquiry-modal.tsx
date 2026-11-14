@@ -418,6 +418,8 @@ export function SkillverseEnquiryModal() {
                         onChange={(e) => setPreferredProgram(e.target.value)}
                         className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 bg-white text-slate-800"
                       >
+                        <option value="45-day-board-exam-commerce">⚡ 45-Day Board Exam Power Prep — Commerce (₹4,500)</option>
+                        <option value="45-day-board-exam-science">⚡ 45-Day Board Exam Power Prep — Science (₹5,100)</option>
                         <option value="sap-s4hana-finance-controlling-fico">💼 SAP S/4HANA Finance & Controlling (SAP FICO)</option>
                         <option value="school-foundation-8-10">School Foundation (Classes 8–10)</option>
                         <option value="senior-secondary-11-12">Senior Secondary (Classes 11–12)</option>
