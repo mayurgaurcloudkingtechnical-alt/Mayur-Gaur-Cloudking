@@ -278,7 +278,7 @@ export function SkillverseShell({ children }: { children: React.ReactNode }) {
               title="Open Skillverse Admission & Diwali Concession Form"
             >
               <Sparkles className="w-3.5 h-3.5 text-yellow-300 animate-pulse shrink-0" />
-              <span>{isDiwaliCampaignActive() ? "Diwali 45% Offer" : "Book Free Demo"}</span>
+              <span>{isDiwaliCampaignActive() ? "Chhath 35% Offer" : "Book Free Demo"}</span>
             </button>
 
             {/* SLG-Style Staff Profile & Logout / Sign-In Button */}
