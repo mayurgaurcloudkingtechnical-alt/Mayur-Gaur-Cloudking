@@ -1,7 +1,7 @@
 import * as React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Metadata } from "next";
 import { db } from "@/server/db/client";
 import { ContentStatus } from "@prisma/client";
@@ -52,7 +52,7 @@ export async function generateMetadata({
     },
   });
 
-  if (!course) {
+  if (!course || course.providerType === "SKILLVERSE") {
     return {
       title: "Course Not Found — SOFTLAB GLOBAL",
       description: "The requested academic program is not available.",
@@ -212,6 +212,15 @@ export default async function CourseDetailPage({ params }: CourseDetailPageProps
 
   if (!course) {
     notFound();
+  }
+
+  // Strict separation: Skillverse venture programs are redirected to their dedicated Skillverse routes
+  if (course.providerType === "SKILLVERSE") {
+    if (course.slug.includes("45-day")) {
+      redirect("/skillverse/45-day-exam-preparation");
+    } else {
+      redirect(`/skillverse/${course.slug}`);
+    }
   }
 
   const formattedFee = formatPaiseToRupees(course.baseFee);

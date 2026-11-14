@@ -28,7 +28,6 @@ interface CareerCounselingModalProps {
 
 const COURSES_LIST = [
   "Technical Support Engineer",
-  "SAP S/4HANA Finance & Controlling (SAP FICO) Professional Program",
   "C++ Programming Complete Course (Basic To Advanced)",
   "MySQL Advanced Course (Beginner To Expert)",
   "Digital Marketing Master Class",

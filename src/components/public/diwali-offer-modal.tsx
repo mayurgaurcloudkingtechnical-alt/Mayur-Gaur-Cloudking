@@ -327,7 +327,6 @@ export function DiwaliOfferModal() {
                       onChange={(e) => setSelectedCourse(e.target.value)}
                       className="w-full px-3 py-2 rounded-xl bg-[#1A0A2A] border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-amber-400 text-xs"
                     >
-                      <option value="SAP S/4HANA Finance & Controlling (SAP FICO) Professional Program">💼 SAP S/4HANA Finance & Controlling (SAP FICO) Professional Program</option>
                       <option value="Artificial Intelligence & Machine Learning">Artificial Intelligence &amp; Machine Learning Masterclass</option>
                       <option value="Full Stack Web Development (MERN / Next.js)">Full Stack Web Development (MERN / Next.js)</option>
                       <option value="Cloud Computing & DevOps Masterclass">Cloud Computing &amp; DevOps Masterclass</option>
