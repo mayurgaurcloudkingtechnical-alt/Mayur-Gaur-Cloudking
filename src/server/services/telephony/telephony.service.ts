@@ -186,8 +186,10 @@ export class TelephonyService {
     // 6. Dispatch to real telephony provider
     let callResult: TwilioCallResult | ExotelCallResult;
     if (activeConfig.provider === "TWILIO") {
+      const twimlUrl = `${baseUrl}/api/telephony/twilio/voice?callLogId=${encodeURIComponent(staffCallLog.id)}&leadId=${encodeURIComponent(params.leadId || "")}&name=${encodeURIComponent(params.leadName || "Student")}&course=${encodeURIComponent(params.courseTitle || "Full Stack & AI Programs")}`;
       callResult = await TwilioVoiceProvider.makeCall({
         to: cleanPhone,
+        twimlUrl,
         statusCallbackUrl,
       });
     } else {

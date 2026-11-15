@@ -30,9 +30,14 @@ export class TwilioVoiceProvider {
   }): Promise<TwilioCallResult> {
     const accountSid = params.config?.accountSid || process.env.TWILIO_ACCOUNT_SID;
     const authToken = params.config?.authToken || process.env.TWILIO_AUTH_TOKEN;
+    const apiKeySid = process.env.TWILIO_API_KEY_SID;
+    const apiKeySecret = process.env.TWILIO_API_KEY_SECRET;
     const fromNumber = params.from || params.config?.fromNumber || process.env.TWILIO_PHONE_NUMBER;
 
-    if (!accountSid || !authToken || !fromNumber) {
+    const authUser = apiKeySid && apiKeySecret ? apiKeySid : accountSid;
+    const authPass = apiKeySid && apiKeySecret ? apiKeySecret : authToken;
+
+    if (!accountSid || !authUser || !authPass || !fromNumber) {
       return {
         success: false,
         providerCallId: "NOT_CONFIGURED",
@@ -49,14 +54,20 @@ export class TwilioVoiceProvider {
       ? `+91${rawTo}`
       : `+${rawTo}`;
 
-    const formattedFrom = fromNumber.startsWith("+") ? fromNumber : `+${fromNumber}`;
+    const rawFrom = fromNumber.replace(/\D/g, "");
+    const formattedFrom = fromNumber.startsWith("+")
+      ? fromNumber
+      : rawFrom.length === 10
+      ? `+91${rawFrom}`
+      : `+${rawFrom}`;
 
     const apiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}/Calls.json`;
-    const basicAuth = Buffer.from(`${accountSid}:${authToken}`).toString("base64");
+    const basicAuth = Buffer.from(`${authUser}:${authPass}`).toString("base64");
 
     const formData = new URLSearchParams();
     formData.append("To", formattedTo);
     formData.append("From", formattedFrom);
+    formData.append("Record", "true");
 
     // If custom TwiML URL provided, use it; otherwise provide SoftLab Global voice greeting
     if (params.twimlUrl) {
