@@ -472,7 +472,7 @@ export function CreateLeadDialog({
                 </Button>
               </DialogFooter>
             </form>
-          ) : (
+          ) : activeTab === "bulk" ? (
             /* Bulk CSV Import Tab */
             <form onSubmit={handleBulkSubmit} className="space-y-3 pt-1">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-2">
