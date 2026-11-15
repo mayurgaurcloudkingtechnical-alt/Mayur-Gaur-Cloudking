@@ -24,11 +24,12 @@ export function WhatsAppProviderModal({ open, onClose }: WhatsAppProviderModalPr
     displayPhoneNumber: "",
     accessToken: "",
   });
+  const [testPhone, setTestPhone] = useState("");
   const [feedback, setFeedback] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   const saveMutation = api.omnichannel.saveWhatsAppCredentials.useMutation({
     onSuccess: () => {
-      setFeedback({ type: "ok", msg: "WhatsApp Cloud API credentials saved securely on server." });
+      setFeedback({ type: "ok", msg: "Credentials saved securely on server. Click 'Test Live Connection' to verify with Meta." });
       setForm((prev) => ({ ...prev, accessToken: "" }));
       refetch();
     },
@@ -49,6 +50,37 @@ export function WhatsAppProviderModal({ open, onClose }: WhatsAppProviderModalPr
     onError: (err) => {
       setFeedback({ type: "err", msg: err.message });
     },
+  });
+
+  const subscribeMutation = api.omnichannel.subscribeWhatsAppWebhook.useMutation({
+    onSuccess: (res: any) => {
+      if (res?.success) {
+        setFeedback({ type: "ok", msg: "Subscribed Meta App to WABA webhook events successfully." });
+      } else {
+        setFeedback({ type: "err", msg: res?.error || "Webhook subscription failed." });
+      }
+      refetch();
+    },
+    onError: (err) => setFeedback({ type: "err", msg: err.message }),
+  });
+
+  const disconnectMutation = api.omnichannel.disconnectWhatsApp.useMutation({
+    onSuccess: () => {
+      setFeedback({ type: "ok", msg: "WhatsApp Cloud API disconnected." });
+      refetch();
+    },
+    onError: (err) => setFeedback({ type: "err", msg: err.message }),
+  });
+
+  const sendTestMutation = api.notifications.sendTestNotification.useMutation({
+    onSuccess: (res: any) => {
+      if (res?.success) {
+        setFeedback({ type: "ok", msg: `Test message accepted by provider (Message ID: ${res.messageId || "sent"}).` });
+      } else {
+        setFeedback({ type: "err", msg: res?.error || `Test message status: ${res?.status || "FAILED"}` });
+      }
+    },
+    onError: (err) => setFeedback({ type: "err", msg: err.message }),
   });
 
   if (!open) return null;
@@ -196,16 +228,60 @@ export function WhatsAppProviderModal({ open, onClose }: WhatsAppProviderModalPr
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+        {/* Inline Send Test Message */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-wrap items-center gap-2 text-xs">
+          <input
+            type="text"
+            placeholder="Test WhatsApp number (e.g. 919876543210)"
+            value={testPhone}
+            onChange={(e) => setTestPhone(e.target.value)}
+            className="flex-1 min-w-[200px] border border-slate-300 rounded px-2.5 py-1.5 font-mono bg-white"
+          />
           <button
             type="button"
-            onClick={() => verifyMutation.mutate()}
-            disabled={verifyMutation.isPending}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50"
+            disabled={!testPhone.trim() || sendTestMutation.isPending}
+            onClick={() => sendTestMutation.mutate({ channel: "WHATSAPP", address: testPhone.trim() })}
+            className="px-3 py-1.5 rounded bg-sky-600 text-white font-semibold hover:bg-sky-700 disabled:opacity-50"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${verifyMutation.isPending ? "animate-spin" : ""}`} />
-            {verifyMutation.isPending ? "Verifying..." : "Test Live Connection"}
+            {sendTestMutation.isPending ? "Sending..." : "Send Test Message"}
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => verifyMutation.mutate()}
+              disabled={verifyMutation.isPending}
+              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${verifyMutation.isPending ? "animate-spin" : ""}`} />
+              {verifyMutation.isPending ? "Verifying..." : "Test Live Connection"}
+            </button>
+            <button
+              type="button"
+              onClick={() => subscribeMutation.mutate()}
+              disabled={subscribeMutation.isPending}
+              className="px-3 py-2 rounded-lg text-xs font-semibold border border-sky-300 bg-sky-50 text-sky-800 hover:bg-sky-100"
+            >
+              {subscribeMutation.isPending ? "Subscribing..." : "Subscribe Webhook"}
+            </button>
+            <button
+              type="button"
+              onClick={() => refetch()}
+              className="px-3 py-2 rounded-lg text-xs font-semibold border border-slate-300 text-slate-700 hover:bg-slate-50"
+            >
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={() => disconnectMutation.mutate()}
+              disabled={disconnectMutation.isPending}
+              className="px-3 py-2 rounded-lg text-xs font-semibold border border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100"
+            >
+              {disconnectMutation.isPending ? "Disconnecting..." : "Disconnect"}
+            </button>
+          </div>
 
           <div className="flex items-center gap-2">
             <button

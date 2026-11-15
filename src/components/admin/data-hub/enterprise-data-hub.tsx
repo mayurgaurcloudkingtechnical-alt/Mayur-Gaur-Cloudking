@@ -242,7 +242,7 @@ export function EnterpriseDataHub() {
             <div>
               <h3 className="text-sm font-bold text-slate-900 flex items-center gap-1.5">
                 <Upload className="h-4 w-4 text-sky-600" />
-                Multi-Format AI Smart Data Capture (.xlsx, .csv, .txt, .json, .vcf, or Raw Text)
+                Multi-Format AI Smart Data Capture (.xlsx, .csv, .pdf, .docx, .txt, .json, .vcf, or Raw Text)
               </h3>
               <p className="text-xs text-slate-500">
                 All imported Leads are automatically staged as <span className="font-semibold">ON_HOLD (Pending Approval)</span> with duplicate checking.
@@ -261,10 +261,10 @@ export function EnterpriseDataHub() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Upload File (.xlsx, .csv, .txt, .json, .vcf)</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Upload File (.xlsx, .csv, .pdf, .docx, .txt, .json, .vcf)</label>
               <input
                 type="file"
-                accept=".xlsx,.csv,.txt,.json,.vcf"
+                accept=".xlsx,.csv,.pdf,.docx,.txt,.json,.vcf"
                 onChange={(e) => setUploadFile(e.target.files?.[0] || null)}
                 className="w-full text-xs border border-slate-300 rounded-lg p-2 bg-slate-50"
               />

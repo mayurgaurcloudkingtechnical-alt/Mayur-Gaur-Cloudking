@@ -69,7 +69,7 @@ export class WhatsAppBusinessConfigService {
         verifiedName: stored.verifiedName || envConfig.verifiedName,
         webhookUrl: envConfig.webhookUrl,
         verifyToken: envConfig.verifyToken,
-        connectionStatus: stored.connectionStatus || (envConfig.accessToken && envConfig.phoneNumberId ? "CONNECTED" : "NOT_CONNECTED"),
+        connectionStatus: stored.connectionStatus || "NOT_CONNECTED",
         lastVerifiedAt: stored.lastVerifiedAt ? new Date(stored.lastVerifiedAt) : null,
         lastError: stored.lastError || null,
         onboardingMethod: stored.onboardingMethod || "DIRECT_SYSTEM_USER",
@@ -115,8 +115,9 @@ export class WhatsAppBusinessConfigService {
       ...partial,
     };
 
-    if (updated.accessToken && updated.phoneNumberId) {
-      updated.connectionStatus = "CONNECTED";
+    // Never auto-mark CONNECTED just because credentials were saved; require verifyMetaConnection()
+    if (!partial.connectionStatus) {
+      updated.connectionStatus = "NOT_CONNECTED";
     }
 
     await db.systemSetting.upsert({
@@ -198,6 +199,44 @@ export class WhatsAppBusinessConfigService {
         success: false,
         error: err.message,
       };
+    }
+  }
+
+  /**
+   * Disconnect WhatsApp Business configuration cleanly
+   */
+  public static async disconnect(updatedBy?: string): Promise<{ success: boolean }> {
+    await this.saveConfig(
+      {
+        connectionStatus: "NOT_CONNECTED",
+        lastVerifiedAt: null,
+        lastError: "Disconnected by administrator",
+      },
+      updatedBy
+    );
+    return { success: true };
+  }
+
+  /**
+   * Subscribe the Meta App to WABA webhook events
+   */
+  public static async subscribeWebhook(): Promise<{ success: boolean; error?: string; data?: any }> {
+    const config = await this.getConfig();
+    if (!config.accessToken || !config.wabaId) {
+      return { success: false, error: "Missing WABA ID or Access Token." };
+    }
+    try {
+      const res = await fetch(`https://graph.facebook.com/v20.0/${config.wabaId}/subscribed_apps`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${config.accessToken}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        return { success: false, error: data.error?.message || "Failed to subscribe webhook.", data };
+      }
+      return { success: true, data };
+    } catch (err: any) {
+      return { success: false, error: err.message };
     }
   }
 }

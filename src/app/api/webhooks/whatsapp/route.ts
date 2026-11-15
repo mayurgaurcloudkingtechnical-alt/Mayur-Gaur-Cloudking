@@ -48,10 +48,16 @@ export async function POST(req: NextRequest) {
     const appSecret = process.env.WHATSAPP_APP_SECRET;
 
     // 1. Signature validation (Phase 18: Security & Reliability)
-    if (appSecret && signature) {
+    if (appSecret) {
+      if (!signature) {
+        console.warn("[WhatsApp Webhook Warning]: Missing x-hub-signature-256 header.");
+        return NextResponse.json({ error: "Missing webhook signature" }, { status: 401 });
+      }
       const hmac = crypto.createHmac("sha256", appSecret);
       const digest = `sha256=${hmac.update(rawBody).digest("hex")}`;
-      if (signature !== digest) {
+      const sigBuf = Buffer.from(signature);
+      const digBuf = Buffer.from(digest);
+      if (sigBuf.length !== digBuf.length || !crypto.timingSafeEqual(sigBuf, digBuf)) {
         console.warn("[WhatsApp Webhook Warning]: Invalid webhook signature rejected.");
         return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
       }
@@ -294,6 +300,24 @@ export async function POST(req: NextRequest) {
                       });
                     }
                   }
+                  // Sync status to NotificationDeliveryLog for Recipient-Wise Analytics
+                  if (wamid) {
+                    const errDetail =
+                      statusStr === "FAILED"
+                        ? statusObj.errors?.[0]?.title || statusObj.errors?.[0]?.message || "Carrier rejected message"
+                        : undefined;
+                    await db.notificationDeliveryLog.updateMany({
+                      where: {
+                        channel: "WHATSAPP",
+                        providerResponse: { contains: wamid },
+                      },
+                      data: {
+                        status: statusStr,
+                        ...(statusStr === "DELIVERED" || statusStr === "READ" ? { deliveredAt: new Date() } : {}),
+                        ...(errDetail ? { errorMessage: errDetail } : {}),
+                      },
+                    });
+                  }
                 } catch (statusDbErr: any) {
                   console.error(`[WhatsApp Status DB Error] ${statusDbErr.message}`);
                 }
@@ -318,6 +342,14 @@ export async function POST(req: NextRequest) {
                     msg.interactive?.button_reply?.title ||
                     msg.interactive?.list_reply?.title ||
                     "";
+                } else if (msg.type === "image") {
+                  messageText = `[IMAGE: ${msg.image?.id || "media"}] ${msg.image?.caption || ""}`.trim();
+                } else if (msg.type === "document") {
+                  messageText = `[DOCUMENT: ${msg.document?.filename || msg.document?.id || "file"}] ${msg.document?.caption || ""}`.trim();
+                } else if (msg.type === "video") {
+                  messageText = `[VIDEO: ${msg.video?.id || "media"}] ${msg.video?.caption || ""}`.trim();
+                } else if (msg.type === "audio" || msg.type === "voice") {
+                  messageText = `[AUDIO/VOICE: ${msg.audio?.id || msg.voice?.id || "media"}]`;
                 }
 
                 if (fromPhone && messageText) {

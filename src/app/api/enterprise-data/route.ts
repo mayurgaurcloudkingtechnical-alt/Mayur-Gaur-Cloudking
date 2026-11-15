@@ -614,6 +614,24 @@ export async function POST(req: NextRequest) {
           } catch {
             extracted = parseDelimitedText(text);
           }
+        } else if (lower.endsWith(".docx")) {
+          try {
+            const JSZip = require("jszip");
+            const zip = await JSZip.loadAsync(await file.arrayBuffer());
+            const xml = (await zip.file("word/document.xml")?.async("text")) || "";
+            const plain = xml.replace(/<w:p[^>]*>/g, "\n").replace(/<[^>]+>/g, " ").replace(/\s+\n/g, "\n");
+            extracted = (await tryGeminiExtraction(plain)) || parseDelimitedText(plain);
+          } catch {
+            extracted = parseDelimitedText(text);
+          }
+        } else if (lower.endsWith(".pdf")) {
+          const buf = Buffer.from(await file.arrayBuffer());
+          const rawAscii = buf.toString("latin1").replace(/[^\x20-\x7E\r\n]/g, " ");
+          const parenText = Array.from(rawAscii.matchAll(/\(([^()]{3,200})\)/g))
+            .map((m) => m[1])
+            .join(" ");
+          const combined = `${parenText}\n${rawAscii}`;
+          extracted = (await tryGeminiExtraction(combined)) || parseDelimitedText(combined);
         } else {
           extracted = (await tryGeminiExtraction(text)) || parseDelimitedText(text);
         }

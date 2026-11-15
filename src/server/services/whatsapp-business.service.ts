@@ -483,8 +483,7 @@ export class WhatsAppBusinessService {
       // Gateway unreachable; fall back to Cloud API config status
     }
 
-    const isConnected =
-      localConnected || config.connectionStatus === "CONNECTED" || (hasToken && hasPhoneId && hasWabaId);
+    const isConnected = localConnected || config.connectionStatus === "CONNECTED";
 
     // Get last inbound and outbound message timestamps from OmnichannelMessage
     const lastInbound = await db.omnichannelMessage.findFirst({

@@ -81,6 +81,28 @@ export const omnichannelRouter = router({
   }),
 
   /**
+   * Disconnect WhatsApp Business configuration
+   */
+  disconnectWhatsApp: protectedProcedure.mutation(async ({ ctx }) => {
+    const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+    if (!allowed.includes(ctx.user.roleCode)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can disconnect WhatsApp." });
+    }
+    return WhatsAppBusinessConfigService.disconnect(ctx.user.id);
+  }),
+
+  /**
+   * Subscribe Meta App to WABA webhook events
+   */
+  subscribeWhatsAppWebhook: protectedProcedure.mutation(async ({ ctx }) => {
+    const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+    if (!allowed.includes(ctx.user.roleCode)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can subscribe webhooks." });
+    }
+    return WhatsAppBusinessConfigService.subscribeWebhook();
+  }),
+
+  /**
    * Trigger an end-to-end test inbound message to verify complete pipeline
    */
   triggerTestInboundMessage: protectedProcedure
