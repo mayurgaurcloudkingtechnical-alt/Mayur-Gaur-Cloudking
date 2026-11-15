@@ -204,11 +204,18 @@ export function CreateLeadDialog({
     }> = [];
 
     for (const line of lines) {
-      // Ignore header row if present
-      if (line.toLowerCase().startsWith("name") || line.toLowerCase().startsWith("full name")) {
+      const lower = line.toLowerCase();
+      if (
+        lower.startsWith("name") ||
+        lower.startsWith("full name") ||
+        lower.startsWith("candidate name") ||
+        lower.startsWith("\"candidate name")
+      ) {
         continue;
       }
-      const parts = line.split(",").map((p) => p.trim());
+      const parts = line
+        .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
+        .map((p) => p.replace(/^"|"$/g, "").trim());
       if (parts.length >= 2) {
         const rawName = parts[0];
         const rawPh = parts[1].replace(/\D/g, "").slice(-10);
@@ -452,21 +459,43 @@ export function CreateLeadDialog({
             /* Bulk CSV Import Tab */
             <form onSubmit={handleBulkSubmit} className="space-y-3 pt-1">
               <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="font-bold flex items-center gap-1.5 text-slate-900">
                     <Upload className="w-4 h-4 text-emerald-600" />
                     <span>Upload CSV File or Paste Rows</span>
                   </div>
-                  <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 shadow-xs">
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{selectedFileName ? "Change File" : "Choose File"}</span>
-                    <input
-                      type="file"
-                      accept=".csv,.txt"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sample = [
+                          "Candidate Name,Phone,Email,Course Title,City",
+                          "Rahul Sharma,9876543210,rahul@example.com,Cloud Computing,Prayagraj",
+                          "Pooja Verma,9876543211,pooja@example.com,Full Stack Development,Prayagraj",
+                        ].join("\n");
+                        const blob = new Blob([sample], { type: "text/csv;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "SoftLab_Bulk_Leads_Template.csv";
+                        a.click();
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-[11px] font-semibold text-emerald-700"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>Sample Template</span>
+                    </button>
+                    <label className="cursor-pointer inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-300 hover:bg-slate-50 text-[11px] font-semibold text-slate-700 shadow-xs">
+                      <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{selectedFileName ? "Change File" : "Choose File"}</span>
+                      <input
+                        type="file"
+                        accept=".csv,.txt"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                 </div>
                 {selectedFileName && (
                   <div className="text-[11px] text-emerald-700 font-medium">

@@ -353,6 +353,58 @@ export const bulkCallingRouter = router({
       return BulkCallingQueueService.stopBatch(input.batchId, ctx.user.id);
     }),
 
+  retryBatchFailed: requireRoleProcedure(BULK_CALLING_ROLES)
+    .input(z.object({ batchId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      const reset = await db.callingQueueItem.updateMany({
+        where: {
+          batchId: input.batchId,
+          status: { in: [CallingQueueStatus.RETRYING, CallingQueueStatus.FAILED, CallingQueueStatus.SKIPPED] },
+        },
+        data: {
+          status: CallingQueueStatus.QUEUED,
+          skipReason: null,
+          attemptCount: 0,
+        },
+      });
+      await db.bulkCallingBatch.update({
+        where: { id: input.batchId },
+        data: { status: CallingBatchStatus.READY },
+      });
+      await BulkCallingQueueService.startBatch(input.batchId, ctx.user.id, true);
+      return { success: true, resetCount: reset.count };
+    }),
+
+  updateQueueItem: requireRoleProcedure(BULK_CALLING_ROLES)
+    .input(
+      z.object({
+        itemId: z.string(),
+        name: z.string().optional(),
+        phone: z.string().optional(),
+        course: z.string().optional(),
+        status: z.nativeEnum(CallingQueueStatus).optional(),
+      })
+    )
+    .mutation(async ({ input }) => {
+      const updated = await db.callingQueueItem.update({
+        where: { id: input.itemId },
+        data: {
+          ...(input.name !== undefined ? { name: input.name } : {}),
+          ...(input.phone !== undefined ? { phone: input.phone } : {}),
+          ...(input.course !== undefined ? { course: input.course } : {}),
+          ...(input.status !== undefined ? { status: input.status } : {}),
+        },
+      });
+      return { success: true, item: updated };
+    }),
+
+  deleteQueueItem: requireRoleProcedure(BULK_CALLING_ROLES)
+    .input(z.object({ itemId: z.string() }))
+    .mutation(async ({ input }) => {
+      await db.callingQueueItem.delete({ where: { id: input.itemId } });
+      return { success: true };
+    }),
+
   /**
    * 7. Delete / Cancel Batch
    */

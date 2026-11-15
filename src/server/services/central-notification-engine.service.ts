@@ -116,13 +116,61 @@ export class CentralNotificationEngine {
         reportUrl: `${this.SITE_URL}/admin/daily-reports`,
       };
 
-      // 2. Fetch all configured Higher Authority recipients
+      // 2. Fetch all configured Higher Authority recipients + Reporting Manager + Super Admin
       const recipients = await HigherAuthorityService.getRecipientsForEvent("DAILY_REPORT");
+
+      // Ensure employee's Reporting Manager is included
+      if (staff.reportingManagerId) {
+        const mgr = await db.staffProfile.findUnique({
+          where: { id: staff.reportingManagerId },
+          include: { user: { select: { firstName: true, lastName: true, email: true, phone: true, roleCode: true } } },
+        });
+        if (mgr?.user) {
+          const mgrEmail = mgr.officialEmail || mgr.user.email;
+          const alreadyHasMgr = recipients.some((r) => r.officialEmail?.toLowerCase() === mgrEmail.toLowerCase());
+          if (!alreadyHasMgr) {
+            recipients.push({
+              id: mgr.id,
+              name: `${mgr.user.firstName} ${mgr.user.lastName}`.trim(),
+              roleCode: mgr.user.roleCode,
+              officialEmail: mgrEmail,
+              personalEmail: mgr.personalEmail || null,
+              whatsappNumber: mgr.whatsappNumber || mgr.user.phone || null,
+              notifyEmail: true,
+              notifyPersonalEmail: Boolean(mgr.personalEmail),
+              notifyWhatsApp: Boolean(mgr.whatsappNumber || mgr.user.phone),
+            } as any);
+          }
+        }
+      }
+
+      // Ensure Super Admins are included
+      const superAdmins = await db.user.findMany({
+        where: { roleCode: "SUPER_ADMIN", isActive: true },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true },
+      });
+      for (const sa of superAdmins) {
+        if (!recipients.some((r) => r.officialEmail?.toLowerCase() === sa.email.toLowerCase())) {
+          recipients.push({
+            id: sa.id,
+            name: `${sa.firstName} ${sa.lastName}`.trim(),
+            roleCode: sa.roleCode,
+            officialEmail: sa.email,
+            personalEmail: null,
+            whatsappNumber: sa.phone || null,
+            notifyEmail: true,
+            notifyPersonalEmail: false,
+            notifyWhatsApp: Boolean(sa.phone),
+          } as any);
+        }
+      }
+
       if (recipients.length === 0) {
         console.warn("[CentralNotificationEngine] No active Higher Authorities configured for DAILY_REPORT.");
       }
 
-      const subject = `Daily Work Report | ${employeeName} | ${department} | ${reportDateStr}`;
+      const dispatchNonce = new Date(report.updatedAt).getTime();
+      const subject = `Daily Work & Closing Report | ${employeeName} | ${department} | ${reportDateStr}`;
       const emailHtml = this.generateDailyReportHtml(reportData);
       const whatsappText = this.generateDailyReportWhatsAppText(reportData);
 
@@ -130,7 +178,7 @@ export class CentralNotificationEngine {
       for (const rec of recipients) {
         // --- Channel 1: Official Work Email ---
         if (rec.notifyEmail && rec.officialEmail) {
-          const idempotencyKey = `DAILY_REPORT:${report.id}:OFFICIAL_EMAIL:${rec.officialEmail.toLowerCase()}`;
+          const idempotencyKey = `DAILY_REPORT:${report.id}:${dispatchNonce}:OFFICIAL_EMAIL:${rec.officialEmail.toLowerCase()}`;
           const res = await this.deliverEmail({
             idempotencyKey,
             eventType: "DAILY_REPORT_SUBMITTED",

@@ -57,6 +57,15 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
 
   const [activeTab, setActiveTab] = useState<string>("batches");
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [monitorPage, setMonitorPage] = useState<number>(1);
+  const [monitorLimit, setMonitorLimit] = useState<number>(20);
+  const [editingQueueItemId, setEditingQueueItemId] = useState<string | null>(null);
+  const [editItemDraft, setEditItemDraft] = useState<{ name: string; phone: string; course: string; status: CallingQueueStatus }>({
+    name: "",
+    phone: "",
+    course: "",
+    status: CallingQueueStatus.QUEUED,
+  });
 
   // Queries
   const { data: batchesData, refetch: refetchBatches, isLoading: loadingBatches } =
@@ -66,7 +75,7 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
     );
 
   const { data: batchDetails, refetch: refetchDetails } = api.bulkCalling.getBatchDetails.useQuery(
-    { batchId: selectedBatchId || "" },
+    { batchId: selectedBatchId || "", page: monitorPage, limit: monitorLimit },
     { enabled: Boolean(selectedBatchId), refetchInterval: 2500 }
   );
 
@@ -92,6 +101,9 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
   const resumeBatchMutation = api.bulkCalling.resumeBatch.useMutation();
   const stopBatchMutation = api.bulkCalling.stopBatch.useMutation();
   const deleteBatchMutation = api.bulkCalling.deleteBatch.useMutation();
+  const retryBatchMutation = api.bulkCalling.retryBatchFailed.useMutation();
+  const updateQueueItemMutation = api.bulkCalling.updateQueueItem.useMutation();
+  const deleteQueueItemMutation = api.bulkCalling.deleteQueueItem.useMutation();
   const updateConfigMutation = api.bulkCalling.updateGlobalConfig.useMutation();
   const upsertIdentityMutation = api.bulkCalling.upsertIdentity.useMutation();
   const addDncMutation = api.bulkCalling.addDnc.useMutation();
@@ -963,7 +975,10 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
               <span className="font-bold text-xs text-slate-700">Select Batch to Monitor:</span>
               <select
                 value={selectedBatchId || ""}
-                onChange={(e) => setSelectedBatchId(e.target.value)}
+                onChange={(e) => {
+                  setSelectedBatchId(e.target.value);
+                  setMonitorPage(1);
+                }}
                 className="h-8 text-xs border rounded-lg px-2 bg-white font-semibold"
               >
                 <option value="">-- Choose Batch --</option>
@@ -976,32 +991,85 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
             </div>
 
             {selectedBatchId && batchDetails && (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="text-xs font-bold text-slate-700">
                   Calling Status:
                 </span>
                 <Badge className="text-xs font-extrabold uppercase">
                   {batchDetails.batch.status}
                 </Badge>
+                {batchDetails.batch.status !== "RUNNING" && (
+                  <Button
+                    size="sm"
+                    onClick={() => handleStartBatch(batchDetails.batch.id)}
+                    className="h-7 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white gap-1"
+                  >
+                    <Play className="w-3 h-3" /> Start
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={retryBatchMutation.isPending}
+                  onClick={async () => {
+                    await retryBatchMutation.mutateAsync({ batchId: batchDetails.batch.id });
+                    refetchBatches();
+                    refetchDetails();
+                  }}
+                  className="h-7 text-xs font-bold text-amber-700 border-amber-300 hover:bg-amber-50 gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" /> Retry Pending / Failed
+                </Button>
                 {batchDetails.batch.status === "RUNNING" && (
                   <Button
                     size="sm"
                     variant="outline"
                     onClick={() => handlePauseBatch(batchDetails.batch.id)}
-                    className="h-7 text-xs font-bold text-amber-700 border-amber-300"
+                    className="h-7 text-xs font-bold text-amber-700 border-amber-300 gap-1"
                   >
-                    Pause
+                    <Pause className="w-3 h-3" /> Pause
                   </Button>
                 )}
                 {batchDetails.batch.status === "PAUSED" && (
                   <Button
                     size="sm"
                     onClick={() => handleResumeBatch(batchDetails.batch.id)}
-                    className="h-7 text-xs font-bold bg-emerald-600 text-white"
+                    className="h-7 text-xs font-bold bg-emerald-600 text-white gap-1"
                   >
-                    Resume
+                    <Play className="w-3 h-3" /> Resume
                   </Button>
                 )}
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    const headers = ["Pos", "Name", "Phone", "Course", "QueueStatus", "CallOutcome", "AI_Intent", "DurationSeconds", "Notes"];
+                    const csvRows = batchDetails.queueItems.map((r) =>
+                      [
+                        r.queuePosition,
+                        r.name || "",
+                        r.phone,
+                        r.course || "",
+                        r.status,
+                        r.callOutcome || "",
+                        r.interestLevel || "",
+                        r.callDurationSeconds || 0,
+                        r.skipReason || "",
+                      ]
+                        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+                        .join(",")
+                    );
+                    const blob = new Blob([`${headers.join(",")}\n${csvRows.join("\n")}`], { type: "text/csv;charset=utf-8;" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `Calling_Report_${batchDetails.batch.batchName.replace(/[^a-z0-9]/gi, "_")}_Page_${batchDetails.page}.csv`;
+                    a.click();
+                  }}
+                  className="h-7 text-xs font-bold text-emerald-700 border-emerald-300 hover:bg-emerald-50 gap-1"
+                >
+                  <Download className="w-3 h-3" /> Export Report
+                </Button>
               </div>
             )}
           </div>
@@ -1082,18 +1150,64 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
                           else if (item.status === "RETRYING") statusBadge = "bg-amber-100 text-amber-800";
                           else if (item.status === "DO_NOT_CALL") statusBadge = "bg-rose-100 text-rose-800";
 
+                          const isEditingRow = editingQueueItemId === item.id;
+
                           return (
                             <tr key={item.id} className="hover:bg-slate-50/70">
                               <td className="p-2.5 text-center font-mono font-bold text-slate-500">
                                 {item.queuePosition}
                               </td>
-                              <td className="p-2.5 font-bold text-slate-900">{item.name || "Prospective Learner"}</td>
-                              <td className="p-2.5 font-mono">{item.phone}</td>
-                              <td className="p-2.5 text-slate-700">{item.course || "General"}</td>
+                              <td className="p-2.5 font-bold text-slate-900">
+                                {isEditingRow ? (
+                                  <Input
+                                    value={editItemDraft.name}
+                                    onChange={(e) => setEditItemDraft((d) => ({ ...d, name: e.target.value }))}
+                                    className="h-7 text-xs w-32"
+                                  />
+                                ) : (
+                                  item.name || "Prospective Learner"
+                                )}
+                              </td>
+                              <td className="p-2.5 font-mono">
+                                {isEditingRow ? (
+                                  <Input
+                                    value={editItemDraft.phone}
+                                    onChange={(e) => setEditItemDraft((d) => ({ ...d, phone: e.target.value }))}
+                                    className="h-7 text-xs w-28"
+                                  />
+                                ) : (
+                                  item.phone
+                                )}
+                              </td>
+                              <td className="p-2.5 text-slate-700">
+                                {isEditingRow ? (
+                                  <Input
+                                    value={editItemDraft.course}
+                                    onChange={(e) => setEditItemDraft((d) => ({ ...d, course: e.target.value }))}
+                                    className="h-7 text-xs w-36"
+                                  />
+                                ) : (
+                                  item.course || "General"
+                                )}
+                              </td>
                               <td className="p-2.5">
-                                <Badge variant="outline" className={`text-[9.5px] font-bold ${statusBadge}`}>
-                                  {item.status}
-                                </Badge>
+                                {isEditingRow ? (
+                                  <select
+                                    value={editItemDraft.status}
+                                    onChange={(e) => setEditItemDraft((d) => ({ ...d, status: e.target.value as CallingQueueStatus }))}
+                                    className="h-7 text-xs border rounded px-1 bg-white"
+                                  >
+                                    <option value="QUEUED">QUEUED</option>
+                                    <option value="COMPLETED">COMPLETED</option>
+                                    <option value="RETRYING">RETRYING</option>
+                                    <option value="SKIPPED">SKIPPED</option>
+                                    <option value="DO_NOT_CALL">DO_NOT_CALL</option>
+                                  </select>
+                                ) : (
+                                  <Badge variant="outline" className={`text-[9.5px] font-bold ${statusBadge}`}>
+                                    {item.status}
+                                  </Badge>
+                                )}
                               </td>
                               <td className="p-2.5 font-semibold text-slate-800">
                                 {item.callOutcome || "-"}
@@ -1131,24 +1245,145 @@ export function BulkCallingDashboard({ userRole, userId }: BulkCallingDashboardP
                                 )}
                               </td>
                               <td className="p-2.5 text-right">
-                                {item.transcript ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setViewingItem(item)}
-                                    className="h-6 text-[10px] font-bold text-[#0088cc] border-[#0088cc]/30 hover:bg-[#0088cc]/10"
-                                  >
-                                    Transcript
-                                  </Button>
-                                ) : (
-                                  <span className="text-slate-400 text-[10px]">-</span>
-                                )}
+                                <div className="flex items-center justify-end gap-1">
+                                  {isEditingRow ? (
+                                    <>
+                                      <Button
+                                        size="sm"
+                                        onClick={async () => {
+                                          await updateQueueItemMutation.mutateAsync({
+                                            itemId: item.id,
+                                            name: editItemDraft.name,
+                                            phone: editItemDraft.phone,
+                                            course: editItemDraft.course,
+                                            status: editItemDraft.status,
+                                          });
+                                          setEditingQueueItemId(null);
+                                          refetchDetails();
+                                        }}
+                                        className="h-6 text-[10px] bg-emerald-600 text-white px-2"
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setEditingQueueItemId(null)}
+                                        className="h-6 text-[10px] px-2"
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <a
+                                        href={`/ai-call?name=${encodeURIComponent(item.name || "Student")}&phone=${encodeURIComponent(item.phone)}&course=${encodeURIComponent(item.course || "Full Stack & AI")}&leadId=${encodeURIComponent(item.leadId || "")}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center h-6 px-2 rounded border border-emerald-300 bg-emerald-50 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100"
+                                      >
+                                        AI Call
+                                      </a>
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => {
+                                          setEditingQueueItemId(item.id);
+                                          setEditItemDraft({
+                                            name: item.name || "",
+                                            phone: item.phone || "",
+                                            course: item.course || "",
+                                            status: item.status,
+                                          });
+                                        }}
+                                        className="h-6 text-[10px] px-2"
+                                      >
+                                        Edit
+                                      </Button>
+                                      {item.transcript && (
+                                        <Button
+                                          size="sm"
+                                          variant="outline"
+                                          onClick={() => setViewingItem(item)}
+                                          className="h-6 text-[10px] font-bold text-[#0088cc] border-[#0088cc]/30 hover:bg-[#0088cc]/10"
+                                        >
+                                          Transcript
+                                        </Button>
+                                      )}
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={async () => {
+                                          await deleteQueueItemMutation.mutateAsync({ itemId: item.id });
+                                          refetchDetails();
+                                        }}
+                                        className="h-6 text-[10px] text-rose-600 border-rose-200 hover:bg-rose-50 px-1.5"
+                                        title="Delete Item"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </Button>
+                                    </>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
+                  </div>
+                  {/* Pagination Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t bg-slate-50/70 text-xs">
+                    <div className="flex items-center gap-2 text-slate-600">
+                      <span>Rows per page:</span>
+                      <select
+                        value={monitorLimit}
+                        onChange={(e) => {
+                          setMonitorLimit(Number(e.target.value));
+                          setMonitorPage(1);
+                        }}
+                        className="h-7 border rounded px-2 bg-white font-semibold"
+                      >
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value={100}>100</option>
+                        <option value={200}>All (200)</option>
+                      </select>
+                      <span className="ml-2 font-medium">
+                        Total: <strong>{batchDetails.totalQueueItems}</strong> leads
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={monitorPage <= 1}
+                        onClick={() => setMonitorPage((p) => Math.max(1, p - 1))}
+                        className="h-7 px-2.5 text-xs"
+                      >
+                        Prev
+                      </Button>
+                      {Array.from({ length: Math.max(1, batchDetails.totalPages) }, (_, idx) => idx + 1).map((pg) => (
+                        <Button
+                          key={pg}
+                          size="sm"
+                          variant={pg === batchDetails.page ? "default" : "outline"}
+                          onClick={() => setMonitorPage(pg)}
+                          className={`h-7 min-w-[28px] px-2 text-xs ${pg === batchDetails.page ? "bg-[#0088cc] text-white" : ""}`}
+                        >
+                          {pg}
+                        </Button>
+                      ))}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={monitorPage >= batchDetails.totalPages}
+                        onClick={() => setMonitorPage((p) => Math.min(batchDetails.totalPages, p + 1))}
+                        className="h-7 px-2.5 text-xs"
+                      >
+                        Next
+                      </Button>
+                    </div>
                   </div>
                 </CardContent>
               </Card>

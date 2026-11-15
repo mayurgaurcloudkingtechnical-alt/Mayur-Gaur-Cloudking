@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     const filePath = join(uploadDir, fileName);
     await writeFile(filePath, buffer);
 
-    const publicUrl = `/uploads/photos/${fileName}`;
+    const publicUrl = `/api/uploads/photos/${fileName}`;
 
     return NextResponse.json({
       success: true,
