@@ -46,7 +46,7 @@ export class WhatsAppBusinessConfigService {
         displayPhoneNumber: process.env.WHATSAPP_DISPLAY_PHONE || "",
         verifiedName: "SOFTLAB GLOBAL",
         webhookUrl: "https://www.softlabglobal.com/api/webhooks/whatsapp",
-        verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || "softlab_whatsapp_2026",
+        verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN || "softlab_whatsapp_2026",
         connectionStatus: "NOT_CONNECTED",
         lastVerifiedAt: null,
         lastError: null,
@@ -145,23 +145,78 @@ export class WhatsAppBusinessConfigService {
    */
   public static async verifyMetaConnection(): Promise<{
     success: boolean;
+    phoneNumberId?: string;
     displayPhoneNumber?: string;
     verifiedName?: string;
     qualityRating?: string;
+    webhookSubscribed?: boolean;
     error?: string;
   }> {
     const config = await this.getConfig();
 
-    if (!config.accessToken || !config.phoneNumberId) {
+    if (!config.accessToken) {
       return {
         success: false,
-        error: "Missing WhatsApp Phone Number ID or Access Token.",
+        error: "Missing Meta System User Access Token.",
       };
     }
 
     try {
+      // 1. Validate token via /me
+      const meRes = await fetch("https://graph.facebook.com/v20.0/me?fields=id,name", {
+        headers: { Authorization: `Bearer ${config.accessToken}` },
+      });
+      const meData = await meRes.json();
+      if (!meRes.ok) {
+        const errorMsg = meData.error?.message || "Invalid or expired Meta access token";
+        await this.saveConfig({ connectionStatus: "ERROR", lastError: errorMsg });
+        return { success: false, error: errorMsg };
+      }
+
+      // 2. Discover actual numeric Phone Number ID from WABA if missing or looks like a 10-digit display phone
+      let resolvedPhoneNumberId = config.phoneNumberId;
+      let resolvedWabaId = config.wabaId;
+
+      if (!resolvedWabaId && config.businessId) {
+        const wabaRes = await fetch(
+          `https://graph.facebook.com/v20.0/${config.businessId}/owned_whatsapp_business_accounts?fields=id,name`,
+          { headers: { Authorization: `Bearer ${config.accessToken}` } }
+        );
+        if (wabaRes.ok) {
+          const wabaJson = await wabaRes.json();
+          if (wabaJson?.data?.[0]?.id) {
+            resolvedWabaId = wabaJson.data[0].id;
+          }
+        }
+      }
+
+      const looksLikeDisplayNumber = !resolvedPhoneNumberId || resolvedPhoneNumberId.length <= 12;
+      if (resolvedWabaId && looksLikeDisplayNumber) {
+        const listRes = await fetch(
+          `https://graph.facebook.com/v20.0/${resolvedWabaId}/phone_numbers?fields=id,display_phone_number,verified_name,code_verification_status,quality_rating`,
+          { headers: { Authorization: `Bearer ${config.accessToken}` } }
+        );
+        if (listRes.ok) {
+          const listJson = await listRes.json();
+          const phones = Array.isArray(listJson?.data) ? listJson.data : [];
+          const preferred =
+            phones.find((p: any) => String(p.display_phone_number || "").replace(/\D/g, "").endsWith("9196596975")) ||
+            phones[0];
+          if (preferred?.id) {
+            resolvedPhoneNumberId = String(preferred.id);
+          }
+        }
+      }
+
+      if (!resolvedPhoneNumberId) {
+        const errorMsg = "Could not resolve numeric Meta Phone Number ID from WABA.";
+        await this.saveConfig({ connectionStatus: "ERROR", lastError: errorMsg });
+        return { success: false, error: errorMsg };
+      }
+
+      // 3. Verify the Phone Number ID asset directly
       const res = await fetch(
-        `https://graph.facebook.com/v20.0/${config.phoneNumberId}?fields=display_phone_number,verified_name,code_verification_status,quality_rating`,
+        `https://graph.facebook.com/v20.0/${resolvedPhoneNumberId}?fields=display_phone_number,verified_name,code_verification_status,quality_rating`,
         {
           headers: {
             Authorization: `Bearer ${config.accessToken}`,
@@ -180,8 +235,22 @@ export class WhatsAppBusinessConfigService {
         return { success: false, error: errorMsg };
       }
 
+      // 4. Check WABA webhook subscription
+      let webhookSubscribed = false;
+      if (resolvedWabaId) {
+        const subRes = await fetch(`https://graph.facebook.com/v20.0/${resolvedWabaId}/subscribed_apps`, {
+          headers: { Authorization: `Bearer ${config.accessToken}` },
+        });
+        if (subRes.ok) {
+          const subJson = await subRes.json();
+          webhookSubscribed = Array.isArray(subJson?.data) && subJson.data.length > 0;
+        }
+      }
+
       await this.saveConfig({
         connectionStatus: "CONNECTED",
+        wabaId: resolvedWabaId || config.wabaId,
+        phoneNumberId: resolvedPhoneNumberId,
         displayPhoneNumber: data.display_phone_number || config.displayPhoneNumber,
         verifiedName: data.verified_name || config.verifiedName,
         lastVerifiedAt: new Date(),
@@ -190,9 +259,11 @@ export class WhatsAppBusinessConfigService {
 
       return {
         success: true,
+        phoneNumberId: resolvedPhoneNumberId,
         displayPhoneNumber: data.display_phone_number,
         verifiedName: data.verified_name,
         qualityRating: data.quality_rating,
+        webhookSubscribed,
       };
     } catch (err: any) {
       return {
