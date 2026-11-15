@@ -38,7 +38,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
         <DiwaliLmsBanner />
       </ErrorBoundary>
 
-      <div className="flex flex-1">
+      <div className="flex flex-1 min-w-0">
         <ErrorBoundary fallback={<div className="w-16 bg-slate-900" />}>
           <Sidebar
             roleCode={safeUser.roleCode}
@@ -47,7 +47,7 @@ export function DashboardShell({ user, children }: DashboardShellProps) {
           />
         </ErrorBoundary>
 
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+        <main className="flex-1 min-w-0 overflow-y-auto p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-7xl">
             <ErrorBoundary>
               {children}

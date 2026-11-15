@@ -694,36 +694,71 @@ export class CentralNotificationEngine {
   }
 
   /**
-   * Get delivery statistics for Admin Dashboard
+   * Get comprehensive recipient-wise delivery statistics for Admin Dashboard
    */
   public static async getDeliveryStats() {
-    const [total, sent, failed, simulated, emailsSent, whatsappSent] = await Promise.all([
-      db.notificationDeliveryLog.count(),
-      db.notificationDeliveryLog.count({ where: { status: "SENT" } }),
-      db.notificationDeliveryLog.count({ where: { status: "FAILED" } }),
-      db.notificationDeliveryLog.count({ where: { status: "SIMULATED" } }),
-      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: "SENT" } }),
-      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: "SENT" } }),
-    ]);
-
-    const lastLog = await db.notificationDeliveryLog.findFirst({
-      where: { status: "SENT" },
-      orderBy: { sentAt: "desc" },
-    });
-
-    return {
+    const [
       total,
       sent,
       failed,
       simulated,
+      pending,
+      retried,
       emailsSent,
-      whatsappSent,
+      emailsDelivered,
+      emailsBounced,
+      whatsappSubmitted,
+      whatsappDelivered,
+      whatsappRead,
+      whatsappFailed,
+      uniqueRecipients,
+      lastLog,
+    ] = await Promise.all([
+      db.notificationDeliveryLog.count(),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.count({ where: { status: "SIMULATED" } }),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["PENDING", "QUEUED"] } } }),
+      db.notificationDeliveryLog.count({ where: { retryCount: { gt: 0 } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["SENT", "DELIVERED", "READ"] }, deliveredAt: { not: null } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: "READ" } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.findMany({
+        distinct: ["recipientAddress"],
+        select: { recipientAddress: true },
+      }),
+      db.notificationDeliveryLog.findFirst({
+        where: { status: { in: ["SENT", "DELIVERED", "READ"] } },
+        orderBy: { sentAt: "desc" },
+      }),
+    ]);
+
+    return {
+      total,
+      totalRecipients: uniqueRecipients.length,
+      sent,
+      failed,
+      simulated,
+      pending,
+      retried,
+      emailsSent,
+      emailsDelivered: emailsDelivered || emailsSent,
+      emailsBounced,
+      whatsappSent: whatsappSubmitted,
+      whatsappSubmitted,
+      whatsappDelivered,
+      whatsappRead,
+      whatsappFailed,
       lastSuccessfulDelivery: lastLog?.sentAt || null,
     };
   }
 
   /**
-   * List delivery logs with filtering and pagination
+   * List delivery logs with filtering, date range, and pagination
    */
   public static async listDeliveryLogs(params: {
     page?: number;
@@ -732,20 +767,36 @@ export class CentralNotificationEngine {
     channel?: string;
     status?: string;
     search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    department?: string;
   }) {
     const page = Math.max(1, params.page || 1);
-    const limit = Math.min(100, Math.max(1, params.limit || 20));
+    const limit = Math.min(200, Math.max(1, params.limit || 20));
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (params.eventType) where.eventType = params.eventType;
     if (params.channel) where.channel = params.channel;
     if (params.status) where.status = params.status;
+    if (params.department) {
+      where.recipientRole = { contains: params.department, mode: "insensitive" };
+    }
+    if (params.dateFrom || params.dateTo) {
+      where.createdAt = {};
+      if (params.dateFrom) where.createdAt.gte = new Date(params.dateFrom);
+      if (params.dateTo) {
+        const end = new Date(params.dateTo);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
     if (params.search) {
       where.OR = [
         { recipientName: { contains: params.search, mode: "insensitive" } },
         { recipientAddress: { contains: params.search, mode: "insensitive" } },
         { subject: { contains: params.search, mode: "insensitive" } },
+        { recipientRole: { contains: params.search, mode: "insensitive" } },
       ];
     }
 
@@ -763,7 +814,7 @@ export class CentralNotificationEngine {
       items,
       total,
       page,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     };
   }
 

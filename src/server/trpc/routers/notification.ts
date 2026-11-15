@@ -9,17 +9,37 @@ import { EmailService } from "@/server/services/email.service";
 import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
 import { UserRoleCode } from "@prisma/client";
 
+function ensureReadAuthorized(user: any) {
+  const allowed = [
+    UserRoleCode.SUPER_ADMIN,
+    UserRoleCode.DIRECTOR,
+    UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
+    UserRoleCode.HR,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TELECALLER,
+    UserRoleCode.PLACEMENT_OFFICER,
+  ];
+  if (!allowed.includes(user.roleCode)) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Access restricted to authorized staff.",
+    });
+  }
+}
+
 function ensureAuthorized(user: any) {
   const allowed = [
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
     UserRoleCode.HR,
   ];
   if (!allowed.includes(user.roleCode)) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Access restricted to Executive Directorate, Administrators and HR.",
+      message: "Access restricted to Executive Directorate, Managers, Administrators and HR.",
     });
   }
 }
@@ -108,7 +128,7 @@ export const notificationRouter = router({
   // ============================================================================
 
   getDeliveryStats: protectedProcedure.query(async ({ ctx }) => {
-    ensureAuthorized(ctx.user);
+    ensureReadAuthorized(ctx.user);
     return CentralNotificationEngine.getDeliveryStats();
   }),
 
@@ -121,10 +141,13 @@ export const notificationRouter = router({
         channel: z.string().optional(),
         status: z.string().optional(),
         search: z.string().optional(),
+        dateFrom: z.string().optional(),
+        dateTo: z.string().optional(),
+        department: z.string().optional(),
       })
     )
     .query(async ({ ctx, input }) => {
-      ensureAuthorized(ctx.user);
+      ensureReadAuthorized(ctx.user);
       return CentralNotificationEngine.listDeliveryLogs(input);
     }),
 
@@ -138,7 +161,7 @@ export const notificationRouter = router({
   listHigherAuthorities: protectedProcedure
     .input(z.object({ search: z.string().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      ensureAuthorized(ctx.user);
+      ensureReadAuthorized(ctx.user);
       return HigherAuthorityService.listHigherAuthorities(input?.search);
     }),
 
