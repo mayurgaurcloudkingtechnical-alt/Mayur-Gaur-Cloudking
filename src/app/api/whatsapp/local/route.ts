@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   const sessionId = resolveSessionId(req, token);
 
   if (action === "feed") {
-    const [recentMessages, recentCalls, totalCourses] = await Promise.all([
+    const [recentMessages, recentCalls, totalCourses, socialMessages, socialLeads] = await Promise.all([
       db.omnichannelMessage.findMany({
         where: { channel: "WHATSAPP" },
         orderBy: { createdAt: "desc" },
@@ -106,8 +106,52 @@ export async function GET(req: NextRequest) {
         },
       }),
       db.course.count({ where: { isPublished: true } }),
+      db.omnichannelMessage.findMany({
+        where: { channel: { in: ["INSTAGRAM", "FACEBOOK_PAGE"] } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          channel: true,
+          senderType: true,
+          senderName: true,
+          content: true,
+          status: true,
+          createdAt: true,
+          conversation: { select: { id: true, externalThreadId: true, lead: { select: { id: true, fullName: true, phone: true } } } },
+        },
+      }),
+      db.lead.findMany({
+        where: { source: { in: ["SOCIAL_MEDIA", "META_LEAD_ADS", "FACEBOOK", "INSTAGRAM"] } },
+        orderBy: { createdAt: "desc" },
+        take: 20,
+        select: {
+          id: true,
+          fullName: true,
+          phone: true,
+          source: true,
+          status: true,
+          campaignName: true,
+          interestedCourse: true,
+          createdAt: true,
+        },
+      }),
     ]);
-    return NextResponse.json({ recentMessages, recentCalls, totalCourses });
+    return NextResponse.json({
+      recentMessages,
+      recentCalls,
+      totalCourses,
+      socialMessages,
+      socialLeads,
+      metaInfo: {
+        pageId: process.env.META_PAGE_ID || "SoftLab Global",
+        pageUrl: process.env.META_PAGE_URL || "https://www.facebook.com/softlabglobal",
+        instagramHandle: "@softlabglobal",
+        instagramUrl: "https://www.instagram.com/softlabglobal",
+        webhookUrl: "https://www.softlabglobal.com/api/webhooks/meta",
+        verifyTokenConfigured: Boolean(process.env.META_WEBHOOK_VERIFY_TOKEN),
+      },
+    });
   }
 
   try {
@@ -144,6 +188,56 @@ export async function POST(req: NextRequest) {
         signal: AbortSignal.timeout(5000),
       });
       return NextResponse.json(await res.json());
+    }
+
+    if (action === "send_social_reply") {
+      const conversationId = String(body.conversationId || "");
+      const channel = String(body.channel || "INSTAGRAM");
+      const text = String(body.text || "").trim();
+      if (!conversationId || !text) {
+        return NextResponse.json({ success: false, error: "Conversation ID and reply text required" }, { status: 400 });
+      }
+      const convo = await db.omnichannelConversation.findUnique({
+        where: { id: conversationId },
+        select: { id: true, externalThreadId: true },
+      });
+      if (!convo) {
+        return NextResponse.json({ success: false, error: "Conversation not found" }, { status: 404 });
+      }
+
+      let dispatched = false;
+      const pageToken = process.env.META_PAGE_ACCESS_TOKEN;
+      if (pageToken && convo.externalThreadId) {
+        try {
+          const graphRes = await fetch(
+            `https://graph.facebook.com/v21.0/me/messages?access_token=${encodeURIComponent(pageToken)}`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                recipient: { id: convo.externalThreadId },
+                message: { text },
+              }),
+              signal: AbortSignal.timeout(6000),
+            }
+          );
+          dispatched = graphRes.ok;
+        } catch {}
+      }
+
+      const saved = await db.omnichannelMessage.create({
+        data: {
+          conversationId: convo.id,
+          senderType: "STAFF",
+          senderName: String(token.name || "SoftLab Staff"),
+          channel,
+          messageType: "TEXT",
+          content: text,
+          status: dispatched ? "SENT" : "QUEUED",
+        },
+        select: { id: true, status: true },
+      });
+      return NextResponse.json({ success: true, messageId: saved.id, status: saved.status });
     }
 
     const messageText =

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { MessageSquare, PhoneCall, RefreshCw, Send, BookOpen, CheckCircle2, X, Radio } from "lucide-react";
+import { MessageSquare, PhoneCall, RefreshCw, Send, BookOpen, CheckCircle2, X, Radio, Instagram, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -18,7 +18,8 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
   const [customMsg, setCustomMsg] = useState("");
   const [sending, setSending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"connect" | "status" | "calls">("connect");
+  const [activeTab, setActiveTab] = useState<"connect" | "status" | "calls" | "social">("connect");
+  const [socialReplyText, setSocialReplyText] = useState<Record<string, string>>({});
 
   const loadAll = useCallback(async () => {
     try {
@@ -100,6 +101,10 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
             { id: "connect", label: "My WhatsApp & Catalogue" },
             { id: "status", label: `Live Message Status (${feed?.recentMessages?.length || 0})` },
             { id: "calls", label: `Live Calls In/Out (${feed?.recentCalls?.length || 0})` },
+            {
+              id: "social",
+              label: `Instagram & Meta (${(feed?.socialLeads?.length || 0) + (feed?.socialMessages?.length || 0)})`,
+            },
           ].map((t) => (
             <button
               key={t.id}
@@ -272,6 +277,132 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                   </Badge>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === "social" && (
+            <div className="space-y-4">
+              <div className="bg-gradient-to-r from-fuchsia-950/60 to-indigo-950/60 border border-fuchsia-700/40 rounded-xl p-4 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Instagram className="w-4 h-4 text-fuchsia-400" />
+                    <span className="font-bold text-sm">SoftLab Global Instagram & Meta Page Live</span>
+                  </div>
+                  <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/40">
+                    {feed?.metaInfo?.verifyTokenConfigured ? "WEBHOOK ACTIVE" : "READY"}
+                  </Badge>
+                </div>
+                <div className="text-[11px] text-slate-300 space-y-1">
+                  <div>
+                    Instagram: <span className="font-semibold text-fuchsia-300">{feed?.metaInfo?.instagramHandle || "@softlabglobal"}</span> • Meta Page ID:{" "}
+                    <span className="font-mono text-indigo-300">{feed?.metaInfo?.pageId || "Configured"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-slate-400 break-all">
+                    <Globe className="w-3 h-3 shrink-0" /> Webhook: {feed?.metaInfo?.webhookUrl || "https://www.softlabglobal.com/api/webhooks/meta"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="font-bold text-slate-200">Live Instagram & Meta DMs ({feed?.socialMessages?.length || 0})</div>
+                {(feed?.socialMessages || []).length === 0 ? (
+                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 text-slate-400">
+                    No Instagram/Meta DMs received yet. Incoming Meta Page Messenger & Instagram DMs/comments appear here automatically in real time for all Counselors to Super Admin.
+                  </div>
+                ) : (
+                  (feed?.socialMessages || []).map((m: any) => {
+                    const convId = m.conversation?.id;
+                    return (
+                      <div key={m.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <span className="font-semibold text-slate-200">
+                              {m.conversation?.lead?.fullName || m.senderName || "Meta User"}
+                            </span>{" "}
+                            <Badge className="ml-1 bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/40 text-[10px]">
+                              {m.channel}
+                            </Badge>
+                            <p className="text-slate-300 mt-1">{m.content}</p>
+                          </div>
+                          <Badge className="bg-slate-800 text-slate-300 border-slate-700 text-[10px] shrink-0">
+                            {m.status}
+                          </Badge>
+                        </div>
+                        {convId && m.senderType === "LEAD" && (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={socialReplyText[convId] || ""}
+                              onChange={(e) => setSocialReplyText((p) => ({ ...p, [convId]: e.target.value }))}
+                              placeholder="Write reply to Instagram/Meta..."
+                              className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={async () => {
+                                const txt = (socialReplyText[convId] || "").trim();
+                                if (!txt) return;
+                                await fetch("/api/whatsapp/local", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    action: "send_social_reply",
+                                    conversationId: convId,
+                                    channel: m.channel,
+                                    text: txt,
+                                  }),
+                                });
+                                setSocialReplyText((p) => ({ ...p, [convId]: "" }));
+                                loadAll();
+                              }}
+                              className="h-7 bg-fuchsia-600 hover:bg-fuchsia-500 text-white text-xs"
+                            >
+                              Reply
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="font-bold text-slate-200">Live Instagram & Facebook Meta Leads ({feed?.socialLeads?.length || 0})</div>
+                {(feed?.socialLeads || []).map((lead: any) => (
+                  <div key={lead.id} className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between gap-2">
+                    <div>
+                      <div className="font-semibold text-slate-200">
+                        {lead.fullName} • <span className="font-mono text-cyan-300">{lead.phone}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        {lead.source} • {lead.interestedCourse || lead.campaignName || "General Enquiry"} • {lead.status}
+                      </div>
+                    </div>
+                    {lead.phone && !String(lead.phone).startsWith("META_") && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <a
+                          href={`/ai-call?phone=${encodeURIComponent(lead.phone)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-semibold"
+                        >
+                          AI Call
+                        </a>
+                        <button
+                          onClick={() => {
+                            setTargetPhone(lead.phone);
+                            setActiveTab("connect");
+                          }}
+                          className="px-2 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-semibold"
+                        >
+                          WhatsApp
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </div>

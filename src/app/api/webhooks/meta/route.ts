@@ -1,8 +1,81 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { MetaLeadAdsService } from "@/server/services/meta-lead-ads.service";
 import { LeadSource } from "@prisma/client";
+import { db } from "@/server/db/client";
 
 export const dynamic = "force-dynamic";
+
+async function persistSocialMessage(params: {
+  channel: "INSTAGRAM" | "FACEBOOK_PAGE";
+  senderId: string;
+  senderName?: string;
+  text: string;
+  externalMsgId?: string;
+  rawPayload?: any;
+}) {
+  const { channel, senderId, senderName, text, externalMsgId, rawPayload } = params;
+  if (!senderId || !text) return null;
+
+  const syntheticPhone = `META_${senderId.slice(-10)}`;
+  let lead = await db.lead.findFirst({
+    where: {
+      OR: [{ externalId: senderId }, { phone: syntheticPhone }],
+    },
+    select: { id: true, fullName: true },
+  });
+
+  if (!lead) {
+    lead = await db.lead.create({
+      data: {
+        fullName: senderName || `${channel === "INSTAGRAM" ? "Instagram" : "Meta Page"} User ${senderId.slice(-4)}`,
+        phone: syntheticPhone,
+        externalId: senderId,
+        source: LeadSource.SOCIAL_MEDIA,
+        status: "NEW",
+        campaignName: channel === "INSTAGRAM" ? "Instagram Direct / @softlabglobal" : "SoftLab Global Meta Page",
+      },
+      select: { id: true, fullName: true },
+    });
+  }
+
+  let convo = await db.omnichannelConversation.findFirst({
+    where: { channel, externalThreadId: senderId },
+    select: { id: true },
+  });
+
+  if (!convo) {
+    convo = await db.omnichannelConversation.create({
+      data: {
+        leadId: lead.id,
+        channel,
+        externalThreadId: senderId,
+        status: "NEEDS_HUMAN",
+        unreadCount: 1,
+      },
+      select: { id: true },
+    });
+  } else {
+    await db.omnichannelConversation.update({
+      where: { id: convo.id },
+      data: { lastMessageAt: new Date(), unreadCount: { increment: 1 } },
+    });
+  }
+
+  return db.omnichannelMessage.create({
+    data: {
+      conversationId: convo.id,
+      senderType: "LEAD",
+      senderName: lead.fullName,
+      channel,
+      messageType: "TEXT",
+      content: text,
+      status: "DELIVERED",
+      externalMsgId: externalMsgId || null,
+      rawPayload: rawPayload || undefined,
+    },
+    select: { id: true },
+  });
+}
 
 /**
  * Meta (Facebook & Instagram Lead Ads) Official Webhook
@@ -93,13 +166,50 @@ export async function POST(req: NextRequest) {
     // --------------------------------------------------------------------------
     // CASE A: Official Meta Graph Webhook Structure ({ object: "page", entry: [...] })
     // --------------------------------------------------------------------------
-    if (body.object === "page" && Array.isArray(body.entry)) {
+    if ((body.object === "page" || body.object === "instagram") && Array.isArray(body.entry)) {
       const results = [];
+      const socialChannel = body.object === "instagram" ? "INSTAGRAM" : "FACEBOOK_PAGE";
 
       for (const entry of body.entry) {
+        if (Array.isArray(entry.messaging)) {
+          for (const msgEvent of entry.messaging) {
+            const senderId = String(msgEvent?.sender?.id || "");
+            const text = String(msgEvent?.message?.text || "");
+            if (senderId && text && !msgEvent?.message?.is_echo) {
+              const saved = await persistSocialMessage({
+                channel: socialChannel,
+                senderId,
+                text,
+                externalMsgId: msgEvent?.message?.mid,
+                rawPayload: msgEvent,
+              });
+              if (saved) results.push({ socialMessageId: saved.id, channel: socialChannel });
+            }
+          }
+        }
+
         if (!Array.isArray(entry.changes)) continue;
 
         for (const change of entry.changes) {
+          if (change.field === "comments" || change.field === "messages") {
+            const val = change.value || {};
+            const senderId = String(val.from?.id || val.sender?.id || "");
+            const senderName = val.from?.username || val.from?.name || undefined;
+            const text = String(val.text || val.message?.text || "");
+            if (senderId && text) {
+              const saved = await persistSocialMessage({
+                channel: socialChannel,
+                senderId,
+                senderName,
+                text,
+                externalMsgId: val.id ? String(val.id) : undefined,
+                rawPayload: val,
+              });
+              if (saved) results.push({ socialMessageId: saved.id, channel: socialChannel });
+            }
+            continue;
+          }
+
           if (change.field !== "leadgen") continue;
 
           const val = change.value || {};
