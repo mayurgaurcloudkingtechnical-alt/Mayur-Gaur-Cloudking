@@ -116,10 +116,41 @@ export class WhatsAppBusinessService {
     const activePhoneId = config.phoneNumberId || this.phoneNumberId;
 
     if (!activeToken || !activePhoneId) {
-      const error =
-        "WhatsApp Cloud API not configured (missing WHATSAPP_ACCESS_TOKEN / WHATSAPP_PHONE_NUMBER_ID). Message NOT sent.";
-      console.error(`[WhatsAppBusinessService] ${error} to=${normalizedPhone}`);
-      return { success: false, messageId: "NOT_CONFIGURED", platform: "SIMULATED", error };
+      // Fallback to Self-Hosted Free Baileys WhatsApp Gateway on VPS (127.0.0.1:3099)
+      const localGatewayUrl = process.env.LOCAL_WHATSAPP_GATEWAY_URL || "http://127.0.0.1:3099";
+      const bodyText =
+        options.text ||
+        (options.mediaCaption ? `${options.mediaCaption} ${options.mediaUrl || ""}` : "") ||
+        `SoftLab Global notification (${options.templateName || "update"})`;
+      try {
+        const localRes = await fetch(`${localGatewayUrl}/send`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to: normalizedPhone, text: bodyText.trim() }),
+          signal: AbortSignal.timeout(8000),
+        });
+        const localData: any = await localRes.json().catch(() => ({}));
+        if (localRes.ok && localData.success) {
+          return {
+            success: true,
+            messageId: localData.messageId || `WA_LOCAL_${Date.now()}`,
+            platform: "CLOUD_API",
+          };
+        }
+        return {
+          success: false,
+          messageId: "LOCAL_WA_NOT_CONNECTED",
+          platform: "SIMULATED",
+          error: localData.error || "Self-hosted WhatsApp QR not scanned yet (open Admin -> Integrations Hub).",
+        };
+      } catch (localErr: any) {
+        return {
+          success: false,
+          messageId: "NOT_CONFIGURED",
+          platform: "SIMULATED",
+          error: localErr?.message || "WhatsApp Gateway offline.",
+        };
+      }
     }
 
     const post = async (payload: any) => {
