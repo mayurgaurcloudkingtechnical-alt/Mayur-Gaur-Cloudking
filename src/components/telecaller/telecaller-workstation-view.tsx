@@ -517,13 +517,33 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                           <Button
                             size="sm"
                             variant="outline"
-                            asChild
+                            onClick={async () => {
+                              const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                              try {
+                                const res = await fetch("/api/whatsapp/local", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    action: "phone_bridge_dial",
+                                    mode: "SIM_CALL",
+                                    to: clean,
+                                    leadId: lead.id,
+                                    contactName: lead.fullName,
+                                  }),
+                                });
+                                const d = await res.json();
+                                setWaToast(
+                                  d?.paired
+                                    ? `SIM Call sent to your paired phone (+91${clean}) & logged!`
+                                    : `Call logged for ${lead.fullName} (${clean}). Pair mobile in 'My WhatsApp & Call' -> 'Send Link to My WhatsApp' for auto-dial!`
+                                );
+                                setTimeout(() => setWaToast(null), 5000);
+                              } catch {}
+                            }}
                             className="border-slate-300 h-7 px-2.5 text-[11px] gap-1"
                           >
-                            <a href={`tel:${lead.phone}`}>
-                              <Phone className="h-3.5 w-3.5 text-blue-600" />
-                              Call
-                            </a>
+                            <Phone className="h-3.5 w-3.5 text-blue-600" />
+                            SIM Call
                           </Button>
                         </div>
                       </td>

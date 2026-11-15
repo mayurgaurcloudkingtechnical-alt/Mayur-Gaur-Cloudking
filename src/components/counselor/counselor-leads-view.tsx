@@ -784,8 +784,10 @@ export function CounselorLeadsView({
                                     alert(`SIM Call sent to your paired phone (${d.to}) & logged!`);
                                     return;
                                   }
+                                  alert(
+                                    `Call logged for ${lead.fullName} (${clean}). Pair your mobile in 'My WhatsApp & Call' -> 'Send Link to My WhatsApp' for 1-click SIM dialing!`
+                                  );
                                 } catch {}
-                                window.location.href = `tel:+91${clean}`;
                               }}
                               className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold flex items-center gap-1"
                               title={`Direct Call: ${lead.phone}`}

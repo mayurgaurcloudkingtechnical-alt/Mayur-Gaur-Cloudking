@@ -243,14 +243,24 @@ export function CallyzerWorkstationWidget({
 
     const cleanPhone = callContactPhone.replace(/\D/g, "").slice(-10);
 
-    // 1. Dial student number immediately via native device tel: protocol
-    if (typeof window !== "undefined") {
-      const dialAnchor = document.createElement("a");
-      dialAnchor.href = `tel:+91${cleanPhone}`;
-      dialAnchor.target = "_blank";
-      dialAnchor.rel = "noopener noreferrer";
-      dialAnchor.click();
-    }
+    // 1. Dial student number via inbuilt SoftLab Phone Bridge (no Windows "Pick an app" popup)
+    try {
+      const res = await fetch("/api/whatsapp/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "phone_bridge_dial",
+          mode: "SIM_CALL",
+          to: cleanPhone,
+          leadId: leadId || undefined,
+          contactName: callContactName || "Lead",
+        }),
+      });
+      const data = await res.json();
+      if (!data?.paired && typeof navigator !== "undefined" && /Android|iPhone|iPad/i.test(navigator.userAgent)) {
+        window.location.href = `tel:+91${cleanPhone}`;
+      }
+    } catch {}
 
     // 2. Start microphone recording
     await startAudioRecorder();

@@ -60,27 +60,31 @@ export default async function AdminDashboardPage() {
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-600">Registered Users</CardTitle>
-            <Users className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{userCount}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Across all 11 system roles</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/staff" className="block transition-transform hover:scale-[1.01]">
+          <Card className="h-full hover:border-emerald-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-semibold text-slate-600">Registered Users</CardTitle>
+              <Users className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">{userCount}</div>
+              <p className="text-xs text-slate-500 mt-0.5">Manage staff & users →</p>
+            </CardContent>
+          </Card>
+        </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-600">Documented Roles</CardTitle>
-            <Shield className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{roleCount}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Enforced with server RBAC</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/settings" className="block transition-transform hover:scale-[1.01]">
+          <Card className="h-full hover:border-emerald-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-semibold text-slate-600">Documented Roles</CardTitle>
+              <Shield className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">{roleCount}</div>
+              <p className="text-xs text-slate-500 mt-0.5">RBAC & permissions →</p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Link href="/admin/courses" className="block transition-transform hover:scale-[1.01]">
           <Card className="h-full border-emerald-100 hover:border-emerald-300">
@@ -108,16 +112,18 @@ export default async function AdminDashboardPage() {
           </Card>
         </Link>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs font-semibold text-slate-600">Audit Logs</CardTitle>
-            <Activity className="h-4 w-4 text-emerald-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">{auditCount}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Immutable security logs</p>
-          </CardContent>
-        </Card>
+        <Link href="/admin/operations" className="block transition-transform hover:scale-[1.01]">
+          <Card className="h-full hover:border-emerald-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-xs font-semibold text-slate-600">Audit Logs</CardTitle>
+              <Activity className="h-4 w-4 text-emerald-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">{auditCount}</div>
+              <p className="text-xs text-slate-500 mt-0.5">View live operations →</p>
+            </CardContent>
+          </Card>
+        </Link>
       </div>
 
       {/* Unified Multi-Platform Mission Control with Real-Time Live Tracking */}

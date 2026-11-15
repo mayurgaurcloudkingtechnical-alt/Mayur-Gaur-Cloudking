@@ -26,7 +26,7 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
     try {
       const [stRes, fdRes, phRes] = await Promise.all([
         fetch("/api/whatsapp/local?scope=mine", { cache: "no-store" }),
-        fetch("/api/whatsapp/local?action=feed", { cache: "no-store" }),
+        fetch("/api/whatsapp/local?action=feed&scope=mine", { cache: "no-store" }),
         fetch("/api/whatsapp/local?action=phone_status", { cache: "no-store" }),
       ]);
       if (stRes.ok) setWaStatus(await stRes.json());
@@ -196,20 +196,41 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                   <p className="text-slate-300 text-[11px]">
                     {phoneStatus?.paired
                       ? "Your mobile phone is paired! Clicking SIM Call or WA Call on PC dials directly on your phone."
-                      : "Scan this QR (or open the link on your phone) so PC SIM Call & WhatsApp Call buttons dial directly on your phone — 100% free inbuilt bridge."}
+                      : "Scan this QR with your Mobile Camera / Google Lens (NOT WhatsApp) — OR click 'Send Link to My WhatsApp' below and tap it on your phone!"}
                   </p>
                   {phoneStatus?.staffId && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const url = `${window.location.origin}/phone-bridge?staffId=${phoneStatus.staffId}`;
-                        navigator.clipboard?.writeText(url);
-                        setFeedback("Phone Link URL copied! Open it on your mobile browser.");
-                      }}
-                      className="text-[11px] text-cyan-300 underline hover:text-cyan-200"
-                    >
-                      Copy Mobile Phone Link URL
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await fetch("/api/whatsapp/local", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ action: "send_phone_link_wa", scope: "mine" }),
+                          });
+                          const d = await res.json();
+                          setFeedback(
+                            d?.success
+                              ? "Phone Link sent to your WhatsApp! Open it on your mobile phone."
+                              : d?.error || "Could not send link via WhatsApp."
+                          );
+                        }}
+                        className="text-[11px] px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold"
+                      >
+                        Send Link to My WhatsApp
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${window.location.origin}/phone-bridge?staffId=${phoneStatus.staffId}`;
+                          navigator.clipboard?.writeText(url);
+                          setFeedback("Phone Link URL copied! Open it in Chrome/Safari on your mobile phone.");
+                        }}
+                        className="text-[11px] text-cyan-300 underline hover:text-cyan-200"
+                      >
+                        Copy Mobile Phone Link URL
+                      </button>
+                    </div>
                   )}
                 </div>
                 {phoneStatus?.qrDataUrl && !phoneStatus?.paired && (
@@ -260,8 +281,9 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                           if (d?.paired) {
                             setFeedback(`SIM Call command sent to your paired phone (${d.to}) & logged!`);
                           } else {
-                            setFeedback(`Call logged! Opening device dialer for ${d.to || targetPhone}...`);
-                            window.location.href = `tel:+91${targetPhone.replace(/\D/g, "").slice(-10)}`;
+                            setFeedback(
+                              `SIM Call logged for ${d.to || targetPhone}. Pair your mobile via 'Send Link to My WhatsApp' above so it dials automatically on your phone (or use AI Call)!`
+                            );
                           }
                           loadAll();
                         }}

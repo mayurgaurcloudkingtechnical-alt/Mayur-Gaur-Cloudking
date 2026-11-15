@@ -77,11 +77,11 @@ export async function GET(req: NextRequest) {
   const sessionId = resolveSessionId(req, token);
 
   if (action === "feed") {
-    const [recentMessages, recentCalls, totalCourses, socialMessages, socialLeads] = await Promise.all([
+    const [recentMessages, recentCalls, totalCourses, socialMessages, socialLeads, gatewayHistory] = await Promise.all([
       db.omnichannelMessage.findMany({
         where: { channel: "WHATSAPP" },
         orderBy: { createdAt: "desc" },
-        take: 15,
+        take: 25,
         select: {
           id: true,
           senderType: true,
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest) {
       }),
       db.staffCallLog.findMany({
         orderBy: { createdAt: "desc" },
-        take: 12,
+        take: 20,
         select: {
           id: true,
           contactName: true,
@@ -110,7 +110,7 @@ export async function GET(req: NextRequest) {
       db.omnichannelMessage.findMany({
         where: { channel: { in: ["INSTAGRAM", "FACEBOOK_PAGE"] } },
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: 25,
         select: {
           id: true,
           channel: true,
@@ -123,9 +123,9 @@ export async function GET(req: NextRequest) {
         },
       }),
       db.lead.findMany({
-        where: { source: { in: ["SOCIAL_MEDIA", "META_LEAD_ADS", "FACEBOOK", "INSTAGRAM"] } },
+        where: { source: { in: ["SOCIAL_MEDIA", "META_ADS_FB", "META_ADS_IG"] } },
         orderBy: { createdAt: "desc" },
-        take: 20,
+        take: 25,
         select: {
           id: true,
           fullName: true,
@@ -137,10 +137,22 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       }),
+      fetch(`${WA_GATEWAY_URL}/history?sessionId=${encodeURIComponent(sessionId)}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(3000),
+      })
+        .then((r) => (r.ok ? r.json() : null))
+        .catch(() => null),
     ]);
+
+    const gatewayMessages = Array.isArray(gatewayHistory?.messages) ? gatewayHistory.messages : [];
+    const gatewayCalls = Array.isArray(gatewayHistory?.calls) ? gatewayHistory.calls : [];
+    const gatewayContacts = Array.isArray(gatewayHistory?.contacts) ? gatewayHistory.contacts : [];
+
     return NextResponse.json({
-      recentMessages,
-      recentCalls,
+      recentMessages: recentMessages.length > 0 ? recentMessages : gatewayMessages,
+      recentCalls: recentCalls.length > 0 ? recentCalls : gatewayCalls,
+      waContacts: gatewayContacts,
       totalCourses,
       socialMessages,
       socialLeads,
@@ -266,6 +278,31 @@ export async function POST(req: NextRequest) {
         select: { id: true, status: true },
       });
       return NextResponse.json({ success: true, messageId: saved.id, status: saved.status });
+    }
+
+    if (action === "send_phone_link_wa") {
+      const userId = String(token.sub);
+      const stRes = await fetch(`${WA_GATEWAY_URL}/status?sessionId=${encodeURIComponent(sessionId)}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(4000),
+      }).catch(() => null);
+      const stData = stRes && stRes.ok ? await stRes.json() : null;
+      const ownPhone = String(stData?.user?.id || "").split(":")[0].replace(/\D/g, "");
+      if (!ownPhone) {
+        return NextResponse.json({ success: false, error: "Connect your WhatsApp first or copy the link." }, { status: 400 });
+      }
+      const linkUrl = `https://lms.softlabglobal.com/phone-bridge?staffId=${encodeURIComponent(userId)}`;
+      const sendRes = await fetch(`${WA_GATEWAY_URL}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sessionId,
+          to: ownPhone,
+          text: `*SoftLab Global Phone Link*\nTap this link on your mobile phone to pair SIM & WhatsApp calling with your PC CRM:\n${linkUrl}`,
+        }),
+        signal: AbortSignal.timeout(8000),
+      });
+      return NextResponse.json(await sendRes.json(), { status: sendRes.status });
     }
 
     if (action === "phone_bridge_dial") {
