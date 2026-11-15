@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { MessageSquare, PhoneCall, RefreshCw, Send, BookOpen, CheckCircle2, X, Radio, Instagram, Globe } from "lucide-react";
+import { MessageSquare, PhoneCall, RefreshCw, Send, BookOpen, CheckCircle2, X, Radio, Instagram, Globe, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -13,6 +13,7 @@ interface MyWhatsAppConnectModalProps {
 
 export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppConnectModalProps) {
   const [waStatus, setWaStatus] = useState<any | null>(null);
+  const [phoneStatus, setPhoneStatus] = useState<any | null>(null);
   const [feed, setFeed] = useState<any | null>(null);
   const [targetPhone, setTargetPhone] = useState("");
   const [customMsg, setCustomMsg] = useState("");
@@ -23,12 +24,14 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
 
   const loadAll = useCallback(async () => {
     try {
-      const [stRes, fdRes] = await Promise.all([
+      const [stRes, fdRes, phRes] = await Promise.all([
         fetch("/api/whatsapp/local?scope=mine", { cache: "no-store" }),
         fetch("/api/whatsapp/local?action=feed", { cache: "no-store" }),
+        fetch("/api/whatsapp/local?action=phone_status", { cache: "no-store" }),
       ]);
       if (stRes.ok) setWaStatus(await stRes.json());
       if (fdRes.ok) setFeed(await fdRes.json());
+      if (phRes.ok) setPhoneStatus(await phRes.json());
     } catch {}
   }, []);
 
@@ -175,6 +178,47 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                 )}
               </div>
 
+              <div className="bg-indigo-950/40 border border-indigo-700/50 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="space-y-1.5 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-indigo-400" />
+                    <span className="font-bold text-sm">Inbuilt Phone Link (SIM & WA Call Bridge)</span>
+                    <Badge
+                      className={
+                        phoneStatus?.paired
+                          ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                          : "bg-slate-800 text-slate-300 border-slate-700"
+                      }
+                    >
+                      {phoneStatus?.paired ? "PHONE PAIRED" : "READY TO PAIR"}
+                    </Badge>
+                  </div>
+                  <p className="text-slate-300 text-[11px]">
+                    {phoneStatus?.paired
+                      ? "Your mobile phone is paired! Clicking SIM Call or WA Call on PC dials directly on your phone."
+                      : "Scan this QR (or open the link on your phone) so PC SIM Call & WhatsApp Call buttons dial directly on your phone — 100% free inbuilt bridge."}
+                  </p>
+                  {phoneStatus?.staffId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = `${window.location.origin}/phone-bridge?staffId=${phoneStatus.staffId}`;
+                        navigator.clipboard?.writeText(url);
+                        setFeedback("Phone Link URL copied! Open it on your mobile browser.");
+                      }}
+                      className="text-[11px] text-cyan-300 underline hover:text-cyan-200"
+                    >
+                      Copy Mobile Phone Link URL
+                    </button>
+                  )}
+                </div>
+                {phoneStatus?.qrDataUrl && !phoneStatus?.paired && (
+                  <div className="bg-white p-1.5 rounded-xl shrink-0">
+                    <img src={phoneStatus.qrDataUrl} alt="Phone Bridge QR" className="w-24 h-24" />
+                  </div>
+                )}
+              </div>
+
               <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="font-bold text-sm flex items-center gap-1.5">
@@ -190,7 +234,7 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                     className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-xs text-white"
                   />
                   {targetPhone.replace(/\D/g, "").length >= 10 && (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <a
                         href={`/ai-call?phone=${encodeURIComponent(targetPhone)}`}
                         target="_blank"
@@ -199,12 +243,58 @@ export function MyWhatsAppConnectModal({ open, onClose, userName }: MyWhatsAppCo
                       >
                         <Radio className="w-3.5 h-3.5" /> AI Call
                       </a>
-                      <a
-                        href={`tel:+91${targetPhone.replace(/\D/g, "").slice(-10)}`}
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await fetch("/api/whatsapp/local", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              action: "phone_bridge_dial",
+                              mode: "SIM_CALL",
+                              to: targetPhone,
+                              contactName: "CRM Contact",
+                            }),
+                          });
+                          const d = await res.json();
+                          if (d?.paired) {
+                            setFeedback(`SIM Call command sent to your paired phone (${d.to}) & logged!`);
+                          } else {
+                            setFeedback(`Call logged! Opening device dialer for ${d.to || targetPhone}...`);
+                            window.location.href = `tel:+91${targetPhone.replace(/\D/g, "").slice(-10)}`;
+                          }
+                          loadAll();
+                        }}
                         className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 font-semibold"
                       >
                         <PhoneCall className="w-3.5 h-3.5" /> SIM Call
-                      </a>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          const res = await fetch("/api/whatsapp/local", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              action: "phone_bridge_dial",
+                              mode: "WHATSAPP_CALL",
+                              to: targetPhone,
+                              contactName: "CRM Contact",
+                            }),
+                          });
+                          const d = await res.json();
+                          if (d?.paired) {
+                            setFeedback(`WhatsApp Call sent to your paired phone (${d.to}) & logged!`);
+                          } else {
+                            setFeedback(`WhatsApp Call logged! Opening WhatsApp for ${d.to || targetPhone}...`);
+                            window.open(`https://wa.me/91${targetPhone.replace(/\D/g, "").slice(-10)}`, "_blank");
+                          }
+                          loadAll();
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-emerald-800 hover:bg-emerald-700 text-emerald-100 border border-emerald-700 font-semibold"
+                      >
+                        <MessageSquare className="w-3.5 h-3.5" /> WA Call
+                      </button>
                     </div>
                   )}
                 </div>

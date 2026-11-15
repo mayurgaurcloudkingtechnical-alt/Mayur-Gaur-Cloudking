@@ -9,7 +9,11 @@ export default async function CommunicationsPage() {
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
     UserRoleCode.HR,
+    UserRoleCode.COUNSELOR,
+    UserRoleCode.TELECALLER,
+    UserRoleCode.PLACEMENT_OFFICER,
   ]);
 
   return (

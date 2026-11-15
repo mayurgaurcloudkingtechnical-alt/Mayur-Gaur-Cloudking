@@ -725,38 +725,73 @@ export function CounselorLeadsView({
                               <span>Qualify</span>
                             </Button>
 
-                            {/* 1-Click WhatsApp Automation */}
+                            {/* 1-Click Direct WhatsApp Delivery */}
                             <Button
                               size="sm"
-                              onClick={() => {
+                              onClick={async () => {
                                 const clean = lead.phone.replace(/\D/g, "").slice(-10);
                                 const counselorName = myProfile?.displayName || myProfile?.firstName || "Counselor";
                                 const counselorPhone = myProfile?.callingNumber || "+91 9196596975";
                                 const courseTitle = lead.course?.title || "our professional IT programs";
-                                const text = encodeURIComponent(
-                                  `Hello ${lead.fullName}! 👋 This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`
-                                );
-                                window.open(`https://wa.me/91${clean}?text=${text}`, "_blank");
+                                const msg = `Hello ${lead.fullName}! This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`;
+                                try {
+                                  const res = await fetch("/api/whatsapp/local", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      scope: "mine",
+                                      action: "send",
+                                      to: clean,
+                                      contactName: lead.fullName,
+                                      text: msg,
+                                    }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok && data?.success) {
+                                    alert(`WhatsApp delivered directly to ${lead.fullName} (${clean})!`);
+                                    return;
+                                  }
+                                } catch {}
+                                window.open(`https://wa.me/91${clean}?text=${encodeURIComponent(msg)}`, "_blank");
                               }}
                               className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
-                              title="1-Click WhatsApp Automation"
+                              title="1-Click Direct WhatsApp Delivery"
                             >
                               <MessageSquare className="h-3 w-3" />
                               <span>WhatsApp</span>
                             </Button>
 
-                            {/* 1-Click Calling Link */}
+                            {/* 1-Click Phone Bridge SIM Call */}
                             <Button
                               size="sm"
                               variant="outline"
-                              asChild
-                              className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold"
+                              onClick={async () => {
+                                const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                                try {
+                                  const res = await fetch("/api/whatsapp/local", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      action: "phone_bridge_dial",
+                                      mode: "SIM_CALL",
+                                      to: clean,
+                                      leadId: lead.id,
+                                      contactName: lead.fullName,
+                                    }),
+                                  });
+                                  const d = await res.json();
+                                  if (d?.paired) {
+                                    alert(`SIM Call sent to your paired phone (${d.to}) & logged!`);
+                                    return;
+                                  }
+                                } catch {}
+                                window.location.href = `tel:+91${clean}`;
+                              }}
+                              className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold flex items-center gap-1"
                               title={`Direct Call: ${lead.phone}`}
                             >
-                              <a href={`tel:${lead.phone.replace(/\D/g, "").slice(-10)}`}>
-                                <Phone className="h-3 w-3 text-blue-600" />
-                                <span>Call</span>
-                              </a>
+                              <Phone className="h-3 w-3 text-blue-600" />
+                              <span>Call</span>
                             </Button>
 
                             <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">

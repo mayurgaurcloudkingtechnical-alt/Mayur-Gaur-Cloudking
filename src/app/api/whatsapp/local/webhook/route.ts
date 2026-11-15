@@ -58,15 +58,23 @@ export async function POST(req: NextRequest) {
         });
       }
 
+      if (body.messageId) {
+        const existing = await db.omnichannelMessage.findFirst({
+          where: { externalMsgId: String(body.messageId) },
+          select: { id: true },
+        });
+        if (existing) return NextResponse.json({ ok: true, deduplicated: true });
+      }
+
       await db.omnichannelMessage.create({
         data: {
           conversationId: conv.id,
-          senderType: "STUDENT",
-          senderName: body.pushName || lead.fullName,
+          senderType: body.fromMe ? "STAFF" : "STUDENT",
+          senderName: body.fromMe ? "WhatsApp Staff" : body.pushName || lead.fullName,
           channel: "WHATSAPP",
           messageType: "TEXT",
           content: String(body.text || ""),
-          status: "DELIVERED",
+          status: body.fromMe ? "SENT" : "DELIVERED",
           externalMsgId: body.messageId || undefined,
         },
       });

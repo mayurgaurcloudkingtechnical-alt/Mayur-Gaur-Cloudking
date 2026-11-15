@@ -41,14 +41,15 @@ function resolveSessionId(req: NextRequest, token: any, bodyScope?: string) {
 
 async function buildBusinessCatalogueText() {
   const courses = await db.course.findMany({
-    where: { isPublished: true },
-    orderBy: { createdAt: "asc" },
+    where: { status: "PUBLISHED" },
+    orderBy: { sortOrder: "asc" },
     take: 15,
-    select: { title: true, slug: true, fee: true, durationWeeks: true },
+    select: { title: true, slug: true, baseFee: true, discountedFee: true, durationWeeks: true },
   });
 
   const lines = courses.map((c, idx) => {
-    const feeStr = c.fee ? `Rs.${Number(c.fee).toLocaleString("en-IN")}` : "Enquire";
+    const paise = c.discountedFee && c.discountedFee > 0 ? c.discountedFee : c.baseFee;
+    const feeStr = paise ? `Rs.${Math.round(paise / 100).toLocaleString("en-IN")}` : "Enquire";
     const durStr = c.durationWeeks ? `${c.durationWeeks} Wks` : "Flexible";
     return `${idx + 1}. *${c.title}* (${durStr} | ${feeStr})\n   https://www.softlabglobal.com/courses/${c.slug}`;
   });
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
           createdAt: true,
         },
       }),
-      db.course.count({ where: { isPublished: true } }),
+      db.course.count({ where: { status: "PUBLISHED" } }),
       db.omnichannelMessage.findMany({
         where: { channel: { in: ["INSTAGRAM", "FACEBOOK_PAGE"] } },
         orderBy: { createdAt: "desc" },
@@ -154,6 +155,15 @@ export async function GET(req: NextRequest) {
     });
   }
 
+  if (action === "phone_status") {
+    const res = await fetch(`${WA_GATEWAY_URL}/phone/status?staffId=${encodeURIComponent(String(token.sub))}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => null);
+    const data = res && res.ok ? await res.json() : { paired: false, pendingCommands: [] };
+    return NextResponse.json({ ...data, staffId: token.sub });
+  }
+
   try {
     const res = await fetch(`${WA_GATEWAY_URL}/status?sessionId=${encodeURIComponent(sessionId)}`, {
       cache: "no-store",
@@ -173,6 +183,15 @@ export async function POST(req: NextRequest) {
   const token = await getStaffToken(req);
   if (!token) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  if (action === "phone_status") {
+    const res = await fetch(`${WA_GATEWAY_URL}/phone/status?staffId=${encodeURIComponent(String(token.sub))}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => null);
+    const data = res && res.ok ? await res.json() : { paired: false, pendingCommands: [] };
+    return NextResponse.json({ ...data, staffId: token.sub });
   }
 
   try {
@@ -208,7 +227,16 @@ export async function POST(req: NextRequest) {
       let dispatched = false;
       const pageToken = process.env.META_PAGE_ACCESS_TOKEN;
       if (pageToken && convo.externalThreadId) {
-        try {
+        if (action === "phone_status") {
+    const res = await fetch(`${WA_GATEWAY_URL}/phone/status?staffId=${encodeURIComponent(String(token.sub))}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(3000),
+    }).catch(() => null);
+    const data = res && res.ok ? await res.json() : { paired: false, pendingCommands: [] };
+    return NextResponse.json({ ...data, staffId: token.sub });
+  }
+
+  try {
           const graphRes = await fetch(
             `https://graph.facebook.com/v21.0/me/messages?access_token=${encodeURIComponent(pageToken)}`,
             {
@@ -240,6 +268,53 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: true, messageId: saved.id, status: saved.status });
     }
 
+    if (action === "phone_bridge_dial") {
+      const targetPhone = String(body.to || "").replace(/\D/g, "").slice(-10);
+      if (targetPhone.length < 10) {
+        return NextResponse.json({ success: false, error: "Valid 10-digit phone required" }, { status: 400 });
+      }
+      const mode = body.mode === "WHATSAPP_CALL" ? "WHATSAPP_CALL" : "SIM_CALL";
+      const contactName = String(body.contactName || "Student / Lead");
+
+      const callLog = await db.staffCallLog.create({
+        data: {
+          userId: String(token.sub),
+          leadId: body.leadId ? String(body.leadId) : null,
+          contactName,
+          contactPhone: targetPhone,
+          callType: "OUTGOING",
+          callStatus: "INITIATED",
+          disposition: mode,
+          durationSeconds: 0,
+          notes: `[${mode === "WHATSAPP_CALL" ? "WhatsApp Call" : "SIM Call"}] Initiated by ${String(token.name || "Staff")}`,
+          roleCode: String(token.roleCode || "COUNSELOR"),
+        },
+        select: { id: true },
+      });
+
+      const bridgeRes = await fetch(`${WA_GATEWAY_URL}/phone/dial`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          staffId: String(token.sub),
+          to: `+91${targetPhone}`,
+          mode,
+          contactName,
+          callLogId: callLog.id,
+        }),
+        signal: AbortSignal.timeout(4000),
+      }).catch(() => null);
+      const bridgeData = bridgeRes && bridgeRes.ok ? await bridgeRes.json() : { paired: false };
+
+      return NextResponse.json({
+        success: true,
+        callLogId: callLog.id,
+        paired: Boolean(bridgeData?.paired),
+        mode,
+        to: `+91${targetPhone}`,
+      });
+    }
+
     const messageText =
       action === "send_catalogue" ? await buildBusinessCatalogueText() : String(body.text || "");
 
@@ -249,7 +324,64 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify({ sessionId, to: body.to, text: messageText }),
       signal: AbortSignal.timeout(10000),
     });
-    return NextResponse.json(await res.json(), { status: res.status });
+    const sendData = await res.json();
+
+    if (res.ok && sendData?.success) {
+      const digits = String(body.to || "").replace(/\D/g, "").slice(-10);
+      if (digits.length === 10) {
+        try {
+          let lead = await db.lead.findFirst({
+            where: { phone: { contains: digits } },
+            select: { id: true, fullName: true },
+          });
+          if (!lead) {
+            lead = await db.lead.create({
+              data: {
+                fullName: String(body.contactName || `WhatsApp ${digits}`),
+                phone: digits,
+                source: "WHATSAPP",
+                status: "CONTACTED",
+              },
+              select: { id: true, fullName: true },
+            });
+          }
+          let convo = await db.omnichannelConversation.findFirst({
+            where: { channel: "WHATSAPP", externalThreadId: { contains: digits } },
+            select: { id: true },
+          });
+          if (!convo) {
+            convo = await db.omnichannelConversation.create({
+              data: {
+                leadId: lead.id,
+                channel: "WHATSAPP",
+                externalThreadId: `91${digits}`,
+                status: "HUMAN_RESOLVED",
+              },
+              select: { id: true },
+            });
+          } else {
+            await db.omnichannelConversation.update({
+              where: { id: convo.id },
+              data: { lastMessageAt: new Date() },
+            });
+          }
+          await db.omnichannelMessage.create({
+            data: {
+              conversationId: convo.id,
+              senderType: "STAFF",
+              senderName: String(token.name || "SoftLab Staff"),
+              channel: "WHATSAPP",
+              messageType: "TEXT",
+              content: messageText,
+              status: "SENT",
+              externalMsgId: sendData.messageId ? String(sendData.messageId) : null,
+            },
+          });
+        } catch {}
+      }
+    }
+
+    return NextResponse.json(sendData, { status: res.status });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err?.message || "Failed" }, { status: 500 });
   }
