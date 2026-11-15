@@ -7,11 +7,12 @@ import { signOut } from "next-auth/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { SoftlabLogo } from "@/components/common/softlab-logo";
-import { LogOut, User as UserIcon, Menu } from "lucide-react";
+import { LogOut, User as UserIcon, Menu, MessageSquare } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { GlobalSearchDialog } from "@/components/common/global-search-dialog";
 import { NotificationBell } from "@/components/common/notification-bell";
 import { UserProfileModal } from "@/components/common/user-profile-modal";
+import { MyWhatsAppConnectModal } from "@/components/common/my-whatsapp-connect-modal";
 import { api } from "@/lib/trpc/react";
 import { ErrorBoundary } from "@/components/ui/error-boundary";
 
@@ -27,6 +28,7 @@ interface NavbarProps {
 
 export function Navbar({ user, onToggleSidebar }: NavbarProps) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isWaModalOpen, setIsWaModalOpen] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const { data: meData } = api.auth.me.useQuery(undefined, {
     staleTime: 30000,
@@ -62,6 +64,19 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
         </div>
 
         <div className="flex items-center gap-3 sm:gap-4">
+          {user?.roleCode !== "STUDENT" && (
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setIsWaModalOpen(true)}
+              className="border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 h-8 text-xs font-semibold gap-1.5"
+              title="Connect My WhatsApp QR, Live Message Status & Calling"
+            >
+              <MessageSquare className="h-3.5 w-3.5" />
+              <span className="hidden md:inline">My WhatsApp & Call</span>
+            </Button>
+          )}
           <ErrorBoundary fallback={<div className="w-8 h-8" />}>
             <NotificationBell />
           </ErrorBoundary>
@@ -115,6 +130,15 @@ export function Navbar({ user, onToggleSidebar }: NavbarProps) {
         <UserProfileModal
           isOpen={isProfileOpen}
           onClose={() => setIsProfileOpen(false)}
+        />
+      )}
+
+      {/* Per-Staff Live WhatsApp QR, Catalogue & CRM Calling */}
+      {isWaModalOpen && (
+        <MyWhatsAppConnectModal
+          open={isWaModalOpen}
+          onClose={() => setIsWaModalOpen(false)}
+          userName={`${user?.firstName || ""} ${user?.lastName || ""}`.trim()}
         />
       )}
     </>
