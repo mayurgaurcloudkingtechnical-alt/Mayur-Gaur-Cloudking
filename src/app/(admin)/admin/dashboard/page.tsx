@@ -53,9 +53,21 @@ export default async function AdminDashboardPage() {
         title="Operations & Administration ERP"
         description="Global institutional mission control, multi-platform telemetry, and real-time live tracking."
         action={
-          <Badge variant="default" className="text-xs uppercase bg-slate-900">
-            {user?.roleCode ? String(user.roleCode).replace(/_/g, " ") : "ADMIN"} • Mission Control Authority
-          </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link href="/admin/leads">
+              <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5">
+                <Sparkles className="h-3.5 w-3.5" /> Complete Lead DB & AI Import
+              </Button>
+            </Link>
+            <Link href="/admin/daily-reports">
+              <Button size="sm" variant="outline" className="text-xs font-semibold">
+                Approve Daily Reports
+              </Button>
+            </Link>
+            <Badge variant="default" className="text-xs uppercase bg-slate-900">
+              {user?.roleCode ? String(user.roleCode).replace(/_/g, " ") : "ADMIN"} • Mission Control Authority
+            </Badge>
+          </div>
         }
       />
 

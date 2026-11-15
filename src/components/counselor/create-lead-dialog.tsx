@@ -43,7 +43,12 @@ export function CreateLeadDialog({
   onSuccess,
   onProceedToApplication,
 }: CreateLeadDialogProps) {
-  const [activeTab, setActiveTab] = useState<"single" | "bulk">("single");
+  const [activeTab, setActiveTab] = useState<"single" | "bulk" | "smart">("single");
+  const [smartText, setSmartText] = useState("");
+  const [smartParsed, setSmartParsed] = useState<any[]>([]);
+  const [smartRequireApproval, setSmartRequireApproval] = useState(true);
+  const [smartAssignToId, setSmartAssignToId] = useState("");
+  const [smartBusy, setSmartBusy] = useState(false);
 
   // Single Lead Form State
   const [fullName, setFullName] = useState("");
@@ -294,6 +299,18 @@ export function CreateLeadDialog({
               >
                 <FileSpreadsheet className="w-3.5 h-3.5" />
                 <span>Upload CSV / Bulk Leads</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("smart")}
+                className={`px-3 py-1 rounded-md text-xs font-bold transition flex items-center gap-1.5 ${
+                  activeTab === "smart"
+                    ? "bg-indigo-600 text-white shadow-xs"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>AI Smart Capture (Any Format)</span>
               </button>
             </div>
           </DialogHeader>
@@ -558,6 +575,129 @@ export function CreateLeadDialog({
                 </Button>
               </DialogFooter>
             </form>
+          ) : (
+            <div className="space-y-3 pt-1">
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 text-xs text-indigo-900 space-y-1">
+                <div className="font-bold flex items-center gap-1.5">
+                  <Sparkles className="w-4 h-4 text-indigo-600" /> AI Any-Format Lead Capture
+                </div>
+                <p className="text-[11px] text-indigo-700">
+                  Paste data in ANY format (WhatsApp chat messages, Excel copy-paste, raw notes, JSON, or mixed phone lists). AI automatically extracts Name, Phone, Email, Course & City.
+                </p>
+              </div>
+              <textarea
+                rows={5}
+                placeholder="Paste any format here... e.g.:&#10;Rohan Gupta 9876543210 interested in Data Science from Lucknow&#10;Ananya Singh | 9123456789 | Python | ananya@gmail.com"
+                value={smartText}
+                onChange={(e) => setSmartText(e.target.value)}
+                className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 font-mono"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="flex items-center gap-1.5 text-xs text-slate-700 font-medium">
+                  <input
+                    type="checkbox"
+                    checked={smartRequireApproval}
+                    onChange={(e) => setSmartRequireApproval(e.target.checked)}
+                  />
+                  Stage as ON_HOLD (Wait for Manager / Super Admin Approval)
+                </label>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={smartBusy || !smartText.trim()}
+                  onClick={async () => {
+                    setSmartBusy(true);
+                    setErrorMsg(null);
+                    setBulkFeedback(null);
+                    try {
+                      const res = await fetch("/api/leads/smart-import", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ action: "parse", rawText: smartText }),
+                      });
+                      const d = await res.json();
+                      if (d.success) setSmartParsed(d.rows || []);
+                      else setErrorMsg(d.error || "Could not parse data.");
+                    } finally {
+                      setSmartBusy(false);
+                    }
+                  }}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs"
+                >
+                  {smartBusy ? "Analyzing..." : "AI Auto-Extract Leads"}
+                </Button>
+              </div>
+
+              {smartParsed.length > 0 && (
+                <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-slate-800">
+                      Extracted {smartParsed.length} Lead(s)
+                    </span>
+                    <select
+                      value={smartAssignToId}
+                      onChange={(e) => setSmartAssignToId(e.target.value)}
+                      className="text-xs border border-slate-300 rounded px-2 py-1 bg-white text-slate-700"
+                    >
+                      <option value="">Unassigned (Distribute Later)</option>
+                      {counselors.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.firstName} {c.lastName} ({c.roleCode})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="max-h-36 overflow-y-auto text-[11px] divide-y divide-slate-200 bg-white rounded border">
+                    {smartParsed.map((r, i) => (
+                      <div key={i} className="px-2 py-1.5 flex items-center justify-between gap-2">
+                        <span className="font-semibold text-slate-800">{r.fullName}</span>
+                        <span className="font-mono text-emerald-700">{r.phone}</span>
+                        <span className="text-slate-500 truncate max-w-[140px]">{r.course}</span>
+                        <span className="text-slate-400">{r.city}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={smartBusy}
+                      onClick={async () => {
+                        setSmartBusy(true);
+                        setErrorMsg(null);
+                        try {
+                          const res = await fetch("/api/leads/smart-import", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              action: "commit",
+                              rows: smartParsed,
+                              requireApproval: smartRequireApproval,
+                              assignToId: smartAssignToId || undefined,
+                            }),
+                          });
+                          const d = await res.json();
+                          if (d.success) {
+                            setBulkFeedback(d.message);
+                            setSmartParsed([]);
+                            setSmartText("");
+                            utils.crm.listLeads.invalidate();
+                            utils.crm.getStats.invalidate();
+                          } else {
+                            setErrorMsg(d.error || "Failed to store leads.");
+                          }
+                        } finally {
+                          setSmartBusy(false);
+                        }
+                      }}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                    >
+                      Store {smartParsed.length} Leads in CRM
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </Dialog>
