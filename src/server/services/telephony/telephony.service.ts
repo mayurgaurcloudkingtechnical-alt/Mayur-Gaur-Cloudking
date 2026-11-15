@@ -18,9 +18,10 @@ export interface TelephonyCallResponse {
   success: boolean;
   status: "INITIATED" | "RINGING" | "IN_PROGRESS" | "COMPLETED" | "BUSY" | "NO_ANSWER" | "FAILED" | "QUEUED";
   providerCallId: string;
-  provider: "TWILIO" | "EXOTEL" | "NONE";
+  provider: "TWILIO" | "EXOTEL" | "SELF_HOSTED" | "NONE";
   error?: string;
   callLogId?: string;
+  aiCallUrl?: string;
 }
 
 export class TelephonyService {
@@ -51,10 +52,14 @@ export class TelephonyService {
    * Retrieves active telephony provider configuration from DB or env
    */
   public static async getActiveProviderConfig(): Promise<{
-    provider: "TWILIO" | "EXOTEL" | "NONE";
+    provider: "TWILIO" | "EXOTEL" | "SELF_HOSTED" | "NONE";
     isConfigured: boolean;
     missingVars: string[];
   }> {
+    if (process.env.TELEPHONY_MODE === "SELF_HOSTED") {
+      return { provider: "SELF_HOSTED", isConfigured: true, missingVars: [] };
+    }
+
     // Check DB stored telephony settings first
     let dbSetting: any = null;
     try {
@@ -183,9 +188,17 @@ export class TelephonyService {
       },
     });
 
-    // 6. Dispatch to real telephony provider
+    // 6. Dispatch to real telephony provider (or Self-Hosted AI Voice + SIM Bridge)
     let callResult: TwilioCallResult | ExotelCallResult;
-    if (activeConfig.provider === "TWILIO") {
+    const aiCallUrl = `${baseUrl}/ai-call?callLogId=${encodeURIComponent(staffCallLog.id)}&leadId=${encodeURIComponent(params.leadId || "")}&name=${encodeURIComponent(params.leadName || "Student")}&phone=${encodeURIComponent(cleanPhone)}&course=${encodeURIComponent(params.courseTitle || "Full Stack & AI Programs")}`;
+
+    if (activeConfig.provider === "SELF_HOSTED") {
+      callResult = {
+        success: true,
+        providerCallId: `SLG_SELF_${staffCallLog.id.slice(-8).toUpperCase()}`,
+        status: "INITIATED",
+      };
+    } else if (activeConfig.provider === "TWILIO") {
       const twimlUrl = `${baseUrl}/api/telephony/twilio/voice?callLogId=${encodeURIComponent(staffCallLog.id)}&leadId=${encodeURIComponent(params.leadId || "")}&name=${encodeURIComponent(params.leadName || "Student")}&course=${encodeURIComponent(params.courseTitle || "Full Stack & AI Programs")}`;
       callResult = await TwilioVoiceProvider.makeCall({
         to: cleanPhone,
@@ -233,6 +246,7 @@ export class TelephonyService {
         providerCallId: callResult.providerCallId,
         provider: activeConfig.provider,
         callLogId: staffCallLog.id,
+        aiCallUrl,
       };
     } else {
       await db.staffCallLog.update({
