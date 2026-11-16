@@ -223,14 +223,16 @@ export function CredentialManagementPanel() {
             <thead className="border-b text-[11px] text-slate-500 uppercase">
               <tr>
                 <th className="py-2 pr-2">Student / Email</th>
-                <th className="py-2 pr-2">Type</th>
+                <th className="py-2 pr-2">Email Type</th>
                 <th className="py-2 pr-2">Status</th>
+                <th className="py-2 pr-2">Provider Msg ID</th>
+                <th className="py-2 pr-2">Timestamp / Error</th>
                 <th className="py-2 text-right">Retry</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {admissionEmails.length === 0 ? (
-                <tr><td colSpan={4} className="py-4 text-slate-400">No 3-email admission logs recorded yet.</td></tr>
+                <tr><td colSpan={6} className="py-4 text-slate-400">No 3-email admission logs recorded yet.</td></tr>
               ) : (
                 admissionEmails.map((em) => (
                   <tr key={em.id}>
@@ -238,11 +240,16 @@ export function CredentialManagementPanel() {
                       <div className="font-mono text-[11px]">{em.studentId}</div>
                       <div className="text-[11px] text-slate-500">{em.recipientEmail}</div>
                     </td>
-                    <td className="py-2 pr-2">{em.emailType}</td>
+                    <td className="py-2 pr-2 font-semibold">{em.emailType}</td>
                     <td className="py-2 pr-2">
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${em.status === "SENT" ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
-                        {em.status}
+                        {em.status} ({em.retryCount + 1})
                       </span>
+                    </td>
+                    <td className="py-2 pr-2 font-mono text-[10px] text-slate-600">{em.providerMessage || "-"}</td>
+                    <td className="py-2 pr-2 text-[10px] text-slate-500">
+                      {em.sentAt ? new Date(em.sentAt).toLocaleString() : new Date(em.createdAt).toLocaleString()}
+                      {em.errorMessage && <div className="text-rose-600">{em.errorMessage}</div>}
                     </td>
                     <td className="py-2 text-right">
                       {em.status !== "SENT" && (

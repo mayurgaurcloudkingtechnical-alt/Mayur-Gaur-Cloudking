@@ -154,6 +154,7 @@ export class StudentAdmissionNotificationService {
           where: { idempotencyKey: idemKey },
           update: {
             status,
+            providerMessage: res.messageId || null,
             errorMessage: res.reason || null,
             retryCount: { increment: 1 },
             ...(res.sent ? { sentAt: new Date() } : {}),
@@ -167,6 +168,7 @@ export class StudentAdmissionNotificationService {
             emailType,
             subject,
             status,
+            providerMessage: res.messageId || null,
             errorMessage: res.reason || null,
             sentAt: res.sent ? new Date() : null,
           },
@@ -252,11 +254,22 @@ export class StudentAdmissionNotificationService {
       </div>
     `;
 
-    const [s1, s2, s3] = await Promise.all([
-      dispatchSingleEmail("ADMISSION_CONFIRMATION", "Admission Confirmed — Welcome to SOFTLAB GLOBAL", email1Html),
-      dispatchSingleEmail("LMS_CREDENTIALS", "Your SOFTLAB GLOBAL LMS Login Credentials", email2Html),
-      dispatchSingleEmail("WELCOME_ACTIVATION", "Welcome to SOFTLAB GLOBAL — Your Learning Journey Starts Here", email3Html),
-    ]);
+    // Sequential dispatch prevents SMTP concurrency drops and guarantees independent tracking
+    const s1 = await dispatchSingleEmail(
+      "ADMISSION_CONFIRMATION",
+      "Admission Confirmed — Welcome to SOFTLAB GLOBAL",
+      email1Html
+    );
+    const s2 = await dispatchSingleEmail(
+      "LMS_CREDENTIALS",
+      "Your SOFTLAB GLOBAL LMS Login Details",
+      email2Html
+    );
+    const s3 = await dispatchSingleEmail(
+      "WELCOME_ACTIVATION",
+      "Welcome to SOFTLAB GLOBAL — Your Learning Journey Starts Here",
+      email3Html
+    );
 
     // Internal Management Hierarchy Notification (NO student password exposed; NO internal staff list exposed to student)
     try {
