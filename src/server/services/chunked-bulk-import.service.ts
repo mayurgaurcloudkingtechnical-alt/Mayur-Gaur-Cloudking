@@ -576,29 +576,32 @@ export class ChunkedBulkImportService {
       let chunkDuplicates = 0;
 
       if (validInsertRows.length > 0) {
-        await db.$transaction(async (tx) => {
-          const inserted = await tx.lead.createMany({
-            data: validInsertRows.map((v) => v.leadData),
-          });
-          chunkCreated = inserted.count;
-
-          const nonDupIds = validInsertRows.filter((v) => !v.isDuplicate).map((v) => v.rowId);
-          const dupIds = validInsertRows.filter((v) => v.isDuplicate).map((v) => v.rowId);
-          chunkDuplicates = dupIds.length;
-
-          if (nonDupIds.length > 0) {
-            await tx.leadImportRow.updateMany({
-              where: { id: { in: nonDupIds } },
-              data: { status: "STAGED" },
+        await db.$transaction(
+          async (tx) => {
+            const inserted = await tx.lead.createMany({
+              data: validInsertRows.map((v) => v.leadData),
             });
-          }
-          if (dupIds.length > 0) {
-            await tx.leadImportRow.updateMany({
-              where: { id: { in: dupIds } },
-              data: { status: "DUPLICATE_REVIEW" },
-            });
-          }
-        });
+            chunkCreated = inserted.count;
+
+            const nonDupIds = validInsertRows.filter((v) => !v.isDuplicate).map((v) => v.rowId);
+            const dupIds = validInsertRows.filter((v) => v.isDuplicate).map((v) => v.rowId);
+            chunkDuplicates = dupIds.length;
+
+            if (nonDupIds.length > 0) {
+              await tx.leadImportRow.updateMany({
+                where: { id: { in: nonDupIds } },
+                data: { status: "STAGED" },
+              });
+            }
+            if (dupIds.length > 0) {
+              await tx.leadImportRow.updateMany({
+                where: { id: { in: dupIds } },
+                data: { status: "DUPLICATE_REVIEW" },
+              });
+            }
+          },
+          { timeout: 60000, maxWait: 15000 }
+        );
       }
 
       if (failedRowUpdates.length > 0) {
