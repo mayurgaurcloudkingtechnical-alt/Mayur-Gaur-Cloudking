@@ -10,6 +10,7 @@ import { WhatsAppBusinessService } from "./whatsapp-business.service";
 import { AttendanceIntegrationService } from "./attendance-integration.service";
 import { VerificationEngineService } from "./verification/verification-engine.service";
 import { CentralNotificationEngine } from "./central-notification-engine.service";
+import { CredentialSecurityService, generateSecureTempPassword } from "./credential-security.service";
 
 export interface OnboardEmployeeInput {
   existingUserId?: string; // Link existing platform user (from User Management)
@@ -71,21 +72,31 @@ export interface OnboardEmployeeInput {
 
   // Step 5: Save as Draft or Immediate Activation
   status?: "DRAFT" | "ACTIVE" | "PENDING";
+  idempotencyKey?: string;
 }
 
 export class StaffOnboardingService {
   /**
-   * Generates a guaranteed unique, sequential Employee ID (e.g. SLG-EMP-2026-0001)
+   * Generates a guaranteed unique, monotonic Employee ID (e.g. SLG-EMP-2026-0016)
    */
   static async generateEmployeeId(): Promise<string> {
     const year = new Date().getFullYear();
-    const count = await db.staffProfile.count();
-    let seq = count + 1;
-    let employeeId = `SLG-EMP-${year}-${String(seq).padStart(4, "0")}`;
+    const prefix = `SLG-EMP-${year}-`;
+    const existing = await db.staffProfile.findMany({
+      where: { employeeId: { startsWith: prefix } },
+      select: { employeeId: true },
+    });
+    let maxSeq = 0;
+    for (const row of existing) {
+      const n = parseInt(row.employeeId.slice(prefix.length), 10);
+      if (!Number.isNaN(n) && n > maxSeq) maxSeq = n;
+    }
+    let seq = maxSeq + 1;
+    let employeeId = `${prefix}${String(seq).padStart(4, "0")}`;
 
     while (await db.staffProfile.findUnique({ where: { employeeId } })) {
       seq += 1;
-      employeeId = `SLG-EMP-${year}-${String(seq).padStart(4, "0")}`;
+      employeeId = `${prefix}${String(seq).padStart(4, "0")}`;
     }
     return employeeId;
   }
@@ -137,6 +148,34 @@ export class StaffOnboardingService {
 
     const primaryEmail = (input.officialEmail || input.personalEmail).trim().toLowerCase();
     const cleanPhone = input.phone?.trim() || null;
+
+    if (input.idempotencyKey?.trim()) {
+      const prior = await db.staffOnboardingIdempotency.findUnique({
+        where: { idempotencyKey: input.idempotencyKey.trim() },
+      });
+      if (prior) {
+        const [existingUser, existingStaff] = await Promise.all([
+          db.user.findUnique({ where: { id: prior.userId } }),
+          db.staffProfile.findUnique({ where: { id: prior.staffId } }),
+        ]);
+        if (existingUser && existingStaff) {
+          return {
+            success: true,
+            idempotentReplay: true,
+            employeeId: existingStaff.employeeId,
+            credentials: null,
+            user: {
+              id: existingUser.id,
+              email: existingUser.email,
+              name: `${existingUser.firstName} ${existingUser.lastName}`,
+              roleCode: existingUser.roleCode,
+            },
+            staffProfile: existingStaff,
+            message: `Idempotent replay: ${existingUser.firstName} ${existingUser.lastName} already onboarded (${existingStaff.employeeId}).`,
+          };
+        }
+      }
+    }
 
     // Check if user already exists or linking an existing user
     let user: any = null;
@@ -318,10 +357,14 @@ export class StaffOnboardingService {
           },
         });
 
-        // 5. If Trainer role, initialize TrainerProfile
+        // 5. If Trainer role, safely upsert TrainerProfile
         if (input.roleCode === UserRoleCode.TRAINER) {
-          await tx.trainerProfile.create({
-            data: {
+          await tx.trainerProfile.upsert({
+            where: { userId: user.id },
+            update: {
+              specializations: [input.designation.trim()],
+            },
+            create: {
               userId: user.id,
               specializations: [input.designation.trim()],
               experienceYears: 1,
@@ -351,8 +394,34 @@ export class StaffOnboardingService {
       { maxWait: 15000, timeout: 30000 }
     );
 
-    // Initialize Default Leave Balances
+    // Initialize Default Leave Balances & Store Encrypted Temporary Credential
     await AttendanceIntegrationService.getOrCreateLeaveBalances(result.staffProfile.id);
+    await CredentialSecurityService.storeEncryptedTempCredential({
+      targetUserId: result.user.id,
+      tempPassword,
+      issuedById: actor.id,
+      issuedReason: "ONBOARDING",
+      ttlHours: 72,
+    });
+
+    const idemKey = input.idempotencyKey?.trim() || `onboard:${primaryEmail}:${employeeId}`;
+    await db.staffOnboardingIdempotency.upsert({
+      where: { idempotencyKey: idemKey },
+      update: {
+        email: primaryEmail,
+        employeeId,
+        userId: result.user.id,
+        staffId: result.staffProfile.id,
+      },
+      create: {
+        idempotencyKey: idemKey,
+        email: primaryEmail,
+        employeeId,
+        userId: result.user.id,
+        staffId: result.staffProfile.id,
+        emailStatus: "PENDING",
+      },
+    });
 
     // Statutory KYC & Identity Verification
     if (input.panNumber && input.panNumber.trim()) {
@@ -516,5 +585,169 @@ export class StaffOnboardingService {
         ...(completionPercent === 100 ? { completedAt: new Date() } : {}),
       },
     });
+  }
+
+  /**
+   * Admin-only idempotent repair for incomplete or orphaned staff onboarding records.
+   * Ensures User, StaffProfile, TrainerProfile (if TRAINER), Checklist, LeaveBalance,
+   * and EncryptedTemporaryCredential exist without creating duplicates.
+   */
+  static async repairIncompleteOnboarding(
+    actor: AuthenticatedUser,
+    params: {
+      email: string;
+      employeeId?: string;
+      firstName?: string;
+      lastName?: string;
+      phone?: string;
+      department?: StaffDepartment;
+      designation?: string;
+      roleCode?: UserRoleCode;
+      branch?: string;
+      baseSalary?: number;
+      resetTempPassword?: boolean;
+    }
+  ) {
+    const allowed: UserRoleCode[] = [UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN, UserRoleCode.HR];
+    if (!allowed.includes(actor.roleCode)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and HR can repair staff onboarding." });
+    }
+
+    const cleanEmail = params.email.trim().toLowerCase();
+    const cleanPhone = params.phone?.trim() || null;
+    const roleCode = params.roleCode || UserRoleCode.TRAINER;
+    const department = params.department || StaffDepartment.TRAINING;
+    const designation = params.designation?.trim() || "Head Trainer";
+    const firstName = params.firstName?.trim() || "Head";
+    const lastName = params.lastName?.trim() || "Trainer";
+
+    const tempPassword = generateSecureTempPassword("SLG");
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+
+    const repaired = await db.$transaction(async (tx) => {
+      let user = await tx.user.findUnique({ where: { email: cleanEmail } });
+      if (!user) {
+        user = await tx.user.create({
+          data: {
+            email: cleanEmail,
+            phone: cleanPhone,
+            callingNumber: cleanPhone,
+            whatsappNumber: cleanPhone,
+            passwordHash,
+            firstName,
+            lastName,
+            roleCode,
+            status: "ACTIVE",
+          },
+        });
+      } else {
+        user = await tx.user.update({
+          where: { id: user.id },
+          data: {
+            roleCode,
+            status: "ACTIVE",
+            deletedAt: null,
+            ...(params.resetTempPassword !== false ? { passwordHash } : {}),
+          },
+        });
+      }
+
+      let staff = await tx.staffProfile.findUnique({ where: { userId: user.id } });
+      if (!staff && params.employeeId) {
+        staff = await tx.staffProfile.findUnique({ where: { employeeId: params.employeeId.trim() } });
+      }
+
+      const targetEmpId = staff?.employeeId || params.employeeId?.trim() || (await this.generateEmployeeId());
+
+      if (!staff) {
+        staff = await tx.staffProfile.create({
+          data: {
+            userId: user.id,
+            employeeId: targetEmpId,
+            department,
+            designation,
+            baseSalary: params.baseSalary ?? 4500000,
+            joiningDate: new Date(),
+            personalEmail: cleanEmail,
+            personalPhone: cleanPhone,
+            employmentType: "FULL_TIME",
+            branch: params.branch || "PRAYAGRAJ_MAIN",
+            workLocation: "PRAYAGRAJ_CAMPUS",
+            employmentStatus: "ACTIVE",
+            isActive: true,
+          },
+        });
+      } else {
+        staff = await tx.staffProfile.update({
+          where: { id: staff.id },
+          data: {
+            userId: user.id,
+            department,
+            designation,
+            employmentStatus: "ACTIVE",
+            isActive: true,
+          },
+        });
+      }
+
+      await tx.staffOnboardingChecklist.upsert({
+        where: { staffId: staff.id },
+        update: { roleAssignmentDone: true, hrmsProfileDone: true, emailAccountCreated: true },
+        create: {
+          staffId: staff.id,
+          personalDetailsDone: true,
+          workstationAssigned: true,
+          emailAccountCreated: true,
+          slackOrPortalInvited: true,
+          roleAssignmentDone: true,
+          crmAccessVerified: true,
+          hrmsProfileDone: true,
+          managerApprovalDone: true,
+          completionPercent: 75,
+          status: "IN_PROGRESS",
+        },
+      });
+
+      if (roleCode === UserRoleCode.TRAINER) {
+        await tx.trainerProfile.upsert({
+          where: { userId: user.id },
+          update: { specializations: [designation] },
+          create: { userId: user.id, specializations: [designation], experienceYears: 3 },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: "STAFF_ONBOARDING_REPAIRED",
+          resourceType: "StaffProfile",
+          resourceId: staff.id,
+          newData: { employeeId: staff.employeeId, email: cleanEmail, roleCode, designation, department },
+        },
+      });
+
+      return { user, staff };
+    });
+
+    await AttendanceIntegrationService.getOrCreateLeaveBalances(repaired.staff.id);
+    if (params.resetTempPassword !== false) {
+      await CredentialSecurityService.storeEncryptedTempCredential({
+        targetUserId: repaired.user.id,
+        tempPassword,
+        issuedById: actor.id,
+        issuedReason: "ONBOARDING",
+        ttlHours: 72,
+      });
+    }
+
+    return {
+      success: true,
+      userId: repaired.user.id,
+      staffId: repaired.staff.id,
+      employeeId: repaired.staff.employeeId,
+      email: repaired.user.email,
+      roleCode: repaired.user.roleCode,
+      temporaryPassword: params.resetTempPassword !== false ? tempPassword : null,
+    };
   }
 }

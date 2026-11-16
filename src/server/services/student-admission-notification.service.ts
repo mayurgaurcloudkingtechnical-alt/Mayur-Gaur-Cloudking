@@ -7,6 +7,7 @@ import { UserRoleCode } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import * as bcrypt from "bcryptjs";
 import * as crypto from "crypto";
+import { CredentialSecurityService, generateSecureTempPassword } from "./credential-security.service";
 
 export type PostcardChannel = "EMAIL" | "WHATSAPP" | "BOTH";
 export type CredentialMode = "KEEP_EXISTING" | "GENERATE_TEMPORARY";
@@ -96,38 +97,169 @@ export class StudentAdmissionNotificationService {
     input: StudentAdmissionNotificationInput
   ): Promise<{
     emailSent: boolean;
+    threeEmails: {
+      admissionConfirmation: string;
+      lmsCredentials: string;
+      welcomeActivation: string;
+    };
     whatsappSent: boolean;
     managementBcc: string;
   }> {
-    const loginEmail = input.loginEmail || input.studentEmail;
-    const tempPassword =
-      input.temporaryPassword === undefined
-        ? `SoftLab@2026!${input.studentId.replace(/\D/g, "").slice(-4) || "8888"}`
-        : input.temporaryPassword;
+    const loginEmail = (input.loginEmail || input.studentEmail).trim().toLowerCase();
     const cleanPhone = WhatsAppBusinessService.normalizePhone(input.studentPhone);
 
-    let emailSent = false;
-    let whatsappSent = false;
+    // Ensure User account exists and temporary password matches actual User.passwordHash
+    const studentUser = await db.user.findUnique({ where: { email: loginEmail } });
+    let actualTempPassword = input.temporaryPassword?.trim() || null;
 
-    // 1. Send Consolidated Email to Student + BCC to softlabglobal9@gmail.com
-    try {
-      const emailResult = await EmailService.sendConsolidatedAdmissionWelcomeEmail({
-        to: input.studentEmail,
-        studentName: input.studentName,
-        studentId: input.studentId,
-        admissionNumber: input.admissionNumber,
-        courseName: input.courseTitle,
-        specialization: input.specialization,
-        providerName: input.providerName,
-        loginEmail,
-        temporaryPassword: tempPassword,
-        counselorName: input.counselorName,
-        counselorPhone: input.counselorPhone,
+    if (studentUser && !actualTempPassword) {
+      actualTempPassword = generateSecureTempPassword("SLG");
+      const hash = await bcrypt.hash(actualTempPassword, 10);
+      await db.user.update({
+        where: { id: studentUser.id },
+        data: { passwordHash: hash, status: "ACTIVE" },
       });
-      emailSent = emailResult.sent;
-    } catch (err: any) {
-      console.error(`[StudentAdmissionNotificationService] Email error for ${input.studentEmail}:`, err.message);
     }
+
+    if (studentUser && actualTempPassword) {
+      await CredentialSecurityService.storeEncryptedTempCredential({
+        targetUserId: studentUser.id,
+        tempPassword: actualTempPassword,
+        issuedReason: "ADMISSION",
+        ttlHours: 72,
+      });
+    }
+
+    const dispatchSingleEmail = async (
+      emailType: "ADMISSION_CONFIRMATION" | "LMS_CREDENTIALS" | "WELCOME_ACTIVATION",
+      subject: string,
+      html: string
+    ): Promise<"SENT" | "FAILED"> => {
+      const idemKey = `adm-email:${input.studentId}:${emailType}:${input.admissionNumber}`;
+      const existing = await db.studentAdmissionEmailLog.findUnique({ where: { idempotencyKey: idemKey } });
+      if (existing?.status === "SENT") {
+        return "SENT";
+      }
+
+      try {
+        const res = await EmailService.sendEmail({
+          to: input.studentEmail,
+          bcc: EmailService.DEFAULT_MANAGEMENT_EMAIL,
+          subject,
+          html,
+        });
+        const status = res.sent ? "SENT" : "FAILED";
+        await db.studentAdmissionEmailLog.upsert({
+          where: { idempotencyKey: idemKey },
+          update: {
+            status,
+            errorMessage: res.reason || null,
+            retryCount: { increment: 1 },
+            ...(res.sent ? { sentAt: new Date() } : {}),
+          },
+          create: {
+            idempotencyKey: idemKey,
+            studentId: input.studentId,
+            admissionNumber: input.admissionNumber,
+            userId: studentUser?.id || null,
+            recipientEmail: input.studentEmail,
+            emailType,
+            subject,
+            status,
+            errorMessage: res.reason || null,
+            sentAt: res.sent ? new Date() : null,
+          },
+        });
+        return status;
+      } catch (err: any) {
+        await db.studentAdmissionEmailLog.upsert({
+          where: { idempotencyKey: idemKey },
+          update: { status: "FAILED", errorMessage: err.message, retryCount: { increment: 1 } },
+          create: {
+            idempotencyKey: idemKey,
+            studentId: input.studentId,
+            admissionNumber: input.admissionNumber,
+            userId: studentUser?.id || null,
+            recipientEmail: input.studentEmail,
+            emailType,
+            subject,
+            status: "FAILED",
+            errorMessage: err.message,
+          },
+        });
+        return "FAILED";
+      }
+    };
+
+    // EMAIL 1 — OFFICIAL ADMISSION CONFIRMATION
+    const email1Html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; color: #1e293b;">
+        <div style="background: #0f172a; color: #ffffff; padding: 20px 28px;">
+          <h2 style="margin: 0; color: #38bdf8;">SOFTLAB GLOBAL — ADMISSION CONFIRMED</h2>
+        </div>
+        <div style="padding: 24px 28px; line-height: 1.6;">
+          <p>Dear <strong>${input.studentName}</strong>,</p>
+          <p>Congratulations! Your admission to <strong>${input.courseTitle}</strong> has been officially confirmed.</p>
+          <ul>
+            <li><strong>Student ID:</strong> ${input.studentId}</li>
+            <li><strong>Admission Number:</strong> ${input.admissionNumber}</li>
+            <li><strong>Enrolled Course:</strong> ${input.courseTitle}${input.specialization ? ` (${input.specialization})` : ""}</li>
+            <li><strong>Campus / Provider:</strong> ${input.providerName || "SOFTLAB GLOBAL Main Campus, Civil Lines, Prayagraj"}</li>
+            <li><strong>Status:</strong> CONFIRMED</li>
+          </ul>
+          <p>Admissions Support: +91 9196596979 | WhatsApp: +91 9196596975</p>
+        </div>
+      </div>
+    `;
+
+    // EMAIL 2 — STUDENT LMS LOGIN CREDENTIALS
+    const email2Html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; color: #1e293b;">
+        <div style="background: #0284c7; color: #ffffff; padding: 20px 28px;">
+          <h2 style="margin: 0;">Your SOFTLAB GLOBAL LMS Login Credentials</h2>
+        </div>
+        <div style="padding: 24px 28px; line-height: 1.6;">
+          <p>Dear <strong>${input.studentName}</strong>,</p>
+          <p>Your Student LMS Portal account is active. Use the credentials below to sign in:</p>
+          <ul>
+            <li><strong>LMS Portal URL:</strong> <a href="https://lms.softlabglobal.com/login">https://lms.softlabglobal.com/login</a></li>
+            <li><strong>Student ID:</strong> ${input.studentId}</li>
+            <li><strong>Login Email:</strong> ${loginEmail}</li>
+            <li><strong>Temporary Password:</strong> <code>${actualTempPassword || "Issued separately"}</code></li>
+          </ul>
+          <p><strong>Security Notice:</strong> Please change your password immediately after your first login. If you need assistance, contact support@softlabglobal.com.</p>
+        </div>
+      </div>
+    `;
+
+    // EMAIL 3 — STUDENT WELCOME & LEARNING ACTIVATION
+    const email3Html = `
+      <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; color: #1e293b;">
+        <div style="background: #059669; color: #ffffff; padding: 20px 28px;">
+          <h2 style="margin: 0;">Welcome to SOFTLAB GLOBAL — Your Learning Journey Starts Here</h2>
+        </div>
+        <div style="padding: 24px 28px; line-height: 1.6;">
+          <p>Dear <strong>${input.studentName}</strong>,</p>
+          <p>Welcome aboard! Your learning workspace for <strong>${input.courseTitle}</strong> is now ready.</p>
+          <ul>
+            <li><strong>Student Dashboard &amp; Curriculum:</strong> <a href="https://lms.softlabglobal.com/student/dashboard">Open Student Dashboard</a></li>
+            <li><strong>Digital Student ID Card:</strong> Available under <em>Student Portal → ID Card</em> (${input.studentId})</li>
+            <li><strong>Practical Labs, Projects &amp; Assessments:</strong> Access topic-wise theory, labs, assignments, and exams directly in your course player.</li>
+            <li><strong>Support Desk:</strong> +91 9196596979 | ${input.counselorName ? `Counselor: ${input.counselorName}` : "Academic Support Team"}</li>
+          </ul>
+        </div>
+      </div>
+    `;
+
+    const [s1, s2, s3] = await Promise.all([
+      dispatchSingleEmail("ADMISSION_CONFIRMATION", "Admission Confirmed — Welcome to SOFTLAB GLOBAL", email1Html),
+      dispatchSingleEmail("LMS_CREDENTIALS", "Your SOFTLAB GLOBAL LMS Login Credentials", email2Html),
+      dispatchSingleEmail("WELCOME_ACTIVATION", "Welcome to SOFTLAB GLOBAL — Your Learning Journey Starts Here", email3Html),
+    ]);
+
+    const emailSent = s1 === "SENT" || s2 === "SENT" || s3 === "SENT";
+    const tempPassword = actualTempPassword;
+    let whatsappSent = false;
 
     // 2. Send Official Admission & Credentials Message to Student's WhatsApp
     try {
@@ -204,6 +336,11 @@ export class StudentAdmissionNotificationService {
 
     return {
       emailSent,
+      threeEmails: {
+        admissionConfirmation: s1,
+        lmsCredentials: s2,
+        welcomeActivation: s3,
+      },
       whatsappSent,
       managementBcc: EmailService.DEFAULT_MANAGEMENT_EMAIL,
     };

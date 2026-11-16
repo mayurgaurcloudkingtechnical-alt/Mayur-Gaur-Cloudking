@@ -6402,3 +6402,65 @@ model AcademicGenerationLog {
   @@index([status])
   @@map("academic_generation_logs")
 }
+
+// ==============================================================================
+// P0 RELIABILITY — ATOMIC ONBOARDING, 3-EMAIL ADMISSIONS & CREDENTIAL VAULT
+// ==============================================================================
+
+model StaffOnboardingIdempotency {
+  id             String   @id @default(cuid())
+  idempotencyKey String   @unique
+  email          String
+  employeeId     String
+  userId         String
+  staffId        String
+  emailStatus    String   @default("PENDING") // PENDING, SENT, FAILED
+  emailError     String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+  @@index([employeeId])
+  @@map("staff_onboarding_idempotency")
+}
+
+model StudentAdmissionEmailLog {
+  id              String    @id @default(cuid())
+  idempotencyKey  String    @unique
+  studentId       String
+  admissionNumber String?
+  userId          String?
+  recipientEmail  String
+  emailType       String    // ADMISSION_CONFIRMATION | LMS_CREDENTIALS | WELCOME_ACTIVATION
+  subject         String
+  status          String    @default("PENDING") // PENDING | SENT | FAILED
+  providerMessage String?
+  errorMessage    String?   @db.Text
+  retryCount      Int       @default(0)
+  sentAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([studentId, emailType])
+  @@index([status])
+  @@map("student_admission_email_logs")
+}
+
+model EncryptedTemporaryCredential {
+  id             String    @id @default(cuid())
+  targetUserId   String    @unique
+  encryptedValue String    @db.Text // AES-256-GCM: iv:tag:ciphertext
+  issuedById     String?
+  issuedReason   String    @default("ONBOARDING") // ONBOARDING | ADMISSION | ADMIN_RESET
+  expiresAt      DateTime
+  consumedAt     DateTime?
+  revokedAt      DateTime?
+  lastRevealedBy String?
+  lastRevealedAt DateTime?
+  revealCount    Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([expiresAt])
+  @@map("encrypted_temporary_credentials")
+}
