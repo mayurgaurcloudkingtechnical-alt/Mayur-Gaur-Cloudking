@@ -137,6 +137,42 @@ async function aiSmartParse(rawText: string): Promise<ParsedLeadRow[]> {
   return fallbackSmartParse(rawText);
 }
 
+function mapRemarksToDisposition(rawNotes: string): {
+  dispositionLabel: string;
+  qualityScore: "HOT" | "WARM" | "COLD";
+  nextFollowUp: Date | null;
+} {
+  const lower = (rawNotes || "").toLowerCase();
+  let dispositionLabel = "New Enquiry";
+  let qualityScore: "HOT" | "WARM" | "COLD" = "WARM";
+  let nextFollowUp: Date | null = null;
+
+  if (lower.includes("visit soon") || lower.includes("will visit") || lower.includes("campus visit")) {
+    dispositionLabel = "Interested / Visit Planned";
+    qualityScore = "HOT";
+  } else if (lower.includes("searching") || lower.includes("looking for") || lower.includes("classes") || lower.includes("course")) {
+    dispositionLabel = "Course Requirement Identified";
+    qualityScore = "HOT";
+  } else if (lower.includes("think about") || lower.includes("will think") || lower.includes("call back")) {
+    dispositionLabel = "Thinking / Follow-up Required";
+    qualityScore = "WARM";
+  } else if (lower.includes("didn't receive") || lower.includes("not reachable") || lower.includes("no answer")) {
+    dispositionLabel = "Not Connected";
+    qualityScore = "WARM";
+  } else if (lower.includes("cut the call") || lower.includes("disconnected")) {
+    dispositionLabel = "Call Disconnected";
+    qualityScore = "COLD";
+  }
+
+  const daysMatch = lower.match(/after\s+(\d+)\s+day/);
+  if (daysMatch) {
+    const days = Math.min(30, Math.max(1, parseInt(daysMatch[1], 10)));
+    nextFollowUp = new Date(Date.now() + days * 24 * 3600 * 1000);
+  }
+
+  return { dispositionLabel, qualityScore, nextFollowUp };
+}
+
 export async function POST(req: NextRequest) {
   const token = await getAuth(req);
   if (!token) {
@@ -165,49 +201,97 @@ export async function POST(req: NextRequest) {
       const role = String(token.roleCode || "");
       const hasAuthority = AUTHORITY_ROLES.includes(role);
       const requireApproval = hasAuthority ? Boolean(body.requireApproval) : true;
-      const assignToId = hasAuthority && body.assignToId ? String(body.assignToId) : null;
+
+      let assignToId: string | null = null;
+      if (hasAuthority && body.assignToId) {
+        const candidate = await db.user.findFirst({
+          where: { id: String(body.assignToId), status: "ACTIVE" },
+          select: { id: true },
+        });
+        assignToId = candidate?.id || null;
+      }
 
       let created = 0;
-      let skipped = 0;
+      let duplicateCount = 0;
+      let needsReviewCount = 0;
+      const seenPhones = new Set<string>();
+      const rowStatuses: Array<{ fullName: string; phone: string; status: string; disposition?: string }> = [];
 
       for (const r of rows) {
         const phone = String(r.phone || "").replace(/\D/g, "").slice(-10);
-        if (phone.length !== 10) {
-          skipped++;
+        if (!/^[6-9]\d{9}$/.test(phone)) {
+          needsReviewCount++;
+          rowStatuses.push({ fullName: r.fullName || "Unknown", phone, status: "NEEDS_REVIEW" });
           continue;
         }
+        // Phone-number-only duplicate detection (within upload & CRM)
+        if (seenPhones.has(phone)) {
+          duplicateCount++;
+          rowStatuses.push({ fullName: r.fullName, phone, status: "DUPLICATE" });
+          continue;
+        }
+        seenPhones.add(phone);
+
         const exists = await db.lead.findFirst({
-          where: { phone: { contains: phone } },
+          where: { phone },
           select: { id: true },
         });
         if (exists) {
-          skipped++;
+          duplicateCount++;
+          rowStatuses.push({ fullName: r.fullName, phone, status: "DUPLICATE" });
           continue;
         }
-        await db.lead.create({
+
+        const mapped = mapRemarksToDisposition(r.notes || "");
+        const lead = await db.lead.create({
           data: {
             fullName: String(r.fullName || `Lead ${phone.slice(-4)}`).slice(0, 100),
             phone,
-            email: r.email || null,
+            email: r.email || `${phone}@pending.softlabglobal.com`,
             city: r.city || "Prayagraj",
             source: LeadSource.BULK_UPLOAD,
             status: requireApproval ? LeadStatus.ON_HOLD : LeadStatus.NEW,
-            assignedToId,
-            notes: `[AI Smart Import${requireApproval ? " - Awaiting Manager/Super Admin Approval" : ""}] Course: ${r.course || "General"} | ${r.notes || ""}`.slice(0, 500),
+            qualityScore: mapped.qualityScore,
+            nextFollowUp: mapped.nextFollowUp,
+            assignedToId: assignToId,
+            notes: `[AI Smart Import${requireApproval ? " - Awaiting Manager/Super Admin Approval" : ""}] Disposition: ${mapped.dispositionLabel} | Course: ${r.course || "General"} | Original Remarks: ${r.notes || ""}`.slice(0, 500),
             campaignName: "AI_SMART_CAPTURE",
           },
         });
         created++;
+        rowStatuses.push({
+          fullName: lead.fullName,
+          phone,
+          status: requireApproval ? "ON_HOLD" : "IMPORTED",
+          disposition: mapped.dispositionLabel,
+        });
       }
+
+      const batchCode = `SLG-SMART-${Date.now().toString().slice(-6)}`;
+      await db.leadImportBatch.create({
+        data: {
+          batchCode,
+          uploaderId: String(token.sub),
+          fileName: "AI_Smart_Capture",
+          source: LeadSource.BULK_UPLOAD,
+          totalRows: rows.length,
+          createdCount: created,
+          updatedCount: 0,
+          failedCount: duplicateCount + needsReviewCount,
+          status: "COMPLETED",
+          completedAt: new Date(),
+        },
+      });
 
       return NextResponse.json({
         success: true,
+        batchCode,
         created,
-        skipped,
-        awaitingApproval: requireApproval,
-        message: requireApproval
-          ? `${created} leads captured & staged for Manager/Super Admin approval (${skipped} duplicates skipped).`
-          : `${created} leads stored & activated (${skipped} duplicates skipped).`,
+        skipped: duplicateCount + needsReviewCount,
+        duplicateCount,
+        needsReviewCount,
+        rowStatuses,
+        message: `${created} lead(s) stored (${requireApproval ? "ON_HOLD" : "NEW"}). ${duplicateCount} duplicate(s), ${needsReviewCount} needs review.`,
       });
     }
 

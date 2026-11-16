@@ -25,6 +25,7 @@ export interface StudentAdmissionNotificationInput {
   loginEmail?: string;
   counselorName?: string | null;
   counselorPhone?: string | null;
+  createdById?: string | null;
   leadId?: string | null;
 }
 
@@ -256,6 +257,55 @@ export class StudentAdmissionNotificationService {
       dispatchSingleEmail("LMS_CREDENTIALS", "Your SOFTLAB GLOBAL LMS Login Credentials", email2Html),
       dispatchSingleEmail("WELCOME_ACTIVATION", "Welcome to SOFTLAB GLOBAL — Your Learning Journey Starts Here", email3Html),
     ]);
+
+    // Internal Management Hierarchy Notification (NO student password exposed; NO internal staff list exposed to student)
+    try {
+      const managementRecipients = new Set<string>([EmailService.DEFAULT_MANAGEMENT_EMAIL]);
+      if (input.createdById) {
+        const creator = await db.user.findUnique({
+          where: { id: input.createdById },
+          select: {
+            email: true,
+            staffProfile: { select: { reportingManagerId: true } },
+          },
+        });
+        if (creator?.email) managementRecipients.add(creator.email.toLowerCase());
+        if (creator?.staffProfile?.reportingManagerId) {
+          const mgr = await db.staffProfile.findUnique({
+            where: { id: creator.staffProfile.reportingManagerId },
+            select: { user: { select: { email: true } } },
+          });
+          if (mgr?.user?.email) managementRecipients.add(mgr.user.email.toLowerCase());
+        }
+      }
+      const authorities = await db.higherAuthorityRecipient.findMany({
+        where: { isActive: true, notifyEmail: true },
+        select: { officialEmail: true },
+      });
+      authorities.forEach((a) => {
+        if (a.officialEmail) managementRecipients.add(a.officialEmail.toLowerCase());
+      });
+
+      const mgmtHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; color: #1e293b;">
+          <h3 style="color: #0f172a; margin-top: 0;">Internal Admission Alert — ${input.studentName} (${input.studentId})</h3>
+          <ul>
+            <li><strong>Admission No:</strong> ${input.admissionNumber}</li>
+            <li><strong>Course:</strong> ${input.courseTitle}</li>
+            <li><strong>Enrolling Counselor:</strong> ${input.counselorName || "Admissions Desk"}</li>
+            <li><strong>3-Email Status:</strong> Confirmation=${s1}, Credentials=${s2}, Welcome=${s3}</li>
+          </ul>
+          <p style="font-size: 12px; color: #64748b;">Note: Student login credentials are never included in internal management alerts.</p>
+        </div>
+      `;
+      await EmailService.sendEmail({
+        to: Array.from(managementRecipients).join(","),
+        subject: `[Internal] New Admission Confirmed: ${input.studentName} (${input.studentId})`,
+        html: mgmtHtml,
+      });
+    } catch (mgmtErr: any) {
+      console.warn("[StudentAdmissionNotificationService] Management hierarchy alert warning:", mgmtErr?.message);
+    }
 
     const emailSent = s1 === "SENT" || s2 === "SENT" || s3 === "SENT";
     const tempPassword = actualTempPassword;

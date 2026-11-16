@@ -726,29 +726,36 @@ export async function POST(req: NextRequest) {
       stagedIds.push(created.id);
     }
   } else {
+    const seenPhones = new Set<string>();
     for (const row of extracted) {
-      if (row.phone.length < 10 && !row.email.includes("@")) {
+      const cleanPhone = normalizePhone(row.phone);
+      const validPhone = /^[6-9]\d{9}$/.test(cleanPhone);
+      if (!validPhone) {
         invalidCount++;
         continue;
       }
+      // Phone-number-only duplicate detection (within upload + existing CRM)
+      if (seenPhones.has(cleanPhone)) {
+        duplicateCount++;
+        duplicates.push({ name: row.fullName, phone: cleanPhone, reason: "Duplicate phone in upload" });
+        continue;
+      }
+      seenPhones.add(cleanPhone);
+
       const existing = await db.lead.findFirst({
-        where: {
-          OR: [
-            ...(row.phone ? [{ phone: row.phone }] : []),
-            ...(row.email ? [{ email: row.email }] : []),
-          ],
-        },
+        where: { phone: cleanPhone },
+        select: { id: true },
       });
       if (existing) {
         duplicateCount++;
-        duplicates.push({ name: row.fullName, phone: row.phone, existingId: existing.id });
+        duplicates.push({ name: row.fullName, phone: cleanPhone, existingId: existing.id, reason: "Phone already exists in CRM" });
         continue;
       }
       const created = await db.lead.create({
         data: {
           fullName: row.fullName,
-          phone: row.phone || `0000000000`,
-          email: row.email || `${row.phone || "lead"}@pending.softlabglobal.com`,
+          phone: cleanPhone,
+          email: row.email || `${cleanPhone}@pending.softlabglobal.com`,
           city: row.city || null,
           qualification: row.courseOrCategory || null,
           source: LeadSource.BULK_UPLOAD,
