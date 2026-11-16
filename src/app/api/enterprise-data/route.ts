@@ -727,40 +727,45 @@ export async function POST(req: NextRequest) {
     }
   } else {
     const seenPhones = new Set<string>();
-    for (const row of extracted) {
+    for (let idx = 0; idx < extracted.length; idx++) {
+      const row = extracted[idx];
       const cleanPhone = normalizePhone(row.phone);
       const validPhone = /^[6-9]\d{9}$/.test(cleanPhone);
       if (!validPhone) {
         invalidCount++;
-        continue;
       }
-      // Phone-number-only duplicate detection (within upload + existing CRM)
-      if (seenPhones.has(cleanPhone)) {
-        duplicateCount++;
-        duplicates.push({ name: row.fullName, phone: cleanPhone, reason: "Duplicate phone in upload" });
-        continue;
-      }
-      seenPhones.add(cleanPhone);
+      const existing = validPhone
+        ? await db.lead.findFirst({ where: { phone: cleanPhone }, select: { id: true } })
+        : null;
+      const dupInUpload = validPhone && seenPhones.has(cleanPhone);
+      if (validPhone) seenPhones.add(cleanPhone);
 
-      const existing = await db.lead.findFirst({
-        where: { phone: cleanPhone },
-        select: { id: true },
-      });
-      if (existing) {
+      const isDup = Boolean(existing || dupInUpload);
+      if (isDup) {
         duplicateCount++;
-        duplicates.push({ name: row.fullName, phone: cleanPhone, existingId: existing.id, reason: "Phone already exists in CRM" });
-        continue;
+        duplicates.push({
+          name: row.fullName,
+          phone: cleanPhone,
+          existingId: existing?.id || null,
+          reason: existing ? "Matching phone in CRM (Preserved)" : "Duplicate phone in upload (Preserved)",
+        });
       }
+
       const created = await db.lead.create({
         data: {
           fullName: row.fullName,
-          phone: cleanPhone,
-          email: row.email || `${cleanPhone}@pending.softlabglobal.com`,
+          phone: cleanPhone || "0000000000",
+          email: row.email || `${cleanPhone || `rev${idx}`}@pending.softlabglobal.com`,
           city: row.city || null,
           qualification: row.courseOrCategory || null,
           source: LeadSource.BULK_UPLOAD,
           status: LeadStatus.ON_HOLD,
-          notes: `[AI-IMPORT-PENDING | Batch: ${batchCode}] ${row.notes}`,
+          duplicateOfLeadId: existing?.id || null,
+          duplicateStatus: isDup ? "DUPLICATE_REVIEW" : "NONE",
+          duplicateReviewMeta: isDup
+            ? { reason: existing ? "Matching phone in CRM" : "Duplicate phone in upload", preservedAt: new Date().toISOString() }
+            : undefined,
+          notes: `[AI-IMPORT-PENDING | Batch: ${batchCode}${isDup ? " | DUPLICATE_REVIEW" : ""}] ${row.notes}`,
         },
       });
       stagedCount++;

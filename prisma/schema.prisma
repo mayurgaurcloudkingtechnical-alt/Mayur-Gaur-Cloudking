@@ -992,6 +992,11 @@ model Lead {
   lastHandledById     String?
   callCount           Int       @default(0)
 
+  // Non-blocking Duplicate Review & Preservation
+  duplicateOfLeadId   String?
+  duplicateStatus     String?   // "NONE", "DUPLICATE_REVIEW", "PRESERVED", "MERGED"
+  duplicateReviewMeta Json?
+
   @@index([email])
   @@index([phone])
   @@index([status])

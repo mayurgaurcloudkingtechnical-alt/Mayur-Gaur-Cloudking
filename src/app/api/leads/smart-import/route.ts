@@ -189,7 +189,67 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "Paste any text/CSV/chat data first." }, { status: 400 });
       }
       const rows = await aiSmartParse(rawText);
-      return NextResponse.json({ success: true, rows, count: rows.length });
+      const phones = rows.map((r) => String(r.phone || "").replace(/\D/g, "").slice(-10)).filter((p) => p.length === 10);
+      const existingMatches = phones.length
+        ? await db.lead.findMany({
+            where: { phone: { in: phones } },
+            select: {
+              id: true,
+              fullName: true,
+              phone: true,
+              email: true,
+              createdAt: true,
+              assignedTo: { select: { firstName: true, lastName: true } },
+            },
+          })
+        : [];
+      const matchByPhone = new Map(existingMatches.map((m) => [m.phone, m]));
+      const seenInBatch = new Set<string>();
+      let duplicateCount = 0;
+
+      const enriched = rows.map((r, idx) => {
+        const cleanPhone = String(r.phone || "").replace(/\D/g, "").slice(-10);
+        const existing = matchByPhone.get(cleanPhone);
+        const dupInBatch = cleanPhone.length === 10 && seenInBatch.has(cleanPhone);
+        if (cleanPhone.length === 10) seenInBatch.add(cleanPhone);
+        const isDuplicate = Boolean(existing || dupInBatch);
+        if (isDuplicate) duplicateCount++;
+        return {
+          ...r,
+          rowIndex: idx,
+          isDuplicate,
+          duplicateReason: existing
+            ? "Matching phone in CRM"
+            : dupInBatch
+              ? "Duplicate phone in upload"
+              : null,
+          existingLead: existing
+            ? {
+                id: existing.id,
+                fullName: existing.fullName,
+                phone: existing.phone,
+                email: existing.email,
+                ownerName: existing.assignedTo
+                  ? `${existing.assignedTo.firstName} ${existing.assignedTo.lastName}`.trim()
+                  : "Unassigned",
+                createdAt: existing.createdAt,
+              }
+            : null,
+        };
+      });
+
+      return NextResponse.json({
+        success: true,
+        rows: enriched,
+        count: enriched.length,
+        summary: {
+          totalSubmitted: enriched.length,
+          validCount: enriched.filter((r) => String(r.phone || "").replace(/\D/g, "").slice(-10).length === 10).length,
+          newCount: enriched.length - duplicateCount,
+          duplicateCount,
+          invalidCount: enriched.filter((r) => String(r.phone || "").replace(/\D/g, "").slice(-10).length !== 10).length,
+        },
+      });
     }
 
     if (action === "commit") {
@@ -201,6 +261,7 @@ export async function POST(req: NextRequest) {
       const role = String(token.roleCode || "");
       const hasAuthority = AUTHORITY_ROLES.includes(role);
       const requireApproval = hasAuthority ? Boolean(body.requireApproval) : true;
+      const skipIndices = new Set<number>(Array.isArray(body.skipIndices) ? body.skipIndices.map(Number) : []);
 
       let assignToId: string | null = null;
       if (hasAuthority && body.assignToId) {
@@ -212,57 +273,58 @@ export async function POST(req: NextRequest) {
       }
 
       let created = 0;
-      let duplicateCount = 0;
+      let duplicatePreservedCount = 0;
+      let skippedByUserCount = 0;
       let needsReviewCount = 0;
       const seenPhones = new Set<string>();
       const rowStatuses: Array<{ fullName: string; phone: string; status: string; disposition?: string }> = [];
 
-      for (const r of rows) {
-        const phone = String(r.phone || "").replace(/\D/g, "").slice(-10);
-        if (!/^[6-9]\d{9}$/.test(phone)) {
-          needsReviewCount++;
-          rowStatuses.push({ fullName: r.fullName || "Unknown", phone, status: "NEEDS_REVIEW" });
+      for (let idx = 0; idx < rows.length; idx++) {
+        const r = rows[idx];
+        if (skipIndices.has(idx)) {
+          skippedByUserCount++;
+          rowStatuses.push({ fullName: r.fullName, phone: r.phone, status: "SKIPPED_BY_USER" });
           continue;
         }
-        // Phone-number-only duplicate detection (within upload & CRM)
-        if (seenPhones.has(phone)) {
-          duplicateCount++;
-          rowStatuses.push({ fullName: r.fullName, phone, status: "DUPLICATE" });
-          continue;
-        }
-        seenPhones.add(phone);
 
-        const exists = await db.lead.findFirst({
-          where: { phone },
-          select: { id: true },
-        });
-        if (exists) {
-          duplicateCount++;
-          rowStatuses.push({ fullName: r.fullName, phone, status: "DUPLICATE" });
-          continue;
-        }
+        const phone = String(r.phone || "").replace(/\D/g, "").slice(-10);
+        const isValidPhone = /^[6-9]\d{9}$/.test(phone);
+        const existing = isValidPhone
+          ? await db.lead.findFirst({ where: { phone }, select: { id: true } })
+          : null;
+        const dupInUpload = isValidPhone && seenPhones.has(phone);
+        if (isValidPhone) seenPhones.add(phone);
+
+        const isDup = Boolean(existing || dupInUpload);
+        if (isDup) duplicatePreservedCount++;
+        if (!isValidPhone) needsReviewCount++;
 
         const mapped = mapRemarksToDisposition(r.notes || "");
         const lead = await db.lead.create({
           data: {
-            fullName: String(r.fullName || `Lead ${phone.slice(-4)}`).slice(0, 100),
-            phone,
-            email: r.email || `${phone}@pending.softlabglobal.com`,
+            fullName: String(r.fullName || `Lead ${phone.slice(-4) || "Review"}`).slice(0, 100),
+            phone: phone || "0000000000",
+            email: r.email || `${phone || `rev${idx}`}@pending.softlabglobal.com`,
             city: r.city || "Prayagraj",
             source: LeadSource.BULK_UPLOAD,
             status: requireApproval ? LeadStatus.ON_HOLD : LeadStatus.NEW,
             qualityScore: mapped.qualityScore,
             nextFollowUp: mapped.nextFollowUp,
             assignedToId: assignToId,
-            notes: `[AI Smart Import${requireApproval ? " - Awaiting Manager/Super Admin Approval" : ""}] Disposition: ${mapped.dispositionLabel} | Course: ${r.course || "General"} | Original Remarks: ${r.notes || ""}`.slice(0, 500),
+            duplicateOfLeadId: existing?.id || null,
+            duplicateStatus: isDup ? "DUPLICATE_REVIEW" : "NONE",
+            duplicateReviewMeta: isDup
+              ? { reason: existing ? "Matching phone in CRM" : "Duplicate phone in upload", preservedAt: new Date().toISOString() }
+              : undefined,
+            notes: `[AI Smart Import${requireApproval ? " - Awaiting Approval" : ""}${isDup ? " | DUPLICATE_REVIEW" : ""}] Disposition: ${mapped.dispositionLabel} | Course: ${r.course || "General"} | Original Remarks: ${r.notes || ""}`.slice(0, 500),
             campaignName: "AI_SMART_CAPTURE",
           },
         });
         created++;
         rowStatuses.push({
           fullName: lead.fullName,
-          phone,
-          status: requireApproval ? "ON_HOLD" : "IMPORTED",
+          phone: lead.phone,
+          status: isDup ? "DUPLICATE_PRESERVED" : !isValidPhone ? "NEEDS_REVIEW" : requireApproval ? "ON_HOLD" : "IMPORTED",
           disposition: mapped.dispositionLabel,
         });
       }
@@ -277,21 +339,32 @@ export async function POST(req: NextRequest) {
           totalRows: rows.length,
           createdCount: created,
           updatedCount: 0,
-          failedCount: duplicateCount + needsReviewCount,
+          failedCount: skippedByUserCount,
           status: "COMPLETED",
           completedAt: new Date(),
+        },
+      });
+
+      await db.auditLog.create({
+        data: {
+          actorId: String(token.sub),
+          action: "CRM_SMART_IMPORT_PRESERVED_ALL",
+          resourceType: "LeadImportBatch",
+          resourceId: batchCode,
+          newData: { totalSubmitted: rows.length, created, duplicatePreservedCount, skippedByUserCount, needsReviewCount },
         },
       });
 
       return NextResponse.json({
         success: true,
         batchCode,
+        totalSubmitted: rows.length,
         created,
-        skipped: duplicateCount + needsReviewCount,
-        duplicateCount,
+        duplicatePreservedCount,
+        skippedByUserCount,
         needsReviewCount,
         rowStatuses,
-        message: `${created} lead(s) stored (${requireApproval ? "ON_HOLD" : "NEW"}). ${duplicateCount} duplicate(s), ${needsReviewCount} needs review.`,
+        message: `Uploaded ${created} of ${rows.length} lead(s) (${duplicatePreservedCount} duplicate(s) preserved, ${skippedByUserCount} skipped by user, ${needsReviewCount} flagged for review).`,
       });
     }
 

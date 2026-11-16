@@ -630,6 +630,11 @@ export function CreateLeadDialog({
 
               {smartParsed.length > 0 && (
                 <div className="space-y-2 border rounded-lg p-2.5 bg-slate-50">
+                  {smartParsed.some((r: any) => r.isDuplicate) && (
+                    <div className="bg-amber-50 border border-amber-300 text-amber-900 rounded px-2.5 py-1.5 text-[11px] font-semibold">
+                      {smartParsed.filter((r: any) => r.isDuplicate).length} potential duplicate record(s) detected. No records have been removed.
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <span className="text-xs font-bold text-slate-800">
                       Extracted {smartParsed.length} Lead(s)
@@ -647,17 +652,48 @@ export function CreateLeadDialog({
                       ))}
                     </select>
                   </div>
-                  <div className="max-h-36 overflow-y-auto text-[11px] divide-y divide-slate-200 bg-white rounded border">
-                    {smartParsed.map((r, i) => (
-                      <div key={i} className="px-2 py-1.5 flex items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-800">{r.fullName}</span>
+                  <div className="max-h-40 overflow-y-auto text-[11px] divide-y divide-slate-200 bg-white rounded border">
+                    {smartParsed.map((r: any, i: number) => (
+                      <div key={i} className="px-2 py-1.5 flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          {r.isDuplicate && (
+                            <label className="inline-flex items-center gap-1 text-[10px] text-rose-700 font-semibold">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(r._skip)}
+                                onChange={(e) => {
+                                  const next = [...smartParsed];
+                                  next[i] = { ...next[i], _skip: e.target.checked };
+                                  setSmartParsed(next);
+                                }}
+                              />
+                              Skip
+                            </label>
+                          )}
+                          <span className="font-semibold text-slate-800">{r.fullName}</span>
+                          {r.isDuplicate && (
+                            <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 text-[10px] font-semibold">
+                              {r.duplicateReason || "Duplicate"}
+                              {r.existingLead ? ` (Existing: ${r.existingLead.fullName} / ${r.existingLead.ownerName})` : ""}
+                            </span>
+                          )}
+                        </div>
                         <span className="font-mono text-emerald-700">{r.phone}</span>
-                        <span className="text-slate-500 truncate max-w-[140px]">{r.course}</span>
+                        <span className="text-slate-500 truncate max-w-[120px]">{r.course}</span>
                         <span className="text-slate-400">{r.city}</span>
                       </div>
                     ))}
                   </div>
-                  <div className="flex justify-end">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSmartParsed([])}
+                      className="text-xs"
+                    >
+                      Cancel Import
+                    </Button>
                     <Button
                       type="button"
                       size="sm"
@@ -666,12 +702,16 @@ export function CreateLeadDialog({
                         setSmartBusy(true);
                         setErrorMsg(null);
                         try {
+                          const skipIndices = smartParsed
+                            .map((r: any, idx: number) => (r._skip ? idx : -1))
+                            .filter((idx: number) => idx >= 0);
                           const res = await fetch("/api/leads/smart-import", {
                             method: "POST",
                             headers: { "Content-Type": "application/json" },
                             body: JSON.stringify({
                               action: "commit",
                               rows: smartParsed,
+                              skipIndices,
                               requireApproval: smartRequireApproval,
                               assignToId: smartAssignToId || undefined,
                             }),
@@ -692,7 +732,7 @@ export function CreateLeadDialog({
                       }}
                       className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
                     >
-                      Store {smartParsed.length} Leads in CRM
+                      Upload All {smartParsed.filter((r: any) => !r._skip).length} Leads
                     </Button>
                   </div>
                 </div>
