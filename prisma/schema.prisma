@@ -348,6 +348,9 @@ model User {
   // Callyzer Call Monitoring & Live Staff Tracking Relations
   staffCallLogs                    StaffCallLog[]                    @relation("UserCallLogs")
   staffLiveSession                 StaffLiveSession?                 @relation("UserLiveSession")
+  callyzerAllocationsDistributed   CallyzerAllocationBatch[]         @relation("CallyzerDistributor")
+  callyzerAllocatedLeads           CallyzerAllocationItem[]          @relation("CallyzerEmployeeLead")
+  callyzerMapping                  CallyzerEmployeeMapping?          @relation("UserCallyzerMapping")
 
   // Virtual Mock & Recruiter Interview Relations
   conductedMockInterviews          MockInterview[]                   @relation("MockInterviewer")
@@ -379,6 +382,8 @@ model User {
   slgReviewedReports               SlgDailyReport[]                  @relation("UserReviewedDailyReports")
   slgDeviceRegistrations           SlgDeviceRegistration[]           @relation("UserDeviceRegistrations")
   slgAuditLogs                     SlgAuditLog[]                     @relation("UserAuditLogs")
+  assignedThreads                  SlgConversationThread[]           @relation("AssignedUserThreads")
+  threadNotes                      SlgThreadNote[]                   @relation("AuthorThreadNotes")
 
   @@index([tenantId])
   @@index([email])
@@ -953,6 +958,9 @@ model Lead {
   callingQueueItems  CallingQueueItem[]
   staffCallLogs      StaffCallLog[]
   slgCallLogs        SlgCallLog[]
+  slgThreads         SlgConversationThread[]     @relation("LeadConversationThreads")
+  callyzerAllocations CallyzerAllocationItem[]
+  lastAllocatedAt     DateTime?
 
   // Omnichannel & Automation Relations
   timelineEvents       CustomerTimelineEvent[]
@@ -4255,6 +4263,70 @@ model StaffLiveSession {
   @@map("staff_live_sessions")
 }
 
+// ============================================================================
+// CALLYZER CENTRAL LEAD DATABASE, SMART DISTRIBUTION & NUMBER MAPPING
+// ============================================================================
+
+model CallyzerAllocationBatch {
+  id                     String                  @id @default(cuid())
+  batchNumber            String                  @unique
+  distributorId          String
+  distributor            User                    @relation("CallyzerDistributor", fields: [distributorId], references: [id], onDelete: Cascade)
+  distributionDate       DateTime                @default(now())
+  totalLeadsAllocated    Int                     @default(0)
+  telecallerQuotaDefault Int                     @default(150)
+  counselorQuotaDefault  Int                     @default(100)
+  idempotencyKey         String?                 @unique
+  notes                  String?
+  summary                Json?
+  createdAt              DateTime                @default(now())
+  items                  CallyzerAllocationItem[]
+
+  @@index([distributorId])
+  @@index([distributionDate])
+  @@map("callyzer_allocation_batches")
+}
+
+model CallyzerAllocationItem {
+  id            String                  @id @default(cuid())
+  batchId       String
+  batch         CallyzerAllocationBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  leadId        String
+  lead          Lead                    @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      User                    @relation("CallyzerEmployeeLead", fields: [employeeId], references: [id], onDelete: Cascade)
+  allocatedDate DateTime                @default(now())
+  status        String                  @default("ALLOCATED")
+  lastCalledAt  DateTime?
+  disposition   String?
+  createdAt     DateTime                @default(now())
+
+  @@index([batchId])
+  @@index([leadId])
+  @@index([employeeId])
+  @@index([allocatedDate])
+  @@index([status])
+  @@map("callyzer_allocation_items")
+}
+
+model CallyzerEmployeeMapping {
+  id                    String   @id @default(cuid())
+  userId                String   @unique
+  user                  User     @relation("UserCallyzerMapping", fields: [userId], references: [id], onDelete: Cascade)
+  businessPhoneNumber   String
+  extension             String?
+  simSlot               String?  @default("SIM1")
+  outboundCallerId      String?
+  isActive              Boolean  @default(true)
+  defaultDailyTarget    Int      @default(150)
+  allowLeadDistribution Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([businessPhoneNumber])
+  @@map("callyzer_employee_mappings")
+}
+
 // ==============================================================================
 // 41. LIVE VIRTUAL CLASSROOM, ATTENDANCE & AUTOMATED RECORDING PIPELINE
 // ==============================================================================
@@ -5282,6 +5354,20 @@ model Tenant {
   subscriptions              TenantSubscription[]
   auditLogs                  SlgAuditLog[]
   deviceRegistrations        SlgDeviceRegistration[]
+  conversationThreads        SlgConversationThread[]
+  messageEvents              SlgMessageEvent[]
+  whatsAppConfig             SlgWhatsAppConfig?
+  whatsAppTemplates          SlgWhatsAppTemplate[]
+  smsGatewayConfig           SlgSmsGatewayConfig?
+  communicationSequences     SlgCommunicationSequence[]
+  sequenceExecutions         SlgSequenceExecution[]
+  slaPolicies                SlgSlaPolicy[]
+  slaBreachIncidents         SlgSlaBreachIncident[]
+  usageRecords               SlgUsageRecord[]
+  onboarding                 SlgTenantOnboarding?
+  byopConfig                 SlgByopConfig?
+  usageEvents                SlgUsageEvent[]
+  supportTickets             SlgSupportTicket[]
 
   @@index([slug])
   @@index([status])
@@ -5855,4 +5941,464 @@ model LabExecutionLog {
   @@index([userId, createdAt])
   @@index([studentId])
   @@map("lab_execution_logs")
+}
+
+// ==============================================================================
+// SLG CALL INTELLIGENCE — PHASES 4 & 5 UNIFIED COMMUNICATIONS & MULTI-TENANT SAAS
+// ==============================================================================
+
+model SlgConversationThread {
+  id                 String            @id @default(cuid())
+  tenantId           String
+  tenant             Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  leadId             String?
+  lead               Lead?             @relation("LeadConversationThreads", fields: [leadId], references: [id], onDelete: SetNull)
+  studentId          String?
+  assignedUserId     String?
+  assignedUser       User?             @relation("AssignedUserThreads", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  customerPhone      String
+  customerName       String?
+  status             String            @default("OPEN")
+  lastChannel        String            @default("WHATSAPP")
+  lastMessageAt      DateTime          @default(now())
+  lastMessageSnippet String?           @db.VarChar(500)
+  unreadCount        Int               @default(0)
+  isAiHandled        Boolean           @default(false)
+  lastAiSummary      String?           @db.Text
+  priority           String            @default("MEDIUM")
+  detectedIntent     String?
+  sentiment          String?           @default("NEUTRAL")
+  followUpAt         DateTime?
+  aiSuggestedReplyEn String?           @db.Text
+  aiSuggestedReplyHi String?           @db.Text
+  resolvedAt         DateTime?
+  firstResponseAt    DateTime?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  messages           SlgMessageEvent[]
+  notes              SlgThreadNote[]
+
+  @@index([tenantId, customerPhone])
+  @@index([tenantId, assignedUserId])
+  @@index([tenantId, status])
+  @@index([tenantId, lastMessageAt])
+  @@index([tenantId, priority])
+  @@index([tenantId, detectedIntent])
+  @@index([tenantId, followUpAt])
+  @@map("slg_conversation_threads")
+}
+
+model SlgMessageEvent {
+  id                String                @id @default(cuid())
+  threadId          String
+  thread            SlgConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  tenantId          String
+  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  channel           String
+  direction         String
+  status            String                @default("SENT")
+  senderPhone       String
+  recipientPhone    String
+  messageBody       String                @db.Text
+  templateName      String?
+  templateParams    Json?
+  externalMessageId String?
+  mediaUrl          String?
+  mediaMimeType     String?
+  mediaSizeBytes    Int?
+  errorCode         String?
+  errorMessage      String?
+  sentAt            DateTime              @default(now())
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  rawMetadata       Json?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([threadId, createdAt])
+  @@index([tenantId, externalMessageId])
+  @@index([tenantId, recipientPhone])
+  @@map("slg_message_events")
+}
+
+model SlgWhatsAppConfig {
+  id                   String   @id @default(cuid())
+  tenantId             String   @unique
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  phoneNumberId        String
+  wabaId               String
+  displayPhoneNumber   String
+  encryptedAccessToken String   @db.Text
+  webhookVerifyToken   String
+  appSecretHash        String
+  status               String   @default("ACTIVE")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("slg_whatsapp_configs")
+}
+
+model SlgWhatsAppTemplate {
+  id               String   @id @default(cuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  templateName     String
+  language         String   @default("en")
+  category         String   @default("UTILITY")
+  metaTemplateId   String?
+  status           String   @default("APPROVED")
+  headerType       String?
+  bodyText         String   @db.Text
+  footerText       String?
+  buttonsJson      Json?
+  variableMappings Json?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId, templateName, language])
+  @@map("slg_whatsapp_templates")
+}
+
+model SlgSmsGatewayConfig {
+  id                 String   @id @default(cuid())
+  tenantId           String   @unique
+  tenant             Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  primaryProvider    String   @default("EXOTEL_SMS")
+  backupProvider     String?
+  dltEntityId        String?
+  defaultSenderId    String   @default("SFTLAB")
+  encryptedApiKey    String?  @db.Text
+  encryptedApiSecret String?  @db.Text
+  webhookSecret      String
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("slg_sms_gateway_configs")
+}
+
+model SlgThreadNote {
+  id           String                @id @default(cuid())
+  threadId     String
+  thread       SlgConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorUserId String
+  authorUser   User                  @relation("AuthorThreadNotes", fields: [authorUserId], references: [id], onDelete: Cascade)
+  noteText     String                @db.Text
+  isPrivate    Boolean               @default(true)
+  createdAt    DateTime              @default(now())
+
+  @@index([threadId, createdAt])
+  @@map("slg_thread_notes")
+}
+
+model SlgCommunicationSequence {
+  id               String                 @id @default(cuid())
+  tenantId         String
+  tenant           Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name             String                 @db.VarChar(200)
+  triggerType      String                 @db.VarChar(100)
+  channel          String                 @default("WHATSAPP") @db.VarChar(50)
+  templateName     String?                @db.VarChar(150)
+  messageBody      String?                @db.Text
+  delayMinutes     Int                    @default(0)
+  branchId         String?
+  departmentId     String?
+  requiresApproval Boolean                @default(false)
+  isActive         Boolean                @default(true)
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+
+  executions       SlgSequenceExecution[]
+
+  @@index([tenantId, triggerType])
+  @@index([tenantId, isActive])
+  @@map("slg_communication_sequences")
+}
+
+model SlgSequenceExecution {
+  id             String                   @id @default(cuid())
+  sequenceId     String
+  sequence       SlgCommunicationSequence @relation(fields: [sequenceId], references: [id], onDelete: Cascade)
+  tenantId       String
+  tenant         Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  threadId       String?
+  leadId         String?
+  customerPhone  String                   @db.VarChar(50)
+  status         String                   @default("SCHEDULED") @db.VarChar(50)
+  scheduledAt    DateTime                 @default(now())
+  executedAt     DateTime?
+  idempotencyKey String                   @unique @db.VarChar(255)
+  retryCount     Int                      @default(0)
+  errorMessage   String?                  @db.Text
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, scheduledAt])
+  @@map("slg_sequence_executions")
+}
+
+model SlgSlaPolicy {
+  id                      String                 @id @default(cuid())
+  tenantId                String
+  tenant                  Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  name                    String                 @db.VarChar(200)
+  channel                 String                 @default("ALL") @db.VarChar(50)
+  priority                String                 @default("ALL") @db.VarChar(50)
+  maxFirstResponseMinutes Int                    @default(15)
+  maxResolutionMinutes    Int                    @default(120)
+  escalationRole          String?                @db.VarChar(100)
+  branchId                String?
+  departmentId            String?
+  isActive                Boolean                @default(true)
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  breachIncidents         SlgSlaBreachIncident[]
+
+  @@index([tenantId, isActive])
+  @@map("slg_sla_policies")
+}
+
+model SlgSlaBreachIncident {
+  id                String        @id @default(cuid())
+  tenantId          String
+  tenant            Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  policyId          String?
+  policy            SlgSlaPolicy? @relation(fields: [policyId], references: [id], onDelete: SetNull)
+  threadId          String?
+  callLogId         String?
+  breachType        String        @db.VarChar(100)
+  targetMinutes     Int
+  actualMinutes     Int
+  assignedUserId    String?
+  escalatedToUserId String?
+  status            String        @default("OPEN") @db.VarChar(50)
+  acknowledgedAt    DateTime?
+  resolvedAt        DateTime?
+  details           Json?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([tenantId, status])
+  @@index([tenantId, createdAt])
+  @@map("slg_sla_breach_incidents")
+}
+
+model SlgUsageRecord {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  billingCycle String   @db.VarChar(50)
+  metricName   String   @db.VarChar(100)
+  metricValue  Int      @default(0)
+  quotaLimit   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([tenantId, billingCycle, metricName])
+  @@index([tenantId, billingCycle])
+  @@map("slg_usage_records")
+}
+
+model SlgTenantOnboarding {
+  id                    String    @id @default(cuid())
+  tenantId              String    @unique
+  tenant                Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  adminUserId           String
+  adminEmail            String    @db.VarChar(255)
+  officialPhone         String?   @db.VarChar(50)
+  country               String    @default("India") @db.VarChar(100)
+  state                 String?   @db.VarChar(100)
+  city                  String?   @db.VarChar(100)
+  address               String?   @db.Text
+  currency              String    @default("INR") @db.VarChar(10)
+  emailVerified         Boolean   @default(false)
+  emailVerifiedAt       DateTime?
+  verificationTokenHash String?   @db.VarChar(128)
+  verificationExpiresAt DateTime?
+  resendCount           Int       @default(0)
+  lastResentAt          DateTime?
+  onboardingStatus      String    @default("PENDING_EMAIL_VERIFICATION") @db.VarChar(50)
+  currentStep           Int       @default(1)
+  completedSteps        Json      @default("[]")
+  checklistState        Json      @default("{}")
+  registrationIp        String?   @db.VarChar(100)
+  completedAt           DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([adminEmail])
+  @@index([onboardingStatus])
+  @@index([verificationTokenHash])
+  @@map("slg_tenant_onboardings")
+}
+
+model SlgByopConfig {
+  id                          String    @id @default(cuid())
+  tenantId                    String    @unique
+  tenant                      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  telephonyProvider           String    @default("ANDROID_SIM") @db.VarChar(50)
+  telephonyAccountSid         String?   @db.VarChar(150)
+  telephonySubdomain          String?   @db.VarChar(150)
+  telephonyVirtualNumber      String?   @db.VarChar(50)
+  encryptedTelephonyApiKey    String?   @db.Text
+  encryptedTelephonyAuthToken String?   @db.Text
+  telephonyStatus             String    @default("CONFIGURED_UNTESTED") @db.VarChar(50)
+  storageProvider             String    @default("PLATFORM_MANAGED") @db.VarChar(50)
+  storageBucket               String?   @db.VarChar(150)
+  storageRegion               String?   @default("auto") @db.VarChar(80)
+  storageEndpoint             String?   @db.VarChar(255)
+  encryptedStorageAccessKey   String?   @db.Text
+  encryptedStorageSecretKey   String?   @db.Text
+  storageStatus               String    @default("VERIFIED") @db.VarChar(50)
+  aiProvider                  String    @default("PLATFORM_DEFAULT") @db.VarChar(50)
+  aiModelName                 String    @default("gemini-1.5-flash") @db.VarChar(100)
+  encryptedAiApiKey           String?   @db.Text
+  aiStatus                    String    @default("VERIFIED") @db.VarChar(50)
+  encryptedWebhookSecret      String    @db.Text
+  webhookTokenHash            String    @db.VarChar(128)
+  lastTestedAt                DateTime?
+  lastTestSummary             Json?     @default("{}")
+  createdAt                   DateTime  @default(now())
+  updatedAt                   DateTime  @updatedAt
+
+  @@index([telephonyProvider])
+  @@map("slg_byop_configs")
+}
+
+model SlgPlatformConfig {
+  id                       String   @id @default("global")
+  allowPublicRegistration  Boolean  @default(true)
+  requireEmailVerification Boolean  @default(true)
+  defaultTrialDays         Int      @default(14)
+  supplierLegalName        String   @default("SoftLab Global Technologies Pvt Ltd") @db.VarChar(200)
+  supplierGstin            String   @default("09AFYFS5388G1ZX") @db.VarChar(30)
+  supplierSacCode          String   @default("998315") @db.VarChar(20)
+  gstRatePercent           Int      @default(18)
+  planOverridesJson        Json     @default("{}")
+  updatedByUserId          String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@map("slg_platform_configs")
+}
+
+model SlgUsageEvent {
+  id             String   @id @default(cuid())
+  tenantId       String
+  tenant         Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  billingCycle   String   @db.VarChar(16)
+  metricName     String   @db.VarChar(80)
+  idempotencyKey String   @unique @db.VarChar(160)
+  amount         Int      @default(1)
+  sourceUserId   String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([tenantId, billingCycle])
+  @@map("slg_usage_events")
+}
+
+model SlgSupportTicket {
+  id               String    @id @default(cuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUserId  String
+  subject          String    @db.VarChar(200)
+  category         String    @default("TECHNICAL") @db.VarChar(60)
+  priority         String    @default("NORMAL") @db.VarChar(30)
+  description      String    @db.Text
+  status           String    @default("OPEN") @db.VarChar(40)
+  resolutionNotes  String?   @db.Text
+  resolvedByUserId String?
+  resolvedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([tenantId, status])
+  @@map("slg_support_tickets")
+}
+
+// ==============================================================================
+// SOFTLAB GLOBAL — AI ACADEMIC CONTENT ENGINE
+// ==============================================================================
+
+model AcademicSourceRegistry {
+  id                 String    @id @default(cuid())
+  name               String
+  baseUrl            String    @unique
+  sourceType         String    @default("REFERENCE_PORTAL") // REFERENCE_PORTAL, OFFICIAL_DOCS, OER
+  subjectCategories  String[]  @default([])
+  topicMappingsJson  Json?     // [{ courseSlug, topic, referenceUrl, attribution }]
+  accessStatus       String    @default("LINK_ONLY") // LINK_ONLY, PERMITTED_API, LICENSED
+  licenseStatus      String    @default("ATTRIBUTION_REQUIRED_NO_SCRAPE")
+  attributionText    String?   @db.Text
+  lastVerifiedAt     DateTime?
+  isActive           Boolean   @default(true)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("academic_source_registry")
+}
+
+model ProjectEvaluationRubric {
+  id           String   @id @default(cuid())
+  category     String   @unique // e.g. "SOFTWARE_ENGINEERING", "DATA_SCIENCE", "NETWORKING_CYBER", "SAP_ERP", "DESIGN_MARKETING", "GENERAL"
+  criteriaJson Json     // [{ key, label, weightPercent, description }]
+  isDefault    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("project_evaluation_rubrics")
+}
+
+model CourseProjectPlan {
+  id                    String   @id @default(cuid())
+  courseId              String
+  title                 String
+  projectType           String   // "MINOR" | "MAJOR"
+  semester              Int      @default(1) // 1 or 2 (for 12-month / 52-week courses)
+  sortOrder             Int      @default(1)
+  coveredModuleIds      String[] @default([])
+  coveredTopicIds       String[] @default([])
+  coveredTopicTitles    String[] @default([])
+  objectives            String   @db.Text
+  problemStatement      String   @db.Text
+  prerequisiteKnowledge String?  @db.Text
+  requiredTools         String?  @db.Text
+  functionalReqsJson    Json?
+  milestonesJson        Json?
+  practicalStepsJson    Json?
+  deliverablesJson      Json?
+  testingReqs           String?  @db.Text
+  rubricJson            Json?
+  vivaQuestionsJson     Json?
+  submissionFormat      String   @default("GitHub Repo / Report PDF / Live Demo")
+  status                String   @default("PUBLISHED") // DRAFT, PUBLISHED, NEEDS_REVIEW
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([courseId, semester, projectType])
+  @@map("course_project_plans")
+}
+
+model AcademicGenerationLog {
+  id               String    @id @default(cuid())
+  courseId         String
+  moduleId         String?
+  lessonId         String?
+  stage            String    // RESEARCH, GENERATION, VALIDATION, PUBLISHED, CORRECTION_QUEUE, ROLLBACK
+  status           String    // PASS, REJECTED, PENDING_REVIEW, ROLLED_BACK
+  confidenceScore  Int       @default(90)
+  sourceUrls       String[]  @default([])
+  validationErrors Json?
+  versionId        String?
+  triggeredById    String?
+  createdAt        DateTime  @default(now())
+
+  @@index([courseId, stage])
+  @@index([status])
+  @@map("academic_generation_logs")
 }
