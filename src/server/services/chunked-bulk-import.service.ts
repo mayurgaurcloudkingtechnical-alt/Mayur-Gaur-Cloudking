@@ -293,34 +293,65 @@ export class ChunkedBulkImportService {
       },
     });
 
-    // Stage LeadImportRow records in fast batches of 2,000
-    const STAGE_SIZE = 2000;
-    for (let offset = 0; offset < totalRows; offset += STAGE_SIZE) {
-      const slice = input.leads.slice(offset, offset + STAGE_SIZE);
-      await db.leadImportRow.createMany({
-        data: slice.map((item, idx) => {
-          const rowIndex = offset + idx + 1;
-          return {
-            batchId: batch.id,
-            rowIndex,
-            idempotencyKey: `${batch.id}:${rowIndex}`,
-            rawPayload: item as unknown as object,
-            normalizedPhone: normalizeIndianPhone(item.phone),
-            status: "PENDING",
-          };
-        }),
-        skipDuplicates: true,
-      });
-    }
-
-    // Launch non-blocking chunk processor
-    this.scheduleWorker(batch.id, actor, {
+    // Stage LeadImportRow records & run chunked processor asynchronously so POST returns immediately even for 100,000+ rows
+    this.scheduleStagingAndWorker(batch.id, actor, input.leads, {
       targetStatus: input.targetStatus ?? LeadStatus.ON_HOLD,
       captureMethod: input.captureMethod || "BULK_CSV_XLSX",
       defaultSource: input.source ?? LeadSource.BULK_UPLOAD,
     });
 
     return batch;
+  }
+
+  static scheduleStagingAndWorker(
+    batchId: string,
+    actor: ImportActor,
+    leads: ParsedBulkLeadInput[],
+    options?: { targetStatus?: LeadStatus; captureMethod?: string; defaultSource?: LeadSource }
+  ) {
+    if (activeBatchWorkers.has(batchId)) return;
+    activeBatchWorkers.add(batchId);
+
+    setImmediate(async () => {
+      try {
+        await db.leadImportBatch.update({
+          where: { id: batchId },
+          data: { status: "PROCESSING", isPaused: false },
+        });
+
+        const STAGE_SIZE = 2000;
+        for (let offset = 0; offset < leads.length; offset += STAGE_SIZE) {
+          const slice = leads.slice(offset, offset + STAGE_SIZE);
+          await db.leadImportRow.createMany({
+            data: slice.map((item, idx) => {
+              const rowIndex = offset + idx + 1;
+              return {
+                batchId,
+                rowIndex,
+                idempotencyKey: `${batchId}:${rowIndex}`,
+                rawPayload: item as unknown as object,
+                normalizedPhone: normalizeIndianPhone(item.phone),
+                status: "PENDING",
+              };
+            }),
+            skipDuplicates: true,
+          });
+        }
+
+        await this.processLoop(batchId, actor, options);
+      } catch (err) {
+        await db.leadImportBatch.update({
+          where: { id: batchId },
+          data: {
+            status: "FAILED",
+            lastError: err instanceof Error ? err.message : "Staging/chunk worker crashed",
+            completedAt: new Date(),
+          },
+        });
+      } finally {
+        activeBatchWorkers.delete(batchId);
+      }
+    });
   }
 
   static scheduleWorker(
