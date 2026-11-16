@@ -626,11 +626,19 @@ export class StaffOnboardingService {
 
     const repaired = await db.$transaction(async (tx) => {
       let user = await tx.user.findUnique({ where: { email: cleanEmail } });
+      const phoneTaken = cleanPhone
+        ? await tx.user.findFirst({
+            where: { phone: cleanPhone, ...(user ? { id: { not: user.id } } : {}) },
+            select: { id: true },
+          })
+        : null;
+      const safeUserPhone = phoneTaken ? null : cleanPhone;
+
       if (!user) {
         user = await tx.user.create({
           data: {
             email: cleanEmail,
-            phone: cleanPhone,
+            phone: safeUserPhone,
             callingNumber: cleanPhone,
             whatsappNumber: cleanPhone,
             passwordHash,
