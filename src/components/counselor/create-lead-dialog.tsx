@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "@/lib/trpc/react";
 import {
   Dialog,
@@ -69,6 +69,21 @@ export function CreateLeadDialog({
   const [bulkFeedback, setBulkFeedback] = useState<string | null>(null);
   const [rowErrors, setRowErrors] = useState<Array<{ row: number; reason: string }>>([]);
   const [selectedFileName, setSelectedFileName] = useState<string>("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isSubmittingBulk, setIsSubmittingBulk] = useState(false);
+  const [activeBatch, setActiveBatch] = useState<{
+    id: string;
+    batchCode: string;
+    status: string;
+    totalRows: number;
+    processedRows: number;
+    createdCount: number;
+    duplicateCount: number;
+    failedCount: number;
+    currentChunk: number;
+    totalChunks: number;
+    progressPercent: number;
+  } | null>(null);
 
   // Instant Action State
   const [instantLead, setInstantLead] = useState<LeadActionTarget | null>(null);
@@ -148,18 +163,88 @@ export function CreateLeadDialog({
     },
   });
 
+  const parseJsonSafely = async (res: Response) => {
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.includes("application/json")) {
+      const text = await res.text();
+      throw new Error(`Server returned non-JSON response (${res.status}): ${text.slice(0, 120)}`);
+    }
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json?.error || `Request failed with status ${res.status}`);
+    }
+    return json;
+  };
+
+  useEffect(() => {
+    if (!activeBatch?.id) return;
+    if (!["QUEUED", "PROCESSING"].includes(activeBatch.status)) return;
+
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/leads/bulk-import?batchId=${encodeURIComponent(activeBatch.id)}`);
+        const data = await parseJsonSafely(res);
+        if (data?.batch) {
+          setActiveBatch(data.batch);
+          if (["COMPLETED", "COMPLETED_WITH_ERRORS", "FAILED", "CANCELLED"].includes(data.batch.status)) {
+            utils.crm.listLeads.invalidate();
+            utils.crm.getStats.invalidate();
+            utils.crm.getPipelineOverview.invalidate();
+            utils.crm.listImportBatches.invalidate();
+            setBulkFeedback(
+              `Batch ${data.batch.batchCode} (${data.batch.status}): Created ${data.batch.createdCount}/${data.batch.totalRows} leads in ON_HOLD (${data.batch.duplicateCount || 0} duplicates flagged & preserved, ${data.batch.failedCount || 0} failed).`
+            );
+            if (Array.isArray(data.batch.errorSummary)) {
+              setRowErrors(data.batch.errorSummary);
+            }
+          }
+        }
+      } catch (err: any) {
+        setErrorMsg(err?.message || "Failed to poll import progress.");
+      }
+    }, 1200);
+
+    return () => clearInterval(timer);
+  }, [activeBatch?.id, activeBatch?.status, utils]);
+
+  const handleBatchAction = async (action: "PAUSE" | "RESUME" | "CANCEL" | "RETRY_FAILED") => {
+    if (!activeBatch?.id) return;
+    if (action === "CANCEL" && !window.confirm("Cancel this bulk import job? Already processed chunks will remain saved.")) {
+      return;
+    }
+    try {
+      setErrorMsg(null);
+      const res = await fetch("/api/leads/bulk-import", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ batchId: activeBatch.id, action }),
+      });
+      const data = await parseJsonSafely(res);
+      if (data?.batch) {
+        setActiveBatch((prev) => ({ ...(prev || {}), ...data.batch }));
+      }
+    } catch (err: any) {
+      setErrorMsg(err?.message || `Failed to ${action.toLowerCase()} batch.`);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setSelectedFileName(file.name);
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const text = event.target?.result as string;
-      if (text) {
-        setCsvText(text);
-      }
-    };
-    reader.readAsText(file);
+    setSelectedFile(file);
+    setSelectedFileName(`${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    setErrorMsg(null);
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    if (["csv", "txt", "json"].includes(ext) && file.size <= 512 * 1024) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        if (text) setCsvText(text);
+      };
+      reader.readAsText(file);
+    } else {
+      setCsvText("");
+    }
   };
 
   const handleSubmitSingle = (e: React.FormEvent) => {
@@ -187,66 +272,57 @@ export function CreateLeadDialog({
     });
   };
 
-  const handleBulkSubmit = (e: React.FormEvent) => {
+  const handleBulkSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
     setBulkFeedback(null);
+    setRowErrors([]);
 
-    if (!csvText.trim()) {
-      setErrorMsg("Please paste CSV data or candidate rows.");
+    if (!selectedFile && !csvText.trim()) {
+      setErrorMsg("Please select a CSV/XLSX/TXT/JSON/PDF file or paste candidate rows.");
       return;
     }
 
-    const lines = csvText.split("\n").map((l) => l.trim()).filter(Boolean);
-    const leadsToImport: Array<{
-      fullName: string;
-      phone: string;
-      email?: string;
-      city?: string;
-      courseName?: string;
-      source?: LeadSource;
-      notes?: string;
-    }> = [];
-
-    for (const line of lines) {
-      const lower = line.toLowerCase();
-      if (
-        lower.startsWith("name") ||
-        lower.startsWith("full name") ||
-        lower.startsWith("candidate name") ||
-        lower.startsWith("\"candidate name")
-      ) {
-        continue;
+    setIsSubmittingBulk(true);
+    try {
+      let res: Response;
+      if (selectedFile) {
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        formData.append("chunkSize", "500");
+        formData.append("targetStatus", "ON_HOLD");
+        formData.append("source", "BULK_UPLOAD");
+        res = await fetch("/api/leads/bulk-import", {
+          method: "POST",
+          body: formData,
+        });
+      } else {
+        res = await fetch("/api/leads/bulk-import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: selectedFileName || "batch_upload.csv",
+            rawText: csvText,
+            chunkSize: 500,
+            targetStatus: "ON_HOLD",
+            source: "BULK_UPLOAD",
+          }),
+        });
       }
-      const parts = line
-        .split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)
-        .map((p) => p.replace(/^"|"$/g, "").trim());
-      if (parts.length >= 2) {
-        const rawName = parts[0];
-        const rawPh = parts[1].replace(/\D/g, "").slice(-10);
-        if (rawName && rawPh.length === 10) {
-          leadsToImport.push({
-            fullName: rawName,
-            phone: rawPh,
-            email: parts[2] || undefined,
-            courseName: parts[3] || undefined,
-            city: parts[4] || "Prayagraj",
-            source: LeadSource.BULK_UPLOAD,
-            notes: "Uploaded via Bulk Lead Assistant",
-          });
-        }
+
+      const data = await parseJsonSafely(res);
+      if (data?.batch) {
+        setActiveBatch(data.batch);
+        setBulkFeedback(
+          data.message ||
+            `Queued ${data.batch.totalRows} leads across ${data.batch.totalChunks} chunks in ON_HOLD.`
+        );
       }
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to start chunked bulk import.");
+    } finally {
+      setIsSubmittingBulk(false);
     }
-
-    if (leadsToImport.length === 0) {
-      setErrorMsg("No valid lead rows found. Format required: Name, Phone (10 digits), Email, Course");
-      return;
-    }
-
-    bulkMutation.mutate({
-      fileName: selectedFileName || "batch_upload.csv",
-      leads: leadsToImport,
-    });
   };
 
   const handleProceedApplication = (lead: LeadActionTarget) => {
@@ -507,7 +583,7 @@ export function CreateLeadDialog({
                       <span>{selectedFileName ? "Change File" : "Choose File"}</span>
                       <input
                         type="file"
-                        accept=".csv,.txt"
+                        accept=".csv,.xlsx,.xls,.txt,.json,.pdf"
                         onChange={handleFileChange}
                         className="hidden"
                       />
@@ -516,24 +592,78 @@ export function CreateLeadDialog({
                 </div>
                 {selectedFileName && (
                   <div className="text-[11px] text-emerald-700 font-medium">
-                    Loaded file: {selectedFileName}
+                    Loaded file: {selectedFileName} {selectedFile && selectedFile.size > 512 * 1024 ? "(Streamed directly to chunked import engine)" : ""}
                   </div>
                 )}
                 <p className="text-[11px] text-slate-500">
-                  Format: <code>Candidate Name, 10-Digit Phone, Email, Course Title, City</code>
+                  Supports CSV, XLSX, TXT, JSON, PDF (10,000–100,000+ rows, 500/chunk, all duplicates preserved in ON_HOLD).
                 </p>
                 <p className="text-[10px] text-slate-400 font-mono">
-                  Example: Rahul Sharma, 9876543210, rahul@gmail.com, Cloud Computing, Prayagraj
+                  Columns: Candidate Name, 10-Digit Phone, Email, Course Title, City, Source, Remarks, Lead Date, Campaign, Original Owner
                 </p>
               </div>
 
               <textarea
-                rows={6}
+                rows={5}
                 placeholder="Rahul Sharma, 9876543210, rahul@example.com, Cloud Computing, Prayagraj&#10;Pooja Verma, 9876543211, pooja@example.com, Full Stack Java, Prayagraj"
                 value={csvText}
                 onChange={(e) => setCsvText(e.target.value)}
                 className="w-full rounded-md border border-slate-300 bg-white p-2.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-1 focus:ring-emerald-500"
               />
+
+              {activeBatch && (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-800">
+                      Job {activeBatch.batchCode} — {activeBatch.status}
+                    </span>
+                    <span className="font-mono text-slate-600">
+                      {activeBatch.processedRows}/{activeBatch.totalRows} ({activeBatch.progressPercent}%) • Chunk {activeBatch.currentChunk}/{activeBatch.totalChunks}
+                    </span>
+                  </div>
+                  <div className="w-full h-2 rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      className="h-full bg-emerald-600 transition-all duration-300"
+                      style={{ width: `${activeBatch.progressPercent}%` }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-3 text-[11px] text-slate-700">
+                    <span>Staged (ON_HOLD): <strong>{activeBatch.createdCount}</strong></span>
+                    <span>Duplicates Flagged: <strong>{activeBatch.duplicateCount}</strong></span>
+                    <span>Failed: <strong>{activeBatch.failedCount}</strong></span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {["QUEUED", "PROCESSING"].includes(activeBatch.status) && (
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleBatchAction("PAUSE")}>
+                        Pause
+                      </Button>
+                    )}
+                    {activeBatch.status === "PAUSED" && (
+                      <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleBatchAction("RESUME")}>
+                        Resume
+                      </Button>
+                    )}
+                    {["QUEUED", "PROCESSING", "PAUSED"].includes(activeBatch.status) && (
+                      <Button type="button" size="sm" variant="destructive" className="h-7 text-[11px]" onClick={() => handleBatchAction("CANCEL")}>
+                        Cancel Import
+                      </Button>
+                    )}
+                    {activeBatch.failedCount > 0 && (
+                      <>
+                        <Button type="button" size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleBatchAction("RETRY_FAILED")}>
+                          Retry Failed ({activeBatch.failedCount})
+                        </Button>
+                        <a
+                          href={`/api/leads/bulk-import?batchId=${encodeURIComponent(activeBatch.id)}&action=failed_csv`}
+                          className="inline-flex items-center px-2.5 h-7 rounded-md border border-slate-300 bg-white text-[11px] font-medium text-slate-700 hover:bg-slate-100"
+                        >
+                          Download Failed CSV
+                        </a>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {rowErrors.length > 0 && (
                 <div className="max-h-28 overflow-y-auto rounded-lg bg-red-50 p-2 text-[11px] text-red-700 border border-red-200 space-y-1">
@@ -550,7 +680,7 @@ export function CreateLeadDialog({
                   variant="outline"
                   size="sm"
                   onClick={() => onOpenChange(false)}
-                  disabled={bulkMutation.isPending}
+                  disabled={isSubmittingBulk}
                   className="text-xs"
                 >
                   Cancel
@@ -558,13 +688,13 @@ export function CreateLeadDialog({
                 <Button
                   type="submit"
                   size="sm"
-                  disabled={bulkMutation.isPending}
+                  disabled={isSubmittingBulk}
                   className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm"
                 >
-                  {bulkMutation.isPending ? (
+                  {isSubmittingBulk ? (
                     <>
                       <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-                      Importing Leads...
+                      Starting Chunked Import...
                     </>
                   ) : (
                     <>

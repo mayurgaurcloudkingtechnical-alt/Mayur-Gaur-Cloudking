@@ -441,8 +441,22 @@ export class CrmIngestionService {
       throw new Error("No lead records provided for bulk import.");
     }
 
-    if (input.leads.length > 2000) {
-      throw new Error("Batch size limit exceeded. Maximum 2000 records permitted per upload batch.");
+    if (input.leads.length > 500) {
+      const { ChunkedBulkImportService } = await import("./chunked-bulk-import.service");
+      return ChunkedBulkImportService.createAndStartJob(actor, {
+        fileName: input.fileName,
+        source: input.source,
+        chunkSize: 500,
+        targetStatus: LeadStatus.ON_HOLD,
+        leads: input.leads.map((l) => ({
+          fullName: l.fullName,
+          phone: l.phone,
+          email: l.email,
+          city: l.city,
+          qualification: l.qualification,
+          notes: l.notes,
+        })),
+      });
     }
 
     const batchCode = `SLG-IMP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;

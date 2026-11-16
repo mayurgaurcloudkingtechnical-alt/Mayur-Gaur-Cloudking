@@ -1054,26 +1054,56 @@ model FollowUpHistory {
 }
 
 model LeadImportBatch {
-  id           String      @id @default(cuid())
-  batchCode    String      @unique // e.g. "SLG-IMP-20261022-0001"
-  uploaderId   String?
-  uploader     User?       @relation("LeadBatchUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
-  fileName     String?
-  source       LeadSource  @default(BULK_UPLOAD)
-  totalRows    Int         @default(0)
-  createdCount Int         @default(0)
-  updatedCount Int         @default(0)
-  failedCount  Int         @default(0)
-  errorSummary Json?       // [{ row, phone, name, reason }]
-  status       String      @default("COMPLETED") // PENDING, PROCESSING, COMPLETED, FAILED
-  startedAt    DateTime    @default(now())
-  completedAt  DateTime?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                String          @id @default(cuid())
+  batchCode         String          @unique // e.g. "SLG-IMP-20261022-0001"
+  uploaderId        String?
+  uploader          User?           @relation("LeadBatchUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+  fileName          String?
+  source            LeadSource      @default(BULK_UPLOAD)
+  totalRows         Int             @default(0)
+  processedRows     Int             @default(0)
+  createdCount      Int             @default(0)
+  updatedCount      Int             @default(0)
+  failedCount       Int             @default(0)
+  duplicateCount    Int             @default(0)
+  stagedOnHoldCount Int             @default(0)
+  chunkSize         Int             @default(500)
+  currentChunk      Int             @default(0)
+  totalChunks       Int             @default(0)
+  isPaused          Boolean         @default(false)
+  isCancelled       Boolean         @default(false)
+  lastError         String?
+  errorSummary      Json?           // [{ row, phone, name, reason }]
+  status            String          @default("COMPLETED") // QUEUED, PROCESSING, PAUSED, COMPLETED, COMPLETED_WITH_ERRORS, FAILED, CANCELLED
+  startedAt         DateTime        @default(now())
+  completedAt       DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  rows              LeadImportRow[]
 
   @@index([uploaderId])
+  @@index([status])
   @@index([createdAt])
   @@map("lead_import_batches")
+}
+
+model LeadImportRow {
+  id              String          @id @default(cuid())
+  batchId         String
+  batch           LeadImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  rowIndex        Int
+  idempotencyKey  String          @unique
+  rawPayload      Json
+  normalizedPhone String?
+  status          String          @default("PENDING") // PENDING, STAGED, DUPLICATE_REVIEW, FAILED, SKIPPED
+  leadId          String?
+  errorReason     String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([batchId, status])
+  @@index([batchId, rowIndex])
+  @@map("lead_import_rows")
 }
 
 // ==============================================================================

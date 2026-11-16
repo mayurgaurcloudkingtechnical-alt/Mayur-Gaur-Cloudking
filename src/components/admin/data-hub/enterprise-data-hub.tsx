@@ -67,6 +67,17 @@ export function EnterpriseDataHub() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    const parseJsonResponse = async (res: Response) => {
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const snippet = (await res.text()).slice(0, 120);
+        throw new Error(`Server returned non-JSON response (${res.status}): ${snippet}`);
+      }
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || `Request failed (${res.status})`);
+      return json;
+    };
+
     try {
       const qs = new URLSearchParams({
         tab,
@@ -75,8 +86,7 @@ export function EnterpriseDataHub() {
       });
       if (search.trim()) qs.set("search", search.trim());
       const res = await fetch(`/api/enterprise-data?${qs.toString()}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load data");
+      const json = await parseJsonResponse(res);
       setData(json);
       setSelectedIds([]);
     } catch (err: any) {
@@ -104,6 +114,11 @@ export function EnterpriseDataHub() {
       if (uploadFile) fd.append("file", uploadFile);
       if (rawText.trim()) fd.append("text", rawText.trim());
       const res = await fetch("/api/enterprise-data", { method: "POST", body: fd });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const snippet = (await res.text()).slice(0, 120);
+        throw new Error(`Server returned non-JSON response (${res.status}): ${snippet}`);
+      }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Import failed");
       setBanner({ type: "ok", msg: json.message });
@@ -136,6 +151,11 @@ export function EnterpriseDataHub() {
           targetRole: assigneeId ? undefined : targetRole,
         }),
       });
+      const ct = res.headers.get("content-type") || "";
+      if (!ct.includes("application/json")) {
+        const snippet = (await res.text()).slice(0, 120);
+        throw new Error(`Server returned non-JSON response (${res.status}): ${snippet}`);
+      }
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Action failed");
       setBanner({
