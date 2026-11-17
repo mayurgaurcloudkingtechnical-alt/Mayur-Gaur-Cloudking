@@ -522,6 +522,9 @@ export function UnifiedLiveDashboard() {
               <Link href="/admin/analytics" className="text-emerald-700 hover:underline flex items-center gap-1">
                 <ChevronRight className="h-3.5 w-3.5" /> Institutional Reports Hub
               </Link>
+              <Link href="/admin/finance/fees" className="text-blue-700 hover:underline flex items-center gap-1 font-bold">
+                <ChevronRight className="h-3.5 w-3.5" /> Collect EMI &amp; Fees
+              </Link>
             </div>
             <p className="text-[11px] text-slate-400 pt-2 border-t border-slate-100">
               Softlab Global • Current Month • Data is confidential and for internal institutional use only.
