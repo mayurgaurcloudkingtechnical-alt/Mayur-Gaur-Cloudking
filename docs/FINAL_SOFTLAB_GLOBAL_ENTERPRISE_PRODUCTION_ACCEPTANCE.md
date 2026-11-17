@@ -3,7 +3,20 @@
 **Production URL:** `https://lms.softlabglobal.com`  
 **Finance Hub:** `https://lms.softlabglobal.com/admin/finance`  
 **Database Backup Verified:** `/root/backups/softlab_db_pre_final_20261117.sql.gz` (`22M`, `gzip -t` -> `BACKUP_OK`)  
-**Commits Deployed:** `6e24006`, `4786d34`, `3622a2d`
+**Commits Deployed:** `6e24006`, `4786d34`, `3622a2d`, `3894950`, `3852f20`
+
+---
+
+## 0. Isolated Director & Accountant EMI + RBAC + Telephony E2E Verification (`2026-11-17`)
+
+Executed against live `https://lms.softlabglobal.com` using an isolated test student (`E2E_EMI`, `₹10,000` `FeeStructure` with 2 × `₹5,000` installments), cleaned up immediately after verification:
+- **Director Browser EMI Flow (`DIRECTOR`)**:
+  - Login → `/admin/dashboard` → clicked `Collect EMI & Fees` → `/admin/finance/fees` → searched student → submitted `₹5,000` offline payment.
+  - Result: `txCount: 1`, `amountPaise: 500000`, `receiptNumber: "SLG-REC-2026-12312142"`, `feePaidPaise: 500000`, `feePendingPaise: 500000`, `inst1Status: "PAID"`, `hasAuditLog: true`.
+  - Receipt A4 PDF (`/admin/finance/receipt?ref=SLG-REC-2026-12312142`): `162100` bytes, `receiptHasStudentName: true`.
+- **Accountant EMI Collection (`ACCOUNTANT`)**: `POST /api/trpc/finance.recordOfflinePayment` returned `HTTP 200`, `hasReceipt: true`.
+- **Unauthorized Role Guard (`TRAINER`)**: `POST /api/trpc/finance.recordOfflinePayment` returned `HTTP 403`, `errorCode: "FORBIDDEN"` (no silent redirect).
+- **SLG Cloud Telephony (`SlgDeviceRegistration` + `SlgCallLog`)**: Created device `cmwkgx97p0001u7183x1dtxb9` (`ANDROID`, `ACTIVE`, heartbeat synced) and call log `cmwkgx98d0003u71872vqxjrf` (`OUTGOING`, `CONNECTED`, `42s`). All isolated test rows deleted after verification.
 
 ---
 
