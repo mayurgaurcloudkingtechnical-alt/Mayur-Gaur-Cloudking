@@ -1658,24 +1658,24 @@ export function AccountsFinanceHub({ roleCode }: { roleCode: string }) {
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => window.open(`/api/admin/finance/export?type=gstr1&year=${selectedYear}`, "_blank")}
                 className="h-12 flex flex-col items-center justify-center text-xs font-bold text-slate-800 gap-1 border-slate-300"
               >
-                <Download className="w-4 h-4 text-blue-600" /> Export GSTR-1 Sales Register
+                <Download className="w-4 h-4 text-blue-600" /> Export GSTR-1 Sales Register (XLSX)
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => window.open(`/api/admin/finance/export?type=gstr2b&year=${selectedYear}`, "_blank")}
                 className="h-12 flex flex-col items-center justify-center text-xs font-bold text-slate-800 gap-1 border-slate-300"
               >
-                <Download className="w-4 h-4 text-amber-600" /> Export GSTR-2B ITC Register
+                <Download className="w-4 h-4 text-amber-600" /> Export GSTR-2B ITC Register (XLSX)
               </Button>
               <Button
                 variant="outline"
-                onClick={() => window.print()}
+                onClick={() => window.open(`/api/admin/finance/export?type=payments&year=${selectedYear}`, "_blank")}
                 className="h-12 flex flex-col items-center justify-center text-xs font-bold text-slate-800 gap-1 border-slate-300"
               >
-                <BarChart3 className="w-4 h-4 text-purple-600" /> Print Monthly Report
+                <Download className="w-4 h-4 text-purple-600" /> Export Payment Register (XLSX)
               </Button>
             </div>
           </div>

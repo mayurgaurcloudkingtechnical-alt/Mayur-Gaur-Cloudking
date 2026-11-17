@@ -291,12 +291,21 @@ export class StudentAdmissionNotificationService {
           if (mgr?.user?.email) managementRecipients.add(mgr.user.email.toLowerCase());
         }
       }
-      const authorities = await db.higherAuthorityRecipient.findMany({
-        where: { isActive: true, notifyEmail: true },
-        select: { officialEmail: true },
-      });
+      const [authorities, superAdmins] = await Promise.all([
+        db.higherAuthorityRecipient.findMany({
+          where: { isActive: true, notifyEmail: true },
+          select: { officialEmail: true },
+        }),
+        db.user.findMany({
+          where: { roleCode: UserRoleCode.SUPER_ADMIN, status: "ACTIVE" },
+          select: { email: true },
+        }),
+      ]);
       authorities.forEach((a) => {
         if (a.officialEmail) managementRecipients.add(a.officialEmail.toLowerCase());
+      });
+      superAdmins.forEach((sa) => {
+        if (sa.email) managementRecipients.add(sa.email.toLowerCase());
       });
 
       const mgmtHtml = `
@@ -311,11 +320,40 @@ export class StudentAdmissionNotificationService {
           <p style="font-size: 12px; color: #64748b;">Note: Student login credentials are never included in internal management alerts.</p>
         </div>
       `;
-      await EmailService.sendEmail({
-        to: Array.from(managementRecipients).join(","),
-        subject: `[Internal] New Admission Confirmed: ${input.studentName} (${input.studentId})`,
-        html: mgmtHtml,
-      });
+      const mgmtSubject = `[Internal] New Admission Confirmed: ${input.studentName} (${input.studentId})`;
+      for (const recipientEmail of Array.from(managementRecipients)) {
+        const key = `${input.studentId}:INTERNAL_ALERT:${recipientEmail}`;
+        try {
+          const sent = await EmailService.sendEmail({
+            to: recipientEmail,
+            subject: mgmtSubject,
+            html: mgmtHtml,
+          });
+          await db.studentAdmissionEmailLog.upsert({
+            where: { idempotencyKey: key },
+            create: {
+              idempotencyKey: key,
+              studentId: input.studentId,
+              admissionNumber: input.admissionNumber,
+              recipientEmail,
+              emailType: "INTERNAL_HIERARCHY_ALERT",
+              subject: mgmtSubject,
+              status: sent.sent ? "SENT" : "FAILED",
+              providerMessage: sent.messageId || null,
+              errorMessage: sent.reason || null,
+              sentAt: sent.sent ? new Date() : null,
+            },
+            update: {
+              status: sent.sent ? "SENT" : "FAILED",
+              providerMessage: sent.messageId || null,
+              errorMessage: sent.reason || null,
+              sentAt: sent.sent ? new Date() : null,
+            },
+          });
+        } catch (singleErr: any) {
+          console.warn(`[StudentAdmissionNotificationService] Internal alert failed for ${recipientEmail}:`, singleErr?.message);
+        }
+      }
     } catch (mgmtErr: any) {
       console.warn("[StudentAdmissionNotificationService] Management hierarchy alert warning:", mgmtErr?.message);
     }

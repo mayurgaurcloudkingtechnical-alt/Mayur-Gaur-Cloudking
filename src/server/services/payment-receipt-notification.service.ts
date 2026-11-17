@@ -120,8 +120,8 @@ export class PaymentReceiptNotificationService {
           <p><a href="${studentPortalUrl}" style="background:#059669;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">View Receipt in Student Portal</a></p>
         </div>`,
         text: `Fee Payment Receipt ${receiptNo} | Student: ${studentName} | Course: ${courseTitle} | Paid: Rs.${paidAmountInr} | Pending: Rs.${pendingAmountInr} | Date: ${paidAtStr} | Portal: ${studentPortalUrl}`,
-      }).catch(() => ({ success: false }));
-      studentEmailSent = Boolean((emailRes as any)?.success);
+      }).catch(() => ({ sent: false }));
+      studentEmailSent = Boolean((emailRes as any)?.sent || (emailRes as any)?.success);
     }
 
     if (studentPhone) {
