@@ -47,42 +47,78 @@ export class DailyReportService {
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
 
-    const [followUpsCount, leadsActivityCount, admissionsCount, assignedTasks, existingReport] =
-      await Promise.all([
-        db.followUpHistory.count({
-          where: {
-            performedById: staff.userId,
-            createdAt: { gte: startOfDay, lte: endOfDay },
+    const [
+      followUpsCount,
+      leadsActivityCount,
+      admissionsCount,
+      callsDoneCount,
+      feesCollectedCount,
+      attendanceMarkedCount,
+      assignedTasks,
+      existingReport,
+    ] = await Promise.all([
+      db.followUpHistory.count({
+        where: {
+          performedById: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }),
+      db.leadActivity.count({
+        where: {
+          userId: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }),
+      db.admissionApplication.count({
+        where: {
+          counselorId: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }),
+      db.staffCallLog.count({
+        where: {
+          userId: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }),
+      db.feePayment.count({
+        where: {
+          collectedById: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }).catch(() => 0),
+      db.attendanceRecord.count({
+        where: {
+          markedById: staff.userId,
+          createdAt: { gte: startOfDay, lte: endOfDay },
+        },
+      }).catch(() => 0),
+      db.dailyWorkTask.findMany({
+        where: {
+          assignedStaffId: staff.id,
+          reportingDate: { gte: startOfDay, lte: endOfDay },
+        },
+      }),
+      db.dailyWorkReport.findUnique({
+        where: {
+          staffId_reportDate: {
+            staffId: staff.id,
+            reportDate: startOfDay,
           },
-        }),
-        db.leadActivity.count({
-          where: {
-            userId: staff.userId,
-            createdAt: { gte: startOfDay, lte: endOfDay },
-          },
-        }),
-        db.admissionApplication.count({
-          where: {
-            counselorId: staff.userId,
-            createdAt: { gte: startOfDay, lte: endOfDay },
-          },
-        }),
-        db.dailyWorkTask.findMany({
-          where: {
-            assignedStaffId: staff.id,
-            reportingDate: { gte: startOfDay, lte: endOfDay },
-          },
-        }),
-        db.dailyWorkReport.findUnique({
-          where: {
-            staffId_reportDate: {
-              staffId: staff.id,
-              reportDate: startOfDay,
-            },
-          },
-          include: { items: true },
-        }),
-      ]);
+        },
+        include: { items: true },
+      }),
+    ]);
+
+    const closingSummaryText = [
+      `End-of-Shift Closing Summary (${startOfDay.toLocaleDateString("en-IN")}):`,
+      `- Calls Logged: ${callsDoneCount}`,
+      `- CRM Follow-ups Done: ${followUpsCount}`,
+      `- Leads Contacted / Updated: ${leadsActivityCount}`,
+      `- Admissions Processed: ${admissionsCount}`,
+      `- Fee Receipts Generated: ${feesCollectedCount}`,
+      `- LMS Attendance Sessions Marked: ${attendanceMarkedCount}`,
+    ].join("\n");
 
     return {
       staff,
@@ -91,7 +127,11 @@ export class DailyReportService {
         followUpsDone: followUpsCount,
         leadsContacted: leadsActivityCount,
         admissionsDone: admissionsCount,
+        callsDone: callsDoneCount,
+        feesCollected: feesCollectedCount,
+        attendanceMarked: attendanceMarkedCount,
       },
+      closingSummaryText,
       assignedTasks,
       existingReport,
     };

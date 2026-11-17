@@ -12,12 +12,16 @@ import {
 interface PortalKpiRibbonProps {
   summary: any;
   reportsCount: number;
+  onSelectTab?: (tab: "analytics" | "presence" | "reports" | "tenant" | "devices" | "access") => void;
 }
 
-export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, reportsCount }) => {
+export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, reportsCount, onSelectTab }) => {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("analytics")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-emerald-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Calls</span>
@@ -28,7 +32,10 @@ export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, repor
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("reports")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Connected</span>
@@ -41,7 +48,10 @@ export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, repor
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("reports")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Talk Time</span>
@@ -52,7 +62,10 @@ export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, repor
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("reports")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Avg Handle Time</span>
@@ -63,7 +76,10 @@ export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, repor
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("reports")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Missed / Unanswered</span>
@@ -76,7 +92,10 @@ export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, repor
         </CardContent>
       </Card>
 
-      <Card className="bg-white border-slate-200 shadow-sm">
+      <Card
+        onClick={() => onSelectTab?.("reports")}
+        className="bg-white border-slate-200 shadow-sm cursor-pointer hover:border-purple-300 hover:shadow-md transition"
+      >
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Daily Reports</span>

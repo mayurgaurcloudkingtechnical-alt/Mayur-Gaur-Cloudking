@@ -162,7 +162,7 @@ export function SlgCallIntelligencePortal() {
       />
 
       {/* Primary KPI Ribbon */}
-      <PortalKpiRibbon summary={summary} reportsCount={reports.length} />
+      <PortalKpiRibbon summary={summary} reportsCount={reports.length} onSelectTab={setActiveTab} />
 
       {/* TAB 1: CALL ANALYTICS & LOGS */}
       {activeTab === "analytics" && (

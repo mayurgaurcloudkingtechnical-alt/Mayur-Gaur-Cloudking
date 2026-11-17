@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
+import { WhatsAppMediaService } from "@/server/services/whatsapp-media.service";
 import { OmnichannelInboxService } from "@/server/services/omnichannel-inbox.service";
 import { AiCounselorService } from "@/server/services/ai-counselor.service";
 import { AiCallingAgentService } from "@/server/services/ai-calling-agent.service";
@@ -48,10 +49,16 @@ export async function POST(req: NextRequest) {
     const appSecret = process.env.WHATSAPP_APP_SECRET;
 
     // 1. Signature validation (Phase 18: Security & Reliability)
-    if (appSecret && signature) {
+    if (appSecret) {
+      if (!signature) {
+        console.warn("[WhatsApp Webhook Warning]: Missing x-hub-signature-256 header.");
+        return NextResponse.json({ error: "Missing webhook signature" }, { status: 401 });
+      }
       const hmac = crypto.createHmac("sha256", appSecret);
       const digest = `sha256=${hmac.update(rawBody).digest("hex")}`;
-      if (signature !== digest) {
+      const sigBuf = Buffer.from(signature);
+      const digBuf = Buffer.from(digest);
+      if (sigBuf.length !== digBuf.length || !crypto.timingSafeEqual(sigBuf, digBuf)) {
         console.warn("[WhatsApp Webhook Warning]: Invalid webhook signature rejected.");
         return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
       }
@@ -91,7 +98,7 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Check for Opt-Out (STOP / UNSUBSCRIBE)
+      // Check for Opt-Out (STOP / UNSUBSCRIBE) or Opt-In (START / SUBSCRIBE)
       if (lowerText === "stop" || lowerText === "unsubscribe" || lowerText === "optout") {
         await WhatsAppBusinessService.handleOptOut(fromPhone, "User sent STOP via WhatsApp");
         await WhatsAppBusinessService.sendMessage({
@@ -100,6 +107,32 @@ export async function POST(req: NextRequest) {
         });
         return;
       }
+
+      if (lowerText === "start" || lowerText === "subscribe") {
+        const cleanDigits = fromPhone.replace(/\D/g, "").slice(-10);
+        if (cleanDigits.length === 10) {
+          await db.lead.updateMany({
+            where: { phone: cleanDigits },
+            data: { isOptedOut: false, optOutDate: null },
+          });
+        }
+      }
+
+      // Download and securely store Meta media attachments if present
+      const mediaNode =
+        rawPayload?.image ||
+        rawPayload?.document ||
+        rawPayload?.video ||
+        rawPayload?.audio ||
+        rawPayload?.voice ||
+        rawPayload?.sticker;
+      const storedMedia = mediaNode?.id
+        ? await WhatsAppMediaService.downloadAndStoreMedia(
+            mediaNode.id,
+            mediaNode.mime_type,
+            mediaNode.filename
+          )
+        : null;
 
       // Ingest / Deduplicate Lead in CRM
       const ingestRes = await CrmIngestionService.ingestLead({
@@ -126,13 +159,33 @@ export async function POST(req: NextRequest) {
         senderType: "LEAD",
         senderName,
         channel: "WHATSAPP",
-        messageType: "TEXT",
+        messageType: storedMedia ? (rawPayload?.type?.toUpperCase() || "MEDIA") : "TEXT",
         content: trimmedText,
         metadata: {
           wamid: msgId,
+          ...(storedMedia ? { media: storedMedia } : {}),
         },
         rawPayload,
       });
+
+      // Track campaign reply attribution if recipient previously received an Offer campaign
+      const clean10 = fromPhone.replace(/\D/g, "").slice(-10);
+      if (clean10.length === 10) {
+        const recentRecipient = await db.offerCampaignRecipient.findFirst({
+          where: { phone: { endsWith: clean10 }, repliedAt: null },
+          orderBy: { createdAt: "desc" },
+        });
+        if (recentRecipient) {
+          await db.offerCampaignRecipient.update({
+            where: { id: recentRecipient.id },
+            data: { repliedAt: new Date() },
+          });
+          await db.offerCampaignDispatch.update({
+            where: { id: recentRecipient.dispatchId },
+            data: { replyCount: { increment: 1 } },
+          });
+        }
+      }
 
       // If conversation is handled by AI, invoke AI Counselor
       if (conversation.status === "AI_HANDLING") {
@@ -294,6 +347,45 @@ export async function POST(req: NextRequest) {
                       });
                     }
                   }
+                  // Sync status to NotificationDeliveryLog for Recipient-Wise Analytics
+                  if (wamid) {
+                    const errDetail =
+                      statusStr === "FAILED"
+                        ? statusObj.errors?.[0]?.title || statusObj.errors?.[0]?.message || "Carrier rejected message"
+                        : undefined;
+                    await db.notificationDeliveryLog.updateMany({
+                      where: {
+                        channel: "WHATSAPP",
+                        providerResponse: { contains: wamid },
+                      },
+                      data: {
+                        status: statusStr,
+                        ...(statusStr === "DELIVERED" || statusStr === "READ" ? { deliveredAt: new Date() } : {}),
+                        ...(errDetail ? { errorMessage: errDetail } : {}),
+                      },
+                    });
+
+                    // Update OfferCampaignRecipient & Dispatch metrics
+                    const campaignRecipients = await db.offerCampaignRecipient.findMany({
+                      where: { whatsappMessageId: wamid },
+                      select: { id: true, dispatchId: true, whatsappStatus: true },
+                    });
+                    for (const cr of campaignRecipients) {
+                      if (cr.whatsappStatus !== statusStr) {
+                        await db.offerCampaignRecipient.update({
+                          where: { id: cr.id },
+                          data: { whatsappStatus: statusStr, ...(errDetail ? { errorMessage: errDetail } : {}) },
+                        });
+                        if (statusStr === "DELIVERED") {
+                          await db.offerCampaignDispatch.update({ where: { id: cr.dispatchId }, data: { deliveredCount: { increment: 1 } } });
+                        } else if (statusStr === "READ") {
+                          await db.offerCampaignDispatch.update({ where: { id: cr.dispatchId }, data: { readCount: { increment: 1 } } });
+                        } else if (statusStr === "FAILED") {
+                          await db.offerCampaignDispatch.update({ where: { id: cr.dispatchId }, data: { failedCount: { increment: 1 } } });
+                        }
+                      }
+                    }
+                  }
                 } catch (statusDbErr: any) {
                   console.error(`[WhatsApp Status DB Error] ${statusDbErr.message}`);
                 }
@@ -318,10 +410,51 @@ export async function POST(req: NextRequest) {
                     msg.interactive?.button_reply?.title ||
                     msg.interactive?.list_reply?.title ||
                     "";
+                } else if (msg.type === "image") {
+                  messageText = `[IMAGE: ${msg.image?.id || "media"}] ${msg.image?.caption || ""}`.trim();
+                } else if (msg.type === "document") {
+                  messageText = `[DOCUMENT: ${msg.document?.filename || msg.document?.id || "file"}] ${msg.document?.caption || ""}`.trim();
+                } else if (msg.type === "video") {
+                  messageText = `[VIDEO: ${msg.video?.id || "media"}] ${msg.video?.caption || ""}`.trim();
+                } else if (msg.type === "audio" || msg.type === "voice") {
+                  messageText = `[AUDIO/VOICE: ${msg.audio?.id || msg.voice?.id || "media"}]`;
+                } else if (msg.type === "location") {
+                  messageText = `[LOCATION: ${msg.location?.name || "Pin"} (${msg.location?.latitude}, ${msg.location?.longitude})]`;
+                } else if (msg.type === "contacts") {
+                  const summary = (msg.contacts || [])
+                    .map((c: any) => `${c.name?.formatted_name || "Contact"} (${c.phones?.[0]?.phone || "N/A"})`)
+                    .join("; ");
+                  messageText = `[CONTACT: ${summary || "vCard"}]`;
+                } else if (msg.type === "reaction") {
+                  messageText = `[REACTION: ${msg.reaction?.emoji || "👍"} on ${msg.reaction?.message_id || "message"}]`;
+                } else if (msg.type === "sticker") {
+                  messageText = `[STICKER: ${msg.sticker?.id || "media"}]`;
                 }
 
                 if (fromPhone && messageText) {
                   await processMessage(fromPhone, senderName, messageText, msgId, msg);
+                }
+              }
+            }
+
+            // Phase 2: Handle Meta WhatsApp Calling API webhook events (when enabled on WABA/phone)
+            if (value && Array.isArray(value.calls)) {
+              for (const callEvt of value.calls) {
+                const callerPhone = String(callEvt.from || callEvt.to || "").replace(/\D/g, "").slice(-10);
+                if (callerPhone.length === 10) {
+                  const matchedLead = await db.lead.findFirst({ where: { phone: callerPhone }, select: { id: true } });
+                  if (matchedLead) {
+                    await db.customerTimelineEvent.create({
+                      data: {
+                        leadId: matchedLead.id,
+                        eventType: "WHATSAPP_CALL",
+                        source: "WHATSAPP",
+                        title: `WhatsApp Call (${callEvt.event || callEvt.status || "EVENT"})`,
+                        summary: `Call ID: ${callEvt.id || "N/A"} | Duration: ${callEvt.duration ?? 0}s | Status: ${callEvt.status || callEvt.event || "LOGGED"}`,
+                        metadata: callEvt,
+                      },
+                    });
+                  }
                 }
               }
             }

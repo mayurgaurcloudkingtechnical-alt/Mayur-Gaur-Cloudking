@@ -3,12 +3,14 @@ import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { UsersView } from "@/components/admin/users/users-view";
+import { CredentialManagementPanel } from "@/components/admin/users/credential-management-panel";
 
 export default async function AdminUsersPage() {
   const user = await requireRole([
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
     UserRoleCode.HR,
   ]);
 
@@ -18,8 +20,9 @@ export default async function AdminUsersPage() {
         title="User & Staff Management"
         description="Manage institutional staff, instructors, counselors, and administrative credentials across departments."
       />
-      <div className="mt-6">
+      <div className="mt-6 space-y-8">
         <UsersView />
+        <CredentialManagementPanel />
       </div>
     </DashboardShell>
   );

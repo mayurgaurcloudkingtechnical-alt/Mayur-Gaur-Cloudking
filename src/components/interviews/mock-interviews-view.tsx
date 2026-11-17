@@ -54,6 +54,15 @@ export function MockInterviewsView({ userRole }: MockInterviewsViewProps) {
   const { data: staffInterviews = [], isLoading: isStaffLoading } =
     api.mockInterview.listAssignedInterviews.useQuery(undefined, { enabled: !isStudent });
 
+  const { data: schedulerOptions } =
+    api.mockInterview.listSchedulerOptions.useQuery(undefined, { enabled: !isStudent });
+
+  React.useEffect(() => {
+    if (schedulerOptions?.currentUserId && !interviewerId) {
+      setInterviewerId(schedulerOptions.currentUserId);
+    }
+  }, [schedulerOptions?.currentUserId, interviewerId]);
+
   const scheduleMutation = api.mockInterview.schedule.useMutation({
     onSuccess: () => {
       setIsScheduleOpen(false);
@@ -205,6 +214,145 @@ export function MockInterviewsView({ userRole }: MockInterviewsViewProps) {
               </Card>
             );
           })}
+        </div>
+      )}
+
+      {/* Schedule Mock Interview Modal */}
+      {isScheduleOpen && !isStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div>
+                <h3 className="font-bold text-base text-slate-900">Schedule Mock Interview</h3>
+                <p className="text-xs text-slate-500">Assign a technical, HR, or communication mock round.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsScheduleOpen(false)}
+                className="text-slate-400 hover:text-slate-700 text-sm font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!studentId || !interviewerId || !title.trim() || !scheduledAt) {
+                  alert("Please select student, interviewer, title, and date/time.");
+                  return;
+                }
+                scheduleMutation.mutate({
+                  title: title.trim(),
+                  interviewType,
+                  scheduledAt: new Date(scheduledAt),
+                  studentId,
+                  interviewerId,
+                  instructions: instructions.trim() || undefined,
+                });
+              }}
+              className="space-y-3 text-xs"
+            >
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Interview Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Full Stack Technical Mock Round 1"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full border border-slate-300 rounded-lg p-2"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Student *</label>
+                  <select
+                    required
+                    value={studentId}
+                    onChange={(e) => setStudentId(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                  >
+                    <option value="">-- Select Student --</option>
+                    {(schedulerOptions?.students || []).map((st: any) => (
+                      <option key={st.id} value={st.id}>
+                        {st.user?.firstName} {st.user?.lastName} ({st.studentId})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Interviewer *</label>
+                  <select
+                    required
+                    value={interviewerId}
+                    onChange={(e) => setInterviewerId(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                  >
+                    <option value="">-- Select Interviewer --</option>
+                    {(schedulerOptions?.interviewers || []).map((iv: any) => (
+                      <option key={iv.id} value={iv.id}>
+                        {iv.firstName} {iv.lastName} ({iv.roleCode})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Round Type</label>
+                  <select
+                    value={interviewType}
+                    onChange={(e) => setInterviewType(e.target.value as any)}
+                    className="w-full border border-slate-300 rounded-lg p-2 bg-white"
+                  >
+                    <option value="TECHNICAL">TECHNICAL</option>
+                    <option value="HR">HR</option>
+                    <option value="COMMUNICATION">COMMUNICATION</option>
+                    <option value="APTITUDE">APTITUDE</option>
+                    <option value="ROLE_SPECIFIC">ROLE_SPECIFIC</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="font-bold text-slate-700 block mb-1">Date & Time *</label>
+                  <input
+                    type="datetime-local"
+                    required
+                    value={scheduledAt}
+                    onChange={(e) => setScheduledAt(e.target.value)}
+                    className="w-full border border-slate-300 rounded-lg p-2"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-700 block mb-1">Instructions / Topics</label>
+                <textarea
+                  rows={2}
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  placeholder="Topics to prepare, resume link, or meeting instructions..."
+                  className="w-full border border-slate-300 rounded-lg p-2"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+                <Button type="button" variant="outline" onClick={() => setIsScheduleOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={scheduleMutation.isPending}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                >
+                  {scheduleMutation.isPending ? "Scheduling..." : "Schedule Interview"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
 

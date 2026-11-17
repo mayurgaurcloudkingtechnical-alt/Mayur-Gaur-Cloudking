@@ -25,11 +25,18 @@ export async function POST(req: NextRequest) {
     const keySecret = (
       process.env.RAZORPAY_KEY_SECRET ||
       env.RAZORPAY_KEY_SECRET ||
-      "nk890Xco6v1UayrJBKsgabs1"
+      ""
     ).trim().replace(/^["']|["']$/g, "");
 
+    if (!keySecret) {
+      return NextResponse.json(
+        { success: false, error: "Razorpay key secret is not configured on server." },
+        { status: 500 }
+      );
+    }
+
     const payload = `${orderId}|${paymentId}`;
-    const secretsToTry = [keySecret, "nk890Xco6v1UayrJBKsgabs1"].filter(Boolean);
+    const secretsToTry = [keySecret];
     let isMatch = false;
 
     // Reject simulated or fake payment signatures
@@ -177,7 +184,7 @@ export async function POST(req: NextRequest) {
               paymentTransactionId: paymentTx.id,
               amountPaise,
               paymentMethod: PaymentMethod.RAZORPAY,
-              paymentReference: receiptNumber || transactionReference || "ONLINE-PAYMENT",
+              paymentReference: receiptNumber || paymentId || "ONLINE-PAYMENT",
               paidAt: new Date(),
               customerName: customerName?.trim() || "Website Learner",
               customerEmail: customerEmail?.trim() || null,

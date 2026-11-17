@@ -441,8 +441,32 @@ export class CrmIngestionService {
       throw new Error("No lead records provided for bulk import.");
     }
 
-    if (input.leads.length > 2000) {
-      throw new Error("Batch size limit exceeded. Maximum 2000 records permitted per upload batch.");
+    if (input.leads.length > 500) {
+      const { ChunkedBulkImportService } = await import("./chunked-bulk-import.service");
+      const queuedBatch = await ChunkedBulkImportService.createAndStartJob(actor, {
+        fileName: input.fileName,
+        source: input.source,
+        chunkSize: 500,
+        targetStatus: LeadStatus.ON_HOLD,
+        leads: input.leads.map((l) => ({
+          fullName: l.fullName,
+          phone: l.phone,
+          email: l.email,
+          city: l.city,
+          qualification: l.qualification,
+          notes: l.notes,
+        })),
+      });
+      return {
+        batchId: queuedBatch.id,
+        batchCode: queuedBatch.batchCode,
+        totalRows: queuedBatch.totalRows,
+        createdCount: 0,
+        updatedCount: 0,
+        failedCount: 0,
+        rowErrors: [] as Array<{ row: number; phone: string; name: string; reason: string }>,
+        queued: true,
+      };
     }
 
     const batchCode = `SLG-IMP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
@@ -480,38 +504,28 @@ export class CrmIngestionService {
         }
 
         const cleanPhone = normalizePhone(item.phone || "");
-        if (!cleanPhone || cleanPhone.length < 10) {
-          errors.push({
-            row: rowNum,
-            phone: item.phone || "Invalid",
-            name: item.fullName,
-            reason: "Mobile number must be at least 10 valid digits",
-          });
-          failedCount++;
-          continue;
-        }
+        const existing = cleanPhone.length >= 10
+          ? await db.lead.findFirst({ where: { phone: cleanPhone.slice(-10) }, select: { id: true } })
+          : null;
 
-        const res = await this.ingestUniversalLead({
-          fullName: item.fullName.trim(),
-          phone: cleanPhone,
-          email: item.email?.trim() || undefined,
-          city: item.city?.trim() || undefined,
-          qualification: item.qualification?.trim() || undefined,
-          interestedCourseName: item.courseName?.trim() || undefined,
-          source: input.source || LeadSource.BULK_UPLOAD,
-          captureMethod: "BULK_CSV_XLSX",
-          actorId: actor.id,
-          actorName: `${actor.firstName} ${actor.lastName}`.trim(),
-          actorRole: actor.roleCode,
-          importBatchId: batch.id,
-          notes: item.notes?.trim() || `Bulk imported via batch ${batchCode}`,
+        const createdLead = await db.lead.create({
+          data: {
+            fullName: item.fullName.trim(),
+            phone: cleanPhone.slice(-10) || "0000000000",
+            email: item.email?.trim() || `${cleanPhone.slice(-10) || `bulk${i}`}@pending.softlabglobal.com`,
+            city: item.city?.trim() || null,
+            qualification: item.qualification?.trim() || null,
+            source: input.source || LeadSource.BULK_UPLOAD,
+            captureMethod: "BULK_CSV_XLSX",
+            importBatchId: batch.id,
+            status: LeadStatus.NEW,
+            duplicateOfLeadId: existing?.id || null,
+            duplicateStatus: existing ? "DUPLICATE_REVIEW" : "NONE",
+            duplicateReviewMeta: existing ? { reason: "Matching phone in CRM", preservedAt: new Date().toISOString() } : undefined,
+            notes: item.notes?.trim() || `Bulk imported via batch ${batchCode}${existing ? " [DUPLICATE_REVIEW]" : ""}`,
+          },
         });
-
-        if (res.isNew) {
-          createdCount++;
-        } else {
-          updatedCount++;
-        }
+        if (createdLead) createdCount++;
       } catch (err: any) {
         errors.push({
           row: rowNum,

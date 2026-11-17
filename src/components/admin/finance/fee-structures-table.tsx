@@ -32,9 +32,10 @@ export function FeeStructuresTable({ initialStudentId, externalStatusFilter, onO
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentIdFromUrl = searchParams.get("studentId") || initialStudentId;
+  const searchFromUrl = searchParams.get("search") || "";
 
   const [filterStudentId, setFilterStudentId] = useState<string | undefined>(studentIdFromUrl || undefined);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(searchFromUrl);
   const [statusFilter, setStatusFilter] = useState<FeePaymentStatus | undefined>(externalStatusFilter || undefined);
 
   React.useEffect(() => {

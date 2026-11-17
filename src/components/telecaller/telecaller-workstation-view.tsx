@@ -44,7 +44,8 @@ interface TelecallerWorkstationViewProps {
 export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewProps) {
   const [search, setSearch] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<LeadStatus | "ALL">("ALL");
-  const [activeTab, setActiveTab] = useState<"META" | "WEBSITE" | "ALL">("META");
+  const [activeTab, setActiveTab] = useState<"META" | "WEBSITE" | "ALL">("ALL");
+  const [waToast, setWaToast] = useState<string | null>(null);
   const [transferOpen, setTransferOpen] = useState(false);
   const [selectedLeadForTransfer, setSelectedLeadForTransfer] = useState<any>(null);
   const [autoConnectOpen, setAutoConnectOpen] = useState(false);
@@ -122,16 +123,35 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
     });
   };
 
-  const handleOpenWhatsApp = (phone: string, name: string, courseName?: string | null) => {
+  const handleOpenWhatsApp = async (phone: string, name: string, courseName?: string | null) => {
     const cleanNumber = phone.replace(/\D/g, "").slice(-10);
     const callerLine = myProfile?.callingNumber || user.callingNumber || user.whatsappNumber || "+91 9196596975";
     const telecallerName = myProfile?.displayName || user.firstName;
-    const text = encodeURIComponent(
-      `Hello ${name}! 👋 This is ${telecallerName} from SOFTLAB GLOBAL (Civil Lines, Prayagraj). Thank you for inquiring about ${
-        courseName || "our 100% Placement-Backed IT Programs"
-      }. When is a good time for a quick 2-minute call? (Direct Helpline: ${callerLine})`
-    );
-    window.open(`https://wa.me/91${cleanNumber}?text=${text}`, "_blank");
+    const msg = `Hello ${name}! This is ${telecallerName} from SOFTLAB GLOBAL (Civil Lines, Prayagraj). Thank you for inquiring about ${
+      courseName || "our 100% Placement-Backed IT Programs"
+    }. When is a good time for a quick 2-minute call? (Direct Helpline: ${callerLine})`;
+
+    try {
+      const res = await fetch("/api/whatsapp/local", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          scope: "mine",
+          action: "send",
+          to: cleanNumber,
+          contactName: name,
+          text: msg,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data?.success) {
+        setWaToast(`WhatsApp delivered directly to ${name} (${cleanNumber})!`);
+        setTimeout(() => setWaToast(null), 4000);
+        return;
+      }
+    } catch {}
+
+    window.open(`https://wa.me/91${cleanNumber}?text=${encodeURIComponent(msg)}`, "_blank");
   };
 
   return (
@@ -142,9 +162,22 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
       {/* Callyzer Live Telephony Desk & Active Dialer */}
       <CallyzerWorkstationWidget />
 
-      {/* Top Telecaller Calling Stats */}
+      {/* Top Telecaller Calling Stats (Clickable Filters) */}
+      {waToast && (
+        <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold">
+          {waToast}
+        </div>
+      )}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-slate-200 bg-white shadow-sm">
+        <Card
+          onClick={() => {
+            setActiveTab("ALL");
+            setSelectedStatus("ALL");
+          }}
+          className={`border-slate-200 bg-white shadow-sm cursor-pointer transition hover:shadow-md ${
+            selectedStatus === "ALL" ? "ring-2 ring-slate-400" : ""
+          }`}
+        >
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
               Assigned Meta & Web Leads
@@ -152,11 +185,19 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-slate-900">{stats?.totalLeads ?? 0}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Assigned to your calling desk</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click to view all assigned leads</p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white shadow-sm">
+        <Card
+          onClick={() => {
+            setActiveTab("ALL");
+            setSelectedStatus("FOLLOW_UP");
+          }}
+          className={`border-slate-200 bg-white shadow-sm cursor-pointer transition hover:shadow-md ${
+            selectedStatus === "FOLLOW_UP" ? "ring-2 ring-amber-400" : ""
+          }`}
+        >
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-amber-600 uppercase tracking-wider flex items-center gap-1.5">
               <Clock className="h-3.5 w-3.5" />
@@ -165,11 +206,19 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-amber-600">{stats?.dueToday ?? 0}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Scheduled for immediate call</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click to filter follow-ups</p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white shadow-sm">
+        <Card
+          onClick={() => {
+            setActiveTab("ALL");
+            setSelectedStatus("NEW");
+          }}
+          className={`border-slate-200 bg-white shadow-sm cursor-pointer transition hover:shadow-md ${
+            selectedStatus === "NEW" ? "ring-2 ring-purple-500" : ""
+          }`}
+        >
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-purple-600 uppercase tracking-wider flex items-center gap-1.5">
               <Sparkles className="h-3.5 w-3.5" />
@@ -178,11 +227,19 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-purple-700">{stats?.newLeads ?? 0}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Ready for first outreach</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click to view uncontacted leads</p>
           </CardContent>
         </Card>
 
-        <Card className="border-slate-200 bg-white shadow-sm">
+        <Card
+          onClick={() => {
+            setActiveTab("ALL");
+            setSelectedStatus("ADMITTED");
+          }}
+          className={`border-slate-200 bg-white shadow-sm cursor-pointer transition hover:shadow-md ${
+            selectedStatus === "ADMITTED" ? "ring-2 ring-emerald-500" : ""
+          }`}
+        >
           <CardHeader className="p-4 pb-2">
             <CardTitle className="text-xs font-semibold text-emerald-600 uppercase tracking-wider flex items-center gap-1.5">
               <CheckCircle2 className="h-3.5 w-3.5" />
@@ -191,7 +248,7 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
           </CardHeader>
           <CardContent className="p-4 pt-0">
             <div className="text-2xl font-bold text-emerald-700">{stats?.admittedCount ?? 0}</div>
-            <p className="text-xs text-slate-500 mt-0.5">Converted from your outreach</p>
+            <p className="text-xs text-slate-500 mt-0.5">Click to view admissions</p>
           </CardContent>
         </Card>
       </div>
@@ -460,13 +517,33 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
                           <Button
                             size="sm"
                             variant="outline"
-                            asChild
+                            onClick={async () => {
+                              const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                              try {
+                                const res = await fetch("/api/whatsapp/local", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    action: "phone_bridge_dial",
+                                    mode: "SIM_CALL",
+                                    to: clean,
+                                    leadId: lead.id,
+                                    contactName: lead.fullName,
+                                  }),
+                                });
+                                const d = await res.json();
+                                setWaToast(
+                                  d?.paired
+                                    ? `SIM Call sent to your paired phone (+91${clean}) & logged!`
+                                    : `Call logged for ${lead.fullName} (${clean}). Pair mobile in 'My WhatsApp & Call' -> 'Send Link to My WhatsApp' for auto-dial!`
+                                );
+                                setTimeout(() => setWaToast(null), 5000);
+                              } catch {}
+                            }}
                             className="border-slate-300 h-7 px-2.5 text-[11px] gap-1"
                           >
-                            <a href={`tel:${lead.phone}`}>
-                              <Phone className="h-3.5 w-3.5 text-blue-600" />
-                              Call
-                            </a>
+                            <Phone className="h-3.5 w-3.5 text-blue-600" />
+                            SIM Call
                           </Button>
                         </div>
                       </td>

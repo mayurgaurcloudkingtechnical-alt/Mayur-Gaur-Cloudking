@@ -37,6 +37,7 @@ import {
   ShieldCheck,
   Mail,
   Terminal,
+  Database,
 } from "lucide-react";
 import { UserRoleCode } from "@prisma/client";
 import { DPGU_CONFIG, DDU_CONFIG } from "@/config/university.config";
@@ -201,6 +202,7 @@ export function Sidebar({ roleCode, isOpen, onClose }: SidebarProps) {
             : []),
           { title: "AI Calling & Bulk Import", href: "/admin/bulk-calling", icon: <PhoneCall className="h-4 w-4" /> },
           { title: "CRM Inbound Leads", href: "/admin/leads", icon: <PhoneCall className="h-4 w-4" /> },
+          { title: "Enterprise Data Hub", href: "/admin/data-hub", icon: <Database className="h-4 w-4" /> },
           { title: "Franchise Management", href: "/admin/franchise", icon: <Building2 className="h-4 w-4" />,
           },
           { title: "Institutional Analytics", href: "/admin/analytics", icon: <BarChart3 className="h-4 w-4" /> },

@@ -64,8 +64,13 @@ export const omnichannelRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+      if (!allowed.includes(ctx.user.roleCode)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can update WhatsApp provider credentials." });
+      }
       const saved = await WhatsAppBusinessConfigService.saveConfig(input, ctx.user.id);
-      return { success: true, saved };
+      const { accessToken: _redacted, ...safeSaved } = saved;
+      return { success: true, saved: { ...safeSaved, hasAccessToken: Boolean(_redacted) } };
     }),
 
   /**
@@ -73,6 +78,28 @@ export const omnichannelRouter = router({
    */
   verifyWhatsAppConnection: protectedProcedure.mutation(async () => {
     return WhatsAppBusinessConfigService.verifyMetaConnection();
+  }),
+
+  /**
+   * Disconnect WhatsApp Business configuration
+   */
+  disconnectWhatsApp: protectedProcedure.mutation(async ({ ctx }) => {
+    const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+    if (!allowed.includes(ctx.user.roleCode)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can disconnect WhatsApp." });
+    }
+    return WhatsAppBusinessConfigService.disconnect(ctx.user.id);
+  }),
+
+  /**
+   * Subscribe Meta App to WABA webhook events
+   */
+  subscribeWhatsAppWebhook: protectedProcedure.mutation(async ({ ctx }) => {
+    const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+    if (!allowed.includes(ctx.user.roleCode)) {
+      throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can subscribe webhooks." });
+    }
+    return WhatsAppBusinessConfigService.subscribeWebhook();
   }),
 
   /**
@@ -513,8 +540,13 @@ export const omnichannelRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      const allowed = ["SUPER_ADMIN", "DIRECTOR", "ADMIN", "MANAGER"];
+      if (!allowed.includes(ctx.user.roleCode)) {
+        throw new TRPCError({ code: "FORBIDDEN", message: "Only Administrators and Managers can update WhatsApp provider credentials." });
+      }
       const saved = await WhatsAppBusinessConfigService.saveConfig(input, ctx.user.id);
-      return { success: true, saved };
+      const { accessToken: _redacted, ...safeSaved } = saved;
+      return { success: true, saved: { ...safeSaved, hasAccessToken: Boolean(_redacted) } };
     }),
 
   /**

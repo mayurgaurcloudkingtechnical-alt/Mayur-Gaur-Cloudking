@@ -82,6 +82,8 @@ export class EmailService {
       return { success: false, message: "SMTP credentials not configured" };
     }
 
+    const messageId = `<slg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}@softlabglobal.com>`;
+
     return new Promise((resolve) => {
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substring(2)}`;
       const senderEmail = fromEmail || config.fromEmail;
@@ -93,6 +95,7 @@ export class EmailService {
       const allRcpt = Array.from(new Set([...toRecipients, ...ccRecipients, ...bccRecipients]));
 
       const headers = [
+        `Message-ID: ${messageId}`,
         `From: ${cleanFrom}`,
         `To: ${toRecipients.map((t) => `<${t}>`).join(", ")}`,
         ...(ccRecipients.length > 0 ? [`Cc: ${ccRecipients.map((c) => `<${c}>`).join(", ")}`] : []),
@@ -304,7 +307,7 @@ export class EmailService {
   /**
    * Dispatches email with template interpolation, error handling, and database audit logging.
    */
-  static async sendEmail(opts: SendEmailOptions): Promise<{ sent: boolean; reason?: string }> {
+  static async sendEmail(opts: SendEmailOptions): Promise<{ sent: boolean; messageId?: string; reason?: string }> {
     const { to, subject, html, text, templateCode, metadata, fromEmail, fromName } = opts;
 
     if (!to || !to.includes("@")) {
@@ -313,6 +316,7 @@ export class EmailService {
 
     let status = "QUEUED";
     let error: string | undefined = undefined;
+    let providerMessageId: string | undefined = undefined;
 
     const hasResend = Boolean(process.env.RESEND_API_KEY?.trim());
     const preferSmtp = process.env.EMAIL_PROVIDER?.trim().toUpperCase() === "SMTP";
@@ -323,6 +327,7 @@ export class EmailService {
       const result = await this.sendViaResend(to, subject, html, text, opts.cc, opts.bcc, fromEmail, fromName);
       if (result.success) {
         status = "SENT";
+        providerMessageId = result.message;
       } else {
         errors.push(`Resend: ${result.message}`);
         console.warn(`[EmailService] Resend failed for ${to}: ${result.message}`);
@@ -335,6 +340,7 @@ export class EmailService {
         const result = await this.sendViaSmtp(to, subject, html, text, opts.cc, opts.bcc, fromEmail, fromName);
         if (result.success) {
           status = "SENT";
+          providerMessageId = `smtp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
         } else {
           errors.push(`SMTP: ${result.message}`);
           console.warn(`[EmailService] Failed to dispatch email to ${to}: ${result.message}`);
@@ -379,7 +385,7 @@ export class EmailService {
       console.error("[EmailService] Failed to create email log entry:", logErr);
     }
 
-    return { sent: status === "SENT", reason: error };
+    return { sent: status === "SENT", messageId: providerMessageId, reason: error };
   }
 
   /**

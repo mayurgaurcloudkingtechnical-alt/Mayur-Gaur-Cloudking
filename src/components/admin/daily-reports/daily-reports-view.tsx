@@ -91,6 +91,16 @@ export function DailyReportsView({ user }: { user: any }) {
       { enabled: Boolean(currentStaff?.id) }
     );
 
+  // Sync existing report into form when returning at End of Shift
+  React.useEffect(() => {
+    if (prefillData?.existingReport) {
+      setActualWorkSummary(prefillData.existingReport.actualWorkSummary || "");
+      setResultsSummary(prefillData.existingReport.resultsSummary || "");
+      setNextDayPriorities(prefillData.existingReport.nextDayPriorities || "");
+      setRemarks(prefillData.existingReport.remarks || "");
+    }
+  }, [prefillData?.existingReport?.id]);
+
   // Team reports list with hierarchy filter
   const { data: teamReports, isLoading: reportsLoading } =
     api.workPlanner.listDailyReports.useQuery({
@@ -272,6 +282,30 @@ export function DailyReportsView({ user }: { user: any }) {
                   <span className="text-xl font-bold font-mono">{prefillData?.crmMetrics.admissionsDone ?? 0}</span>
                 </div>
               </div>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pt-3 border-t border-emerald-800/70 text-xs">
+              <div className="flex flex-wrap items-center gap-4 text-emerald-100">
+                <span>Calls Logged: <strong>{prefillData?.crmMetrics?.callsDone ?? 0}</strong></span>
+                <span>Fee Receipts: <strong>{prefillData?.crmMetrics?.feesCollected ?? 0}</strong></span>
+                <span>LMS Attendance: <strong>{prefillData?.crmMetrics?.attendanceMarked ?? 0}</strong></span>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const closing = prefillData?.closingSummaryText || "";
+                  if (!closing) return;
+                  setResultsSummary((prev) => (prev ? `${prev}\n\n${closing}` : closing));
+                  setActualWorkSummary((prev) =>
+                    prev.includes("End-of-Shift Closing") ? prev : `${prev ? prev + "\n\n" : ""}${closing}`
+                  );
+                }}
+                className="bg-white text-emerald-950 hover:bg-emerald-100 font-bold text-xs h-8 gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                Auto-Fill End-of-Shift Closing List
+              </Button>
             </div>
           </div>
 

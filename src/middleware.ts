@@ -247,8 +247,8 @@ export async function middleware(req: NextRequest) {
     }
 
     // Special Shared Admin Routes Accessible to Operational Staff
-    if (pathname.startsWith("/admin/callyzer")) {
-      const allowedCallyzerRoles = [
+    if (pathname.startsWith("/admin/callyzer") || pathname.startsWith("/admin/slg-call-intelligence")) {
+      const allowedSalesCallRoles = [
         "SUPER_ADMIN",
         "DIRECTOR",
         "ADMIN",
@@ -257,7 +257,48 @@ export async function middleware(req: NextRequest) {
         "COUNSELOR",
         "TELECALLER",
       ];
-      if (!allowedCallyzerRoles.includes(role)) {
+      if (!allowedSalesCallRoles.includes(role)) {
+        return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
+      }
+    } else if (
+      pathname.startsWith("/admin/events") ||
+      pathname.startsWith("/admin/communications")
+    ) {
+      const allowedSalesOpsRoles = [
+        "SUPER_ADMIN",
+        "DIRECTOR",
+        "ADMIN",
+        "MANAGER",
+        "HR",
+        "COUNSELOR",
+        "TELECALLER",
+        "PLACEMENT_OFFICER",
+      ];
+      if (!allowedSalesOpsRoles.includes(role)) {
+        return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
+      }
+    } else if (pathname.startsWith("/admin/virtual-labs")) {
+      const allowedLabRoles = [
+        "SUPER_ADMIN",
+        "DIRECTOR",
+        "ADMIN",
+        "MANAGER",
+        "TRAINER",
+      ];
+      if (!allowedLabRoles.includes(role)) {
+        return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
+      }
+    } else if (pathname.startsWith("/admin/recruiters")) {
+      const allowedRecruiterRoles = [
+        "SUPER_ADMIN",
+        "DIRECTOR",
+        "ADMIN",
+        "MANAGER",
+        "HR",
+        "PLACEMENT_OFFICER",
+        "RECRUITER",
+      ];
+      if (!allowedRecruiterRoles.includes(role)) {
         return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
       }
     } else if (pathname.startsWith("/admin/daily-reports")) {

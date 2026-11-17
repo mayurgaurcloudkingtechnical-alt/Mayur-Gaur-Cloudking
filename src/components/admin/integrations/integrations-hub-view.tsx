@@ -45,6 +45,27 @@ export function IntegrationsHubView() {
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
   const [testPhone, setTestPhone] = useState<string>("");
   const [testFeedback, setTestFeedback] = useState<string | null>(null);
+  const [localWaStatus, setLocalWaStatus] = useState<any | null>(null);
+  const [loadingLocalWa, setLoadingLocalWa] = useState(false);
+
+  const fetchLocalWaStatus = React.useCallback(async () => {
+    setLoadingLocalWa(true);
+    try {
+      const res = await fetch("/api/whatsapp/local", { cache: "no-store" });
+      const data = await res.json();
+      setLocalWaStatus(data);
+    } catch {
+      setLocalWaStatus({ connected: false, status: "OFFLINE" });
+    } finally {
+      setLoadingLocalWa(false);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    fetchLocalWaStatus();
+    const timer = setInterval(fetchLocalWaStatus, 5000);
+    return () => clearInterval(timer);
+  }, [fetchLocalWaStatus]);
 
   const utils = api.useUtils();
   const syncCatalogMutation = api.omnichannel.syncCatalog.useMutation({
@@ -422,6 +443,67 @@ export function IntegrationsHubView() {
               <span className="text-slate-200">10:00 - 19:00 IST</span>
             </div>
           </div>
+        </div>
+
+        {/* Self-Hosted Free WhatsApp QR Gateway (₹0 Cost) */}
+        <div className="bg-emerald-950/50 border border-emerald-700/50 rounded-xl p-4 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="space-y-1.5 flex-1">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-emerald-400" />
+              <h5 className="text-sm font-bold text-white">
+                Self-Hosted Free WhatsApp Gateway (₹0 Cost — No Meta Fee)
+              </h5>
+              <Badge
+                className={
+                  localWaStatus?.connected
+                    ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 text-[10px]"
+                    : "bg-amber-500/20 text-amber-300 border-amber-500/40 text-[10px]"
+                }
+              >
+                {localWaStatus?.connected ? "CONNECTED" : localWaStatus?.status || "CHECKING..."}
+              </Badge>
+            </div>
+            <p className="text-xs text-slate-300">
+              {localWaStatus?.connected
+                ? `Connected to ${localWaStatus?.user?.name || "WhatsApp"} (${localWaStatus?.user?.id?.split(":")[0] || "Active"}). All Daily Reports, CRM Lead Brochures, and Fee Receipts will auto-dispatch via this WhatsApp.`
+                : "Open WhatsApp on your phone → Linked Devices → Link a Device and scan this QR code once to activate free unlimited WhatsApp across LMS/CRM/ERP."}
+            </p>
+            <div className="flex items-center gap-2 pt-1">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={fetchLocalWaStatus}
+                disabled={loadingLocalWa}
+                className="h-7 text-xs bg-slate-900 border-slate-700 text-slate-200 hover:bg-slate-800 gap-1"
+              >
+                <RefreshCw className={`h-3 w-3 ${loadingLocalWa ? "animate-spin" : ""}`} />
+                Refresh QR / Status
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  await fetch("/api/whatsapp/local", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "logout" }),
+                  });
+                  setTimeout(fetchLocalWaStatus, 1500);
+                }}
+                className="h-7 text-xs bg-slate-900 border-rose-700/60 text-rose-300 hover:bg-rose-950/60"
+              >
+                Reset / Re-Link Phone
+              </Button>
+            </div>
+          </div>
+
+          {localWaStatus?.qrDataUrl && !localWaStatus?.connected && (
+            <div className="bg-white p-2 rounded-xl shadow-lg shrink-0">
+              <img src={localWaStatus.qrDataUrl} alt="Scan WhatsApp QR" className="w-36 h-36" />
+            </div>
+          )}
         </div>
 
         {/* Live Diagnostics & Test Execution Bar */}

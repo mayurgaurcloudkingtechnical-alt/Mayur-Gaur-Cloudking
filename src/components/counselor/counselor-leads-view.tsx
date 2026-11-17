@@ -72,11 +72,16 @@ export function CounselorLeadsView({
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [testLeadFeedback, setTestLeadFeedback] = useState<string | null>(null);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
+  const [bulkAssignToId, setBulkAssignToId] = useState("");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkMsg, setBulkMsg] = useState<string | null>(null);
 
   const utils = api.useUtils();
   const { data: authUser } = api.auth.me.useQuery();
   const { data: courses = [] } = api.crm.listPublicCourses.useQuery();
   const { data: myProfile } = api.crm.getMyCallingProfile.useQuery();
+  const { data: counselorsList = [] } = api.crm.listCounselors.useQuery();
 
   const userRole = authUser?.roleCode || myProfile?.roleCode;
   const canConvertAdmission =
@@ -583,7 +588,7 @@ export function CounselorLeadsView({
       ) : (
         /* Leads Table */
         <Card className="border-slate-200 bg-white">
-          <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b border-slate-100">
+          <CardHeader className="py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100">
             <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
               <Users className="h-4 w-4 text-emerald-600" />
               <span>Prospect Records</span>
@@ -591,10 +596,80 @@ export function CounselorLeadsView({
                 <span className="text-xs font-normal text-slate-400">({pagination.total} total)</span>
               )}
             </CardTitle>
+            {["MANAGER", "ADMIN", "DIRECTOR", "SUPER_ADMIN"].includes(String(userRole || "")) && (
+              <div className="flex flex-wrap items-center gap-2">
+                <select
+                  value={bulkAssignToId}
+                  onChange={(e) => setBulkAssignToId(e.target.value)}
+                  className="text-xs border border-slate-300 rounded px-2 py-1 bg-white text-slate-700"
+                >
+                  <option value="">Select Staff to Distribute...</option>
+                  {counselorsList.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName} ({c.roleCode})
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  size="sm"
+                  disabled={bulkBusy || selectedLeadIds.length === 0 || !bulkAssignToId}
+                  onClick={async () => {
+                    setBulkBusy(true);
+                    setBulkMsg(null);
+                    try {
+                      const res = await fetch("/api/leads/smart-import", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ leadIds: selectedLeadIds, assignToId: bulkAssignToId, approve: true }),
+                      });
+                      const d = await res.json();
+                      setBulkMsg(d.message || d.error);
+                      setSelectedLeadIds([]);
+                      utils.crm.listLeads.invalidate();
+                    } finally {
+                      setBulkBusy(false);
+                    }
+                  }}
+                  className="h-7 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+                >
+                  Distribute ({selectedLeadIds.length})
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  disabled={bulkBusy || selectedLeadIds.length === 0}
+                  onClick={async () => {
+                    setBulkBusy(true);
+                    setBulkMsg(null);
+                    try {
+                      const res = await fetch("/api/leads/smart-import", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ leadIds: selectedLeadIds, approve: true }),
+                      });
+                      const d = await res.json();
+                      setBulkMsg(d.message || d.error);
+                      setSelectedLeadIds([]);
+                      utils.crm.listLeads.invalidate();
+                    } finally {
+                      setBulkBusy(false);
+                    }
+                  }}
+                  className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                >
+                  Approve Selected ({selectedLeadIds.length})
+                </Button>
+              </div>
+            )}
             <span className="text-[11px] text-slate-400 font-mono">
               Auto-sync active (10s)
             </span>
           </CardHeader>
+          {bulkMsg && (
+            <div className="px-4 py-2 bg-emerald-50 border-b border-emerald-200 text-emerald-800 text-xs font-semibold">
+              {bulkMsg}
+            </div>
+          )}
           <CardContent className="p-0">
             {isLoading ? (
               <div className="py-12 text-center text-xs text-slate-400">Loading prospects...</div>
@@ -615,6 +690,15 @@ export function CounselorLeadsView({
                 <table className="w-full text-left text-xs">
                   <thead>
                     <tr className="border-b border-slate-100 bg-slate-50/50 text-slate-500">
+                      <th className="py-2.5 px-3 w-8">
+                        <input
+                          type="checkbox"
+                          checked={leads.length > 0 && selectedLeadIds.length === leads.length}
+                          onChange={(e) =>
+                            setSelectedLeadIds(e.target.checked ? leads.map((l: any) => l.id) : [])
+                          }
+                        />
+                      </th>
                       <th className="py-2.5 px-4 font-semibold">Candidate</th>
                       <th className="py-2.5 px-3 font-semibold">Source / Campaign</th>
                       <th className="py-2.5 px-3 font-semibold">Contact</th>
@@ -628,6 +712,17 @@ export function CounselorLeadsView({
                   <tbody className="divide-y divide-slate-100">
                     {leads.map((lead: any) => (
                       <tr key={lead.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="py-3 px-3">
+                          <input
+                            type="checkbox"
+                            checked={selectedLeadIds.includes(lead.id)}
+                            onChange={(e) =>
+                              setSelectedLeadIds((prev) =>
+                                e.target.checked ? [...prev, lead.id] : prev.filter((id) => id !== lead.id)
+                              )
+                            }
+                          />
+                        </td>
                         <td className="py-3 px-4">
                           <div className="font-bold text-slate-900">{lead.fullName}</div>
                           <div className="text-[11px] text-slate-400">
@@ -725,38 +820,75 @@ export function CounselorLeadsView({
                               <span>Qualify</span>
                             </Button>
 
-                            {/* 1-Click WhatsApp Automation */}
+                            {/* 1-Click Direct WhatsApp Delivery */}
                             <Button
                               size="sm"
-                              onClick={() => {
+                              onClick={async () => {
                                 const clean = lead.phone.replace(/\D/g, "").slice(-10);
                                 const counselorName = myProfile?.displayName || myProfile?.firstName || "Counselor";
                                 const counselorPhone = myProfile?.callingNumber || "+91 9196596975";
                                 const courseTitle = lead.course?.title || "our professional IT programs";
-                                const text = encodeURIComponent(
-                                  `Hello ${lead.fullName}! 👋 This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`
-                                );
-                                window.open(`https://wa.me/91${clean}?text=${text}`, "_blank");
+                                const msg = `Hello ${lead.fullName}! This is ${counselorName} from SOFTLAB GLOBAL (Prayagraj). Thank you for inquiring about ${courseTitle}. When is a good time for a quick 2-minute call? (Direct Helpline: ${counselorPhone})`;
+                                try {
+                                  const res = await fetch("/api/whatsapp/local", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      scope: "mine",
+                                      action: "send",
+                                      to: clean,
+                                      contactName: lead.fullName,
+                                      text: msg,
+                                    }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok && data?.success) {
+                                    alert(`WhatsApp delivered directly to ${lead.fullName} (${clean})!`);
+                                    return;
+                                  }
+                                } catch {}
+                                window.open(`https://wa.me/91${clean}?text=${encodeURIComponent(msg)}`, "_blank");
                               }}
                               className="h-7 px-2 text-[11px] bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center gap-1 shadow-xs"
-                              title="1-Click WhatsApp Automation"
+                              title="1-Click Direct WhatsApp Delivery"
                             >
                               <MessageSquare className="h-3 w-3" />
                               <span>WhatsApp</span>
                             </Button>
 
-                            {/* 1-Click Calling Link */}
+                            {/* 1-Click Phone Bridge SIM Call */}
                             <Button
                               size="sm"
                               variant="outline"
-                              asChild
-                              className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold"
+                              onClick={async () => {
+                                const clean = lead.phone.replace(/\D/g, "").slice(-10);
+                                try {
+                                  const res = await fetch("/api/whatsapp/local", {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      action: "phone_bridge_dial",
+                                      mode: "SIM_CALL",
+                                      to: clean,
+                                      leadId: lead.id,
+                                      contactName: lead.fullName,
+                                    }),
+                                  });
+                                  const d = await res.json();
+                                  if (d?.paired) {
+                                    alert(`SIM Call sent to your paired phone (${d.to}) & logged!`);
+                                    return;
+                                  }
+                                  alert(
+                                    `Call logged for ${lead.fullName} (${clean}). Pair your mobile in 'My WhatsApp & Call' -> 'Send Link to My WhatsApp' for 1-click SIM dialing!`
+                                  );
+                                } catch {}
+                              }}
+                              className="h-7 px-2 text-[11px] border-blue-200 text-blue-700 hover:bg-blue-50 font-semibold flex items-center gap-1"
                               title={`Direct Call: ${lead.phone}`}
                             >
-                              <a href={`tel:${lead.phone.replace(/\D/g, "").slice(-10)}`}>
-                                <Phone className="h-3 w-3 text-blue-600" />
-                                <span>Call</span>
-                              </a>
+                              <Phone className="h-3 w-3 text-blue-600" />
+                              <span>Call</span>
                             </Button>
 
                             <Button asChild size="sm" variant="outline" className="h-7 text-xs border-slate-300">

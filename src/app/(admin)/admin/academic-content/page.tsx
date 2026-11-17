@@ -4,6 +4,7 @@ import { UserRoleCode } from "@prisma/client";
 import { DashboardShell } from "@/components/common/dashboard-shell";
 import { PageHeader } from "@/components/common/page-header";
 import { AcademicContentCmsView } from "@/components/admin/academic/academic-content-cms-view";
+import { AiAcademicEnginePanel } from "@/components/admin/academic/ai-academic-engine-panel";
 
 export const metadata: Metadata = {
   title: "Academic Content CMS & Curriculum Master | SoftLab Global",
@@ -24,7 +25,10 @@ export default async function AdminAcademicContentPage() {
         title="Academic Content CMS"
         description="Manage all courses, modules, topics, practicals, version history, safe bulk imports, and complimentary English enrollments."
       />
-      <AcademicContentCmsView />
+      <div className="space-y-8">
+        <AiAcademicEnginePanel />
+        <AcademicContentCmsView />
+      </div>
     </DashboardShell>
   );
 }

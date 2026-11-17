@@ -190,47 +190,98 @@ export function CommunicationsHub() {
         </div>
       </div>
 
-      {/* KPI Cards */}
+      {/* KPI Cards (Clickable Filters) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("logs");
+            setChannelFilter("");
+            setStatusFilter("");
+            setPage(1);
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-slate-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Dispatches</div>
           <div className="text-2xl font-bold text-slate-900 mt-1">{stats?.total ?? 0}</div>
-          <div className="text-xs text-slate-400 mt-1">All Channels</div>
-        </div>
+          <div className="text-xs text-slate-400 mt-1">All Channels →</div>
+        </button>
 
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("logs");
+            setChannelFilter("OFFICIAL_EMAIL");
+            setStatusFilter("");
+            setPage(1);
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-emerald-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-emerald-600 uppercase tracking-wider">Emails Delivered</div>
           <div className="text-2xl font-bold text-emerald-600 mt-1">{stats?.emailsSent ?? 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Mailcow SMTP</div>
-        </div>
+          <div className="text-xs text-slate-400 mt-1">Mailcow SMTP →</div>
+        </button>
 
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("logs");
+            setChannelFilter("WHATSAPP");
+            setStatusFilter("");
+            setPage(1);
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-sky-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-sky-600 uppercase tracking-wider">WhatsApp Sent</div>
           <div className="text-2xl font-bold text-sky-600 mt-1">{stats?.whatsappSent ?? 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Cloud / Official</div>
-        </div>
+          <div className="text-xs text-slate-400 mt-1">Self-Hosted / Cloud →</div>
+        </button>
 
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("logs");
+            setChannelFilter("");
+            setStatusFilter("FAILED");
+            setPage(1);
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-rose-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-rose-600 uppercase tracking-wider">Failures</div>
           <div className="text-2xl font-bold text-rose-600 mt-1">{stats?.failed ?? 0}</div>
-          <div className="text-xs text-slate-400 mt-1">Needs Attention</div>
-        </div>
+          <div className="text-xs text-slate-400 mt-1">Needs Attention →</div>
+        </button>
 
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("logs");
+            setChannelFilter("");
+            setStatusFilter("SIMULATED");
+            setPage(1);
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-amber-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-amber-600 uppercase tracking-wider">Simulated / Staged</div>
           <div className="text-2xl font-bold text-amber-600 mt-1">{stats?.simulated ?? 0}</div>
-          <div className="text-xs text-slate-400 mt-1">No Meta Token</div>
-        </div>
+          <div className="text-xs text-slate-400 mt-1">View Staged →</div>
+        </button>
 
-        <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("authorities");
+          }}
+          className="text-left bg-white p-4 rounded-lg border border-slate-200 shadow-sm hover:border-emerald-400 hover:shadow-md transition cursor-pointer"
+        >
           <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Delivery</div>
           <div className="text-xs font-bold text-slate-800 mt-2 truncate">
             {stats?.lastSuccessfulDelivery ? new Date(stats.lastSuccessfulDelivery).toLocaleTimeString("en-IN") : "Active"}
           </div>
           <div className="text-[11px] text-emerald-600 mt-1 flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" /> System Live
+            <CheckCircle2 className="h-3 w-3" /> Configure Authorities →
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Navigation Tabs */}
@@ -324,8 +375,8 @@ export function CommunicationsHub() {
           </div>
 
           {/* Table */}
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-            <table className="w-full text-left text-sm text-slate-600">
+          <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
+            <table className="w-full min-w-[920px] text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Event & Recipient</th>
@@ -496,8 +547,8 @@ export function CommunicationsHub() {
             </button>
           </div>
 
-          <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
-            <table className="w-full text-left text-sm text-slate-600">
+          <div className="bg-white rounded-lg border border-slate-200 overflow-x-auto shadow-sm">
+            <table className="w-full min-w-[960px] text-left text-sm text-slate-600">
               <thead className="bg-slate-50 text-xs uppercase font-semibold text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 px-4">Authority & Designation</th>
@@ -552,12 +603,31 @@ export function CommunicationsHub() {
                       </td>
 
                       <td className="py-3 px-4 font-mono text-xs text-slate-600">
-                        {auth.whatsappNumber || <span className="text-slate-300 italic">Not set</span>}
-                        {auth.notifyWhatsApp && auth.whatsappNumber && (
-                          <span className="ml-1.5 text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200">
-                            Active
-                          </span>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {auth.whatsappNumber ? (
+                            <>
+                              <span className="text-slate-800 font-semibold">{auth.whatsappNumber}</span>
+                              {auth.notifyWhatsApp && (
+                                <span className="text-[10px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-200 font-sans">
+                                  Active
+                                </span>
+                              )}
+                            </>
+                          ) : (
+                            <>
+                              <span className="text-[10px] bg-amber-50 text-amber-800 px-1.5 py-0.5 rounded border border-amber-200 font-sans font-semibold">
+                                Not Configured
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => handleEditClick(auth)}
+                                className="px-2 py-0.5 rounded bg-sky-600 text-white hover:bg-sky-700 font-sans font-semibold text-[11px]"
+                              >
+                                Configure WhatsApp
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
 
                       <td className="py-3 px-4 text-xs">
@@ -592,26 +662,48 @@ export function CommunicationsHub() {
                         )}
                       </td>
 
-                      <td className="py-3 px-4 text-right space-x-2">
-                        <button
-                          onClick={() => handleEditClick(auth)}
-                          className="p-1 text-slate-500 hover:text-slate-900 rounded hover:bg-slate-100 transition"
-                          title="Edit Authority"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </button>
+                      <td className="py-3 px-4 text-right">
+                        <div className="inline-flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleEditClick(auth)}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded transition"
+                            title="Edit Authority & WhatsApp Number"
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit
+                          </button>
 
-                        <button
-                          onClick={() => toggleAuthMutation.mutate({ id: auth.id })}
-                          className={`p-1 rounded transition ${
-                            auth.isActive
-                              ? "text-rose-500 hover:text-rose-700 hover:bg-rose-50"
-                              : "text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
-                          }`}
-                          title={auth.isActive ? "Deactivate Authority" : "Activate Authority"}
-                        >
-                          {auth.isActive ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                        </button>
+                          {auth.whatsappNumber && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTestChannel("WHATSAPP");
+                                setTestAddress(auth.whatsappNumber);
+                                setActiveTab("test");
+                              }}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded transition"
+                              title="Send Test WhatsApp Message"
+                            >
+                              <Send className="h-3 w-3" />
+                              Test
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => toggleAuthMutation.mutate({ id: auth.id })}
+                            className={`inline-flex items-center gap-1 px-2 py-1 text-[11px] font-semibold rounded transition ${
+                              auth.isActive
+                                ? "text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200"
+                                : "text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
+                            }`}
+                            title={auth.isActive ? "Disable Authority" : "Enable Authority"}
+                          >
+                            {auth.isActive ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                            {auth.isActive ? "Disable" : "Enable"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))

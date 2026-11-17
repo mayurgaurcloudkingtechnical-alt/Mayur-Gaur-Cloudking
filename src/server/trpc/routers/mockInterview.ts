@@ -57,6 +57,36 @@ export const mockInterviewRouter = router({
     });
   }),
 
+  listSchedulerOptions: requireRoleProcedure(INTERVIEW_STAFF_ROLES).query(async ({ ctx }) => {
+    const [students, interviewers] = await Promise.all([
+      ctx.db.studentProfile.findMany({
+        take: 200,
+        orderBy: { createdAt: "desc" },
+        include: {
+          user: { select: { firstName: true, lastName: true, email: true } },
+        },
+      }),
+      ctx.db.user.findMany({
+        where: {
+          status: "ACTIVE",
+          roleCode: {
+            in: [
+              UserRoleCode.TRAINER,
+              UserRoleCode.PLACEMENT_OFFICER,
+              UserRoleCode.ADMIN,
+              UserRoleCode.DIRECTOR,
+              UserRoleCode.SUPER_ADMIN,
+              UserRoleCode.HR,
+            ],
+          },
+        },
+        select: { id: true, firstName: true, lastName: true, roleCode: true },
+        orderBy: { firstName: "asc" },
+      }),
+    ]);
+    return { students, interviewers, currentUserId: ctx.user.id };
+  }),
+
   /**
    * List interviews assigned to the logged-in interviewer or placement officer
    */

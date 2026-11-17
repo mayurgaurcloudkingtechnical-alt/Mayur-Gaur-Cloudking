@@ -116,13 +116,61 @@ export class CentralNotificationEngine {
         reportUrl: `${this.SITE_URL}/admin/daily-reports`,
       };
 
-      // 2. Fetch all configured Higher Authority recipients
+      // 2. Fetch all configured Higher Authority recipients + Reporting Manager + Super Admin
       const recipients = await HigherAuthorityService.getRecipientsForEvent("DAILY_REPORT");
+
+      // Ensure employee's Reporting Manager is included
+      if (staff.reportingManagerId) {
+        const mgr = await db.staffProfile.findUnique({
+          where: { id: staff.reportingManagerId },
+          include: { user: { select: { firstName: true, lastName: true, email: true, phone: true, roleCode: true } } },
+        });
+        if (mgr?.user) {
+          const mgrEmail = mgr.officialEmail || mgr.user.email;
+          const alreadyHasMgr = recipients.some((r) => r.officialEmail?.toLowerCase() === mgrEmail.toLowerCase());
+          if (!alreadyHasMgr) {
+            recipients.push({
+              id: mgr.id,
+              name: `${mgr.user.firstName} ${mgr.user.lastName}`.trim(),
+              roleCode: mgr.user.roleCode,
+              officialEmail: mgrEmail,
+              personalEmail: mgr.personalEmail || null,
+              whatsappNumber: mgr.whatsappNumber || mgr.user.phone || null,
+              notifyEmail: true,
+              notifyPersonalEmail: Boolean(mgr.personalEmail),
+              notifyWhatsApp: Boolean(mgr.whatsappNumber || mgr.user.phone),
+            } as any);
+          }
+        }
+      }
+
+      // Ensure Super Admins are included
+      const superAdmins = await db.user.findMany({
+        where: { roleCode: "SUPER_ADMIN", isActive: true },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true },
+      });
+      for (const sa of superAdmins) {
+        if (!recipients.some((r) => r.officialEmail?.toLowerCase() === sa.email.toLowerCase())) {
+          recipients.push({
+            id: sa.id,
+            name: `${sa.firstName} ${sa.lastName}`.trim(),
+            roleCode: sa.roleCode,
+            officialEmail: sa.email,
+            personalEmail: null,
+            whatsappNumber: sa.phone || null,
+            notifyEmail: true,
+            notifyPersonalEmail: false,
+            notifyWhatsApp: Boolean(sa.phone),
+          } as any);
+        }
+      }
+
       if (recipients.length === 0) {
         console.warn("[CentralNotificationEngine] No active Higher Authorities configured for DAILY_REPORT.");
       }
 
-      const subject = `Daily Work Report | ${employeeName} | ${department} | ${reportDateStr}`;
+      const dispatchNonce = new Date(report.updatedAt).getTime();
+      const subject = `Daily Work & Closing Report | ${employeeName} | ${department} | ${reportDateStr}`;
       const emailHtml = this.generateDailyReportHtml(reportData);
       const whatsappText = this.generateDailyReportWhatsAppText(reportData);
 
@@ -130,7 +178,7 @@ export class CentralNotificationEngine {
       for (const rec of recipients) {
         // --- Channel 1: Official Work Email ---
         if (rec.notifyEmail && rec.officialEmail) {
-          const idempotencyKey = `DAILY_REPORT:${report.id}:OFFICIAL_EMAIL:${rec.officialEmail.toLowerCase()}`;
+          const idempotencyKey = `DAILY_REPORT:${report.id}:${dispatchNonce}:OFFICIAL_EMAIL:${rec.officialEmail.toLowerCase()}`;
           const res = await this.deliverEmail({
             idempotencyKey,
             eventType: "DAILY_REPORT_SUBMITTED",
@@ -646,36 +694,71 @@ export class CentralNotificationEngine {
   }
 
   /**
-   * Get delivery statistics for Admin Dashboard
+   * Get comprehensive recipient-wise delivery statistics for Admin Dashboard
    */
   public static async getDeliveryStats() {
-    const [total, sent, failed, simulated, emailsSent, whatsappSent] = await Promise.all([
-      db.notificationDeliveryLog.count(),
-      db.notificationDeliveryLog.count({ where: { status: "SENT" } }),
-      db.notificationDeliveryLog.count({ where: { status: "FAILED" } }),
-      db.notificationDeliveryLog.count({ where: { status: "SIMULATED" } }),
-      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: "SENT" } }),
-      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: "SENT" } }),
-    ]);
-
-    const lastLog = await db.notificationDeliveryLog.findFirst({
-      where: { status: "SENT" },
-      orderBy: { sentAt: "desc" },
-    });
-
-    return {
+    const [
       total,
       sent,
       failed,
       simulated,
+      pending,
+      retried,
       emailsSent,
-      whatsappSent,
+      emailsDelivered,
+      emailsBounced,
+      whatsappSubmitted,
+      whatsappDelivered,
+      whatsappRead,
+      whatsappFailed,
+      uniqueRecipients,
+      lastLog,
+    ] = await Promise.all([
+      db.notificationDeliveryLog.count(),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.count({ where: { status: "SIMULATED" } }),
+      db.notificationDeliveryLog.count({ where: { status: { in: ["PENDING", "QUEUED"] } } }),
+      db.notificationDeliveryLog.count({ where: { retryCount: { gt: 0 } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["SENT", "DELIVERED", "READ"] }, deliveredAt: { not: null } } }),
+      db.notificationDeliveryLog.count({ where: { channel: { in: ["OFFICIAL_EMAIL", "PERSONAL_EMAIL"] }, status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["SENT", "DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["DELIVERED", "READ"] } } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: "READ" } }),
+      db.notificationDeliveryLog.count({ where: { channel: "WHATSAPP", status: { in: ["FAILED", "BOUNCED"] } } }),
+      db.notificationDeliveryLog.findMany({
+        distinct: ["recipientAddress"],
+        select: { recipientAddress: true },
+      }),
+      db.notificationDeliveryLog.findFirst({
+        where: { status: { in: ["SENT", "DELIVERED", "READ"] } },
+        orderBy: { sentAt: "desc" },
+      }),
+    ]);
+
+    return {
+      total,
+      totalRecipients: uniqueRecipients.length,
+      sent,
+      failed,
+      simulated,
+      pending,
+      retried,
+      emailsSent,
+      emailsDelivered: emailsDelivered || emailsSent,
+      emailsBounced,
+      whatsappSent: whatsappSubmitted,
+      whatsappSubmitted,
+      whatsappDelivered,
+      whatsappRead,
+      whatsappFailed,
       lastSuccessfulDelivery: lastLog?.sentAt || null,
     };
   }
 
   /**
-   * List delivery logs with filtering and pagination
+   * List delivery logs with filtering, date range, and pagination
    */
   public static async listDeliveryLogs(params: {
     page?: number;
@@ -684,20 +767,36 @@ export class CentralNotificationEngine {
     channel?: string;
     status?: string;
     search?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    department?: string;
   }) {
     const page = Math.max(1, params.page || 1);
-    const limit = Math.min(100, Math.max(1, params.limit || 20));
+    const limit = Math.min(200, Math.max(1, params.limit || 20));
     const skip = (page - 1) * limit;
 
     const where: any = {};
     if (params.eventType) where.eventType = params.eventType;
     if (params.channel) where.channel = params.channel;
     if (params.status) where.status = params.status;
+    if (params.department) {
+      where.recipientRole = { contains: params.department, mode: "insensitive" };
+    }
+    if (params.dateFrom || params.dateTo) {
+      where.createdAt = {};
+      if (params.dateFrom) where.createdAt.gte = new Date(params.dateFrom);
+      if (params.dateTo) {
+        const end = new Date(params.dateTo);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
     if (params.search) {
       where.OR = [
         { recipientName: { contains: params.search, mode: "insensitive" } },
         { recipientAddress: { contains: params.search, mode: "insensitive" } },
         { subject: { contains: params.search, mode: "insensitive" } },
+        { recipientRole: { contains: params.search, mode: "insensitive" } },
       ];
     }
 
@@ -715,7 +814,7 @@ export class CentralNotificationEngine {
       items,
       total,
       page,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.max(1, Math.ceil(total / limit)),
     };
   }
 

@@ -1077,40 +1077,27 @@ export class CrmApplicationService {
         },
       });
 
-      // 9. Dispatch Email Notifications asynchronously
-      EmailService.sendAdmissionConfirmation({
-        to: cleanEmail,
-        studentName: input.applicantName.trim(),
-        studentId: studentProfile.studentId,
-        admissionNumber: application.applicationNumber,
-        courseName: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
-        batchName: input.batchId ? "Enrolled Batch" : undefined,
-      }).catch((e) => console.error("[Admission Email Error]", e));
-
-      EmailService.sendStudentCredentials({
-        to: cleanEmail,
-        studentName: input.applicantName.trim(),
-        studentId: studentProfile.studentId,
-        loginEmail: cleanEmail,
-        temporaryPassword: tempPassword,
-      }).catch((e) => console.error("[Credentials Email Error]", e));
-
-      // Consolidated Admission Confirmation + Course Details + LMS Credentials to Student Email (BCC: softlabglobal9@gmail.com) & WhatsApp
-      StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
-        studentName: input.applicantName.trim(),
-        studentEmail: cleanEmail,
-        studentPhone: cleanPhone,
-        studentId: studentProfile.studentId,
-        admissionNumber: application.applicationNumber,
-        courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
-        specialization: univSpec || course.specialization,
-        providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
-        temporaryPassword: tempPassword,
-        loginEmail: cleanEmail,
-        counselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
-        counselorPhone: input.applicantPhone,
-        leadId,
-      }).catch((e) => console.error("[StudentAdmissionNotification Error]", e));
+      // 9. Dispatch Verified 3-Email Admission Workflow + WhatsApp + Management Hierarchy
+      try {
+        await StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
+          studentName: input.applicantName.trim(),
+          studentEmail: cleanEmail,
+          studentPhone: cleanPhone,
+          studentId: studentProfile.studentId,
+          admissionNumber: application.applicationNumber,
+          courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+          specialization: univSpec || course.specialization,
+          providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
+          temporaryPassword: tempPassword,
+          loginEmail: cleanEmail,
+          counselorName: `${user.firstName || ""} ${user.lastName || ""}`.trim() || user.email,
+          counselorPhone: input.applicantPhone,
+          createdById: user.id,
+          leadId,
+        });
+      } catch (e) {
+        console.error("[StudentAdmissionNotification Error]", e);
+      }
 
       if (paidPaise > 0 && receiptNumber) {
         EmailService.sendFeeReceipt({
@@ -1815,39 +1802,27 @@ export class CrmApplicationService {
       };
     }, { maxWait: 15000, timeout: 30000 });
 
-    // 10. Communications Dispatch: Email + WhatsApp to Student
-    EmailService.sendAdmissionConfirmation({
-      to: cleanEmail,
-      studentName: application.applicantName.trim(),
-      studentId: result.studentProfile.studentId,
-      admissionNumber: application.applicationNumber,
-      courseName: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
-      batchName: application.batch ? application.batch.name : undefined,
-    }).catch((e) => console.error("[Admission Email Error]", e));
-
-    EmailService.sendStudentCredentials({
-      to: cleanEmail,
-      studentName: application.applicantName.trim(),
-      studentId: result.studentProfile.studentId,
-      loginEmail: cleanEmail,
-      temporaryPassword: result.tempPassword,
-    }).catch((e) => console.error("[Credentials Email Error]", e));
-
-    StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
-      studentName: application.applicantName.trim(),
-      studentEmail: cleanEmail,
-      studentPhone: cleanPhone,
-      studentId: result.studentProfile.studentId,
-      admissionNumber: application.applicationNumber,
-      courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
-      specialization: univSpec || course.specialization,
-      providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
-      temporaryPassword: result.tempPassword,
-      loginEmail: cleanEmail,
-      counselorName: application.counselor ? `${application.counselor.firstName} ${application.counselor.lastName}` : "Admissions Desk",
-      counselorPhone: application.counselor?.phone || undefined,
-      leadId: application.leadId,
-    }).catch((e) => console.error("[StudentAdmissionNotification Error]", e));
+    // 10. Communications Dispatch: Verified 3-Email Admission Workflow + WhatsApp + Management Hierarchy
+    try {
+      await StudentAdmissionNotificationService.sendStudentAdmissionAndCredentialsNotification({
+        studentName: application.applicantName.trim(),
+        studentEmail: cleanEmail,
+        studentPhone: cleanPhone,
+        studentId: result.studentProfile.studentId,
+        admissionNumber: application.applicationNumber,
+        courseTitle: isUniversity ? `${course.title} (Dr. Preeti Global University)` : course.title,
+        specialization: univSpec || course.specialization,
+        providerName: isUniversity ? (univName || "Dr. Preeti Global University") : "SoftLab Global",
+        temporaryPassword: result.tempPassword,
+        loginEmail: cleanEmail,
+        counselorName: application.counselor ? `${application.counselor.firstName} ${application.counselor.lastName}` : "Admissions Desk",
+        counselorPhone: application.counselor?.phone || undefined,
+        createdById: application.counselorId || undefined,
+        leadId: application.leadId,
+      });
+    } catch (e) {
+      console.error("[StudentAdmissionNotification Error]", e);
+    }
 
     if (result.receiptNumber && paidPaise > 0) {
       EmailService.sendFeeReceipt({
