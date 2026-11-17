@@ -515,7 +515,7 @@ export const eventsRouter = router({
       // Audit log
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "CREATE_EVENT",
           entityType: "Event",
           entityId: event.id,
@@ -580,7 +580,7 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "UPDATE_EVENT",
           entityType: "Event",
           entityId: event.id,
@@ -617,7 +617,7 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "DUPLICATE_EVENT",
           entityType: "Event",
           entityId: duplicated.id,
@@ -638,7 +638,7 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "ARCHIVE_EVENT",
           entityType: "Event",
           entityId: event.id,

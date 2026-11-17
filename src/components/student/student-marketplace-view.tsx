@@ -149,7 +149,7 @@ export function StudentMarketplaceView() {
             setSelectedCourse(null);
             setPurchaseSuccess({
               courseTitle: selectedCourse.title,
-              enrollmentId: verification.enrollmentId,
+              enrollmentId: verification.enrollmentId || "",
               receiptNumber: verification.receiptNumber,
               invoiceNumber: verification.invoiceNumber,
             });
