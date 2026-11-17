@@ -68,7 +68,7 @@ export const mockInterviewRouter = router({
       }),
       ctx.db.user.findMany({
         where: {
-          isActive: true,
+          status: "ACTIVE",
           roleCode: {
             in: [
               UserRoleCode.TRAINER,

@@ -517,8 +517,8 @@ export const eventsRouter = router({
         data: {
           actorId: ctx.user.id,
           action: "CREATE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
+          resourceType: "Event",
+          resourceId: event.id,
           details: `Created new event '${event.title}' (${event.programType})`,
         },
       }).catch(() => null);
@@ -582,8 +582,8 @@ export const eventsRouter = router({
         data: {
           actorId: ctx.user.id,
           action: "UPDATE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
+          resourceType: "Event",
+          resourceId: event.id,
           details: `Updated event '${event.title}'`,
         },
       }).catch(() => null);
@@ -640,8 +640,8 @@ export const eventsRouter = router({
         data: {
           actorId: ctx.user.id,
           action: "ARCHIVE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
+          resourceType: "Event",
+          resourceId: event.id,
           details: `Archived/deleted event '${event.title}'`,
         },
       }).catch(() => null);

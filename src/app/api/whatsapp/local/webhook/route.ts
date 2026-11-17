@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
           data: {
             fullName: body.pushName || `WhatsApp ${tenDigit}`,
             phone: tenDigit,
-            source: "WHATSAPP_INBOUND",
+            email: `${tenDigit}@pending.softlabglobal.com`,
+            source: "WHATSAPP",
             status: "NEW",
             notes: `Auto-created from inbound WhatsApp (${sessionId})`,
           },
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
       let targetUserId = userIdFromSession;
       if (!targetUserId) {
         const admin = await db.user.findFirst({
-          where: { roleCode: { in: ["SUPER_ADMIN", "ADMIN"] }, isActive: true },
+          where: { roleCode: { in: ["SUPER_ADMIN", "ADMIN"] }, status: "ACTIVE" },
           select: { id: true },
         });
         targetUserId = admin?.id || null;

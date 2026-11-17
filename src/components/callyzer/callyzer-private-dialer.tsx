@@ -203,7 +203,7 @@ export function CallyzerPrivateDialer({ initialDestination = "", leadId, onCallE
         {callStatus === "IDLE" ? (
           <button
             onClick={() => handleStartCall()}
-            disabled={!destination.trim() || initiateCallMut.isLoading}
+            disabled={!destination.trim() || initiateCallMut.isPending}
             className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold rounded-lg flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 transition"
           >
             <PhoneCall className="w-4 h-4" />
