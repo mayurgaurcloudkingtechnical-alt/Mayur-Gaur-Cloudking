@@ -443,7 +443,7 @@ export class CrmIngestionService {
 
     if (input.leads.length > 500) {
       const { ChunkedBulkImportService } = await import("./chunked-bulk-import.service");
-      return ChunkedBulkImportService.createAndStartJob(actor, {
+      const queuedBatch = await ChunkedBulkImportService.createAndStartJob(actor, {
         fileName: input.fileName,
         source: input.source,
         chunkSize: 500,
@@ -457,6 +457,16 @@ export class CrmIngestionService {
           notes: l.notes,
         })),
       });
+      return {
+        batchId: queuedBatch.id,
+        batchCode: queuedBatch.batchCode,
+        totalRows: queuedBatch.totalRows,
+        createdCount: 0,
+        updatedCount: 0,
+        failedCount: 0,
+        rowErrors: [] as Array<{ row: number; phone: string; name: string; reason: string }>,
+        queued: true,
+      };
     }
 
     const batchCode = `SLG-IMP-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(1000 + Math.random() * 9000)}`;
