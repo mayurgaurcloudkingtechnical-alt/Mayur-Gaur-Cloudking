@@ -3,6 +3,8 @@ import { getToken } from "next-auth/jwt";
 import ExcelJS from "exceljs";
 import { db } from "@/server/db/client";
 import { LeadSource, LeadStatus, UserRoleCode } from "@prisma/client";
+import { EmailService } from "@/server/services/email.service";
+import { WhatsAppBusinessService } from "@/server/services/whatsapp-business.service";
 
 export const dynamic = "force-dynamic";
 
@@ -254,16 +256,47 @@ export async function GET(req: NextRequest) {
     db.lead.count({ where: { status: LeadStatus.LOST } }),
     db.leadImportBatch.count(),
     db.auditLog.count(),
-    db.user.findMany({
-      where: {
-        status: "ACTIVE",
-        roleCode: { in: [UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER, UserRoleCode.MANAGER, UserRoleCode.ADMIN] },
-      },
-      select: { id: true, firstName: true, lastName: true, email: true, roleCode: true },
-      orderBy: { firstName: "asc" },
-    }).then((list) =>
-      list.map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`.trim(), email: u.email, roleCode: u.roleCode }))
-    ),
+    Promise.all([
+      db.user.findMany({
+        where: {
+          status: "ACTIVE",
+          roleCode: { in: [UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER, UserRoleCode.MANAGER, UserRoleCode.ADMIN] },
+        },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          phone: true,
+          roleCode: true,
+          activeLeadsCount: true,
+          dailyLeadQuota: true,
+          staffProfile: { select: { department: true } },
+        },
+        orderBy: { firstName: "asc" },
+      }),
+      db.leaveRequest.findMany({
+        where: {
+          status: "APPROVED",
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
+        },
+        select: { staff: { select: { userId: true } } },
+      }),
+    ]).then(([list, leaves]) => {
+      const onLeaveUserIds = new Set(leaves.map((l) => l.staff.userId));
+      return list.map((u) => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`.trim(),
+        email: u.email,
+        phone: u.phone,
+        roleCode: u.roleCode,
+        department: u.staffProfile?.department || "Admissions",
+        activeLeadsCount: u.activeLeadsCount,
+        dailyLeadQuota: u.dailyLeadQuota,
+        onLeaveToday: onLeaveUserIds.has(u.id),
+      }));
+    }),
   ]);
 
   let items: any[] = [];
@@ -864,13 +897,55 @@ export async function PATCH(req: NextRequest) {
   }
 
   if (action === "DISTRIBUTE") {
-    let targetUsers: { id: string; name: string; roleCode: UserRoleCode }[] = [];
+    const distributionMode: string = String(body.distributionMode || (assigneeId ? "SINGLE" : targetRole === "INDIVIDUAL_EMPLOYEES" ? "INDIVIDUAL_EMPLOYEES" : targetRole || "COUNSELOR"));
+    const selectedEmployeeIds: string[] = Array.isArray(body.selectedEmployeeIds) ? body.selectedEmployeeIds : [];
+    const distributionMethod: string = String(body.distributionMethod || "EQUAL").toUpperCase();
+    const excludeOnLeave: boolean = body.excludeOnLeave !== false;
+    const overrideLeaveExclusion: boolean = body.overrideLeaveExclusion === true;
+    const sourceLabel: string = String(body.sourceLabel || "Enterprise Data Hub");
+    const campaignName: string = String(body.campaignName || "CRM Lead Allocation");
+    const courseCategory: string = String(body.courseCategory || "All Programs");
+    const followUpDeadline: Date = body.followUpDeadline ? new Date(body.followUpDeadline) : new Date(Date.now() + 24 * 60 * 60 * 1000);
+    const manualAllocations: Record<string, number> = body.manualAllocations && typeof body.manualAllocations === "object" ? body.manualAllocations : {};
+    const weights: Record<string, number> = body.weights && typeof body.weights === "object" ? body.weights : {};
+
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const leavesToday = await db.leaveRequest.findMany({
+      where: { status: "APPROVED", startDate: { lte: new Date() }, endDate: { gte: todayStart } },
+      select: { staff: { select: { userId: true } } },
+    });
+    const onLeaveIds = new Set(leavesToday.map((l) => l.staff.userId));
+
+    let candidateUsers: Array<{ id: string; name: string; email: string; phone: string | null; roleCode: UserRoleCode; activeLeadsCount: number }> = [];
+
+    const mapUsers = (rows: any[]) =>
+      rows.map((u) => ({
+        id: u.id,
+        name: `${u.firstName} ${u.lastName}`.trim(),
+        email: u.email,
+        phone: u.phone || null,
+        roleCode: u.roleCode,
+        activeLeadsCount: u.activeLeadsCount || 0,
+      }));
+
     if (assigneeId) {
-      const u = await db.user.findUnique({
-        where: { id: assigneeId },
-        select: { id: true, firstName: true, lastName: true, roleCode: true },
+      const u = await db.user.findFirst({
+        where: { id: assigneeId, status: "ACTIVE" },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true, activeLeadsCount: true },
       });
-      if (u) targetUsers = [{ id: u.id, name: `${u.firstName} ${u.lastName}`.trim(), roleCode: u.roleCode }];
+      if (u) candidateUsers = mapUsers([u]);
+    } else if (distributionMode === "INDIVIDUAL_EMPLOYEES" && selectedEmployeeIds.length > 0) {
+      const users = await db.user.findMany({
+        where: {
+          id: { in: selectedEmployeeIds },
+          status: "ACTIVE",
+          roleCode: { in: [UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER, UserRoleCode.MANAGER, UserRoleCode.ADMIN] },
+        },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true, activeLeadsCount: true },
+        orderBy: { firstName: "asc" },
+      });
+      candidateUsers = mapUsers(users);
     } else {
       const roleFilter =
         targetRole && ["COUNSELOR", "TELECALLER"].includes(targetRole)
@@ -878,19 +953,78 @@ export async function PATCH(req: NextRequest) {
           : [UserRoleCode.COUNSELOR, UserRoleCode.TELECALLER];
       const users = await db.user.findMany({
         where: { status: "ACTIVE", roleCode: { in: roleFilter } },
-        select: { id: true, firstName: true, lastName: true, roleCode: true },
+        select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true, activeLeadsCount: true },
         orderBy: { firstName: "asc" },
       });
-      targetUsers = users.map((u) => ({ id: u.id, name: `${u.firstName} ${u.lastName}`.trim(), roleCode: u.roleCode }));
+      candidateUsers = mapUsers(users);
     }
+
+    const excludedLeaveIds: string[] = [];
+    const overriddenLeaveIds: string[] = [];
+    const targetUsers = candidateUsers.filter((u) => {
+      if (onLeaveIds.has(u.id)) {
+        if (excludeOnLeave && !overrideLeaveExclusion) {
+          excludedLeaveIds.push(u.id);
+          return false;
+        }
+        overriddenLeaveIds.push(u.id);
+      }
+      return true;
+    });
 
     if (targetUsers.length === 0) {
-      return NextResponse.json({ error: "No active target staff found for distribution." }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            excludedLeaveIds.length > 0
+              ? "All selected employees are on approved leave today. Deselect leave exclusion or choose available staff."
+              : "No active authorized staff found for distribution.",
+        },
+        { status: 400 }
+      );
     }
 
+    // Build assignment plan according to distributionMethod
+    const assignmentOrder: typeof targetUsers = [];
+    if (distributionMethod === "AUTO_BALANCE") {
+      const sorted = [...targetUsers].sort((a, b) => a.activeLeadsCount - b.activeLeadsCount);
+      for (let i = 0; i < leadIds.length; i++) {
+        sorted.sort((a, b) => a.activeLeadsCount - b.activeLeadsCount);
+        const pick = sorted[0];
+        pick.activeLeadsCount += 1;
+        assignmentOrder.push(pick);
+      }
+    } else if (distributionMethod === "MANUAL" && Object.keys(manualAllocations).length > 0) {
+      for (const u of targetUsers) {
+        const qty = Math.max(0, Number(manualAllocations[u.id] || 0));
+        for (let k = 0; k < qty && assignmentOrder.length < leadIds.length; k++) {
+          assignmentOrder.push(u);
+        }
+      }
+      let idx = 0;
+      while (assignmentOrder.length < leadIds.length) {
+        assignmentOrder.push(targetUsers[idx % targetUsers.length]);
+        idx++;
+      }
+    } else if (distributionMethod === "WEIGHTED") {
+      const expanded: typeof targetUsers = [];
+      for (const u of targetUsers) {
+        const w = Math.max(1, Number(weights[u.id] || (u.roleCode === UserRoleCode.COUNSELOR ? 2 : 1)));
+        for (let k = 0; k < w; k++) expanded.push(u);
+      }
+      for (let i = 0; i < leadIds.length; i++) {
+        assignmentOrder.push(expanded[i % expanded.length]);
+      }
+    } else {
+      for (let i = 0; i < leadIds.length; i++) {
+        assignmentOrder.push(targetUsers[i % targetUsers.length]);
+      }
+    }
+
+    const perEmployeeCount = new Map<string, number>();
     let distributedCount = 0;
     for (let i = 0; i < leadIds.length; i++) {
-      const staff = targetUsers[i % targetUsers.length];
+      const staff = assignmentOrder[i];
       await db.lead.update({
         where: { id: leadIds[i] },
         data: {
@@ -905,11 +1039,127 @@ export async function PATCH(req: NextRequest) {
           leadId: leadIds[i],
           userId: String(auth.token.sub),
           activityType: "ASSIGNED",
-          notes: `Approved & distributed to ${staff.name} (${staff.roleCode}) via Enterprise Data Hub`,
+          notes: `Approved & distributed (${distributionMethod}) to ${staff.name} (${staff.roleCode}) via Enterprise Data Hub`,
         },
       });
+      perEmployeeCount.set(staff.id, (perEmployeeCount.get(staff.id) || 0) + 1);
       distributedCount++;
     }
+
+    // Increment activeLeadsCount & send Phase 7 Individual Email + WhatsApp Notifications
+    const actorUser = await db.user.findUnique({
+      where: { id: String(auth.token.sub) },
+      select: { firstName: true, lastName: true },
+    });
+    const managerName = actorUser ? `${actorUser.firstName} ${actorUser.lastName}`.trim() : "Manager";
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+    const timeStr = now.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const deadlineStr = followUpDeadline.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+    const recipientSummary: Array<{ userId: string; name: string; roleCode: string; count: number; emailSent: boolean; whatsappSent: boolean }> = [];
+
+    for (const staff of targetUsers) {
+      const count = perEmployeeCount.get(staff.id) || 0;
+      if (count === 0) continue;
+
+      await db.user.update({
+        where: { id: staff.id },
+        data: { activeLeadsCount: { increment: count } },
+      }).catch(() => {});
+
+      const summaryBody =
+        `New Leads Assigned – SoftLab Global\n\n` +
+        `Hello ${staff.name},\n` +
+        `You have received ${count} new enquiries.\n\n` +
+        `Distribution Date: ${dateStr}\n` +
+        `Distribution Time: ${timeStr}\n` +
+        `Source: ${sourceLabel}\n` +
+        `Campaign: ${campaignName}\n` +
+        `Course Category: ${courseCategory}\n` +
+        `Reporting Period: ${dateStr}\n` +
+        `Assigned By: ${managerName}\n` +
+        `Pending Follow-ups: ${count}\n` +
+        `Expected Follow-up Deadline: ${deadlineStr}\n\n` +
+        `CRM Login: https://lms.softlabglobal.com/login\n` +
+        `Assigned Leads: https://lms.softlabglobal.com/admin/leads\n\n` +
+        `Please log in to CRM and begin follow-up.`;
+
+      await db.notification.create({
+        data: {
+          userId: staff.id,
+          title: `New Leads Assigned: ${count} Enquiries`,
+          message: `${count} new enquiries assigned from ${sourceLabel} (${campaignName}) by ${managerName}.`,
+          type: "SYSTEM",
+        },
+      }).catch(() => {});
+
+      let emailSent = false;
+      let whatsappSent = false;
+
+      if (staff.email) {
+        const emailRes = await EmailService.sendEmail({
+          to: staff.email,
+          subject: `New Leads Assigned (${count}) – SoftLab Global CRM`,
+          html: `<div style="font-family:sans-serif;max-width:600px;line-height:1.5;color:#1e293b">
+            <h2 style="color:#0f766e">New Leads Assigned – SoftLab Global</h2>
+            <p>Hello <strong>${staff.name}</strong>,</p>
+            <p>You have received <strong>${count}</strong> new enquiries.</p>
+            <ul>
+              <li><strong>Distribution Date:</strong> ${dateStr}</li>
+              <li><strong>Distribution Time:</strong> ${timeStr}</li>
+              <li><strong>Source:</strong> ${sourceLabel}</li>
+              <li><strong>Campaign:</strong> ${campaignName}</li>
+              <li><strong>Course Category:</strong> ${courseCategory}</li>
+              <li><strong>Reporting Period:</strong> ${dateStr}</li>
+              <li><strong>Assigned By:</strong> ${managerName}</li>
+              <li><strong>Pending Follow-ups:</strong> ${count}</li>
+              <li><strong>Follow-up Deadline:</strong> ${deadlineStr}</li>
+            </ul>
+            <p><a href="https://lms.softlabglobal.com/admin/leads" style="background:#059669;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block">Open Assigned Leads in CRM</a></p>
+          </div>`,
+          text: summaryBody,
+        }).catch(() => ({ success: false }));
+        emailSent = Boolean((emailRes as any)?.success);
+      }
+
+      if (staff.phone) {
+        const waRes = await WhatsAppBusinessService.sendMessage({
+          toPhone: staff.phone,
+          text: summaryBody,
+        }).catch(() => ({ success: false }));
+        whatsappSent = Boolean((waRes as any)?.success);
+      }
+
+      recipientSummary.push({
+        userId: staff.id,
+        name: staff.name,
+        roleCode: staff.roleCode,
+        count,
+        emailSent,
+        whatsappSent,
+      });
+    }
+
+    const batchCode = `SLG-DIST-${Date.now().toString().slice(-6)}`;
+    await db.leadDistributionLog.create({
+      data: {
+        batchCode,
+        distributedById: String(auth.token.sub),
+        distributionMethod,
+        targetMode: distributionMode,
+        selectedEmployeeIds: targetUsers.map((u) => u.id),
+        excludedLeaveIds,
+        overriddenLeaveIds,
+        totalLeadsDistributed: distributedCount,
+        recipientSummary,
+        sourceLabel,
+        campaignName,
+        courseCategory,
+        reportingPeriod: dateStr,
+        followUpDeadline,
+      },
+    });
 
     await db.auditLog.create({
       data: {
@@ -917,15 +1167,26 @@ export async function PATCH(req: NextRequest) {
         action: "DATA_HUB_DISTRIBUTE_LEADS",
         resourceType: "Lead",
         resourceId: leadIds[0],
-        newData: { distributedCount, targetStaff: targetUsers.map((u) => u.name) },
+        newData: {
+          batchCode,
+          distributedCount,
+          distributionMethod,
+          distributionMode,
+          excludedLeaveIds,
+          overriddenLeaveIds,
+          recipientSummary,
+        },
       },
     });
 
     return NextResponse.json({
       success: true,
       action,
+      batchCode,
       distributedCount,
-      assignedTo: targetUsers.map((u) => u.name).join(", "),
+      excludedLeaveCount: excludedLeaveIds.length,
+      recipientSummary,
+      assignedTo: recipientSummary.map((r) => `${r.name} (${r.count})`).join(", "),
     });
   }
 

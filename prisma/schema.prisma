@@ -6499,3 +6499,105 @@ model EncryptedTemporaryCredential {
   @@index([expiresAt])
   @@map("encrypted_temporary_credentials")
 }
+
+model MarketingOffer {
+  id                 String                  @id @default(cuid())
+  offerName          String
+  discountPercentage Float                   @default(0)
+  applicableCourses  Json?
+  originalFees       Float                   @default(0)
+  discountedFees     Float                   @default(0)
+  startDate          DateTime
+  expiryDate         DateTime
+  eligibility        String?                 @db.Text
+  targetAudience     String?
+  whatsappTemplate   String?                 @db.Text
+  emailSubject       String?
+  emailTemplate      String?                 @db.Text
+  campaignImageUrl   String?
+  landingPageUrl     String?
+  termsAndConditions String?                 @db.Text
+  isActive           Boolean                 @default(true)
+  createdById        String?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  dispatches         OfferCampaignDispatch[]
+
+  @@index([isActive, startDate, expiryDate])
+  @@map("marketing_offers")
+}
+
+model OfferCampaignDispatch {
+  id              String                   @id @default(cuid())
+  offerId         String
+  offer           MarketingOffer           @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  campaignName    String
+  segmentType     String                   // SELECTED_LEADS | SELECTED_STUDENTS | COUNSELOR_LEADS | CITIES | CAMPAIGN_SEGMENT
+  filters         Json?
+  channels        Json?                    // ["WHATSAPP", "EMAIL"]
+  scheduledAt     DateTime?
+  dispatchedAt    DateTime?
+  status          String                   @default("DRAFT") // DRAFT | SCHEDULED | PROCESSING | COMPLETED | FAILED
+  totalRecipients Int                      @default(0)
+  sentCount       Int                      @default(0)
+  deliveredCount  Int                      @default(0)
+  readCount       Int                      @default(0)
+  failedCount     Int                      @default(0)
+  replyCount      Int                      @default(0)
+  enquiryCount    Int                      @default(0)
+  admissionCount  Int                      @default(0)
+  createdById     String?
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  recipients      OfferCampaignRecipient[]
+
+  @@index([offerId, status])
+  @@index([scheduledAt])
+  @@map("offer_campaign_dispatches")
+}
+
+model OfferCampaignRecipient {
+  id                String                @id @default(cuid())
+  dispatchId        String
+  dispatch          OfferCampaignDispatch @relation(fields: [dispatchId], references: [id], onDelete: Cascade)
+  recipientType     String                @default("LEAD") // LEAD | STUDENT
+  leadId            String?
+  studentId         String?
+  recipientName     String
+  phone             String?
+  email             String?
+  whatsappStatus    String                @default("PENDING") // PENDING | SENT | DELIVERED | READ | FAILED | OPTED_OUT | SKIPPED
+  whatsappMessageId String?
+  emailStatus       String                @default("PENDING") // PENDING | SENT | FAILED | SKIPPED
+  emailMessageId    String?
+  repliedAt         DateTime?
+  errorMessage      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  @@index([dispatchId, whatsappStatus])
+  @@index([whatsappMessageId])
+  @@map("offer_campaign_recipients")
+}
+
+model LeadDistributionLog {
+  id                    String   @id @default(cuid())
+  batchCode             String   @unique
+  distributedById       String
+  distributionMethod    String   @default("EQUAL") // EQUAL | AUTO_BALANCE | MANUAL | WEIGHTED
+  targetMode            String   @default("ALL_COUNSELORS") // ALL_COUNSELORS | ALL_TELECALLERS | INDIVIDUAL_EMPLOYEES
+  selectedEmployeeIds   Json?
+  excludedLeaveIds      Json?
+  overriddenLeaveIds    Json?
+  totalLeadsDistributed Int      @default(0)
+  recipientSummary      Json?    // [{ userId, name, roleCode, count, emailSent, whatsappSent }]
+  sourceLabel           String?
+  campaignName          String?
+  courseCategory        String?
+  reportingPeriod       String?
+  followUpDeadline      DateTime?
+  createdAt             DateTime @default(now())
+
+  @@index([distributedById, createdAt])
+  @@map("lead_distribution_logs")
+}

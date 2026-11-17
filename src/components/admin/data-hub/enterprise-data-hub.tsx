@@ -56,6 +56,14 @@ export function EnterpriseDataHub() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [assigneeId, setAssigneeId] = useState("");
   const [targetRole, setTargetRole] = useState("COUNSELOR");
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<string[]>([]);
+  const [employeeSearch, setEmployeeSearch] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("ALL");
+  const [distributionMethod, setDistributionMethod] = useState<"EQUAL" | "AUTO_BALANCE" | "MANUAL" | "WEIGHTED">("EQUAL");
+  const [excludeOnLeave, setExcludeOnLeave] = useState(true);
+  const [overrideLeaveExclusion, setOverrideLeaveExclusion] = useState(false);
+  const [campaignLabel, setCampaignLabel] = useState("Enterprise Data Hub Allocation");
+  const [showDistPreview, setShowDistPreview] = useState(false);
   const [banner, setBanner] = useState<{ type: "ok" | "err"; msg: string } | null>(null);
 
   // AI Smart Upload state
@@ -139,6 +147,13 @@ export function EnterpriseDataHub() {
       setBanner({ type: "err", msg: "Select at least one lead row first." });
       return;
     }
+    if (action === "DISTRIBUTE" && targetRole === "INDIVIDUAL_EMPLOYEES" && !assigneeId && selectedEmployeeIds.length === 0) {
+      setBanner({ type: "err", msg: "Select at least one Counselor or Telecaller from the list." });
+      return;
+    }
+    if (action === "DISTRIBUTE" && overrideLeaveExclusion && !window.confirm("Confirm overriding HRMS approved-leave exclusion and assigning leads to staff on leave?")) {
+      return;
+    }
     setBanner(null);
     try {
       const res = await fetch("/api/enterprise-data", {
@@ -149,6 +164,12 @@ export function EnterpriseDataHub() {
           leadIds: selectedIds,
           assigneeId: assigneeId || undefined,
           targetRole: assigneeId ? undefined : targetRole,
+          distributionMode: assigneeId ? "SINGLE" : targetRole === "INDIVIDUAL_EMPLOYEES" ? "INDIVIDUAL_EMPLOYEES" : targetRole,
+          selectedEmployeeIds: targetRole === "INDIVIDUAL_EMPLOYEES" ? selectedEmployeeIds : undefined,
+          distributionMethod,
+          excludeOnLeave,
+          overrideLeaveExclusion,
+          campaignName: campaignLabel,
         }),
       });
       const ct = res.headers.get("content-type") || "";
@@ -398,14 +419,27 @@ export function EnterpriseDataHub() {
               ))}
             </select>
             {!assigneeId && (
-              <select
-                value={targetRole}
-                onChange={(e) => setTargetRole(e.target.value)}
-                className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
-              >
-                <option value="COUNSELOR">All Counselors</option>
-                <option value="TELECALLER">All Telecallers</option>
-              </select>
+              <>
+                <select
+                  value={targetRole}
+                  onChange={(e) => setTargetRole(e.target.value)}
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white font-semibold"
+                >
+                  <option value="COUNSELOR">All Counselors</option>
+                  <option value="TELECALLER">All Telecallers</option>
+                  <option value="INDIVIDUAL_EMPLOYEES">SELECT INDIVIDUAL EMPLOYEES</option>
+                </select>
+                <select
+                  value={distributionMethod}
+                  onChange={(e) => setDistributionMethod(e.target.value as any)}
+                  className="text-xs border border-slate-300 rounded-lg px-2 py-1.5 bg-white"
+                >
+                  <option value="EQUAL">Equal Distribution</option>
+                  <option value="AUTO_BALANCE">Auto-Balance by Workload</option>
+                  <option value="WEIGHTED">Weighted by Role</option>
+                  <option value="MANUAL">Manual Allocation</option>
+                </select>
+              </>
             )}
             <button
               type="button"
@@ -413,11 +447,163 @@ export function EnterpriseDataHub() {
               className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-sky-600 text-white hover:bg-sky-700"
             >
               <Send className="h-3.5 w-3.5" />
-              Distribute
+              Distribute ({selectedIds.length})
             </button>
           </div>
         )}
       </div>
+
+      {/* Phase 6: Searchable Individual Employee Multi-Select & HRMS Leave Panel */}
+      {isLeadTab && selectedIds.length > 0 && !assigneeId && targetRole === "INDIVIDUAL_EMPLOYEES" && (
+        <div className="bg-sky-50/70 border border-sky-200 rounded-xl p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wide">
+                Select Individual Counselors & Telecallers ({selectedEmployeeIds.length} selected)
+              </h3>
+              <p className="text-[11px] text-slate-600">
+                Employees on HRMS approved leave are excluded by default. Notifications (Email + WhatsApp) are dispatched per recipient.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={employeeSearch}
+                onChange={(e) => setEmployeeSearch(e.target.value)}
+                placeholder="Search employee name..."
+                className="text-xs border border-slate-300 rounded-lg px-2.5 py-1 bg-white"
+              />
+              <select
+                value={departmentFilter}
+                onChange={(e) => setDepartmentFilter(e.target.value)}
+                className="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white"
+              >
+                <option value="ALL">All Departments</option>
+                {Array.from(new Set(assignees.map((a) => a.department || "Admissions"))).map((dept) => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+              <input
+                type="text"
+                value={campaignLabel}
+                onChange={(e) => setCampaignLabel(e.target.value)}
+                placeholder="Campaign Name"
+                className="text-xs border border-slate-300 rounded-lg px-2.5 py-1 bg-white"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <label className="inline-flex items-center gap-1.5 font-medium text-slate-700 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={excludeOnLeave}
+                onChange={(e) => setExcludeOnLeave(e.target.checked)}
+              />
+              <span>Exclude employees on approved leave (Default)</span>
+            </label>
+            <label className="inline-flex items-center gap-1.5 font-medium text-amber-800 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={overrideLeaveExclusion}
+                onChange={(e) => setOverrideLeaveExclusion(e.target.checked)}
+              />
+              <span>Override Leave Exclusion (Audit Logged)</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowDistPreview((v) => !v)}
+              className="text-xs font-semibold text-sky-700 underline"
+            >
+              {showDistPreview ? "Hide Recipient Preview" : "Preview Recipients"}
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {(["COUNSELOR", "TELECALLER"] as const).map((roleGroup) => {
+              const groupUsers = assignees.filter((u) => {
+                if (u.roleCode !== roleGroup) return false;
+                if (departmentFilter !== "ALL" && (u.department || "Admissions") !== departmentFilter) return false;
+                if (employeeSearch.trim() && !u.name.toLowerCase().includes(employeeSearch.toLowerCase())) return false;
+                return true;
+              });
+              return (
+                <div key={roleGroup} className="bg-white border border-slate-200 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center justify-between border-b pb-1.5">
+                    <span className="text-[11px] font-bold text-slate-800">{roleGroup}S ({groupUsers.length})</span>
+                    <div className="flex gap-2 text-[11px]">
+                      <button
+                        type="button"
+                        className="text-emerald-700 font-semibold"
+                        onClick={() => {
+                          const addIds = groupUsers.filter((u) => !u.onLeaveToday || !excludeOnLeave || overrideLeaveExclusion).map((u) => u.id);
+                          setSelectedEmployeeIds((prev) => Array.from(new Set([...prev, ...addIds])));
+                        }}
+                      >
+                        Select Available
+                      </button>
+                      <button
+                        type="button"
+                        className="text-slate-500"
+                        onClick={() => {
+                          const removeSet = new Set(groupUsers.map((u) => u.id));
+                          setSelectedEmployeeIds((prev) => prev.filter((id) => !removeSet.has(id)));
+                        }}
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto space-y-1">
+                    {groupUsers.map((u) => {
+                      const disabledByLeave = Boolean(u.onLeaveToday && excludeOnLeave && !overrideLeaveExclusion);
+                      const checked = selectedEmployeeIds.includes(u.id);
+                      return (
+                        <label
+                          key={u.id}
+                          className={`flex items-center justify-between px-2 py-1 rounded text-xs ${disabledByLeave ? "opacity-50 bg-amber-50 cursor-not-allowed" : "hover:bg-slate-50 cursor-pointer"}`}
+                        >
+                          <span className="inline-flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              disabled={disabledByLeave}
+                              checked={checked}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedEmployeeIds((p) => [...p, u.id]);
+                                else setSelectedEmployeeIds((p) => p.filter((id) => id !== u.id));
+                              }}
+                            />
+                            <span className="font-medium text-slate-800">{u.name}</span>
+                            {u.onLeaveToday && (
+                              <span className="px-1.5 py-0.5 text-[10px] font-bold rounded bg-amber-100 text-amber-800">
+                                ON LEAVE
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-500">
+                            Active: {u.activeLeadsCount ?? 0}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {groupUsers.length === 0 && <div className="text-[11px] text-slate-400">No matching staff</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {showDistPreview && selectedEmployeeIds.length > 0 && (
+            <div className="bg-white border border-sky-200 rounded-lg p-2.5 text-xs text-slate-700">
+              <strong>Distribution Preview:</strong> {selectedIds.length} leads across {selectedEmployeeIds.length} selected employees ({distributionMethod}) →{" "}
+              {assignees
+                .filter((u) => selectedEmployeeIds.includes(u.id) && (!u.onLeaveToday || !excludeOnLeave || overrideLeaveExclusion))
+                .map((u) => u.name)
+                .join(", ")}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Data Table with Guaranteed Horizontal Scroll */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-x-auto">

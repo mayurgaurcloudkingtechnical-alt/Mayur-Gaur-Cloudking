@@ -229,7 +229,15 @@ export class PaymentService {
         payment,
         feeStructure: updatedFee,
       };
-    }, { maxWait: 15000, timeout: 30000 });
+    }, { maxWait: 15000, timeout: 30000 }).then(async (res) => {
+      if (res?.payment?.id) {
+        const { PaymentReceiptNotificationService } = await import("./payment-receipt-notification.service");
+        await PaymentReceiptNotificationService.dispatchForPayment(res.payment.id).catch((err) =>
+          console.error("[PaymentService] Omnichannel receipt dispatch error:", err)
+        );
+      }
+      return res;
+    });
   }
 
   /**

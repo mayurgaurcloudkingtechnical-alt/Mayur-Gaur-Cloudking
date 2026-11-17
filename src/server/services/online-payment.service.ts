@@ -326,7 +326,15 @@ export class OnlinePaymentService {
         status: PaymentTransactionStatus.SUCCESS,
         alreadyProcessed: false,
       };
-    }, { maxWait: 15000, timeout: 30000 });
+    }, { maxWait: 15000, timeout: 30000 }).then(async (res) => {
+      if (res?.paymentId && !res.alreadyProcessed) {
+        const { PaymentReceiptNotificationService } = await import("./payment-receipt-notification.service");
+        await PaymentReceiptNotificationService.dispatchForPayment(res.paymentId).catch((err) =>
+          console.error("[OnlinePaymentService] Omnichannel receipt dispatch error:", err)
+        );
+      }
+      return res;
+    });
   }
 
   /**
@@ -831,7 +839,15 @@ export class OnlinePaymentService {
         status: PaymentTransactionStatus.SUCCESS,
         alreadyProcessed: false,
       };
-    }, { maxWait: 15000, timeout: 30000 });
+    }, { maxWait: 15000, timeout: 30000 }).then(async (res) => {
+      if (res?.paymentId && !res.alreadyProcessed) {
+        const { PaymentReceiptNotificationService } = await import("./payment-receipt-notification.service");
+        await PaymentReceiptNotificationService.dispatchForPayment(res.paymentId).catch((err) =>
+          console.error("[OnlinePaymentService] Omnichannel receipt dispatch error:", err)
+        );
+      }
+      return res;
+    });
   }
 
   /**
