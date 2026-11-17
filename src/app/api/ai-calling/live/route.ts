@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       if (!activeLogId) {
         // Resolve a system/admin userId for StaffCallLog foreign key
         const fallbackUser = await db.user.findFirst({
-          where: { role: { in: ["SUPER_ADMIN", "ADMIN", "COUNSELOR"] }, isActive: true },
+          where: { roleCode: { in: ["SUPER_ADMIN", "ADMIN", "COUNSELOR"] }, status: "ACTIVE" },
           select: { id: true },
         });
         if (fallbackUser) {

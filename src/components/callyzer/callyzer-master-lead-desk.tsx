@@ -42,13 +42,13 @@ export function CallyzerMasterLeadDesk() {
   });
 
   const importMutation = api.callyzer.importLeadsBulk.useMutation({
-    onSuccess: (res) => {
-      setUploadStatus(`Success! Imported: ${res.imported}, Duplicates: ${res.duplicates}, Failed: ${res.errors}`);
+    onSuccess: (res: any) => {
+      setUploadStatus(`Success! Imported: ${res.imported ?? res.count ?? 0}, Duplicates: ${res.duplicates ?? 0}, Failed: ${res.errors ?? 0}`);
       refetchMetrics();
       refetchLeads();
       setCsvText("");
     },
-    onError: (err) => {
+    onError: (err: any) => {
       setUploadStatus(`Error: ${err.message}`);
     },
   });
@@ -226,7 +226,7 @@ export function CallyzerMasterLeadDesk() {
                     </td>
                   </tr>
                 ) : (
-                  leadData?.items.map((lead) => (
+                  leadData?.items.map((lead: any) => (
                     <tr key={lead.id} className="hover:bg-slate-800/40 transition">
                       <td className="py-3 px-4 font-medium text-slate-200">
                         {lead.fullName}

@@ -17,9 +17,10 @@ async function persistSocialMessage(params: {
   if (!senderId || !text) return null;
 
   const syntheticPhone = `META_${senderId.slice(-10)}`;
+  const syntheticEmail = `${senderId}@meta.social.softlab`;
   let lead = await db.lead.findFirst({
     where: {
-      OR: [{ externalId: senderId }, { phone: syntheticPhone }],
+      OR: [{ phone: syntheticPhone }, { email: syntheticEmail }],
     },
     select: { id: true, fullName: true },
   });
@@ -29,7 +30,7 @@ async function persistSocialMessage(params: {
       data: {
         fullName: senderName || `${channel === "INSTAGRAM" ? "Instagram" : "Meta Page"} User ${senderId.slice(-4)}`,
         phone: syntheticPhone,
-        externalId: senderId,
+        email: syntheticEmail,
         source: LeadSource.SOCIAL_MEDIA,
         status: "NEW",
         campaignName: channel === "INSTAGRAM" ? "Instagram Direct / @softlabglobal" : "SoftLab Global Meta Page",

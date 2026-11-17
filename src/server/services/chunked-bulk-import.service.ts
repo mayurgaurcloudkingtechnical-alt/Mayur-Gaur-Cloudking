@@ -210,7 +210,7 @@ export async function parseLeadFileBuffer(buffer: Buffer, fileName: string): Pro
     const headers: string[] = [];
     const rows: ParsedBulkLeadInput[] = [];
 
-    worksheet.eachRow((row, rowNumber) => {
+    worksheet.eachRow((row: any, rowNumber: number) => {
       const values = (row.values as unknown[]).slice(1).map((v) => {
         if (v && typeof v === "object" && "text" in (v as Record<string, unknown>)) {
           return String((v as Record<string, unknown>).text || "").trim();

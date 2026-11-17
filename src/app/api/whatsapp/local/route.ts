@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
           source: true,
           status: true,
           campaignName: true,
-          interestedCourse: true,
+          course: true,
           createdAt: true,
         },
       }),
@@ -197,19 +197,19 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (action === "phone_status") {
-    const res = await fetch(`${WA_GATEWAY_URL}/phone/status?staffId=${encodeURIComponent(String(token.sub))}`, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(3000),
-    }).catch(() => null);
-    const data = res && res.ok ? await res.json() : { paired: false, pendingCommands: [] };
-    return NextResponse.json({ ...data, staffId: token.sub });
-  }
-
   try {
     const body = await req.json();
     const action = body.action || "send";
     const sessionId = resolveSessionId(req, token, body.scope);
+
+    if (action === "phone_status") {
+      const res = await fetch(`${WA_GATEWAY_URL}/phone/status?staffId=${encodeURIComponent(String(token.sub))}`, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(3000),
+      }).catch(() => null);
+      const data = res && res.ok ? await res.json() : { paired: false, pendingCommands: [] };
+      return NextResponse.json({ ...data, staffId: token.sub });
+    }
 
     if (action === "logout" || action === "reset") {
       const res = await fetch(`${WA_GATEWAY_URL}/logout`, {
@@ -376,6 +376,7 @@ export async function POST(req: NextRequest) {
               data: {
                 fullName: String(body.contactName || `WhatsApp ${digits}`),
                 phone: digits,
+                email: `${digits}@whatsapp.softlab`,
                 source: "WHATSAPP",
                 status: "CONTACTED",
               },

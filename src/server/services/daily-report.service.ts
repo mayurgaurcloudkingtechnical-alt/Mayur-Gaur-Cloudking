@@ -81,9 +81,9 @@ export class DailyReportService {
           createdAt: { gte: startOfDay, lte: endOfDay },
         },
       }),
-      db.feePayment.count({
+      db.paymentTransaction.count({
         where: {
-          collectedById: staff.userId,
+          receivedById: staff.userId,
           createdAt: { gte: startOfDay, lte: endOfDay },
         },
       }).catch(() => 0),

@@ -126,7 +126,7 @@ export class CentralNotificationEngine {
           include: { user: { select: { firstName: true, lastName: true, email: true, phone: true, roleCode: true } } },
         });
         if (mgr?.user) {
-          const mgrEmail = mgr.officialEmail || mgr.user.email;
+          const mgrEmail = mgr.user.email;
           const alreadyHasMgr = recipients.some((r) => r.officialEmail?.toLowerCase() === mgrEmail.toLowerCase());
           if (!alreadyHasMgr) {
             recipients.push({
@@ -135,10 +135,10 @@ export class CentralNotificationEngine {
               roleCode: mgr.user.roleCode,
               officialEmail: mgrEmail,
               personalEmail: mgr.personalEmail || null,
-              whatsappNumber: mgr.whatsappNumber || mgr.user.phone || null,
+              whatsappNumber: mgr.personalPhone || mgr.user.phone || null,
               notifyEmail: true,
               notifyPersonalEmail: Boolean(mgr.personalEmail),
-              notifyWhatsApp: Boolean(mgr.whatsappNumber || mgr.user.phone),
+              notifyWhatsApp: Boolean(mgr.personalPhone || mgr.user.phone),
             } as any);
           }
         }
@@ -146,7 +146,7 @@ export class CentralNotificationEngine {
 
       // Ensure Super Admins are included
       const superAdmins = await db.user.findMany({
-        where: { roleCode: "SUPER_ADMIN", isActive: true },
+        where: { roleCode: "SUPER_ADMIN", status: "ACTIVE" },
         select: { id: true, firstName: true, lastName: true, email: true, phone: true, roleCode: true },
       });
       for (const sa of superAdmins) {

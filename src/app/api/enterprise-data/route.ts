@@ -128,7 +128,7 @@ async function parseExcelBuffer(buf: ArrayBuffer): Promise<ExtractedRow[]> {
   if (!ws) return [];
 
   const headerRow: string[] = [];
-  ws.getRow(1).eachCell((cell, colNumber) => {
+  ws.getRow(1).eachCell((cell: any, colNumber: number) => {
     headerRow[colNumber] = String(cell.value ?? "").trim().toLowerCase();
   });
 
@@ -139,10 +139,10 @@ async function parseExcelBuffer(buf: ArrayBuffer): Promise<ExtractedRow[]> {
   const courseCol = headerRow.findIndex((h) => ["course", "program", "category", "interested_course"].includes(h));
 
   const rows: ExtractedRow[] = [];
-  ws.eachRow((row, rowNumber) => {
+  ws.eachRow((row: any, rowNumber: number) => {
     if (rowNumber === 1) return;
     const vals: string[] = [];
-    row.eachCell((cell, colNumber) => {
+    row.eachCell((cell: any, colNumber: number) => {
       vals[colNumber] = String(cell.value ?? "").trim();
     });
     const joined = vals.filter(Boolean).join(" ");

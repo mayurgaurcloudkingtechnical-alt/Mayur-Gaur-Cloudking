@@ -8,11 +8,12 @@ import {
   PhoneMissed,
   FileSpreadsheet,
 } from "lucide-react";
+import type { PortalTabType } from "./portal-header";
 
 interface PortalKpiRibbonProps {
   summary: any;
   reportsCount: number;
-  onSelectTab?: (tab: "analytics" | "presence" | "reports" | "tenant" | "devices" | "access") => void;
+  onSelectTab?: (tab: PortalTabType) => void;
 }
 
 export const PortalKpiRibbon: React.FC<PortalKpiRibbonProps> = ({ summary, reportsCount, onSelectTab }) => {

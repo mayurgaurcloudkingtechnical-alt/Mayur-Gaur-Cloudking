@@ -176,7 +176,7 @@ export function CallyzerPbxDesk() {
                       </td>
                     </tr>
                   ) : (
-                    fleet.activeCalls.map((c) => (
+                    fleet.activeCalls.map((c: any) => (
                       <tr key={c.id} className="hover:bg-slate-800/40">
                         <td className="px-5 py-3 text-slate-400 font-mono">{c.callId.slice(0, 18)}...</td>
                         <td className="px-5 py-3 text-emerald-400 font-bold">Ext {c.callerExtension}</td>
@@ -226,7 +226,7 @@ export function CallyzerPbxDesk() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800 font-mono">
-              {extensions?.map((ext) => (
+              {extensions?.map((ext: any) => (
                 <tr key={ext.id} className="hover:bg-slate-800/40">
                   <td className="px-5 py-3 text-emerald-400 font-bold">Ext {ext.extensionNumber}</td>
                   <td className="px-5 py-3 text-white font-sans font-medium">{ext.displayName}</td>

@@ -216,7 +216,7 @@ export function CallyzerEmployeeWorkspaceView() {
                     </td>
                   </tr>
                 ) : (
-                  leadData?.items.map((lead) => (
+                  leadData?.items.map((lead: any) => (
                     <tr key={lead.id} className="hover:bg-slate-800/40 transition">
                       <td className="py-3 px-4 font-bold text-slate-200">
                         {lead.fullName}
