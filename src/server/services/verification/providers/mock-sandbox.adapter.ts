@@ -27,7 +27,7 @@ export class MockSandboxProviderAdapter implements IVerificationProvider {
 
     const nameMatch = StatutoryValidators.compareNames(declaredName || "", verifiedName);
 
-    let status = VerificationStatus.VERIFIED;
+    let status: VerificationStatus = VerificationStatus.VERIFIED;
     if (nameMatch.score < 60) {
       status = VerificationStatus.FAILED;
     } else if (nameMatch.score < 85) {
@@ -96,7 +96,7 @@ export class MockSandboxProviderAdapter implements IVerificationProvider {
 
     const nameMatch = StatutoryValidators.compareNames(declaredName, verifiedName);
 
-    let status = VerificationStatus.VERIFIED;
+    let status: VerificationStatus = VerificationStatus.VERIFIED;
     if (nameMatch.score < 50) {
       status = VerificationStatus.FAILED;
     } else if (nameMatch.score < 85) {

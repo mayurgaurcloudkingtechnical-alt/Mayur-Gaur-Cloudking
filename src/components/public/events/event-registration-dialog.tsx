@@ -40,7 +40,7 @@ interface EventRegistrationDialogProps {
     duration: string;
     mode: string;
     venue: string;
-    startDate?: Date | null;
+    startDate?: Date | string | null;
   } | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;

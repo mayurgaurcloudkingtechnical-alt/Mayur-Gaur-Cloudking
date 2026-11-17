@@ -515,11 +515,11 @@ export const eventsRouter = router({
       // Audit log
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "CREATE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
-          details: `Created new event '${event.title}' (${event.programType})`,
+          resourceType: "Event",
+          resourceId: event.id,
+          newData: { title: event.title, programType: event.programType },
         },
       }).catch(() => null);
 
@@ -580,11 +580,11 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "UPDATE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
-          details: `Updated event '${event.title}'`,
+          resourceType: "Event",
+          resourceId: event.id,
+          newData: { title: event.title },
         },
       }).catch(() => null);
 
@@ -617,11 +617,11 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "DUPLICATE_EVENT",
-          entityType: "Event",
-          entityId: duplicated.id,
-          details: `Duplicated event from '${original.title}' as '${duplicated.title}'`,
+          resourceType: "Event",
+          resourceId: duplicated.id,
+          newData: { originalTitle: original.title, duplicatedTitle: duplicated.title },
         },
       }).catch(() => null);
 
@@ -638,11 +638,11 @@ export const eventsRouter = router({
 
       await db.auditLog.create({
         data: {
-          userId: ctx.user.id,
+          actorId: ctx.user.id,
           action: "ARCHIVE_EVENT",
-          entityType: "Event",
-          entityId: event.id,
-          details: `Archived/deleted event '${event.title}'`,
+          resourceType: "Event",
+          resourceId: event.id,
+          newData: { title: event.title },
         },
       }).catch(() => null);
 

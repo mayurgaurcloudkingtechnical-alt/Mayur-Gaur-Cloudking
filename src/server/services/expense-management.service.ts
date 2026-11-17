@@ -83,7 +83,7 @@ export class ExpenseManagementService {
     const settings = await db.financeSettings.findUnique({ where: { id: "default" } });
     const executiveLimit = settings?.executiveApprovalLimit || 1000000;
 
-    let initialStatus = ExpenseApprovalStatus.SUBMITTED;
+    let initialStatus: ExpenseApprovalStatus = ExpenseApprovalStatus.SUBMITTED;
     if (["SUPER_ADMIN", "DIRECTOR"].includes(actor.roleCode)) {
       initialStatus = ExpenseApprovalStatus.APPROVED;
     } else if (actor.roleCode === "ACCOUNTANT" && input.amountPaise <= executiveLimit && !input.isClaim) {

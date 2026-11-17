@@ -134,7 +134,14 @@ export class FeeStructureService {
     const registrationFee = Math.max(0, Math.floor(input.registrationFee || 0));
     const discountAmount = Math.max(0, Math.floor(input.discountAmount || 0));
     const scholarshipAmount = Math.max(0, Math.floor(input.scholarshipAmount || 0));
-    const netPayable = Math.max(0, totalCourseFee + registrationFee - discountAmount - scholarshipAmount);
+
+    const calc = FeeStructureService.calculateNetPayable({
+      totalCourseFee,
+      registrationFee,
+      discountAmount,
+      scholarshipAmount,
+    });
+    const { taxableBase, gstAmount, cgstAmount, sgstAmount, netPayable, isValid } = calc;
 
     if (!isValid || netPayable < 0) {
       throw new TRPCError({

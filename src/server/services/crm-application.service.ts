@@ -1486,7 +1486,7 @@ export class CrmApplicationService {
    */
   static async approveAdmissionWithDiscount(
     user: AuthenticatedUser,
-    input: { applicationId: string; approvalNotes?: string; approvedDiscountAmount?: number }
+    input: { applicationId: string; approvalNotes?: string; approvedDiscountAmount?: number; approvedDownPayment?: number }
   ) {
     const isHigherAuthority =
       user.roleCode === UserRoleCode.SUPER_ADMIN ||

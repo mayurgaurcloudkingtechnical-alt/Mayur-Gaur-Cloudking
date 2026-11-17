@@ -6,7 +6,7 @@ import { api } from "@/lib/trpc/react";
 import { FileText, ArrowRight, BookOpen, CheckCircle2, Clock } from "lucide-react";
 
 export default function StudentAssignmentsPage() {
-  const { data: overview, isLoading } = api.student.getDashboardOverview.useQuery();
+  const { data: overview, isLoading } = api.learning.getDashboardOverview.useQuery();
 
   if (isLoading) {
     return (

@@ -161,8 +161,8 @@ export function ApplicationsListView({ basePath = "/counselor/admissions" }: App
     onSuccess: (res) => {
       alert(
         `🎉 Admission Successfully Approved & Converted!\n\n` +
-        `• Student ID: ${res.studentId}\n` +
-        `• Admission Number: ${res.admissionNumber}\n` +
+        `• Student ID: ${res.credentials?.studentId || (res as any).studentId || ""}\n` +
+        `• Admission Number: ${res.credentials?.admissionNumber || (res as any).admissionNumber || ""}\n` +
         `• Official Fee Receipt & ID Card Generated\n\n` +
         `LMS credentials, fee receipt, and official confirmation have been dispatched via Email & WhatsApp to the student.`
       );

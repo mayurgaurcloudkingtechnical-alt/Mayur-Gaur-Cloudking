@@ -226,6 +226,7 @@ export class NativeTokenService {
     refreshToken: string;
     ipAddress?: string;
     userAgent?: string;
+    platform?: string;
   }): Promise<NativeTokenBundle> {
     const rawRefreshToken = (params.refreshToken || "").trim();
     if (!rawRefreshToken) {
@@ -276,7 +277,7 @@ export class NativeTokenService {
       throw new Error("User account is inactive or not found");
     }
 
-    const platformNorm = (params.platform || "").toLowerCase();
+    const platformNorm = (params.platform || existingSession.platform || "").toLowerCase();
     if (
       (platformNorm.includes("android") || platformNorm.includes("ios") || platformNorm.includes("mobile")) &&
       user.canAccessMobile === false

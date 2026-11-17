@@ -79,7 +79,7 @@ export function StudentMarketplaceView() {
   // Success dialog state
   const [purchaseSuccess, setPurchaseSuccess] = React.useState<{
     courseTitle: string;
-    enrollmentId: string;
+    enrollmentId?: string | null;
     receiptNumber?: string | null;
     invoiceNumber?: string | null;
   } | null>(null);

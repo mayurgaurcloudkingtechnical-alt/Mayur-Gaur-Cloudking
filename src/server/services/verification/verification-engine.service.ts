@@ -684,7 +684,7 @@ export class VerificationEngineService {
   // 8. STATUTORY PAYOUT & FINANCIAL GUARD (Strict Compliance)
   // =========================================================================
   public static async checkPayoutEligibility(
-    entityType: "StaffProfile" | "Vendor",
+    entityType: "StaffProfile" | "Vendor" | "CorporatePartner",
     entityId: string
   ): Promise<{ eligible: boolean; status: VerificationStatus; message: string }> {
     const record = await db.verificationRecord.findFirst({

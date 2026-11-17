@@ -517,19 +517,20 @@ export function DirectAdmissionDialog({
       }
 
       // Auto-Dispatch 1: Send credentials directly to the student's personal WhatsApp number
+      const anyRes = res as any;
       const studPhone = ((res.credentials as any)?.phone || applicantPhone || whatsappNumber || "").replace(/\D/g, "");
       if (studPhone.length >= 10) {
         const fullStudPhone = studPhone.length === 10 ? `91${studPhone}` : studPhone;
-        const studentMsg = `🎓 *OFFICIAL ADMISSION CONFIRMED — SOFTLAB GLOBAL* 🚀\n\nDear *${res.credentials?.fullName || applicantName}*,\nCongratulations on your confirmed admission!\n\n📋 *ADMISSION DETAILS*:\n• Student ID: *${res.credentials?.studentId}*\n• Admission No: *${res.credentials?.admissionNumber}*\n• Program: *${res.universityProgram || selectedCourse?.title || "Professional Program"}*\n\n🔑 *STUDENT LMS PORTAL LOGIN CREDENTIALS*:\n• Portal: https://softlabglobal.com/login\n• Username: *${res.credentials?.email || applicantEmail}*\n• Temporary Password: *${res.credentials?.temporaryPassword}*\n\n📞 Admissions Helpline: +91 9196596979\n🌐 www.softlabglobal.com`;
+        const studentMsg = `🎓 *OFFICIAL ADMISSION CONFIRMED — SOFTLAB GLOBAL* 🚀\n\nDear *${res.credentials?.fullName || applicantName}*,\nCongratulations on your confirmed admission!\n\n📋 *ADMISSION DETAILS*:\n• Student ID: *${res.credentials?.studentId}*\n• Admission No: *${res.credentials?.admissionNumber}*\n• Program: *${anyRes.universityProgram || selectedCourse?.title || "Professional Program"}*\n\n🔑 *STUDENT LMS PORTAL LOGIN CREDENTIALS*:\n• Portal: https://softlabglobal.com/login\n• Username: *${res.credentials?.email || applicantEmail}*\n• Temporary Password: *${res.credentials?.temporaryPassword}*\n\n📞 Admissions Helpline: +91 9196596979\n🌐 www.softlabglobal.com`;
         const studentWaUrl = `https://api.whatsapp.com/send?phone=${fullStudPhone}&text=${encodeURIComponent(studentMsg)}`;
         window.open(studentWaUrl, "_blank");
       }
 
       // Auto-Dispatch 2: Also open WhatsApp sales group broadcast window
-      if (res.salesGroupBroadcastUrl) {
-        setTimeout(() => window.open(res.salesGroupBroadcastUrl, "_blank"), 500);
-      } else if (res.salesGroupMessage) {
-        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(res.salesGroupMessage)}`;
+      if (anyRes.salesGroupBroadcastUrl) {
+        setTimeout(() => window.open(anyRes.salesGroupBroadcastUrl, "_blank"), 500);
+      } else if (anyRes.salesGroupMessage) {
+        const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(anyRes.salesGroupMessage)}`;
         setTimeout(() => window.open(url, "_blank"), 500);
       }
 

@@ -3,6 +3,8 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { OnlinePaymentService } from "@/server/services/online-payment.service";
 import { ReceiptService } from "@/server/services/receipt.service";
+import { AuditService } from "@/server/services/audit.service";
+import { FeePaymentStatus, FeeStructureStatus } from "@prisma/client";
 import { db } from "@/server/db/client";
 
 export const paymentRouter = router({
@@ -392,21 +394,38 @@ export const paymentRouter = router({
           });
         }
 
-        // 2. Create formal AdmissionApplication
+        // 2. Ensure Lead & create formal AdmissionApplication
+        const applicantName = `${ctx.user.firstName || ""} ${ctx.user.lastName || ""}`.trim() || ctx.user.email;
+
+        let lead = await tx.lead.findFirst({
+          where: { email: ctx.user.email },
+        });
+
+        if (!lead) {
+          lead = await tx.lead.create({
+            data: {
+              fullName: applicantName,
+              email: ctx.user.email,
+              phone: ctx.user.phone || "0000000000",
+              source: "WEBSITE",
+              status: "ADMITTED",
+              interestedCourseId: course.id,
+            },
+          });
+        }
+
         const appCount = await tx.admissionApplication.count();
         const applicationNumber = `ADM-${now.getFullYear()}-${(appCount + 1).toString().padStart(5, "0")}`;
-        const applicantName = `${ctx.user.firstName || ""} ${ctx.user.lastName || ""}`.trim() || ctx.user.email;
 
         const application = await tx.admissionApplication.create({
           data: {
             applicationNumber,
+            leadId: lead.id,
             courseId: course.id,
             applicantName,
             applicantEmail: ctx.user.email,
             applicantPhone: ctx.user.phone || "0000000000",
             stage: "CONVERTED",
-            status: "CONFIRMED",
-            convertedAt: now,
             dateOfBirth: studentProfile.dateOfBirth,
             gender: studentProfile.gender,
             address: studentProfile.address,
@@ -442,7 +461,7 @@ export const paymentRouter = router({
           });
         }
 
-        // 4. Create FeeStructure and FeePayment
+        // 4. Create FeeStructure and record Payment
         const fullCourseFee = course.discountedFee && course.discountedFee > 0 ? course.discountedFee : course.baseFee;
         let feeStructure = await tx.feeStructure.findFirst({
           where: { studentId: studentProfile.id, courseId: course.id },
@@ -454,10 +473,12 @@ export const paymentRouter = router({
               studentId: studentProfile.id,
               courseId: course.id,
               enrollmentId: enrollment.id,
-              totalAmount: fullCourseFee,
+              totalCourseFee: fullCourseFee,
+              netPayableAmount: fullCourseFee,
               paidAmount: paymentTx.amount,
               pendingAmount: Math.max(0, fullCourseFee - paymentTx.amount),
-              status: paymentTx.amount >= fullCourseFee ? "PAID" : "PARTIALLY_PAID",
+              paymentStatus: paymentTx.amount >= fullCourseFee ? FeePaymentStatus.PAID : FeePaymentStatus.PARTIAL,
+              status: FeeStructureStatus.ACTIVE,
             },
           });
         } else {
@@ -466,25 +487,13 @@ export const paymentRouter = router({
             where: { id: feeStructure.id },
             data: {
               paidAmount: newPaid,
-              pendingAmount: Math.max(0, feeStructure.totalAmount - newPaid),
-              status: newPaid >= feeStructure.totalAmount ? "PAID" : "PARTIALLY_PAID",
+              pendingAmount: Math.max(0, feeStructure.netPayableAmount - newPaid),
+              paymentStatus: newPaid >= feeStructure.netPayableAmount ? FeePaymentStatus.PAID : FeePaymentStatus.PARTIAL,
             },
           });
         }
 
         const receiptNumber = await ReceiptService.generateReceiptNumber();
-
-        await tx.feePayment.create({
-          data: {
-            feeStructureId: feeStructure.id,
-            amountPaid: paymentTx.amount,
-            paymentMethod: "RAZORPAY",
-            paymentDate: now,
-            receiptNumber,
-            transactionReference: paymentTx.transactionReference,
-            remarks: `Marketplace Razorpay Enrollment: ${course.title}`,
-          },
-        });
 
         // 5. Update PaymentTransaction
         await tx.paymentTransaction.update({

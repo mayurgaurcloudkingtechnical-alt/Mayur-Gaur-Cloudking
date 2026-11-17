@@ -480,7 +480,7 @@ export class FinancialAccountingService {
     return {
       dateRange: { startDate: params.startDate || null, endDate: params.endDate || null },
       inflows: {
-        totalCashInflowsPaise,
+        totalCashInflowsPaise: cashInflowsPaise,
         transactionCount: payments.length,
       },
       outflows: {

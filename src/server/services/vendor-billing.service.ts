@@ -152,7 +152,7 @@ export class VendorBillingService {
         (input.ifscCode !== undefined && input.ifscCode.trim().toUpperCase() !== (existingVendor.ifscCode || ""))
       ) {
         try {
-          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, VerificationType.BANK_ACCOUNT, actor);
+          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, "bank", actor);
         } catch (err) {
           console.warn(`[Verification] Vendor bank reverify warning:`, err);
         }
@@ -160,7 +160,7 @@ export class VendorBillingService {
 
       if (input.gstin !== undefined && input.gstin.trim().toUpperCase() !== (existingVendor.gstin || "")) {
         try {
-          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, VerificationType.GSTIN, actor);
+          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, "gstin", actor);
         } catch (err) {
           console.warn(`[Verification] Vendor GSTIN reverify warning:`, err);
         }
@@ -168,7 +168,7 @@ export class VendorBillingService {
 
       if (input.pan !== undefined && input.pan.trim().toUpperCase() !== (existingVendor.pan || "")) {
         try {
-          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, VerificationType.PAN, actor);
+          await VerificationEngineService.reverifyOnChange("Vendor", vendorId, "pan", actor);
         } catch (err) {
           console.warn(`[Verification] Vendor PAN reverify warning:`, err);
         }
@@ -275,7 +275,7 @@ export class VendorBillingService {
     const settings = await db.financeSettings.findUnique({ where: { id: "default" } });
     const executiveLimit = settings?.executiveApprovalLimit || 1000000; // ₹10,000
 
-    let status = VendorBillStatus.PENDING_APPROVAL;
+    let status: VendorBillStatus = VendorBillStatus.PENDING_APPROVAL;
     if (["SUPER_ADMIN", "DIRECTOR"].includes(actor.roleCode)) {
       status = VendorBillStatus.APPROVED;
     } else if (actor.roleCode === "ACCOUNTANT" && totalAmount <= executiveLimit) {
@@ -574,7 +574,7 @@ export class VendorBillingService {
     if (!payoutCheck.eligible) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: `Vendor disbursement blocked by statutory compliance policy: ${payoutCheck.reason}`,
+        message: `Vendor disbursement blocked by statutory compliance policy: ${payoutCheck.message}`,
       });
     }
 

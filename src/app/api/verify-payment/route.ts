@@ -177,7 +177,7 @@ export async function POST(req: NextRequest) {
               paymentTransactionId: paymentTx.id,
               amountPaise,
               paymentMethod: PaymentMethod.RAZORPAY,
-              paymentReference: receiptNumber,
+              paymentReference: receiptNumber || transactionReference || "ONLINE-PAYMENT",
               paidAt: new Date(),
               customerName: customerName?.trim() || "Website Learner",
               customerEmail: customerEmail?.trim() || null,

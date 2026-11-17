@@ -128,7 +128,7 @@ export function RazorpayStandardCheckout({
             item: itemName,
             customerName: customerName.trim(),
             customerEmail: customerEmail.trim(),
-            customerPhone: customerPhone.trim(),
+            customerPhone: customerPhone ? customerPhone.trim() : "",
           },
         }),
       });
@@ -158,7 +158,7 @@ export function RazorpayStandardCheckout({
         prefill: {
           name: customerName.trim(),
           email: customerEmail.trim(),
-          contact: customerPhone.trim(),
+          contact: customerPhone ? customerPhone.trim() : "",
         },
         theme: {
           color: "#0f172a",
@@ -190,7 +190,7 @@ export function RazorpayStandardCheckout({
                 itemName,
                 customerName: customerName.trim(),
                 customerEmail: customerEmail.trim(),
-                customerPhone: customerPhone.trim(),
+                customerPhone: customerPhone ? customerPhone.trim() : "",
                 ...(extraVerificationData || {}),
               }),
             });

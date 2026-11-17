@@ -37,9 +37,15 @@ export class IntelligentNotificationEngine {
 
       // 2. Idempotency Check: Prevent duplicate email dispatch for same entity + event
       const idempotencyKey = `NOTIF:${input.eventType}:${input.entityId}`;
-      const alreadySent = await db.emailLog.findFirst({
-        where: { templateCode: idempotencyKey, status: "SENT" },
-      });
+      const alreadySent = input.primaryRecipientEmail
+        ? await db.emailLog.findFirst({
+            where: {
+              recipient: input.primaryRecipientEmail,
+              status: "SENT",
+              subject: { contains: input.entityId },
+            },
+          })
+        : null;
 
       if (alreadySent) {
         return { success: true, dispatchedCount: 0, errors: ["Event already dispatched (Idempotency check passed)"] };

@@ -69,7 +69,7 @@ export default async function EventSlugPage({ params }: EventPageProps) {
     registrationEndDate: event.registrationEndDate ? event.registrationEndDate.toISOString() : null,
     createdAt: event.createdAt.toISOString(),
     updatedAt: event.updatedAt.toISOString(),
-    deletedAt: event.deletedAt ? event.deletedAt.toISOString() : null,
+    deletedAt: null,
   };
 
   // Structured Data (JSON-LD) for Google Search Event Indexing

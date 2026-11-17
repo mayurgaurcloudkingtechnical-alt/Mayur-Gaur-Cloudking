@@ -140,12 +140,12 @@ export const verificationRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const user = asAuthUser(ctx.user);
-      const authorizedRoles = [
+      const authorizedRoles: string[] = [
         UserRoleCode.SUPER_ADMIN,
         UserRoleCode.DIRECTOR,
         UserRoleCode.ADMIN,
       ];
-      if (!authorizedRoles.includes(user.roleCode as UserRoleCode)) {
+      if (!authorizedRoles.includes(user.roleCode)) {
         throw new TRPCError({
           code: "FORBIDDEN",
           message: "Only administrators and directors can execute manual statutory KYC reviews.",

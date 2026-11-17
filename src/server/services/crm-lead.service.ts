@@ -58,6 +58,7 @@ export interface PublicEnquiryInput {
   city?: string;
   qualification?: string;
   interestedCourseId?: string;
+  interestedCourseName?: string;
   source?: LeadSource;
   campaignName?: string;
   notes?: string;

@@ -753,7 +753,7 @@ export class StaffProfileService {
       (input.bankIfsc !== undefined && input.bankIfsc.trim().toUpperCase() !== (existing.bankIfsc || ""))
     ) {
       try {
-        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, VerificationType.BANK_ACCOUNT, actor);
+        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, "bank", actor);
       } catch (err) {
         console.warn(`[Verification] Bank reverify warning for staff ${staffId}:`, err);
       }
@@ -764,7 +764,7 @@ export class StaffProfileService {
       input.panNumber.trim().toUpperCase() !== (existing.panNumber || "")
     ) {
       try {
-        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, VerificationType.PAN, actor);
+        await VerificationEngineService.reverifyOnChange("StaffProfile", staffId, "pan", actor);
       } catch (err) {
         console.warn(`[Verification] PAN reverify warning for staff ${staffId}:`, err);
       }
