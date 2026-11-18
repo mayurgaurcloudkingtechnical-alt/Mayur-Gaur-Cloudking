@@ -97,6 +97,8 @@ export interface ListLeadsInput {
 export interface LogFollowUpInput {
   leadId: string;
   type: FollowUpType;
+  disposition?: string;
+  durationSeconds?: number;
   notes: string;
   newStatus?: LeadStatus;
   nextFollowUpDate?: Date | null;
@@ -480,7 +482,7 @@ export class CrmLeadService {
     const canAccessLead =
       hasReadAll ||
       user.roleCode === UserRoleCode.COUNSELOR ||
-      (user.roleCode === UserRoleCode.TELECALLER && isMetaLeadSource(lead.source)) ||
+      user.roleCode === UserRoleCode.TELECALLER ||
       lead.assignedToId === user.id ||
       lead.assignedCounselorId === user.id ||
       lead.assignedTelecallerId === user.id ||
@@ -517,10 +519,24 @@ export class CrmLeadService {
   }
 
   /**
-   * Logs a follow-up interaction, updates lead status & next follow-up schedule.
+   * Logs a follow-up interaction, disposition, updates lead status & next follow-up schedule,
+   * and synchronizes CRM history, 360° Omnichannel Timeline, and Call Intelligence.
    */
   static async logFollowUp(user: AuthenticatedUser, input: LogFollowUpInput) {
-    const hasUpdate = hasPermission(user.permissions, "leads:update");
+    const isAuthorizedRole = (
+      [
+        UserRoleCode.SUPER_ADMIN,
+        UserRoleCode.DIRECTOR,
+        UserRoleCode.ADMIN,
+        UserRoleCode.MANAGER,
+        UserRoleCode.COUNSELOR,
+        UserRoleCode.TELECALLER,
+        UserRoleCode.HR,
+        UserRoleCode.MARKETING,
+      ] as string[]
+    ).includes(user.roleCode);
+
+    const hasUpdate = isAuthorizedRole || hasPermission(user.permissions, "leads:update");
     if (!hasUpdate) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -528,77 +544,34 @@ export class CrmLeadService {
       });
     }
 
-    const lead = await db.lead.findUnique({
-      where: { id: input.leadId },
+    const { DispositionEngineService } = await import("./disposition-engine.service");
+    const result = await DispositionEngineService.recordInteraction(user, {
+      leadId: input.leadId,
+      interactionType: input.type,
+      disposition: input.disposition || input.newStatus || "FOLLOW_UP_REQUIRED",
+      newStatus: input.newStatus,
+      notes: input.notes,
+      nextFollowUpDate: input.nextFollowUpDate,
+      durationSeconds: input.durationSeconds ?? (input.type === FollowUpType.CALL ? 60 : 0),
+      source: "CRM_LEAD_DETAIL",
     });
 
-    if (!lead) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: `Lead with ID '${input.leadId}' not found.`,
-      });
-    }
-
-    const hasReadAll = canReadAllLeads(user);
-    const canUpdateLead =
-      hasReadAll ||
-      user.roleCode === UserRoleCode.COUNSELOR ||
-      (user.roleCode === UserRoleCode.TELECALLER && isMetaLeadSource(lead.source)) ||
-      lead.assignedToId === user.id ||
-      lead.assignedCounselorId === user.id ||
-      lead.assignedTelecallerId === user.id ||
-      lead.assignedToId === null;
-
-    if (!canUpdateLead) {
-      throw new TRPCError({
-        code: "FORBIDDEN",
-        message: "You can only update leads assigned to you or within your authorized channel pool.",
-      });
-    }
-
-    const followUp = await db.followUpHistory.create({
-      data: {
-        leadId: input.leadId,
-        type: input.type,
-        notes: input.notes.trim(),
-        nextFollowUpDate: input.nextFollowUpDate ?? null,
-        performedById: user.id,
-      },
-      include: {
-        performedBy: { select: { id: true, firstName: true, lastName: true } },
-      },
-    });
-
-    const updatedLead = await db.lead.update({
-      where: { id: input.leadId },
-      data: {
-        status: input.newStatus || lead.status,
-        nextFollowUp: input.nextFollowUpDate !== undefined ? input.nextFollowUpDate : lead.nextFollowUp,
-      },
-    });
-
-    await AuditService.log({
-      actorId: user.id,
-      action: "LEAD_FOLLOW_UP_LOGGED",
-      resourceType: "Lead",
-      resourceId: lead.id,
-      previousData: { status: lead.status, nextFollowUp: lead.nextFollowUp },
-      newData: {
-        status: updatedLead.status,
-        nextFollowUp: updatedLead.nextFollowUp,
-        followUpType: input.type,
-      },
-    });
-
-    return { followUp, lead: updatedLead };
+    return {
+      followUp: result.followUp,
+      lead: result.lead,
+      disposition: result.disposition,
+    };
   }
 
   /**
    * Reassigns a lead to another counselor or unassigns.
-   * Requires 'leads:assign' permission.
+   * Requires 'leads:assign' permission or supervisory role.
    */
   static async assignLead(user: AuthenticatedUser, input: AssignLeadInput) {
-    const canAssign = hasPermission(user.permissions, "leads:assign");
+    const canAssign =
+      canReadAllLeads(user) ||
+      user.roleCode === UserRoleCode.COUNSELOR ||
+      hasPermission(user.permissions, "leads:assign");
     if (!canAssign) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -844,7 +817,9 @@ export class CrmLeadService {
    * Manually creates a lead by Counselor, Telecaller, or Administrator.
    */
   static async createLead(user: AuthenticatedUser, input: CreateLeadManualInput) {
-    const canCreate = hasPermission(user.permissions, "leads:create");
+    const canCreate =
+      canReadOwnLeads(user) ||
+      hasPermission(user.permissions, "leads:create");
     if (!canCreate) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -1107,7 +1082,7 @@ export class CrmLeadService {
    * One-click stage progression for Kanban cards.
    */
   static async updateLeadStage(user: AuthenticatedUser, leadId: string, newStatus: LeadStatus) {
-    const hasUpdate = hasPermission(user.permissions, "leads:update");
+    const hasUpdate = canReadOwnLeads(user) || hasPermission(user.permissions, "leads:update");
     if (!hasUpdate) {
       throw new TRPCError({
         code: "FORBIDDEN",
@@ -1158,8 +1133,8 @@ export class CrmLeadService {
   }
 
   /**
-   * Logs a rapid calling disposition (CONNECTED, CALLBACK, BUSY, INTERESTED, NOT_INTERESTED).
-   * Creates a LeadActivity record and optionally updates status / follow-up date.
+   * Logs a rapid calling disposition via the canonical DispositionEngineService.
+   * Updates LeadActivity, FollowUpHistory, CustomerTimelineEvent, SlgCallLog, and StaffCallLog.
    */
   static async logDisposition(
     user: AuthenticatedUser,
@@ -1171,38 +1146,19 @@ export class CrmLeadService {
       nextFollowUpDate?: Date | null;
     }
   ) {
-    const lead = await db.lead.findUnique({
-      where: { id: input.leadId },
+    const { DispositionEngineService } = await import("./disposition-engine.service");
+    const result = await DispositionEngineService.recordInteraction(user, {
+      leadId: input.leadId,
+      interactionType: FollowUpType.CALL,
+      disposition: input.disposition,
+      newStatus: input.newStatus,
+      notes: input.notes || `Quick call disposition: ${input.disposition}`,
+      nextFollowUpDate: input.nextFollowUpDate,
+      durationSeconds: 45,
+      source: "TELECALLER_DESK",
     });
 
-    if (!lead) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: `Lead with ID '${input.leadId}' not found.`,
-      });
-    }
-
-    const activity = await db.leadActivity.create({
-      data: {
-        leadId: input.leadId,
-        userId: user.id,
-        activityType: "CALL_DISPOSITION",
-        disposition: input.disposition,
-        notes: input.notes || `Disposition logged: ${input.disposition}`,
-      },
-    });
-
-    if (input.newStatus || input.nextFollowUpDate !== undefined) {
-      await db.lead.update({
-        where: { id: input.leadId },
-        data: {
-          ...(input.newStatus ? { status: input.newStatus } : {}),
-          ...(input.nextFollowUpDate !== undefined ? { nextFollowUp: input.nextFollowUpDate } : {}),
-        },
-      });
-    }
-
-    return activity;
+    return result.activity;
   }
 
   /**

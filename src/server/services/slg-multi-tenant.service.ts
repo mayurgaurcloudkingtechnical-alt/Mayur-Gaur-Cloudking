@@ -105,9 +105,54 @@ export class SlgMultiTenantService {
 
     // Backfill any orphaned users without tenantId to TENANT-0
     await db.user.updateMany({
-      where: { tenantId: null },
+      where: { OR: [{ tenantId: null }, { tenantId: "cmw4nbpcx0000f2ofxcdwsnnt" }] },
       data: { tenantId: softlabTenant.id },
     });
+
+    // Backfill StaffCallLog into SlgCallLog if SlgCallLog has 0 rows for this tenant
+    try {
+      const existingSlgCount = await db.slgCallLog.count({
+        where: { tenantId: softlabTenant.id },
+      });
+      if (existingSlgCount === 0) {
+        const staffLogs = await db.staffCallLog.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 100,
+        });
+        for (const sl of staffLogs) {
+          await db.slgCallLog.create({
+            data: {
+              tenantId: softlabTenant.id,
+              userId: sl.userId,
+              leadId: sl.leadId || null,
+              source: "MANUAL",
+              provider: "SELF_HOSTED",
+              callType: sl.callType === "INCOMING" ? "INCOMING" : "OUTGOING",
+              callStatus:
+                sl.callStatus === "BUSY"
+                  ? "BUSY"
+                  : sl.callStatus === "NO_ANSWER"
+                  ? "UNANSWERED"
+                  : sl.callStatus === "FAILED"
+                  ? "FAILED"
+                  : "CONNECTED",
+              contactName: sl.contactName || "Prospective Student",
+              customerPhone: sl.contactPhone || "",
+              agentPhone: "DESKTOP",
+              startedAt: sl.startedAt || sl.createdAt,
+              endedAt: sl.endedAt || sl.createdAt,
+              durationSeconds: Math.max(0, sl.durationSeconds || 0),
+              talkTimeSeconds: Math.max(0, sl.durationSeconds || 0),
+              disposition: sl.disposition || "INTERESTED",
+              notes: sl.notes || "[MANUAL_LOG] Backfilled from StaffCallLog",
+              nextFollowUpAt: sl.nextFollowUpDate || null,
+            },
+          });
+        }
+      }
+    } catch {
+      // Ignore backfill errors
+    }
 
     return softlabTenant;
   }
@@ -190,10 +235,26 @@ export class SlgMultiTenantService {
   }
 
   /**
+   * Resolves a guaranteed valid Tenant ID in the database.
+   * If candidateTenantId is missing or does not exist in db.tenant, provisions/returns the default SoftLab Global tenant.
+   */
+  static async resolveValidTenantId(candidateTenantId?: string | null): Promise<string> {
+    if (candidateTenantId) {
+      const existing = await db.tenant.findUnique({
+        where: { id: candidateTenantId },
+        select: { id: true },
+      });
+      if (existing) return existing.id;
+    }
+    const defaultTenant = await this.ensureDefaultSoftlabTenant();
+    return defaultTenant.id;
+  }
+
+  /**
    * Retrieves comprehensive tenant metrics, quota limits, and usage details
    */
   static async getTenantOverview(tenantId: string) {
-    const tenant = await db.tenant.findUnique({
+    let tenant = await db.tenant.findUnique({
       where: { id: tenantId },
       include: {
         branches: {
@@ -215,6 +276,30 @@ export class SlgMultiTenantService {
     });
 
     if (!tenant) {
+      const defaultTenant = await this.ensureDefaultSoftlabTenant();
+      tenant = await db.tenant.findUnique({
+        where: { id: defaultTenant.id },
+        include: {
+          branches: {
+            select: { id: true, code: true, name: true, city: true, isActive: true },
+          },
+          departments: {
+            select: { id: true, code: true, name: true, isActive: true },
+          },
+          _count: {
+            select: {
+              users: true,
+              callLogs: true,
+              callRecordings: true,
+              dailyReports: true,
+              deviceRegistrations: true,
+            },
+          },
+        },
+      });
+    }
+
+    if (!tenant) {
       throw new TRPCError({ code: "NOT_FOUND", message: "Tenant not found." });
     }
 
@@ -232,8 +317,9 @@ export class SlgMultiTenantService {
    * Enforces tenant operational quotas
    */
   static async checkQuota(tenantId: string, resource: "USERS" | "AI_MINUTES") {
+    const validId = await this.resolveValidTenantId(tenantId);
     const tenant = await db.tenant.findUnique({
-      where: { id: tenantId },
+      where: { id: validId },
       select: {
         maxUsers: true,
         monthlyAiMinutesLimit: true,

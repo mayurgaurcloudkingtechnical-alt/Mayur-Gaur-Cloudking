@@ -61,7 +61,18 @@ export function MockInterviewsView({ userRole }: MockInterviewsViewProps) {
     if (schedulerOptions?.currentUserId && !interviewerId) {
       setInterviewerId(schedulerOptions.currentUserId);
     }
-  }, [schedulerOptions?.currentUserId, interviewerId]);
+    if (schedulerOptions?.students?.length && !studentId) {
+      setStudentId(schedulerOptions.students[0].id);
+    }
+    if (!scheduledAt) {
+      const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+      tomorrow.setMinutes(0, 0, 0);
+      const localIso = new Date(tomorrow.getTime() - tomorrow.getTimezoneOffset() * 60000)
+        .toISOString()
+        .slice(0, 16);
+      setScheduledAt(localIso);
+    }
+  }, [schedulerOptions, interviewerId, studentId, scheduledAt]);
 
   const scheduleMutation = api.mockInterview.schedule.useMutation({
     onSuccess: () => {

@@ -10,6 +10,7 @@ export default async function CounselorMarketingPage() {
     UserRoleCode.TELECALLER,
     UserRoleCode.MANAGER,
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

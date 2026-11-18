@@ -484,6 +484,22 @@ export class WhatsAppBusinessService {
     }
 
     const isConnected = localConnected || config.connectionStatus === "CONNECTED";
+    const isTokenExpired = Boolean(
+      config.lastError &&
+      (config.lastError.includes("expired") ||
+        config.lastError.includes("Invalid") ||
+        config.lastError.includes("OAuthException") ||
+        config.lastError.includes("190"))
+    );
+    const effectiveStatus = isConnected
+      ? "CONNECTED"
+      : isTokenExpired
+        ? "TOKEN_EXPIRED"
+        : config.connectionStatus === "ERROR"
+          ? "ERROR"
+          : hasToken || hasPhoneId
+            ? "DEGRADED"
+            : "NOT_CONFIGURED";
 
     // Get last inbound and outbound message timestamps from OmnichannelMessage
     const lastInbound = await db.omnichannelMessage.findFirst({
@@ -505,19 +521,19 @@ export class WhatsAppBusinessService {
     });
 
     return {
-      status: isConnected ? "CONNECTED" : hasToken || hasPhoneId ? "DEGRADED" : "NOT_CONFIGURED",
-      apiStatus: localConnected || hasToken ? "CONNECTED" : "NOT_CONFIGURED",
-      phoneNumberStatus: localConnected || hasPhoneId ? "CONNECTED" : "NOT_CONFIGURED",
+      status: effectiveStatus,
+      apiStatus: isConnected ? "CONNECTED" : isTokenExpired ? "TOKEN_EXPIRED" : "NOT_CONNECTED",
+      phoneNumberStatus: isConnected ? "CONNECTED" : isTokenExpired ? "TOKEN_EXPIRED" : "NOT_CONNECTED",
       displayPhoneNumber:
         localPhone || config.displayPhoneNumber || (hasPhoneId ? `ID: ${config.phoneNumberId}` : "Not Connected"),
       verifiedName: config.verifiedName || "SOFTLAB GLOBAL",
-      wabaStatus: localConnected || hasWabaId ? "CONNECTED" : "NOT_CONFIGURED",
+      wabaStatus: isConnected ? "CONNECTED" : isTokenExpired ? "TOKEN_EXPIRED" : "NOT_CONNECTED",
       wabaId: config.wabaId || (localConnected ? "SELF_HOSTED_GATEWAY" : "Not Connected"),
       phoneNumberId: config.phoneNumberId || (localConnected ? "SELF_HOSTED_WA" : "Not Connected"),
       webhookStatus: "VERIFIED",
       webhookUrl: config.webhookUrl,
       verifyToken: `${verifyToken.slice(0, 4)}••••••`,
-      catalogStatus: localConnected || hasCatalogId ? "CONNECTED" : "NOT_CONFIGURED",
+      catalogStatus: isConnected && hasCatalogId ? "CONNECTED" : "NOT_CONFIGURED",
       lastInboundMessageAt: lastInbound?.createdAt || null,
       lastOutboundMessageAt: lastOutbound?.createdAt || null,
       lastCatalogSyncAt: lastCourseSync?.lastCatalogSyncAt || null,
@@ -527,7 +543,9 @@ export class WhatsAppBusinessService {
         ? `Self-Hosted WhatsApp Gateway active & connected (${localPhone}).`
         : isConnected
           ? `Official WhatsApp Business Cloud API active (${config.displayPhoneNumber || config.phoneNumberId}).`
-          : "WhatsApp Business not connected. Use 'Connect WhatsApp Business' wizard or scan QR in Self-Hosted Gateway.",
+          : config.lastError
+            ? `Meta Cloud API Error: ${config.lastError}. Scan QR in Self-Hosted Gateway or update System User Token.`
+            : "WhatsApp Business not connected. Scan QR in Self-Hosted Gateway or update Meta System User Token.",
     };
   }
 

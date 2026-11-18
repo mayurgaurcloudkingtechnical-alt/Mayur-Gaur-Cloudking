@@ -54,6 +54,11 @@ export default async function AdminDashboardPage() {
         description="Global institutional mission control, multi-platform telemetry, and real-time live tracking."
         action={
           <div className="flex flex-wrap items-center gap-2">
+            <Link href="/admin/finance/fees">
+              <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold gap-1.5">
+                Collect EMI & Fees
+              </Button>
+            </Link>
             <Link href="/admin/leads">
               <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold gap-1.5">
                 <Sparkles className="h-3.5 w-3.5" /> Complete Lead DB & AI Import

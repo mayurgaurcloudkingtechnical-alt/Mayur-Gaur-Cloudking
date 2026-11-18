@@ -215,20 +215,21 @@ export async function middleware(req: NextRequest) {
   if (token) {
     const role = token.roleCode as string;
 
-    // Student boundary: only STUDENT or SUPER_ADMIN
-    if (isStudentRoute && role !== "STUDENT" && role !== "SUPER_ADMIN") {
+    // Student boundary: only STUDENT, DIRECTOR, ADMIN, or SUPER_ADMIN
+    if (isStudentRoute && !["STUDENT", "DIRECTOR", "ADMIN", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
     }
 
-    // Trainer boundary: only TRAINER or SUPER_ADMIN
-    if (isTrainerRoute && role !== "TRAINER" && role !== "SUPER_ADMIN") {
+    // Trainer boundary: TRAINER, MANAGER, ADMIN, DIRECTOR, or SUPER_ADMIN
+    if (isTrainerRoute && !["TRAINER", "MANAGER", "ADMIN", "DIRECTOR", "SUPER_ADMIN"].includes(role)) {
       return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
     }
 
-    // Counselor boundary: COUNSELOR, TELECALLER, MANAGER, or SUPER_ADMIN
+    // Counselor boundary: COUNSELOR, TELECALLER, MANAGER, ADMIN, DIRECTOR, SUPER_ADMIN, or ACCOUNTANT (on fees)
     if (
       isCounselorRoute &&
-      !["COUNSELOR", "TELECALLER", "MANAGER", "SUPER_ADMIN"].includes(role)
+      !["COUNSELOR", "TELECALLER", "MANAGER", "ADMIN", "DIRECTOR", "SUPER_ADMIN"].includes(role) &&
+      !(role === "ACCOUNTANT" && pathname.startsWith("/counselor/fees"))
     ) {
       return NextResponse.redirect(getSafeRedirectUrl(getRoleDashboard(role), req));
     }

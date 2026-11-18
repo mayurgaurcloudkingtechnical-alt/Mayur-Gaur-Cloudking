@@ -9,6 +9,7 @@ export default async function CounselorAdmissionsPage() {
     UserRoleCode.COUNSELOR,
     UserRoleCode.MANAGER,
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

@@ -268,13 +268,15 @@ export const crmRouter = router({
     }),
 
   /**
-   * Logs a counseling note, outbound call, or status change.
+   * Logs a counseling note, outbound call, disposition, or status change.
    */
   logFollowUp: requireRoleProcedure(crmRoles)
     .input(
       z.object({
         leadId: z.string(),
         type: z.nativeEnum(FollowUpType),
+        disposition: z.string().optional(),
+        durationSeconds: z.number().int().min(0).optional(),
         notes: z.string().min(2, "Notes must be provided"),
         newStatus: z.nativeEnum(LeadStatus).optional(),
         nextFollowUpDate: z.date().nullable().optional(),

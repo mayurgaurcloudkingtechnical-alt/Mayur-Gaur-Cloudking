@@ -295,20 +295,21 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                 <div className="shrink-0 flex flex-col items-center gap-2">
                   <input
                     type="file"
+                    id="softlab-profile-photo-input"
                     ref={fileInputRef}
-                    accept="image/jpeg,image/png,image/webp,image/gif"
-                    className="hidden"
+                    accept="image/*"
+                    className="sr-only"
                     onChange={handlePhotoUpload}
                   />
-                  <button
-                    type="button"
-                    disabled={isUploading}
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-400 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition"
+                  <label
+                    htmlFor="softlab-profile-photo-input"
+                    className={`px-4 py-2 ${
+                      isUploading ? "bg-slate-400 pointer-events-none" : "bg-blue-600 hover:bg-blue-700 cursor-pointer"
+                    } text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-sm transition`}
                   >
                     <Camera className="w-4 h-4" />
-                    <span>{user?.avatarUrl ? "Change Profile Picture" : "Upload Profile Picture"}</span>
-                  </button>
+                    <span>{isUploading ? "Uploading..." : user?.avatarUrl ? "Change Profile Picture" : "Upload Profile Picture"}</span>
+                  </label>
                   {uploadSuccess && (
                     <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />

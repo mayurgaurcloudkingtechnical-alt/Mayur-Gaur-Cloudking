@@ -56,8 +56,9 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const { data: leadsData, isLoading: isLoadingLeads, refetch } = api.crm.listLeads.useQuery(
     {
       status: selectedStatus === "ALL" ? undefined : selectedStatus,
+      source: activeTab === "META" ? "META_ALL" : undefined,
       search: search.trim() || undefined,
-      limit: 30,
+      limit: 50,
       page: 1,
     },
     {
@@ -94,6 +95,8 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
     onSuccess: () => {
       utils.crm.listLeads.invalidate();
       utils.crm.getStats.invalidate();
+      setWaToast("Disposition saved and synchronized across CRM & Call Intelligence!");
+      setTimeout(() => setWaToast(null), 3500);
     },
   });
 
@@ -103,13 +106,21 @@ export function TelecallerWorkstationView({ user }: TelecallerWorkstationViewPro
   const filteredLeads = leads.filter((lead) => {
     if (activeTab === "META") {
       return (
+        lead.source === "META" ||
         lead.source === "META_ADS_FB" ||
         lead.source === "META_ADS_IG" ||
         lead.source === "SOCIAL_MEDIA"
       );
     }
     if (activeTab === "WEBSITE") {
-      return lead.source === "WEBSITE" || lead.source === "CHATBOT";
+      return (
+        lead.source === "WEBSITE" ||
+        lead.source === "WEBSITE_CAREER_POPUP" ||
+        lead.source === "CAREER_POPUP" ||
+        lead.source === "CONTACT_FORM" ||
+        lead.source === "COURSE_PAGE" ||
+        lead.source === "CHATBOT"
+      );
     }
     return true;
   });

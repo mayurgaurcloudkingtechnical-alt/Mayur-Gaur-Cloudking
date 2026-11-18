@@ -20,6 +20,15 @@ const DialogContext = React.createContext<DialogContextType | null>(null);
 export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
+  const childArray = React.Children.toArray(children);
+  const hasDialogContent = childArray.some(
+    (child) =>
+      React.isValidElement(child) &&
+      (child.type === DialogContent ||
+        (typeof child.type === "function" &&
+          (child.type as { displayName?: string }).displayName === "DialogContent"))
+  );
+
   return (
     <DialogContext.Provider value={{ open, onOpenChange }}>
       <div
@@ -32,7 +41,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
           onClick={() => onOpenChange(false)}
           aria-hidden="true"
         />
-        {children}
+        {hasDialogContent ? children : <DialogContent>{children}</DialogContent>}
       </div>
     </DialogContext.Provider>
   );
@@ -45,7 +54,7 @@ export function DialogHeader({
   return (
     <div
       className={cn(
-        "flex flex-col space-y-1.5 text-center sm:text-left mb-4",
+        "flex flex-col space-y-1.5 text-left pr-10 mb-4",
         className
       )}
       {...props}
@@ -60,7 +69,7 @@ export function DialogTitle({
   return (
     <h3
       className={cn(
-        "text-lg font-semibold leading-none tracking-tight text-slate-900",
+        "text-lg font-bold leading-snug tracking-tight text-slate-900",
         className
       )}
       {...props}
@@ -74,7 +83,7 @@ export function DialogDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-sm text-slate-500 mt-1.5", className)}
+      className={cn("text-xs sm:text-sm text-slate-500 mt-1 leading-relaxed", className)}
       {...props}
     />
   );
@@ -87,7 +96,7 @@ export function DialogFooter({
   return (
     <div
       className={cn(
-        "flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6",
+        "flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:space-x-2 mt-6 pt-3 border-t border-slate-100",
         className
       )}
       {...props}
@@ -98,14 +107,19 @@ export function DialogFooter({
 export function DialogContent({
   className,
   children,
+  onClick,
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   const ctx = React.useContext(DialogContext);
 
   return (
     <div
+      onClick={(e) => {
+        e.stopPropagation();
+        if (onClick) onClick(e);
+      }}
       className={cn(
-        "relative z-10 w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 text-slate-900 border border-slate-200",
+        "relative z-10 w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl animate-in fade-in zoom-in-95 text-slate-900 border border-slate-200",
         className
       )}
       {...props}
@@ -125,3 +139,4 @@ export function DialogContent({
     </div>
   );
 }
+DialogContent.displayName = "DialogContent";

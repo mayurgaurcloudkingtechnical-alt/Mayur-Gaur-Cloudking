@@ -9,6 +9,8 @@ export default async function CounselorBulkCallingPage() {
     UserRoleCode.COUNSELOR,
     UserRoleCode.TELECALLER,
     UserRoleCode.MANAGER,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

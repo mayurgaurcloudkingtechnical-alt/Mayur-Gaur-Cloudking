@@ -7,9 +7,11 @@ import { randomBytes } from "crypto";
 // Allowed mime types for student and staff photos
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
+  "image/jpg",
   "image/png",
   "image/webp",
   "image/gif",
+  "image/avif",
 ]);
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB

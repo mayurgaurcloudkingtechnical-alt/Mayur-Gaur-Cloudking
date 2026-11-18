@@ -12,6 +12,7 @@ export default async function CounselorAdmissionDetailPage({ params }: PageProps
     UserRoleCode.COUNSELOR,
     UserRoleCode.MANAGER,
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

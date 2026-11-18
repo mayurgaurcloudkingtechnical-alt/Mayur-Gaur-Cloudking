@@ -11,6 +11,7 @@ export default async function CounselorFeesPage() {
     UserRoleCode.MANAGER,
     UserRoleCode.ACCOUNTANT,
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

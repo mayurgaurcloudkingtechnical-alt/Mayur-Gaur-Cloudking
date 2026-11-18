@@ -9,6 +9,7 @@ const INTERVIEW_STAFF_ROLES = [
   UserRoleCode.SUPER_ADMIN,
   UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
   UserRoleCode.TRAINER,
   UserRoleCode.HR,
 ];

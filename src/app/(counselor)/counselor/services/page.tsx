@@ -11,7 +11,9 @@ export const metadata = {
 export default async function CounselorServicesPage() {
   const user = await requireRole([
     UserRoleCode.COUNSELOR,
+    UserRoleCode.MANAGER,
     UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

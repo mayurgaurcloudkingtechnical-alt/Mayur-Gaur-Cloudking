@@ -7,6 +7,7 @@ const adminProcedure = requireRoleProcedure([
   UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
   UserRoleCode.MANAGER,
+  UserRoleCode.TRAINER,
 ]);
 import { TRPCError } from "@trpc/server";
 import { VirtualLabSandboxService, SupportedLabLanguage } from "@/server/services/virtual-lab-sandbox.service";

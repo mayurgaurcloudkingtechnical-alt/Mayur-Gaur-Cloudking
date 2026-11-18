@@ -9,6 +9,7 @@ export default async function TrainerInterviewsPage() {
     UserRoleCode.SUPER_ADMIN,
     UserRoleCode.DIRECTOR,
     UserRoleCode.ADMIN,
+    UserRoleCode.MANAGER,
   ]);
 
   return (

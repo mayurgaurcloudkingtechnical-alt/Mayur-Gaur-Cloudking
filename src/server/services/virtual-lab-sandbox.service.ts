@@ -172,6 +172,7 @@ export class VirtualLabSandboxService {
       const dockerArgs = [
         "run",
         "--rm",
+        "-i",
         "--network",
         "none",
         "--memory",

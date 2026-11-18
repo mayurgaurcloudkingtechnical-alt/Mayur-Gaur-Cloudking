@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/trpc/react";
 import { PhoneCall, CheckCircle2, X } from "lucide-react";
+import { CANONICAL_DISPOSITIONS } from "@/config/dispositions.config";
 
 interface CallyzerDispositionModalProps {
   lead: any;
@@ -126,14 +127,11 @@ export function CallyzerDispositionModal({
               onChange={(e) => setDisposition(e.target.value)}
               className="w-full mt-1 h-9 text-xs border border-slate-300 rounded-lg px-2.5 bg-white font-medium text-slate-800"
             >
-              <option value="INTERESTED">Interested - Needs Course Follow-up</option>
-              <option value="ADMISSION_CONFIRMED">Admission Confirmed - Send Fee Receipt</option>
-              <option value="CALLBACK">Callback Requested</option>
-              <option value="FOLLOW_UP">Follow-up Scheduled</option>
-              <option value="NOT_INTERESTED">Not Interested</option>
-              <option value="BUSY_NO_ANSWER">Busy / Not Reachable</option>
-              <option value="WRONG_NUMBER">Wrong Number / Invalid</option>
-              <option value="ENQUIRY_RESOLVED">Enquiry Resolved</option>
+              {CANONICAL_DISPOSITIONS.map((d) => (
+                <option key={d.code} value={d.code}>
+                  {d.code} — {d.label}
+                </option>
+              ))}
             </select>
           </div>
 

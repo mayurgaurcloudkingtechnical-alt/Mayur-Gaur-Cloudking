@@ -9,20 +9,39 @@ import { TRPCError } from "@trpc/server";
 import { db } from "@/server/db/client";
 
 /**
- * Strict Supervisory Roles permitted to view analytics, review reports, and manage devices.
+ * Strict Supervisory Roles permitted to view global analytics, review reports, and manage devices.
  */
 const supervisoryRoles = [
-  UserRoleCode.SUPER_ADMIN, UserRoleCode.DIRECTOR, UserRoleCode.ADMIN, UserRoleCode.MANAGER, UserRoleCode.HR
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+  UserRoleCode.HR,
 ];
 
 /**
- * Asserts that the authenticated context carries a valid, verified tenantId.
+ * Authorized Sales & Calling Roles permitted to use SLG Call Intelligence (scoped to own records when non-supervisory).
  */
-function assertTenantContext(ctx: { user: any }) {
+const salesCallRoles = [
+  UserRoleCode.SUPER_ADMIN,
+  UserRoleCode.DIRECTOR,
+  UserRoleCode.ADMIN,
+  UserRoleCode.MANAGER,
+  UserRoleCode.HR,
+  UserRoleCode.COUNSELOR,
+  UserRoleCode.TELECALLER,
+  UserRoleCode.MARKETING,
+  UserRoleCode.PLACEMENT_OFFICER,
+];
+
+/**
+ * Resolves a verified, database-backed tenantId for the authenticated user.
+ */
+async function resolveTenantContextAsync(ctx: { user: any }) {
   if (!ctx.user) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Authentication required to access SLG Call Intelligence." });
   }
-  const tenantId = ctx.user.tenantId || "cmw4nbpcx0000f2ofxcdwsnnt";
+  const tenantId = await SlgMultiTenantService.resolveValidTenantId(ctx.user.tenantId);
   return {
     tenantId,
     userId: ctx.user.id as string,
@@ -37,14 +56,14 @@ export const slgCallIntelligenceRouter = router({
    * Resolve authenticated tenant overview
    */
   resolveTenantContext: protectedProcedure.query(async ({ ctx }) => {
-    const { tenantId } = assertTenantContext(ctx);
+    const { tenantId } = await resolveTenantContextAsync(ctx);
     return SlgMultiTenantService.getTenantOverview(tenantId);
   }),
 
   /**
-   * Call Intelligence Analytics Dashboard (Supervisory Roles Only)
+   * Call Intelligence Analytics Dashboard (Scoped by RBAC Hierarchy)
    */
-  getCallAnalytics: requireRoleProcedure(supervisoryRoles)
+  getCallAnalytics: requireRoleProcedure(salesCallRoles)
     .input(
       z.object({
         branchId: z.string().optional(),
@@ -57,16 +76,18 @@ export const slgCallIntelligenceRouter = router({
       }).optional()
     )
     .query(async ({ ctx, input }) => {
-      const { tenantId, roleCode, branchId, departmentId } = assertTenantContext(ctx);
-      const isExecutive = roleCode === UserRoleCode.SUPER_ADMIN || roleCode === UserRoleCode.DIRECTOR;
+      const { tenantId, userId, roleCode, branchId, departmentId } = await resolveTenantContextAsync(ctx);
+      const isExecutive = roleCode === UserRoleCode.SUPER_ADMIN || roleCode === UserRoleCode.DIRECTOR || roleCode === UserRoleCode.ADMIN;
+      const isSupervisory = supervisoryRoles.includes(roleCode);
       const effectiveBranchId = !isExecutive && branchId ? branchId : input?.branchId;
       const effectiveDepartmentId = !isExecutive && departmentId ? departmentId : input?.departmentId;
+      const effectiveUserId = !isSupervisory ? userId : input?.userId;
 
       return SlgCallIntelligenceService.getCallAnalytics({
         tenantId,
         branchId: effectiveBranchId,
         departmentId: effectiveDepartmentId,
-        userId: input?.userId,
+        userId: effectiveUserId,
         startDate: input?.startDate,
         endDate: input?.endDate,
         search: input?.search,
@@ -77,15 +98,15 @@ export const slgCallIntelligenceRouter = router({
   /**
    * Live fleet presence monitor
    */
-  getLiveFleetPresence: requireRoleProcedure(supervisoryRoles).query(async ({ ctx }) => {
-    const { tenantId } = assertTenantContext(ctx);
+  getLiveFleetPresence: requireRoleProcedure(salesCallRoles).query(async ({ ctx }) => {
+    const { tenantId } = await resolveTenantContextAsync(ctx);
     return SlgCallIntelligenceService.getLiveFleetPresence(tenantId);
   }),
 
   /**
    * Telephony Provider Adapter & Fleet Health Status
    */
-  getProviderFleetHealth: requireRoleProcedure(supervisoryRoles).query(() => {
+  getProviderFleetHealth: requireRoleProcedure(salesCallRoles).query(() => {
     return SlgCallIntelligenceService.getProviderFleetHealth();
   }),
 
@@ -104,7 +125,7 @@ export const slgCallIntelligenceRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgCallIntelligenceService.submitDisposition({
         tenantId,
         actorUserId: userId,
@@ -120,10 +141,10 @@ export const slgCallIntelligenceRouter = router({
   /**
    * Secure signed recording playback URL with audit logging
    */
-  getRecordingPlaybackUrl: requireRoleProcedure(supervisoryRoles)
+  getRecordingPlaybackUrl: requireRoleProcedure(salesCallRoles)
     .input(z.object({ recordingId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       const clientIp = (ctx as any).req?.headers?.["x-forwarded-for"] || "127.0.0.1";
       const userAgent = (ctx as any).req?.headers?.["user-agent"] || "Browser";
 
@@ -152,126 +173,41 @@ export const slgCallIntelligenceRouter = router({
       nextFollowUpAt: z.date().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
-      const normalizedPhone = SlgCallIntelligenceService.normalizePhoneNumber(input.customerPhone);
-      const lead = await db.lead.findFirst({
-        where: { OR: [{ phone: normalizedPhone }, { phone: input.customerPhone }] },
-        select: { id: true, fullName: true },
-      });
-
+      const { DispositionEngineService } = await import("@/server/services/disposition-engine.service");
       const effectiveDuration = Math.max(0, input.durationSeconds || input.talkTimeSeconds || 0);
+      const mappedStatus: "CONNECTED" | "NO_ANSWER" | "BUSY" | "FAILED" =
+        input.callStatus === "BUSY"
+          ? "BUSY"
+          : input.callStatus === "MISSED" || input.callStatus === "UNANSWERED" || input.callStatus === "REJECTED"
+          ? "NO_ANSWER"
+          : input.callStatus === "FAILED"
+          ? "FAILED"
+          : "CONNECTED";
 
-      // 1. Create SLG Call Log with clear MANUAL classification
-      const slgCall = await db.slgCallLog.create({
-        data: {
-          tenantId,
-          userId,
-          leadId: lead?.id,
-          source: SlgCallSource.MANUAL,
-          callType: input.callType as SlgCallType,
-          callStatus: input.callStatus as SlgCallStatus,
-          contactName: input.contactName || lead?.fullName || "Prospective Student",
-          customerPhone: normalizedPhone,
-          agentPhone: (ctx.user as any).phone || "DESKTOP",
-          startedAt: new Date(Date.now() - effectiveDuration * 1000),
-          endedAt: new Date(),
-          durationSeconds: effectiveDuration,
-          talkTimeSeconds: effectiveDuration,
-          disposition: input.disposition,
-          notes: input.notes ? `[MANUAL_LOG] ${input.notes}` : "[MANUAL_LOG] Manual business call entry",
-          nextFollowUpAt: input.nextFollowUpAt,
+      const result = await DispositionEngineService.recordInteraction(
+        {
+          id: ctx.user.id,
+          email: ctx.user.email || "",
+          roleCode: ctx.user.roleCode,
+          permissions: ctx.user.permissions || [],
+          firstName: ctx.user.firstName || "",
+          lastName: ctx.user.lastName || "",
         },
-      });
-
-      // 2. Synchronize with StaffCallLog so CRM workspaces and Callyzer are aligned
-      try {
-        const user = await db.user.findUnique({
-          where: { id: userId },
-          include: { staffProfile: true },
-        });
-
-        await db.staffCallLog.create({
-          data: {
-            userId,
-            staffProfileId: user?.staffProfile?.id || null,
-            leadId: lead?.id || null,
-            contactName: input.contactName || lead?.fullName || "Prospective Student",
-            contactPhone: normalizedPhone,
-            callType: input.callType,
-            callStatus: input.callStatus === "UNANSWERED" ? "NO_ANSWER" : input.callStatus,
-            disposition: input.disposition,
-            durationSeconds: effectiveDuration,
-            notes: input.notes ? `[MANUAL_LOG] ${input.notes}` : "[MANUAL_LOG] Manual business call logged",
-            nextFollowUpDate: input.nextFollowUpAt || null,
-            roleCode: user?.roleCode || "COUNSELOR",
-            startedAt: new Date(Date.now() - effectiveDuration * 1000),
-            endedAt: new Date(),
-          },
-        });
-
-        // 3. Update StaffLiveSession metrics
-        const isConnected = input.callStatus === "CONNECTED" || effectiveDuration > 0;
-        await db.staffLiveSession.upsert({
-          where: { userId },
-          create: {
-            userId,
-            staffProfileId: user?.staffProfile?.id || null,
-            roleCode: user?.roleCode || "COUNSELOR",
-            department: user?.staffProfile?.department || null,
-            status: "AVAILABLE",
-            dailyTargetCalls: 50,
-            todayCallsCount: 1,
-            todayTalkTimeSeconds: effectiveDuration,
-            todayConnectedCount: isConnected ? 1 : 0,
-            todayConversionsCount: ["ADMISSION_CONFIRMED", "INTERESTED"].includes(input.disposition) ? 1 : 0,
-            lastActiveAt: new Date(),
-          },
-          update: {
-            todayCallsCount: { increment: 1 },
-            todayTalkTimeSeconds: { increment: effectiveDuration },
-            todayConnectedCount: { increment: isConnected ? 1 : 0 },
-            todayConversionsCount: { increment: ["ADMISSION_CONFIRMED", "INTERESTED"].includes(input.disposition) ? 1 : 0 },
-            lastActiveAt: new Date(),
-          },
-        });
-
-        // 4. If lead linked, append to CRM Lead Activity and Follow-up History
-        if (lead?.id) {
-          await db.leadActivity.create({
-            data: {
-              leadId: lead.id,
-              userId,
-              activityType: isConnected ? "CALL_CONNECTED" : "CALL_ATTEMPT",
-              disposition: input.disposition,
-              notes: `[Manual Call: ${effectiveDuration}s] ${input.notes || ""}`.trim(),
-            },
-          });
-
-          if (input.nextFollowUpAt) {
-            await db.followUpHistory.create({
-              data: {
-                leadId: lead.id,
-                type: FollowUpType.CALL,
-                notes: input.notes?.trim() || `Follow-up scheduled from manual call: ${input.disposition}`,
-                nextFollowUpDate: input.nextFollowUpAt,
-                performedById: userId,
-              },
-            });
-
-            await db.lead.update({
-              where: { id: lead.id },
-              data: {
-                nextFollowUp: input.nextFollowUpAt,
-                lastInteraction: new Date(),
-              },
-            });
-          }
+        {
+          contactName: input.contactName,
+          contactPhone: input.customerPhone,
+          interactionType: FollowUpType.CALL,
+          disposition: input.disposition,
+          notes: input.notes || "Manual business call entry",
+          nextFollowUpDate: input.nextFollowUpAt || null,
+          durationSeconds: effectiveDuration,
+          callDirection: input.callType,
+          callStatus: mappedStatus,
+          source: "SLG_CALL_INTELLIGENCE",
         }
-      } catch (syncErr) {
-        console.warn("[SlgCallIntelligenceRouter] Staff sync warning:", syncErr);
-      }
+      );
 
-      return slgCall;
+      return result.slgCallLog;
     }),
 
   /**
@@ -294,7 +230,7 @@ export const slgCallIntelligenceRouter = router({
       })),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgCallIntelligenceService.syncDeviceCallEvents({
         tenantId,
         userId,
@@ -303,26 +239,26 @@ export const slgCallIntelligenceRouter = router({
       });
     }),
 
-  listTenantDevices: requireRoleProcedure(supervisoryRoles).query(({ ctx }) =>
-    SlgDeviceManagementService.listTenantDevices(assertTenantContext(ctx).tenantId)
+  listTenantDevices: requireRoleProcedure(salesCallRoles).query(async ({ ctx }) =>
+    SlgDeviceManagementService.listTenantDevices((await resolveTenantContextAsync(ctx)).tenantId)
   ),
   approveDevice: requireRoleProcedure(supervisoryRoles)
     .input(z.object({ deviceId: z.string() }))
-    .mutation(({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+    .mutation(async ({ ctx, input }) => {
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgDeviceManagementService.approveDevice(tenantId, userId, input.deviceId);
     }),
   revokeDevice: requireRoleProcedure(supervisoryRoles)
     .input(z.object({ deviceId: z.string(), reason: z.string().optional() }))
-    .mutation(({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+    .mutation(async ({ ctx, input }) => {
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgDeviceManagementService.revokeDevice(tenantId, userId, input.deviceId, input.reason);
     }),
 
   getPrefilledDailyReport: protectedProcedure
     .input(z.object({ date: z.date().optional() }).optional())
     .query(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgDailyReportingService.getVerifiedMetrics(tenantId, userId, input?.date || new Date());
     }),
 
@@ -345,7 +281,7 @@ export const slgCallIntelligenceRouter = router({
       })).default([]),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgDailyReportingService.submitDailyReport({
         tenantId,
         userId,
@@ -365,7 +301,7 @@ export const slgCallIntelligenceRouter = router({
       feedback: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId, userId } = assertTenantContext(ctx);
+      const { tenantId, userId } = await resolveTenantContextAsync(ctx);
       return SlgDailyReportingService.reviewDailyReport({
         tenantId,
         reviewerId: userId,
@@ -375,15 +311,15 @@ export const slgCallIntelligenceRouter = router({
       });
     }),
 
-  listDailyReports: requireRoleProcedure(supervisoryRoles)
+  listDailyReports: requireRoleProcedure(salesCallRoles)
     .input(z.object({
       date: z.date().optional(),
       status: z.string().optional(),
       departmentId: z.string().optional(),
     }).optional())
     .query(async ({ ctx, input }) => {
-      const { tenantId, roleCode, departmentId } = assertTenantContext(ctx);
-      const isExecutive = roleCode === UserRoleCode.SUPER_ADMIN || roleCode === UserRoleCode.DIRECTOR;
+      const { tenantId, roleCode, departmentId } = await resolveTenantContextAsync(ctx);
+      const isExecutive = roleCode === UserRoleCode.SUPER_ADMIN || roleCode === UserRoleCode.DIRECTOR || roleCode === UserRoleCode.ADMIN;
       const effectiveDepartmentId = !isExecutive && departmentId ? departmentId : input?.departmentId;
 
       return SlgDailyReportingService.listDailyReports(tenantId, {
@@ -396,7 +332,7 @@ export const slgCallIntelligenceRouter = router({
   exportDailyReportsCsv: requireRoleProcedure(supervisoryRoles)
     .input(z.object({ date: z.date() }))
     .mutation(async ({ ctx, input }) => {
-      const { tenantId } = assertTenantContext(ctx);
+      const { tenantId } = await resolveTenantContextAsync(ctx);
       const csv = await SlgDailyReportingService.generateCsvExport(tenantId, input.date);
       return { csv, filename: `Daily_Reports_${input.date.toISOString().slice(0, 10)}.csv` };
     }),

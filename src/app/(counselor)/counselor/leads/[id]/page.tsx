@@ -12,11 +12,14 @@ export default async function CounselorLeadDetailPage({ params }: PageProps) {
     UserRoleCode.COUNSELOR,
     UserRoleCode.TELECALLER,
     UserRoleCode.MANAGER,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 
   const canAssign =
     user.roleCode === UserRoleCode.SUPER_ADMIN ||
+    user.roleCode === UserRoleCode.DIRECTOR ||
     user.roleCode === UserRoleCode.ADMIN ||
     user.roleCode === UserRoleCode.MANAGER;
 

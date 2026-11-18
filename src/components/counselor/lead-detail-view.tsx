@@ -713,7 +713,10 @@ export function LeadDetailView({ leadId, canAssign = false }: LeadDetailViewProp
         leadId={lead.id}
         leadName={lead.fullName}
         currentStatus={lead.status}
-        onSuccess={() => utils.crm.getLeadDetails.invalidate({ leadId })}
+        onSuccess={() => {
+          utils.crm.getLeadDetails.invalidate({ leadId });
+          utils.omnichannel.getCustomerTimeline.invalidate({ leadId });
+        }}
       />
 
       <DirectAdmissionDialog

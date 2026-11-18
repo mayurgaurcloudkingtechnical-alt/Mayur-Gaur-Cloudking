@@ -12,6 +12,8 @@ export default async function CounselorDashboardPage() {
     UserRoleCode.COUNSELOR,
     UserRoleCode.TELECALLER,
     UserRoleCode.MANAGER,
+    UserRoleCode.ADMIN,
+    UserRoleCode.DIRECTOR,
     UserRoleCode.SUPER_ADMIN,
   ]);
 

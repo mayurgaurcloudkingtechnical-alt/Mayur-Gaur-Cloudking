@@ -95,6 +95,44 @@ export class PaymentService {
       });
     }
 
+    // Idempotency protection: prevent duplicate payment transactions or receipts
+    const trimmedRef = input.providerReference?.trim();
+    if (trimmedRef) {
+      const existingByRef = await db.paymentTransaction.findFirst({
+        where: {
+          feeStructureId: fee.id,
+          providerReference: trimmedRef,
+          status: PaymentTransactionStatus.SUCCESS,
+        },
+      });
+      if (existingByRef) {
+        return {
+          payment: existingByRef,
+          feeStructure: fee,
+          deduplicated: true,
+        };
+      }
+    } else {
+      const tenSecsAgo = new Date(Date.now() - 10_000);
+      const recentDuplicate = await db.paymentTransaction.findFirst({
+        where: {
+          feeStructureId: fee.id,
+          amount: payAmount,
+          paymentMethod: input.paymentMethod,
+          receivedById: user.id,
+          status: PaymentTransactionStatus.SUCCESS,
+          createdAt: { gte: tenSecsAgo },
+        },
+      });
+      if (recentDuplicate) {
+        return {
+          payment: recentDuplicate,
+          feeStructure: fee,
+          deduplicated: true,
+        };
+      }
+    }
+
     if (payAmount > fee.pendingAmount) {
       throw new TRPCError({
         code: "BAD_REQUEST",

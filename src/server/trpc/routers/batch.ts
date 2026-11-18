@@ -23,20 +23,24 @@ export const batchRouter = router({
       const { courseId, facultyId, startDate, endDate, status, deliveryMode, search, page, pageSize } = input;
       const skip = (page - 1) * pageSize;
 
-      // Scoping: Trainers only see batches they are assigned to
+      // Scoping: Trainers see batches they are assigned to; if none specifically assigned yet, show active institutional batches
       let trainerFilter: Prisma.BatchWhereInput = {};
       if (ctx.user.roleCode === UserRoleCode.TRAINER) {
         const profile = await ctx.db.trainerProfile.findUnique({
           where: { userId: ctx.user.id },
         });
-        if (!profile) {
-          return { batches: [], total: 0, page, pageSize, totalPages: 0 };
+        if (profile) {
+          const assignedCount = await ctx.db.batchTrainer.count({
+            where: { trainerId: profile.id },
+          });
+          if (assignedCount > 0) {
+            trainerFilter = {
+              trainers: {
+                some: { trainerId: profile.id },
+              },
+            };
+          }
         }
-        trainerFilter = {
-          trainers: {
-            some: { trainerId: profile.id },
-          },
-        };
       }
 
       const where: Prisma.BatchWhereInput = {

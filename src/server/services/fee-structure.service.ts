@@ -98,7 +98,11 @@ export class FeeStructureService {
       hasPermission(user.permissions, "payments:record_offline") ||
       hasPermission(user.permissions, "admissions:create") ||
       user.roleCode === "SUPER_ADMIN" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "MANAGER" ||
+      user.roleCode === "COUNSELOR";
 
     if (!canCreate) {
       throw new TRPCError({

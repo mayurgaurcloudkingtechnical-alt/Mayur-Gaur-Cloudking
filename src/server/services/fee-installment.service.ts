@@ -27,7 +27,11 @@ export class FeeInstallmentService {
     const canManage =
       hasPermission(user.permissions, "payments:record_offline") ||
       user.roleCode === "SUPER_ADMIN" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "MANAGER" ||
+      user.roleCode === "COUNSELOR";
 
     if (!canManage) {
       throw new TRPCError({ code: "FORBIDDEN", message: "You lack authority to modify installment schedules." });
@@ -148,7 +152,11 @@ export class FeeInstallmentService {
     const canManage =
       hasPermission(user.permissions, "payments:record_offline") ||
       user.roleCode === "SUPER_ADMIN" ||
-      user.roleCode === "ACCOUNTANT";
+      user.roleCode === "DIRECTOR" ||
+      user.roleCode === "ADMIN" ||
+      user.roleCode === "ACCOUNTANT" ||
+      user.roleCode === "MANAGER" ||
+      user.roleCode === "COUNSELOR";
 
     if (!canManage) {
       throw new TRPCError({ code: "FORBIDDEN", message: "Access denied to update installments." });

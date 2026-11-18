@@ -219,7 +219,7 @@ export function WhatsAppConnectionWizard() {
           <div className="bg-slate-800/60 p-3 rounded-xl border border-slate-700/60">
             <span className="text-[10px] text-slate-400 font-semibold uppercase block">Webhook</span>
             <p className="text-xs font-bold text-emerald-400 mt-1 flex items-center gap-1">
-              CONNECTED ✓
+              ENDPOINT READY ✓
             </p>
             <span className="text-[10px] text-slate-400 truncate mt-0.5 block">
               {details?.lastInboundMessageAt

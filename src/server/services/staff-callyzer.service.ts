@@ -232,7 +232,8 @@ export class StaffCallyzerService {
 
     // 1b. Synchronize with SLG Call Intelligence portal
     try {
-      const tenantId = user.tenantId || "cmw4nbpcx0000f2ofxcdwsnnt";
+      const { SlgMultiTenantService } = await import("./slg-multi-tenant.service");
+      const tenantId = await SlgMultiTenantService.resolveValidTenantId(user.tenantId);
       const normalizedPhone = input.contactPhone.replace(/\D/g, "").slice(-10);
       let slgStatus: SlgCallStatus = SlgCallStatus.CONNECTED;
       if (input.callStatus === "BUSY") slgStatus = SlgCallStatus.BUSY;
@@ -263,50 +264,60 @@ export class StaffCallyzerService {
       console.warn("[StaffCallyzerService] SlgCallLog sync warning:", slgSyncErr);
     }
 
-    // 2. Synchronize with Lead Activity and Follow-up if lead linked
+    // 2. Synchronize with Lead Activity, Follow-up, and 360° Omnichannel Timeline if lead linked
     if (matchedLeadId) {
+      const { resolveCanonicalDisposition } = await import("@/config/dispositions.config");
+      const canonical = resolveCanonicalDisposition(input.disposition);
+      const cleanNotes = (input.notes || "").trim() || `Call disposition: ${canonical.label}`;
+
       await db.leadActivity.create({
         data: {
           leadId: matchedLeadId,
           userId,
-          activityType: "CALL_CONNECTED",
-          disposition: input.disposition,
-          notes: `[Callyzer Call Log: ${this.formatDuration(input.durationSeconds)}] ${input.notes || ""}`.trim(),
+          activityType: input.callStatus === "CONNECTED" ? "CALL_CONNECTED" : "CALL_ATTEMPT",
+          disposition: canonical.code,
+          notes: `[MANUAL_LOG | ${this.formatDuration(input.durationSeconds)}] ${cleanNotes}`,
         },
       });
 
-      if (input.nextFollowUpDate) {
-        await db.followUpHistory.create({
-          data: {
-            leadId: matchedLeadId,
-            type: "CALL",
-            notes: input.notes?.trim() || `Follow-up scheduled after call disposition: ${input.disposition}`,
-            nextFollowUpDate: input.nextFollowUpDate,
-            performedById: userId,
-          },
-        });
+      await db.followUpHistory.create({
+        data: {
+          leadId: matchedLeadId,
+          type: "CALL",
+          notes: `[${canonical.code}] ${cleanNotes}`,
+          nextFollowUpDate: canonical.requiresFollowUp ? (input.nextFollowUpDate || null) : null,
+          performedById: userId,
+        },
+      });
 
-        await db.lead.update({
-          where: { id: matchedLeadId },
-          data: {
-            nextFollowUp: input.nextFollowUpDate,
-            lastInteraction: new Date(),
+      await db.customerTimelineEvent.create({
+        data: {
+          leadId: matchedLeadId,
+          actorId: userId,
+          eventType: "VOICE_CALL_DISPOSITION",
+          source: "CALLYZER",
+          title: `Phone Call (Manual Log) — ${canonical.label}`,
+          summary: `[${canonical.code}] ${cleanNotes} (${this.formatDuration(input.durationSeconds)})`,
+          metadata: {
+            disposition: canonical.code,
+            durationSeconds: input.durationSeconds,
+            callStatus: input.callStatus || "CONNECTED",
+            isCarrierVerified: false,
           },
-        });
-      }
+        },
+      });
 
-      // Update lead temperature and status based on disposition
-      if (input.disposition === "ADMISSION_CONFIRMED") {
-        await db.lead.update({
-          where: { id: matchedLeadId },
-          data: { status: "ADMISSION_DONE" as any, temperature: "HOT" },
-        }).catch(() => null);
-      } else if (input.disposition === "INTERESTED") {
-        await db.lead.update({
-          where: { id: matchedLeadId },
-          data: { temperature: "HOT" },
-        }).catch(() => null);
-      }
+      await db.lead.update({
+        where: { id: matchedLeadId },
+        data: {
+          status: canonical.mappedLeadStatus,
+          temperature: canonical.temperature,
+          nextFollowUp: canonical.requiresFollowUp ? (input.nextFollowUpDate || undefined) : null,
+          lastInteraction: new Date(),
+          lastHandledById: userId,
+          callCount: { increment: 1 },
+        },
+      }).catch(() => null);
     }
 
     // 3. Update StaffLiveSession counters
@@ -902,7 +913,7 @@ export class StaffCallyzerService {
   }
 
   /**
-   * Create a manual call log / lead activity entry
+   * Create a manual call log / lead activity entry and synchronize across CRM & SLG Call Intelligence
    */
   static async createManualCallLog(
     creatorUserId: string,
@@ -920,27 +931,15 @@ export class StaffCallyzerService {
     }
   ) {
     const targetUserId = input.userId || creatorUserId;
-    const user = await db.user.findUnique({
-      where: { id: targetUserId },
-      select: { roleCode: true, staffProfile: { select: { id: true } } },
-    });
-
-    return db.staffCallLog.create({
-      data: {
-        userId: targetUserId,
-        staffProfileId: user?.staffProfile?.id || null,
-        contactName: input.contactName,
-        contactPhone: input.contactPhone,
-        callType: input.callType || "OUTGOING",
-        callStatus: input.callStatus || "CONNECTED",
-        durationSeconds: input.durationSeconds || 0,
-        disposition: input.disposition || "INTERESTED",
-        notes: input.notes,
-        nextFollowUpDate: input.nextFollowUpDate,
-        roleCode: user?.roleCode || "TELECALLER",
-        createdAt: input.createdAt || new Date(),
-        startedAt: input.createdAt || new Date(),
-      },
+    return this.logCallActivity(targetUserId, {
+      contactName: input.contactName,
+      contactPhone: input.contactPhone,
+      callType: (input.callType as any) || "OUTGOING",
+      callStatus: (input.callStatus as any) || "CONNECTED",
+      disposition: input.disposition || "INTERESTED",
+      durationSeconds: input.durationSeconds || 0,
+      notes: input.notes ? `[MANUAL_LOG] ${input.notes}` : "[MANUAL_LOG] Manual Callyzer entry",
+      nextFollowUpDate: input.nextFollowUpDate || undefined,
     });
   }
 

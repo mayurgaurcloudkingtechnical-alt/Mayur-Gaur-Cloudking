@@ -171,7 +171,12 @@ export function IntegrationsHubView() {
       category: "Communications",
       description: "Official Meta WhatsApp Business Cloud API. Automates student counseling, AI voice calling, course catalogue sharing, and direct admission routing.",
       icon: <MessageSquare className="h-6 w-6 text-emerald-600" />,
-      status: integrationsHealth.data?.whatsapp.status === "CONNECTED" ? "CONNECTED" : "CONFIGURED",
+      status:
+        integrationsHealth.data?.whatsapp.status === "CONNECTED" || Boolean(localWaStatus?.connected)
+          ? "CONNECTED"
+          : localWaStatus?.status === "QR_READY"
+            ? "QR_READY"
+            : integrationsHealth.data?.whatsapp.status || "NOT_CONNECTED",
       meta: `WABA ID: 1071124442294607 | Phone: ${integrationsHealth.data?.whatsapp.displayPhoneNumber || "+91 9196596975"}`,
       webhookUrl: "https://www.softlabglobal.com/api/webhooks/whatsapp",
       webhookKey: "softlab_whatsapp_2026",
