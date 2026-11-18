@@ -153,23 +153,20 @@ async function main() {
   if (pilotCourse) {
     let targetModule = pilotCourse.modules[0];
     if (!targetModule) {
-      targetModule = await db.courseModule.create({
+      targetModule = await db.module.create({
         data: {
           courseId: pilotCourse.id,
           title: "Module 1: Python Programming for AI — Complete Foundations",
           description: "Comprehensive 9-part Python Programming for AI module with interactive code playground.",
           sortOrder: 1,
           status: "PUBLISHED",
-          topics: PILOT_TOPICS,
         },
         include: { lessons: { include: { contentDetails: true } } },
       });
     } else {
-      // Ensure the 9 pilot topics are included in module.topics
-      const mergedTopics = Array.from(new Set([...PILOT_TOPICS, ...(targetModule.topics || [])]));
-      await db.courseModule.update({
+      await db.module.update({
         where: { id: targetModule.id },
-        data: { topics: mergedTopics, status: "PUBLISHED" },
+        data: { status: "PUBLISHED" },
       });
     }
 
