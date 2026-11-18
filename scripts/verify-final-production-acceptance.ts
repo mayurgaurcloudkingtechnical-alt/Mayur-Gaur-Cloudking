@@ -446,14 +446,18 @@ async function main() {
   let varianceCount = 0;
 
   for (const fs of allStructures) {
-    totalFinalFeePaise += fs.finalFee;
-    totalPaidFeePaise += fs.paidFee;
-    totalPendingFeePaise += fs.pendingFee;
+    totalFinalFeePaise += fs.netPayableAmount;
+    totalPaidFeePaise += fs.paidAmount;
+    totalPendingFeePaise += fs.pendingAmount;
     const instPaid = fs.installments.reduce((acc, i) => acc + i.paidAmount, 0);
     const txPaid = fs.payments.reduce((acc, t) => acc + t.amount, 0);
     totalInstallmentPaidPaise += instPaid;
     totalTxSuccessPaise += txPaid;
-    if (fs.finalFee - fs.paidFee !== fs.pendingFee || fs.paidFee !== instPaid || fs.paidFee !== txPaid) {
+    if (
+      fs.netPayableAmount - fs.paidAmount !== fs.pendingAmount ||
+      fs.paidAmount !== instPaid ||
+      fs.paidAmount !== txPaid
+    ) {
       varianceCount++;
     }
   }
