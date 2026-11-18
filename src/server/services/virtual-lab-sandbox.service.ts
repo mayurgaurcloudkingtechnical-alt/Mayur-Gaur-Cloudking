@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs";
 import path from "node:path";
@@ -6,6 +6,56 @@ import os from "node:os";
 import { db } from "@/server/db/client";
 
 const execFileAsync = promisify(execFile);
+
+function runProcessWithStdin(
+  command: string,
+  args: string[],
+  stdinText: string | undefined,
+  timeoutMs: number
+): Promise<{ stdout: string; stderr: string; exitCode: number; timedOut: boolean }> {
+  return new Promise((resolve) => {
+    const child = spawn(command, args, { stdio: ["pipe", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      try {
+        child.kill("SIGKILL");
+      } catch {}
+    }, timeoutMs);
+
+    child.stdout.on("data", (chunk) => {
+      if (stdout.length < 256 * 1024) stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      if (stderr.length < 256 * 1024) stderr += String(chunk);
+    });
+
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      resolve({ stdout, stderr: stderr + "\n" + err.message, exitCode: 1, timedOut });
+    });
+
+    child.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({
+        stdout,
+        stderr: timedOut ? stderr + `\n[Execution timed out after ${Math.round(timeoutMs / 1000)}s limit]` : stderr,
+        exitCode: timedOut ? 124 : code ?? 0,
+        timedOut,
+      });
+    });
+
+    try {
+      if (stdinText) {
+        child.stdin.write(stdinText);
+      }
+      child.stdin.end();
+    } catch {}
+  });
+}
 
 export type SupportedLabLanguage =
   | "python"
@@ -189,30 +239,23 @@ export class VirtualLabSandboxService {
         ...spec.cmd,
       ];
 
-      const { stdout, stderr } = await execFileAsync("docker", dockerArgs, {
-        timeout: 8000,
-        maxBuffer: 256 * 1024,
-        ...(stdin ? { input: stdin } : {}),
-      } as any);
+      const runRes = await runProcessWithStdin("docker", dockerArgs, stdin, 8000);
 
       return {
-        stdout: String(stdout || ""),
-        stderr: String(stderr || ""),
-        exitCode: 0,
+        stdout: runRes.stdout,
+        stderr: runRes.stderr,
+        exitCode: runRes.exitCode,
         durationMs: Date.now() - start,
-        timedOut: false,
+        timedOut: runRes.timedOut,
         sandboxMode: "DOCKER_ISOLATED_CONTAINER",
       };
     } catch (err: any) {
-      const timedOut = Boolean(err?.killed || err?.signal === "SIGTERM");
       return {
         stdout: String(err?.stdout || ""),
-        stderr:
-          String(err?.stderr || err?.message || "Execution failed") +
-          (timedOut ? "\n[Execution timed out after 8s limit]" : ""),
+        stderr: String(err?.stderr || err?.message || "Execution failed"),
         exitCode: typeof err?.code === "number" ? err.code : 1,
         durationMs: Date.now() - start,
-        timedOut,
+        timedOut: false,
         sandboxMode: "DOCKER_ISOLATED_CONTAINER",
       };
     } finally {
