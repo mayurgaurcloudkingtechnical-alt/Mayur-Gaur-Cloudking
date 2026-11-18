@@ -100,9 +100,15 @@ export function CoursePlayerContent({
       for (const t of currentLesson.topics) {
         const cleaned = t
           .replace(/[\uF0B7\u2022\u25CF\uFEFF]/g, "")
-          .replace(/^[-–—o•*]\s*/, "")
+          .replace(/^[•\s*-]+/, "")
+          .replace(/^\d+[\.\)\-:]\s*/, "")
           .trim();
-        if (cleaned && cleaned.length > 1 && !list.includes(cleaned)) {
+        if (
+          cleaned &&
+          cleaned.length > 2 &&
+          !/^(\d+\)?|weeks?\)?|\(.*\)|preparation\s*\(.*\))$/i.test(cleaned) &&
+          !list.includes(cleaned)
+        ) {
           list.push(cleaned);
         }
       }
@@ -282,9 +288,16 @@ export function CoursePlayerContent({
               if (text) {
                 const cleaned = text
                   .replace(/[\uF0B7\u2022\u25CF\uFEFF]/g, "")
-                  .replace(/^[-–—o•*]\s*/, "")
+                  .replace(/^[•\s*-]+/, "")
+                  .replace(/^\d+[\.\)\-:]\s*/, "")
                   .trim();
-                if (cleaned && cleaned.length > 2) setSelectedTopic(cleaned);
+                if (
+                  cleaned &&
+                  cleaned.length > 2 &&
+                  !/^(\d+\)?|weeks?\)?|\(.*\)|preparation\s*\(.*\))$/i.test(cleaned)
+                ) {
+                  setSelectedTopic(cleaned);
+                }
               }
             }
           }}

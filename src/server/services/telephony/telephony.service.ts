@@ -56,10 +56,6 @@ export class TelephonyService {
     isConfigured: boolean;
     missingVars: string[];
   }> {
-    if (process.env.TELEPHONY_MODE === "SELF_HOSTED") {
-      return { provider: "SELF_HOSTED", isConfigured: true, missingVars: [] };
-    }
-
     // Check DB stored telephony settings first
     let dbSetting: any = null;
     try {
@@ -88,6 +84,10 @@ export class TelephonyService {
 
     if (exotelSid && exotelKey && exotelToken && exotelCallerId) {
       return { provider: "EXOTEL", isConfigured: true, missingVars: [] };
+    }
+
+    if (process.env.TELEPHONY_MODE === "SELF_HOSTED") {
+      return { provider: "SELF_HOSTED", isConfigured: true, missingVars: [] };
     }
 
     const missingVars: string[] = [];

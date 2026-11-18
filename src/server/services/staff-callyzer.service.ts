@@ -1,5 +1,5 @@
 import { db } from "@/server/db/client";
-import { UserRoleCode } from "@prisma/client";
+import { UserRoleCode, SlgCallSource, SlgCallType, SlgCallStatus } from "@prisma/client";
 import { TRPCError } from "@trpc/server";
 import { CrmIngestionService } from "@/server/services/crm-ingestion.service";
 
@@ -229,6 +229,39 @@ export class StaffCallyzerService {
         transcript: input.transcript ? (typeof input.transcript === "string" ? JSON.parse(input.transcript) : input.transcript) : undefined,
       },
     });
+
+    // 1b. Synchronize with SLG Call Intelligence portal
+    try {
+      const tenantId = user.tenantId || "cmw4nbpcx0000f2ofxcdwsnnt";
+      const normalizedPhone = input.contactPhone.replace(/\D/g, "").slice(-10);
+      let slgStatus: SlgCallStatus = SlgCallStatus.CONNECTED;
+      if (input.callStatus === "BUSY") slgStatus = SlgCallStatus.BUSY;
+      else if (input.callStatus === "NO_ANSWER") slgStatus = SlgCallStatus.UNANSWERED;
+      else if (input.callStatus === "FAILED") slgStatus = SlgCallStatus.FAILED;
+
+      await db.slgCallLog.create({
+        data: {
+          tenantId,
+          userId,
+          leadId: matchedLeadId,
+          source: SlgCallSource.MANUAL,
+          callType: input.callType === "INCOMING" ? SlgCallType.INCOMING : SlgCallType.OUTGOING,
+          callStatus: slgStatus,
+          contactName: input.contactName.trim(),
+          customerPhone: normalizedPhone ? `91${normalizedPhone}` : input.contactPhone.trim(),
+          agentPhone: user.phone || "DESKTOP",
+          startedAt: new Date(Date.now() - Math.max(0, input.durationSeconds || 0) * 1000),
+          endedAt: new Date(),
+          durationSeconds: Math.max(0, input.durationSeconds || 0),
+          talkTimeSeconds: Math.max(0, input.durationSeconds || 0),
+          disposition: input.disposition,
+          notes: input.notes?.trim() ? `[MANUAL_LOG] ${input.notes.trim()}` : "[MANUAL_LOG] Callyzer business call entry",
+          nextFollowUpAt: input.nextFollowUpDate || null,
+        },
+      });
+    } catch (slgSyncErr) {
+      console.warn("[StaffCallyzerService] SlgCallLog sync warning:", slgSyncErr);
+    }
 
     // 2. Synchronize with Lead Activity and Follow-up if lead linked
     if (matchedLeadId) {

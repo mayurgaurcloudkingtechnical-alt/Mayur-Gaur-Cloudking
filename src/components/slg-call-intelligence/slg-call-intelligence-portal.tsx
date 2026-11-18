@@ -69,6 +69,10 @@ export function SlgCallIntelligencePortal() {
         disposition: "INTERESTED",
         notes: "",
       });
+      alert("Call record saved successfully.");
+    },
+    onError: (err) => {
+      alert(`Failed to save call record: ${err.message}`);
     },
   });
 
@@ -207,7 +211,12 @@ export function SlgCallIntelligencePortal() {
         setIsLogCallModalOpen={setIsLogCallModalOpen}
         callForm={callForm}
         setCallForm={setCallForm}
-        onLogCallSubmit={() => logCallMutation.mutate(callForm)}
+        onLogCallSubmit={() =>
+          logCallMutation.mutate({
+            ...callForm,
+            durationSeconds: callForm.talkTimeSeconds || 60,
+          })
+        }
         isLogCallPending={logCallMutation.isPending}
         isSubmitReportModalOpen={isSubmitReportModalOpen}
         setIsSubmitReportModalOpen={setIsSubmitReportModalOpen}

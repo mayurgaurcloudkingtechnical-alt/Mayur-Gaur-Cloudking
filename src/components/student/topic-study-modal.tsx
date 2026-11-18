@@ -52,7 +52,7 @@ export function TopicStudyModal({
   completedTopics = new Set(),
 }: TopicStudyModalProps) {
   const [copiedCodeIndex, setCopiedCodeIndex] = React.useState<number | null>(null);
-  const [activeTab, setActiveTab] = React.useState<"notes" | "architecture" | "lab" | "troubleshooting" | "interview">("notes");
+  const [activeTab, setActiveTab] = React.useState<"notes" | "architecture" | "lab" | "examples" | "troubleshooting" | "interview">("notes");
 
   if (!topicTitle) return null;
 
@@ -73,9 +73,9 @@ export function TopicStudyModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white sm:rounded-2xl border-slate-200 shadow-2xl">
+      <DialogContent className="w-[94vw] max-w-[1440px] h-[90vh] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white sm:rounded-2xl border-slate-200 shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-6 text-white border-b border-slate-800">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-6 text-white border-b border-slate-800 flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">
               <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-medium">
@@ -110,13 +110,13 @@ export function TopicStudyModal({
             {moduleTitle ? `${moduleTitle} • ` : ""}Official SoftLab Global Deep-Dive Study Guide
           </DialogDescription>
 
-          {/* Navigation Tabs */}
-          <div className="flex items-center gap-1 mt-5 overflow-x-auto pb-1 text-xs">
+          {/* Navigation Tabs (6 Tabs) */}
+          <div className="flex items-center gap-1.5 mt-5 overflow-x-auto pb-1 text-xs no-scrollbar">
             <button
               onClick={() => setActiveTab("notes")}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "notes"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
@@ -127,7 +127,7 @@ export function TopicStudyModal({
               onClick={() => setActiveTab("architecture")}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "architecture"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
@@ -138,7 +138,7 @@ export function TopicStudyModal({
               onClick={() => setActiveTab("lab")}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "lab"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
@@ -146,10 +146,21 @@ export function TopicStudyModal({
             </button>
 
             <button
+              onClick={() => setActiveTab("examples")}
+              className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
+                activeTab === "examples"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
+                  : "text-slate-300 hover:bg-slate-800"
+              }`}
+            >
+              <Cpu className="h-3.5 w-3.5" /> Practical Examples
+            </button>
+
+            <button
               onClick={() => setActiveTab("troubleshooting")}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "troubleshooting"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
@@ -160,11 +171,11 @@ export function TopicStudyModal({
               onClick={() => setActiveTab("interview")}
               className={`px-3 py-1.5 rounded-lg font-medium transition-colors flex items-center gap-1.5 whitespace-nowrap ${
                 activeTab === "interview"
-                  ? "bg-emerald-500 text-slate-950 font-bold"
+                  ? "bg-emerald-500 text-slate-950 font-bold shadow"
                   : "text-slate-300 hover:bg-slate-800"
               }`}
             >
-              <HelpCircle className="h-3.5 w-3.5" /> Interview Q&A
+              <HelpCircle className="h-3.5 w-3.5" /> Interview Prep
             </button>
           </div>
         </div>
@@ -205,8 +216,8 @@ export function TopicStudyModal({
               </p>
 
               {notes.architecture.diagram && (
-                <div className="bg-slate-950 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto shadow-inner border border-slate-800 leading-tight">
-                  <pre>{notes.architecture.diagram}</pre>
+                <div className="bg-slate-950 text-emerald-400 p-5 rounded-xl font-mono text-xs overflow-x-auto shadow-inner border border-slate-800 leading-normal">
+                  <pre className="font-mono text-xs leading-relaxed whitespace-pre min-w-max">{notes.architecture.diagram}</pre>
                 </div>
               )}
 
@@ -273,6 +284,64 @@ export function TopicStudyModal({
                     {notes.practicalLab.expectedOutput}
                   </pre>
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* TAB 4: PRACTICAL EXAMPLES */}
+          {activeTab === "examples" && (
+            <div className="space-y-6">
+              {(!notes.practicalExamples || notes.practicalExamples.length === 0) ? (
+                <div className="p-8 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200 text-slate-500">
+                  <Cpu className="h-8 w-8 mx-auto text-slate-400 mb-2" />
+                  <p className="font-medium text-sm">Industry Scenario Implementation</p>
+                  <p className="text-xs text-slate-400 mt-1">Review the hands-on commands tab for executable snippets.</p>
+                </div>
+              ) : (
+                notes.practicalExamples.map((ex, exIdx) => (
+                  <div key={exIdx} className="space-y-3 p-5 rounded-xl border border-slate-200 bg-slate-50/60">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-xs font-semibold">
+                          Scenario {exIdx + 1}
+                        </span>
+                        <span>{ex.title}</span>
+                      </h4>
+                      <span className="text-[11px] font-mono uppercase bg-slate-200 text-slate-700 px-2 py-0.5 rounded">
+                        {ex.language}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-600 bg-white p-3 rounded-lg border border-slate-100">
+                      <strong>Business Context:</strong> {ex.scenario}
+                    </p>
+                    <div className="relative group rounded-xl overflow-hidden bg-slate-950 border border-slate-800">
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-slate-900 text-[11px] text-slate-400 border-b border-slate-800 font-mono">
+                        <span>{ex.language.toUpperCase()} PRODUCTION SCRIPT</span>
+                        <button
+                          onClick={() => handleCopy(ex.code, 1000 + exIdx)}
+                          className="flex items-center gap-1 hover:text-white transition-colors"
+                        >
+                          {copiedCodeIndex === (1000 + exIdx) ? (
+                            <>
+                              <Check className="h-3 w-3 text-emerald-400" /> Copied!
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3 w-3" /> Copy
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <pre className="p-4 text-xs font-mono text-emerald-400 overflow-x-auto whitespace-pre leading-relaxed">
+                        {ex.code}
+                      </pre>
+                    </div>
+                    <div className="p-3 bg-emerald-50/80 rounded-lg border border-emerald-200 text-xs text-slate-700">
+                      <strong className="text-emerald-950 font-semibold">Detailed Code Walkthrough:</strong>
+                      <p className="mt-1 leading-relaxed">{ex.explanation}</p>
+                    </div>
+                  </div>
+                ))
               )}
             </div>
           )}

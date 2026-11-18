@@ -279,9 +279,24 @@ export class LearningService {
       if (activeModule?.description) {
         const lines = activeModule.description.split("\n");
         for (const line of lines) {
-          if (line.trim().startsWith("•")) {
-            const t = line.replace(/^[•\s*-]+/, "").trim();
-            if (t && t.length > 1 && !t.includes("") && !t.includes("\uF0B7")) {
+          const trimmed = line.trim();
+          if (
+            trimmed.startsWith("•") ||
+            trimmed.startsWith("-") ||
+            trimmed.startsWith("*") ||
+            /^\d+[\.\)]/.test(trimmed)
+          ) {
+            const t = trimmed
+              .replace(/[\uF0B7\u2022\u25CF\uFEFF]/g, "")
+              .replace(/^[•\s*-]+/, "")
+              .replace(/^\d+[\.\)\-:]\s*/, "")
+              .trim();
+            if (
+              t &&
+              t.length > 2 &&
+              !/^(\d+\)?|weeks?\)?|\(.*\)|preparation\s*\(.*\))$/i.test(t) &&
+              !extractedTopics.includes(t)
+            ) {
               extractedTopics.push(t);
             }
           }
