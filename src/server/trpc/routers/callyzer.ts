@@ -309,7 +309,7 @@ export const callyzerRouter = router({
     }),
 
   startTodaysCalling: protectedProcedure.mutation(async ({ ctx }) => {
-    return StaffCallyzerService.updateLiveStatus(ctx.user.id, "AVAILABLE");
+    return StaffCallyzerService.updateLiveStatus(ctx.user.id, { status: "AVAILABLE" });
   }),
 
   getPoolMetrics: protectedProcedure.query(async () => {
@@ -446,7 +446,12 @@ export const callyzerRouter = router({
       const targetUserId = input.userId || input.agentId;
       const targetStatus = input.newStatus || input.status || "AVAILABLE";
       if (targetUserId) {
-        await StaffCallyzerService.updateLiveStatus(targetUserId, targetStatus as any);
+        const validStatuses = ["AVAILABLE", "ON_CALL", "ON_BREAK", "WRAP_UP", "OFFLINE"] as const;
+        type CallyzerStatus = (typeof validStatuses)[number];
+        const normalizedStatus: CallyzerStatus = validStatuses.includes(targetStatus as CallyzerStatus)
+          ? (targetStatus as CallyzerStatus)
+          : "AVAILABLE";
+        await StaffCallyzerService.updateLiveStatus(targetUserId, { status: normalizedStatus });
       }
       return { success: true };
     }),
