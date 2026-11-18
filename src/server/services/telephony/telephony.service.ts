@@ -307,6 +307,14 @@ export class TelephonyService {
 
     const duration = payload.durationSeconds ? Math.max(0, payload.durationSeconds) : 0;
 
+    const updateData: any = {
+      callStatus: standardizedStatus,
+      disposition,
+      ...(duration > 0 ? { durationSeconds: duration } : {}),
+      ...(payload.recordingUrl ? { recordingUrl: payload.recordingUrl } : {}),
+      ...(standardizedStatus === "COMPLETED" ? { endedAt: new Date() } : {}),
+    };
+
     // 1. Update StaffCallLog matching this providerCallId
     const updateResult = await db.staffCallLog.updateMany({
       where: {
@@ -314,21 +322,37 @@ export class TelephonyService {
           contains: payload.providerCallId,
         },
       },
-      data: {
-        callStatus: standardizedStatus,
-        disposition,
-        durationSeconds: duration,
-        recordingUrl: payload.recordingUrl || undefined,
-        endedAt: standardizedStatus === "COMPLETED" ? new Date() : undefined,
-      },
+      data: updateData,
     });
 
-    // 2. Also update CallingQueueItem if part of a queue batch
+    // 2. Also update SlgCallLog matching this providerCallId
+    try {
+      let slgStatus: any = undefined;
+      if (standardizedStatus === "RINGING") slgStatus = "INITIATED";
+      else if (standardizedStatus === "IN_PROGRESS" || standardizedStatus === "COMPLETED") slgStatus = "CONNECTED";
+      else if (standardizedStatus === "BUSY") slgStatus = "BUSY";
+      else if (standardizedStatus === "NO_ANSWER") slgStatus = "MISSED";
+      else if (standardizedStatus === "FAILED") slgStatus = "REJECTED";
+
+      await db.slgCallLog.updateMany({
+        where: {
+          providerId: payload.providerCallId,
+        },
+        data: {
+          ...(payload.recordingUrl ? { recordingUrl: payload.recordingUrl } : {}),
+          ...(duration > 0 ? { durationSeconds: duration } : {}),
+          ...(slgStatus ? { callStatus: slgStatus } : {}),
+          ...(standardizedStatus === "COMPLETED" ? { endedAt: new Date() } : {}),
+        },
+      });
+    } catch {}
+
+    // 3. Also update CallingQueueItem if part of a queue batch
     await db.callingQueueItem.updateMany({
       where: { providerCallId: payload.providerCallId },
       data: {
-        callDurationSeconds: duration,
-        recordingUrl: payload.recordingUrl || undefined,
+        ...(duration > 0 ? { callDurationSeconds: duration } : {}),
+        ...(payload.recordingUrl ? { recordingUrl: payload.recordingUrl } : {}),
         callOutcome: disposition as any,
       },
     });

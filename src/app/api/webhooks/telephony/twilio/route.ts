@@ -9,8 +9,8 @@ export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
     const callSid = formData.get("CallSid") as string;
-    const callStatus = formData.get("CallStatus") as string;
-    const callDuration = formData.get("CallDuration") as string;
+    const callStatus = ((formData.get("CallStatus") as string) || (formData.get("RecordingStatus") as string) || "in-progress");
+    const callDuration = ((formData.get("CallDuration") as string) || (formData.get("RecordingDuration") as string));
     const recordingUrl = formData.get("RecordingUrl") as string;
 
     if (!callSid) {

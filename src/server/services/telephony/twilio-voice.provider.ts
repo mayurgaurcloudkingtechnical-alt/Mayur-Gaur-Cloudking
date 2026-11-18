@@ -92,6 +92,8 @@ export class TwilioVoiceProvider {
       formData.append("StatusCallbackEvent", "answered");
       formData.append("StatusCallbackEvent", "completed");
       formData.append("StatusCallbackMethod", "POST");
+      formData.append("RecordingStatusCallback", params.statusCallbackUrl);
+      formData.append("RecordingStatusCallbackMethod", "POST");
     }
 
     try {

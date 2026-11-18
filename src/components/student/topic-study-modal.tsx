@@ -73,9 +73,9 @@ export function TopicStudyModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-[94vw] max-w-[1440px] h-[90vh] max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white sm:rounded-2xl border-slate-200 shadow-2xl">
+      <DialogContent className="w-[96vw] sm:w-[94vw] max-w-[1440px] h-[92vh] sm:h-[90vh] max-h-[92vh] sm:max-h-[90vh] flex flex-col p-0 overflow-hidden bg-white rounded-2xl border-slate-200 shadow-2xl">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-6 text-white border-b border-slate-800 flex-shrink-0">
+        <div className="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 p-5 sm:p-6 pr-14 sm:pr-16 text-white border-b border-slate-800 flex-shrink-0">
           <div className="flex flex-wrap items-center justify-between gap-3 mb-2">
             <div className="flex items-center gap-2">
               <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] font-medium">
