@@ -317,7 +317,6 @@ async function main() {
       testA_status: "PASS",
       actor: `${salesStaff.firstName} (${salesStaff.roleCode})`,
       persistedLeadStatus: updatedLead?.status,
-      persistedCallDisposition: updatedLead?.callDisposition,
       persistedNextFollowUp: updatedLead?.nextFollowUp?.toISOString(),
       followUpHistoryCount: followUps.length,
       leadActivityCount: activities.length,
@@ -350,10 +349,10 @@ async function main() {
     resolvedTenantId: validTenantId,
     tenantName: tenantOverview.name,
     tenantSlug: tenantOverview.slug,
-    totalCallsInSlgCallIntelligence: callAnalytics.summary.totalCalls,
-    connectedCalls: callAnalytics.summary.connectedCalls,
-    totalTalkTimeSec: callAnalytics.summary.totalDurationSeconds,
-    recentLogsCount: callAnalytics.recentLogs.length,
+    totalCallsInSlgCallIntelligence: callAnalytics.kpis.totalCalls,
+    connectedCalls: callAnalytics.kpis.connectedCalls,
+    totalTalkTimeSec: callAnalytics.kpis.totalTalkTimeSeconds,
+    recentLogsCount: callAnalytics.recentCalls.length,
   });
 
   // ---------------------------------------------------------------------------
