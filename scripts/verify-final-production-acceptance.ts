@@ -347,8 +347,8 @@ async function main() {
   console.log({
     testB_status: "PASS",
     resolvedTenantId: validTenantId,
-    tenantName: tenantOverview.name,
-    tenantSlug: tenantOverview.slug,
+    tenantName: tenantOverview.tenant?.name,
+    tenantSlug: tenantOverview.tenant?.slug,
     totalCallsInSlgCallIntelligence: callAnalytics.kpis.totalCalls,
     connectedCalls: callAnalytics.kpis.connectedCalls,
     totalTalkTimeSec: callAnalytics.kpis.totalTalkTimeSeconds,
@@ -433,8 +433,7 @@ async function main() {
   const allStructures = await db.feeStructure.findMany({
     include: {
       installments: true,
-      transactions: { where: { status: "SUCCESS" } },
-      receipts: true,
+      payments: { where: { status: "SUCCESS" } },
       student: { select: { studentId: true } },
     },
   });
@@ -451,7 +450,7 @@ async function main() {
     totalPaidFeePaise += fs.paidFee;
     totalPendingFeePaise += fs.pendingFee;
     const instPaid = fs.installments.reduce((acc, i) => acc + i.paidAmount, 0);
-    const txPaid = fs.transactions.reduce((acc, t) => acc + t.amount, 0);
+    const txPaid = fs.payments.reduce((acc, t) => acc + t.amount, 0);
     totalInstallmentPaidPaise += instPaid;
     totalTxSuccessPaise += txPaid;
     if (fs.finalFee - fs.paidFee !== fs.pendingFee || fs.paidFee !== instPaid || fs.paidFee !== txPaid) {
