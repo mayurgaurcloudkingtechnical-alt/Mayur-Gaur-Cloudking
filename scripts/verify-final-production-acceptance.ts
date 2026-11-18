@@ -262,45 +262,45 @@ async function main() {
   });
 
   try {
-    const nextFollowUp = new Date(Date.now() + 48 * 3600 * 1000);
+    const authUser = {
+      id: salesStaff.id,
+      email: salesStaff.email,
+      firstName: salesStaff.firstName,
+      lastName: salesStaff.lastName || "",
+      roleCode: salesStaff.roleCode,
+      permissions: ["*"],
+    };
 
     // 1. Phone Call Interaction
-    const callRes = await DispositionEngineService.recordInteraction({
+    const callRes = await DispositionEngineService.recordInteraction(authUser, {
       leadId: testLead.id,
-      userId: salesStaff.id,
-      userRole: salesStaff.roleCode,
-      userName: `${salesStaff.firstName} ${salesStaff.lastName}`,
       interactionType: FollowUpType.CALL,
       disposition: "COUNSELLING_REQUIRED",
       notes: "Connected on phone call; candidate requested detailed Python AI fee counseling.",
-      nextFollowUp,
+      nextFollowUpDate: new Date(Date.now() + 24 * 3600 * 1000),
       durationSeconds: 185,
-      callType: "OUTGOING",
-      isManualCall: true,
+      callDirection: "OUTGOING",
+      callStatus: "CONNECTED",
+      source: "MANUAL_LOG",
     });
 
     // 2. WhatsApp Interaction
-    const waRes = await DispositionEngineService.recordInteraction({
+    const waRes = await DispositionEngineService.recordInteraction(authUser, {
       leadId: testLead.id,
-      userId: salesStaff.id,
-      userName: `${salesStaff.firstName} ${salesStaff.lastName}`,
-      userRole: salesStaff.roleCode,
       interactionType: FollowUpType.WHATSAPP,
       disposition: "FEE_ENQUIRY",
       notes: "Shared official course brochure and EMI schedule on WhatsApp.",
-      nextFollowUp,
+      nextFollowUpDate: new Date(Date.now() + 36 * 3600 * 1000),
     });
 
     // 3. Counselling Interaction
-    const counselRes = await DispositionEngineService.recordInteraction({
+    const nextFollowUp = new Date(Date.now() + 48 * 3600 * 1000);
+    const counselRes = await DispositionEngineService.recordInteraction(authUser, {
       leadId: testLead.id,
-      userId: salesStaff.id,
-      userName: `${salesStaff.firstName} ${salesStaff.lastName}`,
-      userRole: salesStaff.roleCode,
       interactionType: FollowUpType.COUNSELING,
       disposition: "HIGHLY_INTERESTED",
       notes: "Completed 1-on-1 career counseling session; ready for batch enrollment.",
-      nextFollowUp,
+      nextFollowUpDate: nextFollowUp,
     });
 
     // Verify persistence across all 6 tables
@@ -324,9 +324,9 @@ async function main() {
       omnichannelTimelineCount: timelineEvents.length,
       staffCallLogCount: staffCalls.length,
       slgCallLogCount: slgCalls.length,
-      callDispositionReturned: callRes.canonicalDisposition.code,
-      waDispositionReturned: waRes.canonicalDisposition.code,
-      counselDispositionReturned: counselRes.canonicalDisposition.code,
+      callDispositionReturned: callRes.disposition,
+      waDispositionReturned: waRes.disposition,
+      counselDispositionReturned: counselRes.disposition,
     });
   } finally {
     // Clean up temporary verification records to adhere strictly to Rule 8 (no fake records left in production)
