@@ -11,7 +11,7 @@ import { db } from "@/server/db/client";
 /**
  * Strict Supervisory Roles permitted to view global analytics, review reports, and manage devices.
  */
-const supervisoryRoles = [
+const supervisoryRoles: UserRoleCode[] = [
   UserRoleCode.SUPER_ADMIN,
   UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
@@ -22,7 +22,7 @@ const supervisoryRoles = [
 /**
  * Authorized Sales & Calling Roles permitted to use SLG Call Intelligence (scoped to own records when non-supervisory).
  */
-const salesCallRoles = [
+const salesCallRoles: UserRoleCode[] = [
   UserRoleCode.SUPER_ADMIN,
   UserRoleCode.DIRECTOR,
   UserRoleCode.ADMIN,
